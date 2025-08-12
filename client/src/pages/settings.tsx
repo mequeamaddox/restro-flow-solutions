@@ -35,7 +35,7 @@ export default function Settings() {
   const queryClient = useQueryClient();
 
   // Fetch locations
-  const { data: locations, isLoading: locationsLoading } = useQuery({
+  const { data: locations, isLoading: locationsLoading, error: locationsError } = useQuery({
     queryKey: ["/api/locations"],
     retry: false,
   });
@@ -75,19 +75,8 @@ export default function Settings() {
       addLocationForm.reset();
     },
     onError: (error) => {
-      if (isUnauthorizedError(error)) {
-        toast({
-          title: "Unauthorized",
-          description: "You are logged out. Logging in again...",
-          variant: "destructive",
-        });
-        setTimeout(() => {
-          window.location.href = "/api/login";
-        }, 500);
-        return;
-      }
       toast({
-        title: "Error",
+        title: "Error", 
         description: "Failed to add location",
         variant: "destructive",
       });
@@ -108,20 +97,9 @@ export default function Settings() {
       setEditingLocation(null);
     },
     onError: (error) => {
-      if (isUnauthorizedError(error)) {
-        toast({
-          title: "Unauthorized",
-          description: "You are logged out. Logging in again...",
-          variant: "destructive",
-        });
-        setTimeout(() => {
-          window.location.href = "/api/login";
-        }, 500);
-        return;
-      }
       toast({
         title: "Error",
-        description: "Failed to update location",
+        description: "Failed to update location", 
         variant: "destructive",
       });
     },
@@ -140,17 +118,6 @@ export default function Settings() {
       queryClient.invalidateQueries({ queryKey: ["/api/locations"] });
     },
     onError: (error) => {
-      if (isUnauthorizedError(error)) {
-        toast({
-          title: "Unauthorized",
-          description: "You are logged out. Logging in again...",
-          variant: "destructive",
-        });
-        setTimeout(() => {
-          window.location.href = "/api/login";
-        }, 500);
-        return;
-      }
       toast({
         title: "Error",
         description: "Failed to delete location",
