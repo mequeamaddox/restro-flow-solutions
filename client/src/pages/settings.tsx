@@ -31,7 +31,7 @@ export default function Settings() {
   });
 
   const { toast } = useToast();
-  const { user } = useAuth();
+  const { user, isLoading: userLoading } = useAuth();
   const queryClient = useQueryClient();
 
   // Fetch locations
@@ -187,7 +187,17 @@ export default function Settings() {
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
-            {user && (
+            {userLoading ? (
+              <div className="animate-pulse space-y-3">
+                <div className="flex items-center space-x-3">
+                  <div className="h-12 w-12 bg-gray-200 rounded-full"></div>
+                  <div className="space-y-2">
+                    <div className="h-4 bg-gray-200 rounded w-24"></div>
+                    <div className="h-3 bg-gray-200 rounded w-32"></div>
+                  </div>
+                </div>
+              </div>
+            ) : user ? (
               <div className="space-y-3">
                 <div className="flex items-center space-x-3">
                   {(user as any).profileImageUrl && (
@@ -209,6 +219,10 @@ export default function Settings() {
                   <p>User ID: {(user as any).id}</p>
                   <p>Joined: {new Date((user as any).createdAt).toLocaleDateString()}</p>
                 </div>
+              </div>
+            ) : (
+              <div className="text-center py-4">
+                <p className="text-gray-500">Please log in to view profile</p>
               </div>
             )}
           </CardContent>
