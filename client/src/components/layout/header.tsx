@@ -1,12 +1,15 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Bell, Search } from "lucide-react";
+import { Bell, Search, MapPin } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useQuery } from "@tanstack/react-query";
+import { useLocation } from "@/contexts/LocationContext";
 
 export default function Header() {
   const [searchQuery, setSearchQuery] = useState("");
+  const { currentLocation, setCurrentLocation, locations } = useLocation();
 
   const { data: lowStockItems } = useQuery({
     queryKey: ['/api/inventory/low-stock'],
@@ -22,6 +25,29 @@ export default function Header() {
         </div>
         
         <div className="flex items-center space-x-4">
+          {/* Location Selector */}
+          <div className="flex items-center space-x-2">
+            <MapPin className="h-4 w-4 text-gray-400" />
+            <Select 
+              value={currentLocation?.id} 
+              onValueChange={(value) => {
+                const location = locations.find(l => l.id === value);
+                if (location) setCurrentLocation(location);
+              }}
+            >
+              <SelectTrigger className="w-40">
+                <SelectValue placeholder="Select location" />
+              </SelectTrigger>
+              <SelectContent>
+                {locations.map((location) => (
+                  <SelectItem key={location.id} value={location.id}>
+                    {location.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
           {/* Search - Hidden on mobile, shown on md+ */}
           <div className="relative hidden md:block">
             <Search className="absolute left-3 top-3 h-4 w-4 text-gray-400" />

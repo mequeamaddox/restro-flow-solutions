@@ -4,6 +4,7 @@ import { QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { useAuth } from "@/hooks/useAuth";
+import { LocationProvider } from "@/contexts/LocationContext";
 import NotFound from "@/pages/not-found";
 import Landing from "@/pages/landing";
 import Dashboard from "@/pages/dashboard";
@@ -29,24 +30,26 @@ function Router() {
   }
 
   return (
-    <div className="flex h-screen bg-gray-50">
-      <Sidebar />
-      <div className="flex-1 flex flex-col overflow-hidden">
-        <Header />
-        <main className="flex-1 overflow-y-auto">
-          <Switch>
-            <Route path="/" component={Dashboard} />
-            <Route path="/inventory" component={Inventory} />
-            <Route path="/recipes" component={Recipes} />
-            <Route path="/vendors" component={Vendors} />
-            <Route path="/purchase-orders" component={PurchaseOrders} />
-            <Route path="/reports" component={Reports} />
-            <Route path="/waste-tracking" component={WasteTracking} />
-            <Route component={NotFound} />
-          </Switch>
-        </main>
+    <LocationProvider>
+      <div className="flex h-screen bg-gray-50">
+        <Sidebar />
+        <div className="flex-1 flex flex-col overflow-hidden">
+          <Header />
+          <main className="flex-1 overflow-y-auto">
+            <Switch>
+              <Route path="/" component={Dashboard} />
+              <Route path="/inventory" component={Inventory} />
+              <Route path="/recipes" component={Recipes} />
+              <Route path="/vendors" component={Vendors} />
+              <Route path="/purchase-orders" component={PurchaseOrders} />
+              <Route path="/reports" component={Reports} />
+              <Route path="/waste-tracking" component={WasteTracking} />
+              <Route component={NotFound} />
+            </Switch>
+          </main>
+        </div>
       </div>
-    </div>
+    </LocationProvider>
   );
 }
 

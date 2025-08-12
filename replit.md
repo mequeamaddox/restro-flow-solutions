@@ -9,6 +9,8 @@ The system features a React-based frontend with TypeScript, a Node.js/Express ba
 ## User Preferences
 
 Preferred communication style: Simple, everyday language.
+Multi-location restaurant business: Table-top restaurant and bar & grill as second location.
+Target features: Location-specific inventory, bar-specific items, separate analytics per location.
 
 ## System Architecture
 

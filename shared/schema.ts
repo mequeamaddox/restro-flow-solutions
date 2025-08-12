@@ -26,6 +26,18 @@ export const sessions = pgTable(
   (table) => [index("IDX_session_expire").on(table.expire)],
 );
 
+// Locations table
+export const locations = pgTable("locations", {
+  id: uuid("id").primaryKey().default(sql`gen_random_uuid()`),
+  name: varchar("name", { length: 100 }).notNull(),
+  type: varchar("type", { length: 50 }).notNull(), // restaurant, bar, cafe, etc.
+  address: text("address"),
+  phone: varchar("phone"),
+  manager: varchar("manager"),
+  isActive: boolean("is_active").default(true),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
 // User storage table (required for Replit Auth)
 export const users = pgTable("users", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
@@ -34,6 +46,7 @@ export const users = pgTable("users", {
   lastName: varchar("last_name"),
   profileImageUrl: varchar("profile_image_url"),
   role: varchar("role").default("staff"), // admin, manager, staff
+  defaultLocationId: uuid("default_location_id").references(() => locations.id),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
@@ -43,6 +56,7 @@ export const categories = pgTable("categories", {
   id: uuid("id").primaryKey().default(sql`gen_random_uuid()`),
   name: varchar("name", { length: 100 }).notNull(),
   description: text("description"),
+  type: varchar("type", { length: 50 }).default("general"), // general, bar, kitchen, cleaning, etc.
   createdAt: timestamp("created_at").defaultNow(),
 });
 
@@ -63,12 +77,17 @@ export const inventoryItems = pgTable("inventory_items", {
   name: varchar("name", { length: 200 }).notNull(),
   description: text("description"),
   categoryId: uuid("category_id").references(() => categories.id),
+  locationId: uuid("location_id").references(() => locations.id).notNull(),
   quantity: decimal("quantity", { precision: 10, scale: 2 }).notNull().default("0"),
-  unit: varchar("unit", { length: 20 }).notNull(), // lbs, kg, L, pieces, etc.
+  unit: varchar("unit", { length: 20 }).notNull(), // lbs, kg, L, pieces, bottles, cases, etc.
   costPerUnit: decimal("cost_per_unit", { precision: 10, scale: 2 }).notNull(),
   reorderLevel: decimal("reorder_level", { precision: 10, scale: 2 }).notNull().default("0"),
   vendorId: uuid("vendor_id").references(() => vendors.id),
   barcode: varchar("barcode"),
+  // Bar-specific fields
+  alcoholContent: decimal("alcohol_content", { precision: 5, scale: 2 }), // ABV percentage
+  isAlcoholic: boolean("is_alcoholic").default(false),
+  bottleSize: varchar("bottle_size"), // 750ml, 1L, etc.
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
@@ -93,6 +112,28 @@ export const recipeIngredients = pgTable("recipe_ingredients", {
   unit: varchar("unit", { length: 20 }).notNull(),
 });
 
+// Bar menu items (cocktails, beers, wines)
+export const menuItems = pgTable("menu_items", {
+  id: uuid("id").primaryKey().default(sql`gen_random_uuid()`),
+  name: varchar("name", { length: 200 }).notNull(),
+  description: text("description"),
+  category: varchar("category", { length: 50 }).notNull(), // cocktail, beer, wine, spirit, non-alcoholic
+  price: decimal("price", { precision: 10, scale: 2 }).notNull(),
+  locationId: uuid("location_id").references(() => locations.id).notNull(),
+  isActive: boolean("is_active").default(true),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// Menu item ingredients (for cocktails and mixed drinks)
+export const menuItemIngredients = pgTable("menu_item_ingredients", {
+  id: uuid("id").primaryKey().default(sql`gen_random_uuid()`),
+  menuItemId: uuid("menu_item_id").references(() => menuItems.id, { onDelete: "cascade" }),
+  inventoryItemId: uuid("inventory_item_id").references(() => inventoryItems.id),
+  quantity: decimal("quantity", { precision: 10, scale: 3 }).notNull(), // oz, ml, etc.
+  unit: varchar("unit", { length: 20 }).notNull(),
+});
+
 // Purchase orders
 export const purchaseOrderStatusEnum = pgEnum("purchase_order_status", ["draft", "sent", "confirmed", "delivered", "cancelled"]);
 
@@ -100,6 +141,7 @@ export const purchaseOrders = pgTable("purchase_orders", {
   id: uuid("id").primaryKey().default(sql`gen_random_uuid()`),
   orderNumber: varchar("order_number", { length: 50 }).notNull().unique(),
   vendorId: uuid("vendor_id").references(() => vendors.id),
+  locationId: uuid("location_id").references(() => locations.id).notNull(),
   status: purchaseOrderStatusEnum("status").default("draft"),
   orderDate: timestamp("order_date").defaultNow(),
   expectedDeliveryDate: timestamp("expected_delivery_date"),
@@ -126,6 +168,7 @@ export const wasteReasons = pgEnum("waste_reason", ["expired", "spoiled", "damag
 export const wasteEntries = pgTable("waste_entries", {
   id: uuid("id").primaryKey().default(sql`gen_random_uuid()`),
   inventoryItemId: uuid("inventory_item_id").references(() => inventoryItems.id),
+  locationId: uuid("location_id").references(() => locations.id).notNull(),
   quantity: decimal("quantity", { precision: 10, scale: 2 }).notNull(),
   unit: varchar("unit", { length: 20 }).notNull(),
   reason: wasteReasons("reason").notNull(),
@@ -141,6 +184,7 @@ export const transactionTypeEnum = pgEnum("transaction_type", ["in", "out", "adj
 export const inventoryTransactions = pgTable("inventory_transactions", {
   id: uuid("id").primaryKey().default(sql`gen_random_uuid()`),
   inventoryItemId: uuid("inventory_item_id").references(() => inventoryItems.id),
+  locationId: uuid("location_id").references(() => locations.id).notNull(),
   type: transactionTypeEnum("type").notNull(),
   quantity: decimal("quantity", { precision: 10, scale: 2 }).notNull(),
   reference: varchar("reference"), // PO number, recipe name, etc.
@@ -150,6 +194,22 @@ export const inventoryTransactions = pgTable("inventory_transactions", {
 });
 
 // Relations
+export const locationsRelations = relations(locations, ({ many }) => ({
+  users: many(users),
+  inventoryItems: many(inventoryItems),
+  menuItems: many(menuItems),
+  purchaseOrders: many(purchaseOrders),
+  wasteEntries: many(wasteEntries),
+  inventoryTransactions: many(inventoryTransactions),
+}));
+
+export const usersRelations = relations(users, ({ one }) => ({
+  defaultLocation: one(locations, {
+    fields: [users.defaultLocationId],
+    references: [locations.id],
+  }),
+}));
+
 export const categoriesRelations = relations(categories, ({ many }) => ({
   inventoryItems: many(inventoryItems),
 }));
@@ -168,10 +228,34 @@ export const inventoryItemsRelations = relations(inventoryItems, ({ one, many })
     fields: [inventoryItems.vendorId],
     references: [vendors.id],
   }),
+  location: one(locations, {
+    fields: [inventoryItems.locationId],
+    references: [locations.id],
+  }),
   recipeIngredients: many(recipeIngredients),
+  menuItemIngredients: many(menuItemIngredients),
   purchaseOrderItems: many(purchaseOrderItems),
   wasteEntries: many(wasteEntries),
   transactions: many(inventoryTransactions),
+}));
+
+export const menuItemsRelations = relations(menuItems, ({ one, many }) => ({
+  location: one(locations, {
+    fields: [menuItems.locationId],
+    references: [locations.id],
+  }),
+  ingredients: many(menuItemIngredients),
+}));
+
+export const menuItemIngredientsRelations = relations(menuItemIngredients, ({ one }) => ({
+  menuItem: one(menuItems, {
+    fields: [menuItemIngredients.menuItemId],
+    references: [menuItems.id],
+  }),
+  inventoryItem: one(inventoryItems, {
+    fields: [menuItemIngredients.inventoryItemId],
+    references: [inventoryItems.id],
+  }),
 }));
 
 export const recipesRelations = relations(recipes, ({ many }) => ({
@@ -193,6 +277,10 @@ export const purchaseOrdersRelations = relations(purchaseOrders, ({ one, many })
   vendor: one(vendors, {
     fields: [purchaseOrders.vendorId],
     references: [vendors.id],
+  }),
+  location: one(locations, {
+    fields: [purchaseOrders.locationId],
+    references: [locations.id],
   }),
   creator: one(users, {
     fields: [purchaseOrders.createdBy],
@@ -217,6 +305,10 @@ export const wasteEntriesRelations = relations(wasteEntries, ({ one }) => ({
     fields: [wasteEntries.inventoryItemId],
     references: [inventoryItems.id],
   }),
+  location: one(locations, {
+    fields: [wasteEntries.locationId],
+    references: [locations.id],
+  }),
   reporter: one(users, {
     fields: [wasteEntries.reportedBy],
     references: [users.id],
@@ -228,6 +320,10 @@ export const inventoryTransactionsRelations = relations(inventoryTransactions, (
     fields: [inventoryTransactions.inventoryItemId],
     references: [inventoryItems.id],
   }),
+  location: one(locations, {
+    fields: [inventoryTransactions.locationId],
+    references: [locations.id],
+  }),
   creator: one(users, {
     fields: [inventoryTransactions.createdBy],
     references: [users.id],
@@ -235,11 +331,14 @@ export const inventoryTransactionsRelations = relations(inventoryTransactions, (
 }));
 
 // Insert schemas
+export const insertLocationSchema = createInsertSchema(locations).omit({ id: true, createdAt: true });
 export const insertCategorySchema = createInsertSchema(categories).omit({ id: true, createdAt: true });
 export const insertVendorSchema = createInsertSchema(vendors).omit({ id: true, createdAt: true });
 export const insertInventoryItemSchema = createInsertSchema(inventoryItems).omit({ id: true, createdAt: true, updatedAt: true });
 export const insertRecipeSchema = createInsertSchema(recipes).omit({ id: true, createdAt: true, updatedAt: true });
 export const insertRecipeIngredientSchema = createInsertSchema(recipeIngredients).omit({ id: true });
+export const insertMenuItemSchema = createInsertSchema(menuItems).omit({ id: true, createdAt: true, updatedAt: true });
+export const insertMenuItemIngredientSchema = createInsertSchema(menuItemIngredients).omit({ id: true });
 export const insertPurchaseOrderSchema = createInsertSchema(purchaseOrders).omit({ id: true, createdAt: true, updatedAt: true });
 export const insertPurchaseOrderItemSchema = createInsertSchema(purchaseOrderItems).omit({ id: true });
 export const insertWasteEntrySchema = createInsertSchema(wasteEntries).omit({ id: true, createdAt: true });
@@ -248,6 +347,8 @@ export const insertInventoryTransactionSchema = createInsertSchema(inventoryTran
 // Types
 export type UpsertUser = typeof users.$inferInsert;
 export type User = typeof users.$inferSelect;
+export type Location = typeof locations.$inferSelect;
+export type InsertLocation = z.infer<typeof insertLocationSchema>;
 export type Category = typeof categories.$inferSelect;
 export type InsertCategory = z.infer<typeof insertCategorySchema>;
 export type Vendor = typeof vendors.$inferSelect;
@@ -258,6 +359,10 @@ export type Recipe = typeof recipes.$inferSelect;
 export type InsertRecipe = z.infer<typeof insertRecipeSchema>;
 export type RecipeIngredient = typeof recipeIngredients.$inferSelect;
 export type InsertRecipeIngredient = z.infer<typeof insertRecipeIngredientSchema>;
+export type MenuItem = typeof menuItems.$inferSelect;
+export type InsertMenuItem = z.infer<typeof insertMenuItemSchema>;
+export type MenuItemIngredient = typeof menuItemIngredients.$inferSelect;
+export type InsertMenuItemIngredient = z.infer<typeof insertMenuItemIngredientSchema>;
 export type PurchaseOrder = typeof purchaseOrders.$inferSelect;
 export type InsertPurchaseOrder = z.infer<typeof insertPurchaseOrderSchema>;
 export type PurchaseOrderItem = typeof purchaseOrderItems.$inferSelect;

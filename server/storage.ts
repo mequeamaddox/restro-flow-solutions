@@ -1,16 +1,21 @@
 import {
   users,
+  locations,
   categories,
   vendors,
   inventoryItems,
   recipes,
   recipeIngredients,
+  menuItems,
+  menuItemIngredients,
   purchaseOrders,
   purchaseOrderItems,
   wasteEntries,
   inventoryTransactions,
   type User,
   type UpsertUser,
+  type Location,
+  type InsertLocation,
   type Category,
   type InsertCategory,
   type Vendor,
@@ -21,6 +26,10 @@ import {
   type InsertRecipe,
   type RecipeIngredient,
   type InsertRecipeIngredient,
+  type MenuItem,
+  type InsertMenuItem,
+  type MenuItemIngredient,
+  type InsertMenuItemIngredient,
   type PurchaseOrder,
   type InsertPurchaseOrder,
   type PurchaseOrderItem,
@@ -37,6 +46,10 @@ export interface IStorage {
   // User operations (required for Replit Auth)
   getUser(id: string): Promise<User | undefined>;
   upsertUser(user: UpsertUser): Promise<User>;
+
+  // Location operations
+  getLocations(): Promise<Location[]>;
+  createLocation(location: InsertLocation): Promise<Location>;
 
   // Category operations
   getCategories(): Promise<Category[]>;
@@ -101,6 +114,19 @@ export class DatabaseStorage implements IStorage {
   async getUser(id: string): Promise<User | undefined> {
     const [user] = await db.select().from(users).where(eq(users.id, id));
     return user;
+  }
+
+  // Location operations
+  async getLocations(): Promise<Location[]> {
+    return await db.select().from(locations).orderBy(locations.name);
+  }
+
+  async createLocation(locationData: InsertLocation): Promise<Location> {
+    const [location] = await db
+      .insert(locations)
+      .values(locationData)
+      .returning();
+    return location;
   }
 
   async upsertUser(userData: UpsertUser): Promise<User> {
@@ -453,3 +479,71 @@ export class DatabaseStorage implements IStorage {
 }
 
 export const storage = new DatabaseStorage();
+
+// Initialize default locations and categories
+async function initializeData() {
+  try {
+    // Initialize locations
+    const existingLocations = await storage.getLocations();
+    if (existingLocations.length === 0) {
+      // Create default locations for table-top restaurant and bar & grill
+      await storage.createLocation({
+        name: "Main Restaurant",
+        type: "restaurant",
+        address: "123 Main Street, Downtown",
+        manager: "Restaurant Manager",
+        isActive: true,
+      });
+      
+      await storage.createLocation({
+        name: "Bar & Grill",
+        type: "bar",
+        address: "456 Nightlife Avenue, Entertainment District",
+        manager: "Bar Manager", 
+        isActive: true,
+      });
+      
+      console.log("Default locations created successfully");
+    }
+
+    // Initialize categories
+    const existingCategories = await storage.getCategories();
+    if (existingCategories.length === 0) {
+      // Restaurant categories
+      const restaurantCategories = [
+        { name: "Proteins", description: "Meat, poultry, seafood", type: "kitchen" },
+        { name: "Vegetables", description: "Fresh vegetables and herbs", type: "kitchen" },
+        { name: "Dairy", description: "Milk, cheese, cream, butter", type: "kitchen" },
+        { name: "Grains & Starches", description: "Rice, pasta, bread, potatoes", type: "kitchen" },
+        { name: "Condiments & Sauces", description: "Sauces, spices, seasonings", type: "kitchen" },
+      ];
+
+      // Bar categories
+      const barCategories = [
+        { name: "Spirits", description: "Whiskey, vodka, rum, gin, tequila", type: "bar" },
+        { name: "Wine", description: "Red, white, sparkling wines", type: "bar" },
+        { name: "Beer", description: "Draft, bottled, and canned beer", type: "bar" },
+        { name: "Mixers", description: "Juices, sodas, tonic, simple syrups", type: "bar" },
+        { name: "Bar Tools", description: "Strainers, jiggers, shakers", type: "bar" },
+        { name: "Garnishes", description: "Olives, cherries, citrus, herbs", type: "bar" },
+      ];
+
+      // General categories
+      const generalCategories = [
+        { name: "Cleaning Supplies", description: "Sanitizers, detergents, paper goods", type: "general" },
+        { name: "Office Supplies", description: "Paper, pens, receipt books", type: "general" },
+      ];
+
+      for (const category of [...restaurantCategories, ...barCategories, ...generalCategories]) {
+        await storage.createCategory(category);
+      }
+
+      console.log("Default categories created successfully");
+    }
+  } catch (error) {
+    console.error("Error initializing data:", error);
+  }
+}
+
+// Initialize on startup
+initializeData();

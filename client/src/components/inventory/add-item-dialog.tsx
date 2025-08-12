@@ -11,6 +11,8 @@ import { insertInventoryItemSchema, type InsertInventoryItem, type Category, typ
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { isUnauthorizedError } from "@/lib/authUtils";
+import { useLocation } from "@/contexts/LocationContext";
+import { Checkbox } from "@/components/ui/checkbox";
 import { ScanLine } from "lucide-react";
 
 interface AddItemDialogProps {
@@ -23,6 +25,7 @@ interface AddItemDialogProps {
 
 export default function AddItemDialog({ isOpen, onClose, onSuccess, categories, vendors }: AddItemDialogProps) {
   const { toast } = useToast();
+  const { currentLocation } = useLocation();
 
   const form = useForm<InsertInventoryItem>({
     resolver: zodResolver(insertInventoryItemSchema),
@@ -30,12 +33,16 @@ export default function AddItemDialog({ isOpen, onClose, onSuccess, categories, 
       name: "",
       description: null,
       categoryId: null,
+      locationId: currentLocation?.id || "",
       quantity: "0",
       unit: "lbs",
       costPerUnit: "0",
       reorderLevel: "0",
       vendorId: null,
       barcode: null,
+      alcoholContent: null,
+      isAlcoholic: false,
+      bottleSize: null,
     },
   });
 

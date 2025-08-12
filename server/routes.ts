@@ -3,6 +3,7 @@ import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { setupAuth, isAuthenticated } from "./replitAuth";
 import {
+  insertLocationSchema,
   insertCategorySchema,
   insertVendorSchema,
   insertInventoryItemSchema,
@@ -27,6 +28,28 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error fetching user:", error);
       res.status(500).json({ message: "Failed to fetch user" });
+    }
+  });
+
+  // Locations
+  app.get('/api/locations', isAuthenticated, async (req, res) => {
+    try {
+      const locations = await storage.getLocations();
+      res.json(locations);
+    } catch (error) {
+      console.error("Error fetching locations:", error);
+      res.status(500).json({ message: "Failed to fetch locations" });
+    }
+  });
+
+  app.post('/api/locations', isAuthenticated, async (req, res) => {
+    try {
+      const locationData = insertLocationSchema.parse(req.body);
+      const location = await storage.createLocation(locationData);
+      res.status(201).json(location);
+    } catch (error) {
+      console.error("Error creating location:", error);
+      res.status(400).json({ message: "Failed to create location" });
     }
   });
 
