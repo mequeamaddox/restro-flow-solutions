@@ -7,6 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Plus, Search, Filter } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { isUnauthorizedError } from "@/lib/authUtils";
+import { useLocation } from "@/contexts/LocationContext";
 import InventoryTable from "@/components/inventory/inventory-table";
 import AddItemDialog from "@/components/inventory/add-item-dialog";
 
@@ -16,9 +17,17 @@ export default function Inventory() {
   const [categoryFilter, setCategoryFilter] = useState("");
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const { currentLocation } = useLocation();
 
   const { data: inventoryItems, isLoading } = useQuery({
-    queryKey: ['/api/inventory'],
+    queryKey: ['/api/inventory', currentLocation?.id],
+    queryFn: () => {
+      const params = currentLocation?.id ? `?locationId=${currentLocation.id}` : '';
+      return fetch(`/api/inventory${params}`, {
+        headers: { 'Content-Type': 'application/json' }
+      }).then(res => res.json());
+    },
+    enabled: !!currentLocation,
   });
 
   const { data: categories } = useQuery({

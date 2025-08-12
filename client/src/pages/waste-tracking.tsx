@@ -16,6 +16,7 @@ import { useToast } from "@/hooks/use-toast";
 import { isUnauthorizedError } from "@/lib/authUtils";
 import { apiRequest } from "@/lib/queryClient";
 import { format } from "date-fns";
+import { useLocation } from "@/contexts/LocationContext";
 
 export default function WasteTracking() {
   const [searchTerm, setSearchTerm] = useState("");
@@ -23,17 +24,39 @@ export default function WasteTracking() {
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const { currentLocation } = useLocation();
 
   const { data: wasteEntries, isLoading } = useQuery({
-    queryKey: ['/api/waste'],
+    queryKey: ['/api/waste', currentLocation?.id],
+    queryFn: () => {
+      const params = currentLocation?.id ? `?locationId=${currentLocation.id}` : '';
+      return fetch(`/api/waste${params}`, {
+        headers: { 'Content-Type': 'application/json' }
+      }).then(res => res.json());
+    },
+    enabled: !!currentLocation,
   });
 
   const { data: inventoryItems } = useQuery({
-    queryKey: ['/api/inventory'],
+    queryKey: ['/api/inventory', currentLocation?.id],
+    queryFn: () => {
+      const params = currentLocation?.id ? `?locationId=${currentLocation.id}` : '';
+      return fetch(`/api/inventory${params}`, {
+        headers: { 'Content-Type': 'application/json' }
+      }).then(res => res.json());
+    },
+    enabled: !!currentLocation,
   });
 
   const { data: wasteStats } = useQuery({
-    queryKey: ['/api/waste/stats'],
+    queryKey: ['/api/waste/stats', currentLocation?.id],
+    queryFn: () => {
+      const params = currentLocation?.id ? `?locationId=${currentLocation.id}` : '';
+      return fetch(`/api/waste/stats${params}`, {
+        headers: { 'Content-Type': 'application/json' }
+      }).then(res => res.json());
+    },
+    enabled: !!currentLocation,
   });
 
   const form = useForm<InsertWasteEntry>({

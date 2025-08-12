@@ -171,7 +171,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Inventory Items
   app.get('/api/inventory', isAuthenticated, async (req, res) => {
     try {
-      const items = await storage.getInventoryItems();
+      const locationId = req.query.locationId as string;
+      const items = await storage.getInventoryItems(locationId);
       res.json(items);
     } catch (error) {
       console.error("Error fetching inventory items:", error);
@@ -181,7 +182,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.get('/api/inventory/low-stock', isAuthenticated, async (req, res) => {
     try {
-      const items = await storage.getLowStockItems();
+      const locationId = req.query.locationId as string;
+      const items = await storage.getLowStockItems(locationId);
       res.json(items);
     } catch (error) {
       console.error("Error fetching low stock items:", error);
@@ -425,7 +427,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Waste Tracking
   app.get('/api/waste', isAuthenticated, async (req, res) => {
     try {
-      const entries = await storage.getWasteEntries();
+      const locationId = req.query.locationId as string;
+      const entries = await storage.getWasteEntries(locationId);
       res.json(entries);
     } catch (error) {
       console.error("Error fetching waste entries:", error);

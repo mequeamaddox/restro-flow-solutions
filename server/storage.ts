@@ -196,18 +196,23 @@ export class DatabaseStorage implements IStorage {
   }
 
   // Inventory operations
-  async getInventoryItems(): Promise<(InventoryItem & { category?: Category; vendor?: Vendor })[]> {
-    return await db
+  async getInventoryItems(locationId?: string): Promise<(InventoryItem & { category?: Category; vendor?: Vendor })[]> {
+    let query = db
       .select()
       .from(inventoryItems)
       .leftJoin(categories, eq(inventoryItems.categoryId, categories.id))
       .leftJoin(vendors, eq(inventoryItems.vendorId, vendors.id))
-      .orderBy(inventoryItems.name)
-      .then(rows => rows.map(row => ({
-        ...row.inventory_items,
-        category: row.categories || undefined,
-        vendor: row.vendors || undefined,
-      })));
+      .orderBy(inventoryItems.name);
+
+    if (locationId) {
+      query = query.where(eq(inventoryItems.locationId, locationId));
+    }
+
+    return await query.then(rows => rows.map(row => ({
+      ...row.inventory_items,
+      category: row.categories || undefined,
+      vendor: row.vendors || undefined,
+    })));
   }
 
   async getInventoryItem(id: string): Promise<(InventoryItem & { category?: Category; vendor?: Vendor }) | undefined> {
@@ -245,19 +250,29 @@ export class DatabaseStorage implements IStorage {
     await db.delete(inventoryItems).where(eq(inventoryItems.id, id));
   }
 
-  async getLowStockItems(): Promise<(InventoryItem & { category?: Category; vendor?: Vendor })[]> {
-    return await db
+  async getLowStockItems(locationId?: string): Promise<(InventoryItem & { category?: Category; vendor?: Vendor })[]> {
+    let query = db
       .select()
       .from(inventoryItems)
       .leftJoin(categories, eq(inventoryItems.categoryId, categories.id))
       .leftJoin(vendors, eq(inventoryItems.vendorId, vendors.id))
       .where(sql`${inventoryItems.quantity} <= ${inventoryItems.reorderLevel}`)
-      .orderBy(inventoryItems.name)
-      .then(rows => rows.map(row => ({
-        ...row.inventory_items,
-        category: row.categories || undefined,
-        vendor: row.vendors || undefined,
-      })));
+      .orderBy(inventoryItems.name);
+
+    if (locationId) {
+      query = query.where(and(
+        sql`${inventoryItems.quantity} <= ${inventoryItems.reorderLevel}`,
+        eq(inventoryItems.locationId, locationId)
+      ));
+    } else {
+      query = query.where(sql`${inventoryItems.quantity} <= ${inventoryItems.reorderLevel}`);
+    }
+
+    return await query.then(rows => rows.map(row => ({
+      ...row.inventory_items,
+      category: row.categories || undefined,
+      vendor: row.vendors || undefined,
+    })));
   }
 
   async getTotalInventoryValue(): Promise<number> {
@@ -386,18 +401,23 @@ export class DatabaseStorage implements IStorage {
   }
 
   // Waste tracking operations
-  async getWasteEntries(): Promise<(WasteEntry & { inventoryItem: InventoryItem; reporter?: User })[]> {
-    return await db
+  async getWasteEntries(locationId?: string): Promise<(WasteEntry & { inventoryItem: InventoryItem; reporter?: User })[]> {
+    let query = db
       .select()
       .from(wasteEntries)
       .innerJoin(inventoryItems, eq(wasteEntries.inventoryItemId, inventoryItems.id))
       .leftJoin(users, eq(wasteEntries.reportedBy, users.id))
-      .orderBy(desc(wasteEntries.createdAt))
-      .then(rows => rows.map(row => ({
-        ...row.waste_entries,
-        inventoryItem: row.inventory_items,
-        reporter: row.users || undefined,
-      })));
+      .orderBy(desc(wasteEntries.createdAt));
+
+    if (locationId) {
+      query = query.where(eq(inventoryItems.locationId, locationId));
+    }
+
+    return await query.then(rows => rows.map(row => ({
+      ...row.waste_entries,
+      inventoryItem: row.inventory_items,
+      reporter: row.users || undefined,
+    })));
   }
 
   async createWasteEntry(entry: InsertWasteEntry): Promise<WasteEntry> {
@@ -532,6 +552,8 @@ async function initializeData() {
       const generalCategories = [
         { name: "Cleaning Supplies", description: "Sanitizers, detergents, paper goods", type: "general" },
         { name: "Office Supplies", description: "Paper, pens, receipt books", type: "general" },
+        { name: "Packaging & Disposables", description: "To-go boxes, tray liners, cups, napkins", type: "general" },
+        { name: "Small Wares", description: "Portion cups, lids, straws, utensils", type: "general" },
       ];
 
       for (const category of [...restaurantCategories, ...barCategories, ...generalCategories]) {
