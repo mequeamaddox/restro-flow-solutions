@@ -13,7 +13,9 @@ import { useToast } from "@/hooks/use-toast";
 import { isUnauthorizedError } from "@/lib/authUtils";
 import { useLocation } from "@/contexts/LocationContext";
 import { Checkbox } from "@/components/ui/checkbox";
-import { ScanLine } from "lucide-react";
+import { ScanLine, Camera } from "lucide-react";
+import BarcodeScanner from "@/components/barcode/barcode-scanner";
+import { useState } from "react";
 
 interface AddItemDialogProps {
   isOpen: boolean;
@@ -26,6 +28,7 @@ interface AddItemDialogProps {
 export default function AddItemDialog({ isOpen, onClose, onSuccess, categories, vendors }: AddItemDialogProps) {
   const { toast } = useToast();
   const { currentLocation } = useLocation();
+  const [isScannerOpen, setIsScannerOpen] = useState(false);
 
   const form = useForm<InsertInventoryItem>({
     resolver: zodResolver(insertInventoryItemSchema),
@@ -76,6 +79,15 @@ export default function AddItemDialog({ isOpen, onClose, onSuccess, categories, 
 
   const onSubmit = (data: InsertInventoryItem) => {
     createItemMutation.mutate(data);
+  };
+
+  const handleBarcodeScanned = (barcode: string) => {
+    form.setValue("barcode", barcode);
+    setIsScannerOpen(false);
+    toast({
+      title: "Barcode Scanned",
+      description: `Barcode ${barcode} added to the form`,
+    });
   };
 
   const handleClose = () => {
@@ -245,9 +257,20 @@ export default function AddItemDialog({ isOpen, onClose, onSuccess, categories, 
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>Barcode (Optional)</FormLabel>
-                  <FormControl>
-                    <Input placeholder="Scan or enter barcode" {...field} />
-                  </FormControl>
+                  <div className="flex space-x-2">
+                    <FormControl>
+                      <Input placeholder="Scan or enter barcode" {...field} className="flex-1" />
+                    </FormControl>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setIsScannerOpen(true)}
+                      className="px-3"
+                    >
+                      <Camera className="h-4 w-4" />
+                    </Button>
+                  </div>
                   <FormMessage />
                 </FormItem>
               )}
@@ -271,27 +294,28 @@ export default function AddItemDialog({ isOpen, onClose, onSuccess, categories, 
               )}
             />
             
-            <div className="flex items-center justify-between pt-6 border-t border-gray-200">
-              <Button type="button" variant="outline">
-                <ScanLine className="h-4 w-4 mr-2" />
-                Scan Barcode
+            <div className="flex justify-end space-x-3 pt-6 border-t border-gray-200">
+              <Button type="button" variant="outline" onClick={handleClose}>
+                Cancel
               </Button>
-              <div className="space-x-3">
-                <Button type="button" variant="outline" onClick={handleClose}>
-                  Cancel
-                </Button>
-                <Button 
-                  type="submit" 
-                  disabled={createItemMutation.isPending}
-                  className="bg-primary-600 hover:bg-primary-700"
-                >
-                  {createItemMutation.isPending ? "Adding..." : "Add Item"}
-                </Button>
-              </div>
+              <Button 
+                type="submit" 
+                disabled={createItemMutation.isPending}
+                className="bg-primary-600 hover:bg-primary-700"
+              >
+                {createItemMutation.isPending ? "Adding..." : "Add Item"}
+              </Button>
             </div>
           </form>
         </Form>
       </DialogContent>
+      
+      {/* Barcode Scanner */}
+      <BarcodeScanner
+        isOpen={isScannerOpen}
+        onClose={() => setIsScannerOpen(false)}
+        onScan={handleBarcodeScanned}
+      />
     </Dialog>
   );
 }

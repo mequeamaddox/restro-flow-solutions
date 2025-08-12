@@ -15,6 +15,7 @@ import PurchaseOrders from "@/pages/purchase-orders";
 import Reports from "@/pages/reports";
 import WasteTracking from "@/pages/waste-tracking";
 import PosIntegration from "@/pages/pos-integration";
+import BarcodeTest from "@/pages/barcode-test";
 import Sidebar from "@/components/layout/sidebar";
 import Header from "@/components/layout/header";
 
@@ -46,6 +47,7 @@ function Router() {
               <Route path="/reports" component={Reports} />
               <Route path="/waste-tracking" component={WasteTracking} />
               <Route path="/pos-integration" component={PosIntegration} />
+              <Route path="/barcode-test" component={BarcodeTest} />
               <Route component={NotFound} />
             </Switch>
           </main>
