@@ -78,16 +78,16 @@ export default function Sidebar() {
               return (
                 <li key={item.name}>
                   <Link href={item.href}>
-                    <a
+                    <div
                       className={cn(
-                        "flex items-center px-6 py-3 text-gray-700 hover:bg-gray-50 transition-colors",
+                        "flex items-center px-6 py-3 text-gray-700 hover:bg-gray-50 transition-colors cursor-pointer",
                         isActive && "bg-primary-50 border-r-4 border-primary-500 text-primary-700"
                       )}
                       onClick={() => setIsMobileMenuOpen(false)}
                     >
                       <Icon className="h-5 w-5 mr-3" />
                       {item.name}
-                    </a>
+                    </div>
                   </Link>
                 </li>
               );

@@ -28,14 +28,14 @@ export default function AddItemDialog({ isOpen, onClose, onSuccess, categories, 
     resolver: zodResolver(insertInventoryItemSchema),
     defaultValues: {
       name: "",
-      description: "",
-      categoryId: "",
+      description: null,
+      categoryId: null,
       quantity: "0",
       unit: "lbs",
       costPerUnit: "0",
       reorderLevel: "0",
-      vendorId: "",
-      barcode: "",
+      vendorId: null,
+      barcode: null,
     },
   });
 
@@ -111,11 +111,17 @@ export default function AddItemDialog({ isOpen, onClose, onSuccess, categories, 
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
-                        {categories.map((category) => (
-                          <SelectItem key={category.id} value={category.id}>
-                            {category.name}
+                        {categories.length > 0 ? (
+                          categories.map((category) => (
+                            <SelectItem key={category.id} value={category.id}>
+                              {category.name}
+                            </SelectItem>
+                          ))
+                        ) : (
+                          <SelectItem value="no-categories" disabled>
+                            No categories available
                           </SelectItem>
-                        ))}
+                        )}
                       </SelectContent>
                     </Select>
                     <FormMessage />
@@ -194,11 +200,17 @@ export default function AddItemDialog({ isOpen, onClose, onSuccess, categories, 
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
-                        {vendors.map((vendor) => (
-                          <SelectItem key={vendor.id} value={vendor.id}>
-                            {vendor.name}
+                        {vendors.length > 0 ? (
+                          vendors.map((vendor) => (
+                            <SelectItem key={vendor.id} value={vendor.id}>
+                              {vendor.name}
+                            </SelectItem>
+                          ))
+                        ) : (
+                          <SelectItem value="no-vendors" disabled>
+                            No vendors available
                           </SelectItem>
-                        ))}
+                        )}
                       </SelectContent>
                     </Select>
                     <FormMessage />

@@ -19,7 +19,7 @@ export default function PurchaseOrders() {
   const filteredOrders = purchaseOrders?.filter(order => {
     const matchesSearch = order.orderNumber.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          order.vendor?.name?.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesStatus = !statusFilter || order.status === statusFilter;
+    const matchesStatus = !statusFilter || statusFilter === 'all' || order.status === statusFilter;
     return matchesSearch && matchesStatus;
   });
 
@@ -70,7 +70,7 @@ export default function PurchaseOrders() {
                 <SelectValue placeholder="All Statuses" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">All Statuses</SelectItem>
+                <SelectItem value="all">All Statuses</SelectItem>
                 <SelectItem value="draft">Draft</SelectItem>
                 <SelectItem value="sent">Sent</SelectItem>
                 <SelectItem value="confirmed">Confirmed</SelectItem>

@@ -33,7 +33,7 @@ export default function Inventory() {
   const filteredItems = inventoryItems?.filter(item => {
     const matchesSearch = item.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          item.description?.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesCategory = !categoryFilter || item.categoryId === categoryFilter;
+    const matchesCategory = !categoryFilter || categoryFilter === 'all' || item.categoryId === categoryFilter;
     return matchesSearch && matchesCategory;
   });
 
@@ -82,7 +82,7 @@ export default function Inventory() {
                 <SelectValue placeholder="All Categories" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">All Categories</SelectItem>
+                <SelectItem value="all">All Categories</SelectItem>
                 {categories?.map((category) => (
                   <SelectItem key={category.id} value={category.id}>
                     {category.name}
