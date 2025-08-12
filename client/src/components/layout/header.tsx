@@ -1,13 +1,17 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Bell, Search, MapPin } from "lucide-react";
+import { Bell, Search, MapPin, Menu } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useQuery } from "@tanstack/react-query";
 import { useLocation } from "@/contexts/LocationContext";
 
-export default function Header() {
+interface HeaderProps {
+  onMobileMenuToggle?: () => void;
+}
+
+export default function Header({ onMobileMenuToggle }: HeaderProps = {}) {
   const [searchQuery, setSearchQuery] = useState("");
   const { currentLocation, setCurrentLocation, locations } = useLocation();
 
@@ -18,15 +22,28 @@ export default function Header() {
   const lowStockCount = lowStockItems?.length || 0;
 
   return (
-    <header className="bg-white shadow-sm border-b border-gray-200 sticky top-0 z-30 lg:ml-0">
-      <div className="flex items-center justify-between px-4 py-4 lg:px-6 lg:ml-0">
-        <div className="flex items-center lg:ml-0">
-          {/* Title is handled by individual pages */}
+    <header className="bg-white shadow-sm border-b border-gray-200 sticky top-0 z-30">
+      <div className="flex items-center justify-between px-4 py-4 lg:px-6">
+        <div className="flex items-center">
+          {/* Mobile menu button */}
+          <Button
+            variant="ghost"
+            size="sm"
+            className="lg:hidden mr-2"
+            onClick={onMobileMenuToggle}
+          >
+            <Menu className="h-6 w-6" />
+          </Button>
+          
+          {/* App title on mobile */}
+          <div className="lg:hidden">
+            <h1 className="text-lg font-semibold text-gray-900">RestroFlow</h1>
+          </div>
         </div>
         
-        <div className="flex items-center space-x-4">
-          {/* Location Selector */}
-          <div className="flex items-center space-x-2">
+        <div className="flex items-center space-x-2 lg:space-x-4">
+          {/* Location Selector - Hidden on mobile, shown in sidebar */}
+          <div className="hidden lg:flex items-center space-x-2">
             <MapPin className="h-4 w-4 text-gray-400" />
             <Select 
               value={currentLocation?.id} 
