@@ -16,6 +16,7 @@ import Reports from "@/pages/reports";
 import WasteTracking from "@/pages/waste-tracking";
 import PosIntegration from "@/pages/pos-integration";
 import BarcodeTest from "@/pages/barcode-test";
+import Settings from "@/pages/settings";
 import Sidebar from "@/components/layout/sidebar";
 import Header from "@/components/layout/header";
 
@@ -48,6 +49,7 @@ function Router() {
               <Route path="/waste-tracking" component={WasteTracking} />
               <Route path="/pos-integration" component={PosIntegration} />
               <Route path="/barcode-test" component={BarcodeTest} />
+              <Route path="/settings" component={Settings} />
               <Route component={NotFound} />
             </Switch>
           </main>

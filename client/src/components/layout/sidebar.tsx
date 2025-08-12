@@ -30,6 +30,7 @@ const navigation = [
   { name: 'Reports', href: '/reports', icon: BarChart3 },
   { name: 'Waste Tracking', href: '/waste-tracking', icon: Trash2 },
   { name: 'POS Integration', href: '/pos-integration', icon: CreditCard },
+  { name: 'Settings', href: '/settings', icon: Settings },
 ];
 
 export default function Sidebar() {
