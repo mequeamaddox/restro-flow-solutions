@@ -8,6 +8,7 @@ import RecentActivity from "@/components/dashboard/recent-activity";
 import QuickActions from "@/components/dashboard/quick-actions";
 import InventoryTable from "@/components/inventory/inventory-table";
 import LocationBanner from "@/components/location/location-banner";
+import QuickAddDashboard from "@/components/dashboard/quick-add-dashboard";
 
 export default function Dashboard() {
   const { currentLocation } = useLocation();
@@ -69,7 +70,10 @@ export default function Dashboard() {
         </div>
 
         {/* Quick Actions */}
-        <QuickActions />
+        <div className="space-y-6">
+          <QuickActions />
+          <QuickAddDashboard />
+        </div>
       </div>
 
       {/* Low Stock Alerts & Recent Activity */}

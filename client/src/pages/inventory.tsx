@@ -11,6 +11,7 @@ import { useLocation } from "@/contexts/LocationContext";
 import InventoryTable from "@/components/inventory/inventory-table";
 import AddItemDialog from "@/components/inventory/add-item-dialog";
 import LocationBanner from "@/components/location/location-banner";
+import QuickAddWidget from "@/components/inventory/quick-add-widget";
 
 export default function Inventory() {
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
@@ -74,46 +75,59 @@ export default function Inventory() {
         </Button>
       </div>
 
-      {/* Filters */}
-      <Card>
-        <CardContent className="pt-6">
-          <div className="flex flex-col md:flex-row gap-4">
-            <div className="relative flex-1">
-              <Search className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
-              <Input
-                placeholder="Search inventory items..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-10"
-              />
-            </div>
-            <Select value={categoryFilter} onValueChange={setCategoryFilter}>
-              <SelectTrigger className="w-full md:w-48">
-                <SelectValue placeholder="All Categories" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Categories</SelectItem>
-                {categories?.map((category) => (
-                  <SelectItem key={category.id} value={category.id}>
-                    {category.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-        </CardContent>
-      </Card>
+      {/* Main Content Layout */}
+      <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
+        {/* Main Content */}
+        <div className="lg:col-span-3 space-y-6">
+          {/* Filters */}
+          <Card>
+            <CardContent className="pt-6">
+              <div className="flex flex-col md:flex-row gap-4">
+                <div className="relative flex-1">
+                  <Search className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
+                  <Input
+                    placeholder="Search inventory items..."
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    className="pl-10"
+                  />
+                </div>
+                <Select value={categoryFilter} onValueChange={setCategoryFilter}>
+                  <SelectTrigger className="w-full md:w-48">
+                    <SelectValue placeholder="All Categories" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Categories</SelectItem>
+                    {categories?.map((category) => (
+                      <SelectItem key={category.id} value={category.id}>
+                        {category.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </CardContent>
+          </Card>
 
-      {/* Inventory Table */}
-      <Card>
-        <CardContent>
-          <InventoryTable 
-            items={filteredItems} 
-            isLoading={isLoading}
-            showPagination={true}
-          />
-        </CardContent>
-      </Card>
+          {/* Inventory Table */}
+          <Card>
+            <CardContent>
+              <InventoryTable 
+                items={filteredItems} 
+                isLoading={isLoading}
+                showPagination={true}
+              />
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Sidebar with Quick Add Widget */}
+        <div className="lg:col-span-1">
+          <div className="sticky top-6">
+            <QuickAddWidget />
+          </div>
+        </div>
+      </div>
 
       {/* Add Item Dialog */}
       <AddItemDialog
