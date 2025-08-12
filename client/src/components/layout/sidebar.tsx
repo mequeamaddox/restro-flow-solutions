@@ -154,13 +154,28 @@ export default function Sidebar({ isMobileMenuOpen = false, setIsMobileMenuOpen 
                 {(user as any)?.role || 'Staff'}
               </p>
             </div>
+            <Link href="/settings">
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setMobileMenuOpen(false)}
+                className="ml-2"
+                title="Settings"
+              >
+                <Settings className="h-4 w-4" />
+              </Button>
+            </Link>
+          </div>
+          
+          {/* Logout Button */}
+          <div className="mt-2 pt-2 border-t border-gray-100">
             <Button
               variant="ghost"
               size="sm"
               onClick={() => window.location.href = '/api/logout'}
-              className="ml-2"
+              className="w-full justify-start text-red-600 hover:text-red-700 hover:bg-red-50"
             >
-              <Settings className="h-4 w-4" />
+              Logout
             </Button>
           </div>
         </div>
