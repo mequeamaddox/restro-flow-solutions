@@ -10,6 +10,7 @@ import { isUnauthorizedError } from "@/lib/authUtils";
 import { useLocation } from "@/contexts/LocationContext";
 import InventoryTable from "@/components/inventory/inventory-table";
 import AddItemDialog from "@/components/inventory/add-item-dialog";
+import LocationBanner from "@/components/location/location-banner";
 
 export default function Inventory() {
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
@@ -19,22 +20,16 @@ export default function Inventory() {
   const queryClient = useQueryClient();
   const { currentLocation } = useLocation();
 
-  const { data: inventoryItems, isLoading } = useQuery({
+  const { data: inventoryItems = [], isLoading } = useQuery({
     queryKey: ['/api/inventory', currentLocation?.id],
-    queryFn: () => {
-      const params = currentLocation?.id ? `?locationId=${currentLocation.id}` : '';
-      return fetch(`/api/inventory${params}`, {
-        headers: { 'Content-Type': 'application/json' }
-      }).then(res => res.json());
-    },
     enabled: !!currentLocation,
   });
 
-  const { data: categories } = useQuery({
+  const { data: categories = [] } = useQuery({
     queryKey: ['/api/categories'],
   });
 
-  const { data: vendors } = useQuery({
+  const { data: vendors = [] } = useQuery({
     queryKey: ['/api/vendors'],
   });
 
@@ -58,15 +53,21 @@ export default function Inventory() {
 
   return (
     <div className="p-4 lg:p-6 space-y-6">
+      {/* Location Banner */}
+      <LocationBanner />
+      
       {/* Page Header */}
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-semibold text-gray-900">Inventory Management</h1>
-          <p className="text-gray-600">Track and manage your restaurant inventory</p>
+          <p className="text-gray-600">
+            {currentLocation ? `Managing inventory for ${currentLocation.name}` : 'Select a location to view inventory'}
+          </p>
         </div>
         <Button 
           onClick={() => setIsAddDialogOpen(true)}
           className="bg-primary-600 hover:bg-primary-700"
+          disabled={!currentLocation}
         >
           <Plus className="h-4 w-4 mr-2" />
           Add Item

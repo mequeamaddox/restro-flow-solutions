@@ -1,6 +1,6 @@
 import { createContext, useContext, useState, ReactNode, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Location } from "@shared/schema";
+import type { Location } from "@shared/schema";
 
 interface LocationContextType {
   currentLocation: Location | null;
@@ -14,7 +14,7 @@ const LocationContext = createContext<LocationContextType | undefined>(undefined
 export function LocationProvider({ children }: { children: ReactNode }) {
   const [currentLocation, setCurrentLocationState] = useState<Location | null>(null);
 
-  const { data: locations = [], isLoading } = useQuery({
+  const { data: locations = [], isLoading } = useQuery<Location[]>({
     queryKey: ['/api/locations'],
   });
 

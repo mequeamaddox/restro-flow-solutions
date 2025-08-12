@@ -29,7 +29,17 @@ export const getQueryFn: <T>(options: {
 }) => QueryFunction<T> =
   ({ on401: unauthorizedBehavior }) =>
   async ({ queryKey }) => {
-    const res = await fetch(queryKey.join("/") as string, {
+    let url = queryKey[0] as string;
+    
+    // Handle location-specific queries
+    if (queryKey.length > 1 && queryKey[1]) {
+      const locationId = queryKey[1] as string;
+      if (url.includes('/api/inventory') || url.includes('/api/dashboard') || url.includes('/api/waste')) {
+        url += url.includes('?') ? `&locationId=${locationId}` : `?locationId=${locationId}`;
+      }
+    }
+
+    const res = await fetch(url, {
       credentials: "include",
     });
 

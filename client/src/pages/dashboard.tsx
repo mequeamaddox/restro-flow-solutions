@@ -1,31 +1,43 @@
 import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { DollarSign, AlertTriangle, TrendingUp, Trash2 } from "lucide-react";
+import { useLocation } from "@/contexts/LocationContext";
 import MetricsCards from "@/components/dashboard/metrics-cards";
 import LowStockAlerts from "@/components/dashboard/low-stock-alerts";
 import RecentActivity from "@/components/dashboard/recent-activity";
 import QuickActions from "@/components/dashboard/quick-actions";
 import InventoryTable from "@/components/inventory/inventory-table";
+import LocationBanner from "@/components/location/location-banner";
 
 export default function Dashboard() {
+  const { currentLocation } = useLocation();
+
   const { data: metrics, isLoading: metricsLoading } = useQuery({
-    queryKey: ['/api/dashboard/metrics'],
+    queryKey: ['/api/dashboard/metrics', currentLocation?.id],
+    enabled: !!currentLocation,
   });
 
-  const { data: lowStockItems, isLoading: lowStockLoading } = useQuery({
-    queryKey: ['/api/inventory/low-stock'],
+  const { data: lowStockItems = [], isLoading: lowStockLoading } = useQuery({
+    queryKey: ['/api/inventory/low-stock', currentLocation?.id],
+    enabled: !!currentLocation,
   });
 
-  const { data: inventoryItems, isLoading: inventoryLoading } = useQuery({
-    queryKey: ['/api/inventory'],
+  const { data: inventoryItems = [], isLoading: inventoryLoading } = useQuery({
+    queryKey: ['/api/inventory', currentLocation?.id],
+    enabled: !!currentLocation,
   });
 
   return (
     <div className="p-4 lg:p-6 space-y-6">
+      {/* Location Banner */}
+      <LocationBanner />
+      
       {/* Page Header */}
       <div>
         <h1 className="text-2xl font-semibold text-gray-900">Dashboard</h1>
-        <p className="text-gray-600">Overview of your restaurant inventory</p>
+        <p className="text-gray-600">
+          {currentLocation ? `Overview of ${currentLocation.name} inventory` : 'Select a location to view dashboard'}
+        </p>
       </div>
 
       {/* Key Metrics */}

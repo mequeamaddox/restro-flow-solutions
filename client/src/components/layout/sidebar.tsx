@@ -1,7 +1,9 @@
 import { useState } from "react";
-import { Link, useLocation } from "wouter";
+import { Link, useLocation as useWouterLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/useAuth";
+import { useLocation } from "@/contexts/LocationContext";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { 
   LayoutDashboard, 
   Package, 
@@ -14,7 +16,8 @@ import {
   Menu,
   X,
   Utensils,
-  CreditCard
+  CreditCard,
+  MapPin
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -30,9 +33,10 @@ const navigation = [
 ];
 
 export default function Sidebar() {
-  const [location] = useLocation();
+  const [currentPath] = useWouterLocation();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const { user } = useAuth();
+  const { currentLocation, setCurrentLocation, locations, isLoading } = useLocation();
 
   return (
     <>
@@ -61,12 +65,46 @@ export default function Sidebar() {
       )}>
         {/* Header */}
         <div className="p-6 border-b border-gray-200">
-          <div className="flex items-center">
+          <div className="flex items-center mb-4">
             <Utensils className="h-8 w-8 text-primary-600 mr-3" />
             <div>
               <h1 className="text-xl font-bold text-primary-800">RestroFlow</h1>
-              <p className="text-sm text-gray-600">Main Street Bistro</p>
+              <p className="text-sm text-gray-600">Inventory Management</p>
             </div>
+          </div>
+          
+          {/* Location Switcher */}
+          <div className="space-y-2">
+            <div className="flex items-center text-xs font-medium text-gray-500 uppercase tracking-wide">
+              <MapPin className="h-3 w-3 mr-1" />
+              Current Location
+            </div>
+            <Select 
+              value={currentLocation?.id || ""} 
+              onValueChange={(value) => {
+                const location = locations.find(loc => loc.id === value);
+                if (location) setCurrentLocation(location);
+              }}
+              disabled={isLoading}
+            >
+              <SelectTrigger className="w-full">
+                <SelectValue placeholder="Select location..." />
+              </SelectTrigger>
+              <SelectContent>
+                {locations.map((location) => (
+                  <SelectItem key={location.id} value={location.id}>
+                    <div className="flex items-center">
+                      <div className={cn(
+                        "w-2 h-2 rounded-full mr-2",
+                        location.type === 'restaurant' ? 'bg-blue-500' : 
+                        location.type === 'bar' ? 'bg-purple-500' : 'bg-gray-500'
+                      )}></div>
+                      {location.name}
+                    </div>
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
         </div>
 
@@ -74,7 +112,7 @@ export default function Sidebar() {
         <nav className="mt-6 flex-1">
           <ul className="space-y-1">
             {navigation.map((item) => {
-              const isActive = location === item.href;
+              const isActive = currentPath === item.href;
               const Icon = item.icon;
               
               return (
@@ -101,14 +139,14 @@ export default function Sidebar() {
         <div className="absolute bottom-0 left-0 right-0 p-6 border-t border-gray-200">
           <div className="flex items-center">
             <div className="w-8 h-8 bg-primary-500 rounded-full flex items-center justify-center text-white text-sm font-medium">
-              {user?.firstName ? user.firstName.charAt(0) : user?.email?.charAt(0) || 'U'}
+              {(user as any)?.firstName ? (user as any).firstName.charAt(0) : (user as any)?.email?.charAt(0) || 'U'}
             </div>
             <div className="ml-3 flex-1 min-w-0">
               <p className="text-sm font-medium text-gray-700 truncate">
-                {user?.firstName || user?.email || 'User'}
+                {(user as any)?.firstName || (user as any)?.email || 'User'}
               </p>
               <p className="text-xs text-gray-500 truncate">
-                {user?.role || 'Staff'}
+                {(user as any)?.role || 'Staff'}
               </p>
             </div>
             <Button
