@@ -1,0 +1,64 @@
+import { Switch, Route } from "wouter";
+import { queryClient } from "./lib/queryClient";
+import { QueryClientProvider } from "@tanstack/react-query";
+import { Toaster } from "@/components/ui/toaster";
+import { TooltipProvider } from "@/components/ui/tooltip";
+import { useAuth } from "@/hooks/useAuth";
+import NotFound from "@/pages/not-found";
+import Landing from "@/pages/landing";
+import Dashboard from "@/pages/dashboard";
+import Inventory from "@/pages/inventory";
+import Recipes from "@/pages/recipes";
+import Vendors from "@/pages/vendors";
+import PurchaseOrders from "@/pages/purchase-orders";
+import Reports from "@/pages/reports";
+import WasteTracking from "@/pages/waste-tracking";
+import Sidebar from "@/components/layout/sidebar";
+import Header from "@/components/layout/header";
+
+function Router() {
+  const { isAuthenticated, isLoading } = useAuth();
+
+  if (isLoading || !isAuthenticated) {
+    return (
+      <Switch>
+        <Route path="/" component={Landing} />
+        <Route component={NotFound} />
+      </Switch>
+    );
+  }
+
+  return (
+    <div className="flex h-screen bg-gray-50">
+      <Sidebar />
+      <div className="flex-1 flex flex-col overflow-hidden">
+        <Header />
+        <main className="flex-1 overflow-y-auto">
+          <Switch>
+            <Route path="/" component={Dashboard} />
+            <Route path="/inventory" component={Inventory} />
+            <Route path="/recipes" component={Recipes} />
+            <Route path="/vendors" component={Vendors} />
+            <Route path="/purchase-orders" component={PurchaseOrders} />
+            <Route path="/reports" component={Reports} />
+            <Route path="/waste-tracking" component={WasteTracking} />
+            <Route component={NotFound} />
+          </Switch>
+        </main>
+      </div>
+    </div>
+  );
+}
+
+function App() {
+  return (
+    <QueryClientProvider client={queryClient}>
+      <TooltipProvider>
+        <Toaster />
+        <Router />
+      </TooltipProvider>
+    </QueryClientProvider>
+  );
+}
+
+export default App;

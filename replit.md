@@ -1,0 +1,77 @@
+# RestroFlow Inventory Management System
+
+## Overview
+
+RestroFlow is a comprehensive restaurant inventory management system built with a modern full-stack architecture. The application provides real-time inventory tracking, recipe costing, vendor management, purchase order creation, and waste tracking capabilities. It's designed to help restaurants optimize their food costs, reduce waste, and streamline their supply chain operations.
+
+The system features a React-based frontend with TypeScript, a Node.js/Express backend, PostgreSQL database with Drizzle ORM, and integrates Replit authentication for user management.
+
+## User Preferences
+
+Preferred communication style: Simple, everyday language.
+
+## System Architecture
+
+### Frontend Architecture
+- **Framework**: React 18 with TypeScript and Vite for development/build tooling
+- **UI Framework**: shadcn/ui components built on Radix UI primitives with Tailwind CSS styling
+- **State Management**: TanStack Query (React Query) for server state management and caching
+- **Routing**: Wouter for lightweight client-side routing
+- **Forms**: React Hook Form with Zod schema validation for type-safe form handling
+- **Build System**: Vite with custom configuration supporting path aliases and development overlays
+
+### Backend Architecture
+- **Runtime**: Node.js with Express.js framework using ES modules
+- **Database ORM**: Drizzle ORM with PostgreSQL dialect for type-safe database operations
+- **Authentication**: Replit's OpenID Connect integration with Passport.js strategy
+- **Session Management**: Express sessions stored in PostgreSQL using connect-pg-simple
+- **Database Provider**: Neon PostgreSQL with serverless connection pooling
+- **API Design**: RESTful endpoints following conventional HTTP methods and status codes
+
+### Data Storage Solutions
+- **Primary Database**: PostgreSQL hosted on Neon with connection pooling
+- **Schema Management**: Drizzle migrations with schema defined in TypeScript
+- **Session Storage**: Database-backed sessions for authentication persistence
+- **Data Modeling**: Comprehensive relational schema covering inventory, recipes, vendors, purchase orders, and waste tracking
+
+### Authentication and Authorization
+- **Provider**: Replit OpenID Connect (OIDC) integration
+- **Session Strategy**: Server-side sessions with secure HTTP-only cookies
+- **User Management**: Automatic user creation/updates on authentication
+- **Role System**: Basic role-based access (admin, manager, staff)
+- **Security**: HTTPS-only cookies with secure session configuration
+
+### Database Schema Design
+The system uses a normalized relational database design with the following core entities:
+- **Users**: Authentication and user profile management
+- **Categories**: Hierarchical organization of inventory items
+- **Vendors**: Supplier information and contact management
+- **Inventory Items**: Core product catalog with quantities, costs, and reorder levels
+- **Recipes**: Menu items with ingredient breakdowns and costing
+- **Purchase Orders**: Procurement workflow with line items and status tracking
+- **Waste Tracking**: Loss recording with categorization and cost analysis
+- **Inventory Transactions**: Audit trail for all stock movements
+
+## External Dependencies
+
+### Database Services
+- **Neon PostgreSQL**: Serverless PostgreSQL hosting with connection pooling and WebSocket support for real-time features
+
+### Authentication Services
+- **Replit OIDC**: OpenID Connect authentication provider integrated with Replit's user system
+
+### Frontend Libraries
+- **Radix UI**: Comprehensive set of accessible UI primitives for building the component library
+- **Tailwind CSS**: Utility-first CSS framework for responsive design and consistent styling
+- **TanStack Query**: Server state management with caching, background updates, and optimistic updates
+- **React Hook Form**: Performant form library with minimal re-renders and built-in validation
+
+### Development Tools
+- **Vite**: Fast development server and build tool with HMR and TypeScript support
+- **Drizzle Kit**: Database migration and schema management tooling
+- **TypeScript**: Static type checking across the entire application stack
+
+### Utility Libraries
+- **date-fns**: Date manipulation and formatting utilities
+- **Zod**: Runtime type validation and schema definition
+- **clsx/twMerge**: Conditional CSS class utilities for dynamic styling
