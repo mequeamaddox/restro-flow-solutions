@@ -6,6 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useQuery } from "@tanstack/react-query";
 import { useLocation } from "@/contexts/LocationContext";
+import logoImg from "@assets/IMG_20250812_004328_1754973838131.png";
 
 interface HeaderProps {
   onMobileMenuToggle?: () => void;
@@ -35,8 +36,13 @@ export default function Header({ onMobileMenuToggle }: HeaderProps = {}) {
             <Menu className="h-6 w-6" />
           </Button>
           
-          {/* App title on mobile */}
-          <div className="lg:hidden">
+          {/* App logo and title on mobile */}
+          <div className="lg:hidden flex items-center">
+            <img 
+              src={logoImg} 
+              alt="RestroFlow Logo" 
+              className="h-8 w-auto mr-2"
+            />
             <h1 className="text-lg font-semibold text-gray-900">RestroFlow</h1>
           </div>
         </div>

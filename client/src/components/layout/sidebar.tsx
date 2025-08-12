@@ -20,6 +20,7 @@ import {
   MapPin
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import logoImg from "@assets/IMG_20250812_004328_1754973838131.png";
 
 const navigation = [
   { name: 'Dashboard', href: '/', icon: LayoutDashboard },
@@ -66,9 +67,13 @@ export default function Sidebar({ isMobileMenuOpen = false, setIsMobileMenuOpen 
         {/* Header */}
         <div className="p-6 border-b border-gray-200">
           <div className="flex items-center mb-4">
-            <Utensils className="h-8 w-8 text-primary-600 mr-3" />
+            <img 
+              src={logoImg} 
+              alt="RestroFlow Logo" 
+              className="h-10 w-auto mr-3"
+            />
             <div>
-              <h1 className="text-xl font-bold text-primary-800">RestroFlow</h1>
+              <h1 className="text-xl font-bold text-gray-800">RestroFlow</h1>
               <p className="text-sm text-gray-600">Inventory Management</p>
             </div>
           </div>
