@@ -38,6 +38,21 @@ import {
   type InsertWasteEntry,
   type InventoryTransaction,
   type InsertInventoryTransaction,
+  cloverIntegrations,
+  cloverMenuItems,
+  cloverItemMappings,
+  cloverSales,
+  cloverSaleItems,
+  type CloverIntegration,
+  type InsertCloverIntegration,
+  type CloverMenuItem,
+  type InsertCloverMenuItem,
+  type CloverItemMapping,
+  type InsertCloverItemMapping,
+  type CloverSale,
+  type InsertCloverSale,
+  type CloverSaleItem,
+  type InsertCloverSaleItem,
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, sql, desc, and, gte, lte, ilike, sum } from "drizzle-orm";
@@ -107,6 +122,35 @@ export interface IStorage {
     weeklyWaste: number;
     foodCostPercentage: number;
   }>;
+
+  // Clover POS integration operations
+  getCloverIntegrations(locationId?: string): Promise<CloverIntegration[]>;
+  getCloverIntegration(id: string): Promise<CloverIntegration | undefined>;
+  getCloverIntegrationByMerchant(merchantId: string): Promise<CloverIntegration | undefined>;
+  createCloverIntegration(integration: InsertCloverIntegration): Promise<CloverIntegration>;
+  updateCloverIntegration(id: string, integration: Partial<InsertCloverIntegration>): Promise<CloverIntegration>;
+  deleteCloverIntegration(id: string): Promise<void>;
+
+  // Clover menu items
+  getCloverMenuItems(integrationId: string): Promise<CloverMenuItem[]>;
+  upsertCloverMenuItem(menuItem: InsertCloverMenuItem): Promise<CloverMenuItem>;
+
+  // Clover item mappings
+  getCloverItemMappings(integrationId?: string): Promise<(CloverItemMapping & { cloverMenuItem?: CloverMenuItem; inventoryItem?: InventoryItem })[]>;
+  getCloverItemMappingByCloverItemId(cloverItemId: string): Promise<(CloverItemMapping & { cloverMenuItem?: CloverMenuItem; inventoryItem?: InventoryItem }) | undefined>;
+  createCloverItemMapping(mapping: InsertCloverItemMapping): Promise<CloverItemMapping>;
+  updateCloverItemMapping(id: string, mapping: Partial<InsertCloverItemMapping>): Promise<CloverItemMapping>;
+  deleteCloverItemMapping(id: string): Promise<void>;
+
+  // Clover sales
+  getCloverSales(locationId?: string): Promise<(CloverSale & { items?: CloverSaleItem[] })[]>;
+  getCloverSaleByOrderId(orderId: string): Promise<CloverSale | undefined>;
+  createCloverSale(sale: InsertCloverSale): Promise<CloverSale>;
+  updateCloverSale(id: string, sale: Partial<InsertCloverSale>): Promise<CloverSale>;
+
+  // Clover sale items
+  createCloverSaleItem(saleItem: InsertCloverSaleItem): Promise<CloverSaleItem>;
+  updateCloverSaleItem(id: string, saleItem: Partial<InsertCloverSaleItem>): Promise<CloverSaleItem>;
 }
 
 export class DatabaseStorage implements IStorage {

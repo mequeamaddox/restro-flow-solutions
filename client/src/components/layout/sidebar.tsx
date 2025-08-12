@@ -25,6 +25,7 @@ const navigation = [
   { name: 'Vendors', href: '/vendors', icon: Building2 },
   { name: 'Reports', href: '/reports', icon: BarChart3 },
   { name: 'Waste Tracking', href: '/waste-tracking', icon: Trash2 },
+  { name: 'Clover POS', href: '/clover-integration', icon: Settings },
 ];
 
 export default function Sidebar() {

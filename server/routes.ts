@@ -2,6 +2,7 @@ import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { setupAuth, isAuthenticated } from "./replitAuth";
+import { cloverService } from "./cloverService";
 import {
   insertLocationSchema,
   insertCategorySchema,
@@ -497,6 +498,60 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error creating inventory transaction:", error);
       res.status(400).json({ message: "Failed to create inventory transaction" });
+    }
+  });
+
+  // Clover POS Integration Routes
+  app.get("/api/clover/integrations", isAuthenticated, async (req, res) => {
+    try {
+      const locationId = req.query.locationId as string;
+      const integrations = await storage.getCloverIntegrations(locationId);
+      res.json(integrations);
+    } catch (error) {
+      console.error("Error fetching Clover integrations:", error);
+      res.status(500).json({ message: "Failed to fetch Clover integrations" });
+    }
+  });
+
+  app.post("/api/clover/integrations", isAuthenticated, async (req, res) => {
+    try {
+      const integration = await storage.createCloverIntegration(req.body);
+      res.status(201).json(integration);
+    } catch (error) {
+      console.error("Error creating Clover integration:", error);
+      res.status(500).json({ message: "Failed to create Clover integration" });
+    }
+  });
+
+  app.put("/api/clover/integrations/:id", isAuthenticated, async (req, res) => {
+    try {
+      const integration = await storage.updateCloverIntegration(req.params.id, req.body);
+      res.json(integration);
+    } catch (error) {
+      console.error("Error updating Clover integration:", error);
+      res.status(500).json({ message: "Failed to update Clover integration" });
+    }
+  });
+
+  app.delete("/api/clover/integrations/:id", isAuthenticated, async (req, res) => {
+    try {
+      await storage.deleteCloverIntegration(req.params.id);
+      res.status(204).send();
+    } catch (error) {
+      console.error("Error deleting Clover integration:", error);
+      res.status(500).json({ message: "Failed to delete Clover integration" });
+    }
+  });
+
+  // Webhook endpoint for Clover (not protected by auth)
+  app.post("/api/clover/webhook", async (req, res) => {
+    try {
+      console.log('Received Clover webhook:', req.body);
+      await cloverService.processOrderWebhook(req.body);
+      res.status(200).json({ message: "Webhook processed successfully" });
+    } catch (error) {
+      console.error("Error processing Clover webhook:", error);
+      res.status(500).json({ message: "Failed to process webhook" });
     }
   });
 
