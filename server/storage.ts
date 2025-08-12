@@ -237,11 +237,11 @@ export class DatabaseStorage implements IStorage {
   async getTotalInventoryValue(): Promise<number> {
     const [result] = await db
       .select({
-        total: sql<number>`COALESCE(SUM(${inventoryItems.quantity} * ${inventoryItems.costPerUnit}), 0)`,
+        total: sql<string>`COALESCE(SUM(${inventoryItems.quantity} * ${inventoryItems.costPerUnit}), 0)`,
       })
       .from(inventoryItems);
     
-    return result?.total || 0;
+    return parseFloat(result?.total || '0');
   }
 
   // Recipe operations
@@ -381,8 +381,8 @@ export class DatabaseStorage implements IStorage {
 
   async getWasteStats(startDate?: Date, endDate?: Date): Promise<{ totalCost: number; totalEntries: number }> {
     let query = db.select({
-      totalCost: sql<number>`COALESCE(SUM(${wasteEntries.cost}), 0)`,
-      totalEntries: sql<number>`COUNT(*)`,
+      totalCost: sql<string>`COALESCE(SUM(${wasteEntries.cost}), 0)`,
+      totalEntries: sql<string>`COUNT(*)`,
     }).from(wasteEntries);
 
     if (startDate && endDate) {
@@ -393,7 +393,10 @@ export class DatabaseStorage implements IStorage {
     }
 
     const [result] = await query;
-    return result || { totalCost: 0, totalEntries: 0 };
+    return {
+      totalCost: parseFloat(result?.totalCost || '0'),
+      totalEntries: parseInt(result?.totalEntries || '0'),
+    };
   }
 
   // Inventory transaction operations

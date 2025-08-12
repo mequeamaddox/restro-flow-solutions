@@ -39,28 +39,28 @@ export default function MetricsCards({ metrics, isLoading }: MetricsCardsProps) 
   const cards = [
     {
       title: "Total Inventory Value",
-      value: `$${metrics?.totalInventoryValue.toLocaleString() || '0'}`,
+      value: `$${Number(metrics?.totalInventoryValue || 0).toLocaleString()}`,
       icon: DollarSign,
       iconColor: "text-primary-600",
       bgColor: "bg-primary-100",
     },
     {
       title: "Low Stock Items",
-      value: metrics?.lowStockCount || 0,
+      value: Number(metrics?.lowStockCount || 0),
       icon: AlertTriangle,
       iconColor: "text-red-600",
       bgColor: "bg-red-100",
     },
     {
       title: "Food Cost %",
-      value: `${metrics?.foodCostPercentage.toFixed(1) || '0.0'}%`,
+      value: `${Number(metrics?.foodCostPercentage || 0).toFixed(1)}%`,
       icon: TrendingUp,
       iconColor: "text-green-600",
       bgColor: "bg-green-100",
     },
     {
       title: "Weekly Waste",
-      value: `$${metrics?.weeklyWaste.toFixed(0) || '0'}`,
+      value: `$${Number(metrics?.weeklyWaste || 0).toFixed(0)}`,
       icon: Trash2,
       iconColor: "text-orange-600",
       bgColor: "bg-orange-100",
