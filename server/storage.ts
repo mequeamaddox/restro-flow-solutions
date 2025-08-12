@@ -239,6 +239,192 @@ export class DatabaseStorage implements IStorage {
     await db.delete(vendors).where(eq(vendors.id, id));
   }
 
+  // Universal POS Integration Methods
+  async getPosIntegrations(locationId?: string): Promise<PosIntegration[]> {
+    let query = db.select().from(posIntegrations);
+    
+    if (locationId) {
+      query = query.where(eq(posIntegrations.locationId, locationId));
+    }
+    
+    return await query.orderBy(posIntegrations.createdAt);
+  }
+
+  async getPosIntegration(id: string): Promise<PosIntegration | undefined> {
+    const [integration] = await db.select().from(posIntegrations).where(eq(posIntegrations.id, id));
+    return integration;
+  }
+
+  async getPosIntegrationByMerchant(merchantId: string, provider: string): Promise<PosIntegration | undefined> {
+    const [integration] = await db.select().from(posIntegrations)
+      .where(and(
+        eq(posIntegrations.merchantId, merchantId), 
+        eq(posIntegrations.provider, provider as any),
+        eq(posIntegrations.isActive, true)
+      ));
+    return integration;
+  }
+
+  async createPosIntegration(integrationData: InsertPosIntegration): Promise<PosIntegration> {
+    const [integration] = await db
+      .insert(posIntegrations)
+      .values(integrationData)
+      .returning();
+    return integration;
+  }
+
+  async updatePosIntegration(id: string, integrationData: Partial<InsertPosIntegration>): Promise<PosIntegration> {
+    const [integration] = await db
+      .update(posIntegrations)
+      .set({ ...integrationData, updatedAt: new Date() })
+      .where(eq(posIntegrations.id, id))
+      .returning();
+    return integration;
+  }
+
+  async deletePosIntegration(id: string): Promise<void> {
+    await db.delete(posIntegrations).where(eq(posIntegrations.id, id));
+  }
+
+  // POS Menu Items
+  async getPosMenuItems(integrationId: string): Promise<PosMenuItem[]> {
+    return await db.select().from(posMenuItems)
+      .where(eq(posMenuItems.posIntegrationId, integrationId))
+      .orderBy(posMenuItems.name);
+  }
+
+  async upsertPosMenuItem(menuItemData: InsertPosMenuItem): Promise<PosMenuItem> {
+    const [menuItem] = await db
+      .insert(posMenuItems)
+      .values(menuItemData)
+      .onConflictDoUpdate({
+        target: [posMenuItems.posItemId, posMenuItems.posIntegrationId],
+        set: {
+          ...menuItemData,
+          updatedAt: new Date(),
+        },
+      })
+      .returning();
+    return menuItem;
+  }
+
+  // POS Item Mappings
+  async getPosItemMappings(integrationId?: string): Promise<(PosItemMapping & { posMenuItem?: PosMenuItem; inventoryItem?: InventoryItem })[]> {
+    let query = db.select().from(posItemMappings)
+      .leftJoin(posMenuItems, eq(posItemMappings.posMenuItemId, posMenuItems.id))
+      .leftJoin(inventoryItems, eq(posItemMappings.inventoryItemId, inventoryItems.id));
+
+    if (integrationId) {
+      query = query.where(eq(posMenuItems.posIntegrationId, integrationId));
+    }
+
+    const results = await query;
+    return results.map(row => ({
+      ...row.pos_item_mappings,
+      posMenuItem: row.pos_menu_items || undefined,
+      inventoryItem: row.inventory_items || undefined,
+    }));
+  }
+
+  async getPosItemMappingByPosItemId(posItemId: string): Promise<(PosItemMapping & { posMenuItem?: PosMenuItem; inventoryItem?: InventoryItem }) | undefined> {
+    const [result] = await db.select().from(posItemMappings)
+      .leftJoin(posMenuItems, eq(posItemMappings.posMenuItemId, posMenuItems.id))
+      .leftJoin(inventoryItems, eq(posItemMappings.inventoryItemId, inventoryItems.id))
+      .where(eq(posMenuItems.posItemId, posItemId));
+
+    if (!result) return undefined;
+
+    return {
+      ...result.pos_item_mappings,
+      posMenuItem: result.pos_menu_items || undefined,
+      inventoryItem: result.inventory_items || undefined,
+    };
+  }
+
+  async createPosItemMapping(mappingData: InsertPosItemMapping): Promise<PosItemMapping> {
+    const [mapping] = await db
+      .insert(posItemMappings)
+      .values(mappingData)
+      .returning();
+    return mapping;
+  }
+
+  async updatePosItemMapping(id: string, mappingData: Partial<InsertPosItemMapping>): Promise<PosItemMapping> {
+    const [mapping] = await db
+      .update(posItemMappings)
+      .set(mappingData)
+      .where(eq(posItemMappings.id, id))
+      .returning();
+    return mapping;
+  }
+
+  async deletePosItemMapping(id: string): Promise<void> {
+    await db.delete(posItemMappings).where(eq(posItemMappings.id, id));
+  }
+
+  // POS Sales
+  async getPosSales(locationId?: string): Promise<(PosSale & { items?: PosSaleItem[] })[]> {
+    let query = db.select().from(posSales);
+    
+    if (locationId) {
+      query = query.where(eq(posSales.locationId, locationId));
+    }
+    
+    const sales = await query.orderBy(desc(posSales.orderDate));
+    
+    // Get items for each sale
+    const salesWithItems = await Promise.all(
+      sales.map(async (sale) => {
+        const items = await db.select().from(posSaleItems)
+          .where(eq(posSaleItems.posSaleId, sale.id));
+        return { ...sale, items };
+      })
+    );
+
+    return salesWithItems;
+  }
+
+  async getPosSaleByOrderId(orderId: string): Promise<PosSale | undefined> {
+    const [sale] = await db.select().from(posSales)
+      .where(eq(posSales.posOrderId, orderId));
+    return sale;
+  }
+
+  async createPosSale(saleData: InsertPosSale): Promise<PosSale> {
+    const [sale] = await db
+      .insert(posSales)
+      .values(saleData)
+      .returning();
+    return sale;
+  }
+
+  async updatePosSale(id: string, saleData: Partial<InsertPosSale>): Promise<PosSale> {
+    const [sale] = await db
+      .update(posSales)
+      .set(saleData)
+      .where(eq(posSales.id, id))
+      .returning();
+    return sale;
+  }
+
+  // POS Sale Items
+  async createPosSaleItem(saleItemData: InsertPosSaleItem): Promise<PosSaleItem> {
+    const [saleItem] = await db
+      .insert(posSaleItems)
+      .values(saleItemData)
+      .returning();
+    return saleItem;
+  }
+
+  async updatePosSaleItem(id: string, saleItemData: Partial<InsertPosSaleItem>): Promise<PosSaleItem> {
+    const [saleItem] = await db
+      .update(posSaleItems)
+      .set(saleItemData)
+      .where(eq(posSaleItems.id, id))
+      .returning();
+    return saleItem;
+  }
+
   // Inventory operations
   async getInventoryItems(locationId?: string): Promise<(InventoryItem & { category?: Category; vendor?: Vendor })[]> {
     let query = db

@@ -26,7 +26,13 @@ export default function Recipes() {
           <h1 className="text-2xl font-semibold text-gray-900">Recipes & Menu Costing</h1>
           <p className="text-gray-600">Manage recipes and calculate food costs</p>
         </div>
-        <Button className="bg-primary-600 hover:bg-primary-700">
+        <Button 
+          className="bg-primary-600 hover:bg-primary-700"
+          onClick={() => {
+            // TODO: Open recipe creation dialog
+            console.log("Add Recipe clicked");
+          }}
+        >
           <Plus className="h-4 w-4 mr-2" />
           Add Recipe
         </Button>

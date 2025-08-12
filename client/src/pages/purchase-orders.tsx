@@ -46,7 +46,13 @@ export default function PurchaseOrders() {
           <h1 className="text-2xl font-semibold text-gray-900">Purchase Orders</h1>
           <p className="text-gray-600">Manage supplier orders and deliveries</p>
         </div>
-        <Button className="bg-primary-600 hover:bg-primary-700">
+        <Button 
+          className="bg-primary-600 hover:bg-primary-700"
+          onClick={() => {
+            // TODO: Open purchase order creation dialog
+            console.log("Create Purchase Order clicked");
+          }}
+        >
           <Plus className="h-4 w-4 mr-2" />
           Create Purchase Order
         </Button>
