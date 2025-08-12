@@ -33,36 +33,35 @@ const navigation = [
   { name: 'Settings', href: '/settings', icon: Settings },
 ];
 
-export default function Sidebar() {
+interface SidebarProps {
+  isMobileMenuOpen?: boolean;
+  setIsMobileMenuOpen?: (open: boolean) => void;
+}
+
+export default function Sidebar({ isMobileMenuOpen = false, setIsMobileMenuOpen }: SidebarProps = {}) {
   const [currentPath] = useWouterLocation();
-  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [internalMobileMenuOpen, setInternalMobileMenuOpen] = useState(false);
   const { user } = useAuth();
   const { currentLocation, setCurrentLocation, locations, isLoading } = useLocation();
+  
+  // Use external state if provided, otherwise use internal state
+  const mobileMenuOpen = isMobileMenuOpen || internalMobileMenuOpen;
+  const setMobileMenuOpen = setIsMobileMenuOpen || setInternalMobileMenuOpen;
 
   return (
     <>
-      {/* Mobile menu button */}
-      <Button
-        variant="ghost"
-        size="sm"
-        className="fixed top-4 left-4 z-50 lg:hidden bg-white shadow-md"
-        onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-      >
-        {isMobileMenuOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
-      </Button>
-
       {/* Mobile menu overlay */}
-      {isMobileMenuOpen && (
+      {mobileMenuOpen && (
         <div 
           className="fixed inset-0 bg-black bg-opacity-50 z-40 lg:hidden"
-          onClick={() => setIsMobileMenuOpen(false)}
+          onClick={() => setMobileMenuOpen(false)}
         />
       )}
 
       {/* Sidebar */}
       <div className={cn(
-        "fixed left-0 top-0 h-full w-64 bg-white shadow-lg z-50 transform transition-transform duration-300 ease-in-out lg:translate-x-0",
-        isMobileMenuOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"
+        "fixed left-0 top-0 h-full w-64 bg-white shadow-lg z-50 transform transition-transform duration-300 ease-in-out lg:translate-x-0 lg:static lg:z-auto",
+        mobileMenuOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"
       )}>
         {/* Header */}
         <div className="p-6 border-b border-gray-200">
@@ -124,7 +123,7 @@ export default function Sidebar() {
                         "flex items-center px-6 py-3 text-gray-700 hover:bg-gray-50 transition-colors cursor-pointer",
                         isActive && "bg-primary-50 border-r-4 border-primary-500 text-primary-700"
                       )}
-                      onClick={() => setIsMobileMenuOpen(false)}
+                      onClick={() => setMobileMenuOpen(false)}
                     >
                       <Icon className="h-5 w-5 mr-3" />
                       {item.name}

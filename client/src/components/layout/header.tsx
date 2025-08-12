@@ -19,7 +19,7 @@ export default function Header({ onMobileMenuToggle }: HeaderProps = {}) {
     queryKey: ['/api/inventory/low-stock'],
   });
 
-  const lowStockCount = lowStockItems?.length || 0;
+  const lowStockCount = (lowStockItems as any[])?.length || 0;
 
   return (
     <header className="bg-white shadow-sm border-b border-gray-200 sticky top-0 z-30">
