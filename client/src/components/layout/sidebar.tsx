@@ -60,7 +60,7 @@ export default function Sidebar({ isMobileMenuOpen = false, setIsMobileMenuOpen 
 
       {/* Sidebar */}
       <div className={cn(
-        "fixed left-0 top-0 h-full w-64 bg-white shadow-lg z-50 transform transition-transform duration-300 ease-in-out lg:translate-x-0 lg:static lg:z-auto",
+        "fixed left-0 top-0 h-full w-64 bg-white shadow-lg z-50 transform transition-transform duration-300 ease-in-out lg:translate-x-0 lg:static lg:z-auto flex flex-col",
         mobileMenuOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"
       )}>
         {/* Header */}
@@ -109,7 +109,7 @@ export default function Sidebar({ isMobileMenuOpen = false, setIsMobileMenuOpen 
         </div>
 
         {/* Navigation */}
-        <nav className="mt-6 flex-1">
+        <nav className="mt-6 flex-1 overflow-y-auto pb-20">
           <ul className="space-y-1">
             {navigation.map((item) => {
               const isActive = currentPath === item.href;
@@ -136,7 +136,7 @@ export default function Sidebar({ isMobileMenuOpen = false, setIsMobileMenuOpen 
         </nav>
 
         {/* User Profile */}
-        <div className="absolute bottom-0 left-0 right-0 p-6 border-t border-gray-200">
+        <div className="mt-auto p-4 border-t border-gray-200 bg-white">
           <div className="flex items-center">
             <div className="w-8 h-8 bg-primary-500 rounded-full flex items-center justify-center text-white text-sm font-medium">
               {(user as any)?.firstName ? (user as any).firstName.charAt(0) : (user as any)?.email?.charAt(0) || 'U'}
@@ -153,6 +153,7 @@ export default function Sidebar({ isMobileMenuOpen = false, setIsMobileMenuOpen 
               variant="ghost"
               size="sm"
               onClick={() => window.location.href = '/api/logout'}
+              className="ml-2"
             >
               <Settings className="h-4 w-4" />
             </Button>
