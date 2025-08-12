@@ -11,6 +11,7 @@ The system features a React-based frontend with TypeScript, a Node.js/Express ba
 Preferred communication style: Simple, everyday language.
 Multi-location restaurant business: Table-top restaurant and bar & grill as second location.
 Target features: Location-specific inventory, bar-specific items, separate analytics per location.
+POS Systems: Uses SpotOn POS at the bar, Clover at main restaurant - needs universal POS integration.
 
 ## System Architecture
 

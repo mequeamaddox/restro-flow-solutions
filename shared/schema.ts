@@ -345,62 +345,76 @@ export const insertWasteEntrySchema = createInsertSchema(wasteEntries).omit({ id
 export const insertInventoryTransactionSchema = createInsertSchema(inventoryTransactions).omit({ id: true, createdAt: true });
 
 // Types
-// Clover POS Integration Tables
-export const cloverIntegrations = pgTable("clover_integrations", {
+// Universal POS Integration Tables
+export const posProviderEnum = pgEnum("pos_provider", ["clover", "spoton", "square", "toast", "revel"]);
+
+export const posIntegrations = pgTable("pos_integrations", {
   id: uuid("id").primaryKey().default(sql`gen_random_uuid()`),
   locationId: uuid("location_id").references(() => locations.id).notNull(),
+  provider: posProviderEnum("provider").notNull(),
+  name: varchar("name").notNull(), // User-friendly name for this integration
   merchantId: varchar("merchant_id").notNull(),
-  accessToken: varchar("access_token").notNull(),
+  credentials: jsonb("credentials").notNull(), // Store API keys, tokens, etc. as JSON
   environment: varchar("environment").default("sandbox"), // sandbox or production
+  webhookUrl: varchar("webhook_url"), // Generated webhook URL for this integration
   isActive: boolean("is_active").default(true),
   lastSyncAt: timestamp("last_sync_at"),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
 
-// Clover Menu Items mapping to inventory
-export const cloverMenuItems = pgTable("clover_menu_items", {
+// Universal POS Menu Items
+export const posMenuItems = pgTable("pos_menu_items", {
   id: uuid("id").primaryKey().default(sql`gen_random_uuid()`),
-  cloverItemId: varchar("clover_item_id").notNull(),
-  cloverIntegrationId: uuid("clover_integration_id").references(() => cloverIntegrations.id).notNull(),
+  posItemId: varchar("pos_item_id").notNull(), // ID from the POS system
+  posIntegrationId: uuid("pos_integration_id").references(() => posIntegrations.id).notNull(),
   name: varchar("name").notNull(),
+  category: varchar("category"),
   price: decimal("price", { precision: 10, scale: 2 }),
+  sku: varchar("sku"),
   isActive: boolean("is_active").default(true),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
 
-// Mapping between Clover menu items and inventory items
-export const cloverItemMappings = pgTable("clover_item_mappings", {
+// Mapping between POS menu items and inventory items
+export const posItemMappings = pgTable("pos_item_mappings", {
   id: uuid("id").primaryKey().default(sql`gen_random_uuid()`),
-  cloverMenuItemId: uuid("clover_menu_item_id").references(() => cloverMenuItems.id).notNull(),
+  posMenuItemId: uuid("pos_menu_item_id").references(() => posMenuItems.id).notNull(),
   inventoryItemId: uuid("inventory_item_id").references(() => inventoryItems.id).notNull(),
   quantityUsed: decimal("quantity_used", { precision: 10, scale: 3 }).notNull(), // Amount of inventory used per menu item
   unit: varchar("unit").notNull(),
+  notes: text("notes"), // Additional mapping notes
   createdAt: timestamp("created_at").defaultNow(),
 });
 
-// Sales transactions from Clover
-export const cloverSales = pgTable("clover_sales", {
+// Universal POS Sales transactions
+export const posSales = pgTable("pos_sales", {
   id: uuid("id").primaryKey().default(sql`gen_random_uuid()`),
-  cloverOrderId: varchar("clover_order_id").notNull(),
-  cloverIntegrationId: uuid("clover_integration_id").references(() => cloverIntegrations.id).notNull(),
+  posOrderId: varchar("pos_order_id").notNull(),
+  posIntegrationId: uuid("pos_integration_id").references(() => posIntegrations.id).notNull(),
   locationId: uuid("location_id").references(() => locations.id).notNull(),
   total: decimal("total", { precision: 10, scale: 2 }).notNull(),
+  subtotal: decimal("subtotal", { precision: 10, scale: 2 }),
+  tax: decimal("tax", { precision: 10, scale: 2 }),
+  tip: decimal("tip", { precision: 10, scale: 2 }),
   orderDate: timestamp("order_date").notNull(),
   processedAt: timestamp("processed_at"),
   inventoryProcessed: boolean("inventory_processed").default(false),
+  metadata: jsonb("metadata"), // Store additional POS-specific data
   createdAt: timestamp("created_at").defaultNow(),
 });
 
-// Line items from Clover sales
-export const cloverSaleItems = pgTable("clover_sale_items", {
+// Universal POS Sale items
+export const posSaleItems = pgTable("pos_sale_items", {
   id: uuid("id").primaryKey().default(sql`gen_random_uuid()`),
-  cloverSaleId: uuid("clover_sale_id").references(() => cloverSales.id).notNull(),
-  cloverMenuItemId: uuid("clover_menu_item_id").references(() => cloverMenuItems.id),
+  posSaleId: uuid("pos_sale_id").references(() => posSales.id).notNull(),
+  posMenuItemId: uuid("pos_menu_item_id").references(() => posMenuItems.id),
   itemName: varchar("item_name").notNull(),
   quantity: integer("quantity").notNull(),
-  price: decimal("price", { precision: 10, scale: 2 }).notNull(),
+  unitPrice: decimal("unit_price", { precision: 10, scale: 2 }).notNull(),
+  totalPrice: decimal("total_price", { precision: 10, scale: 2 }).notNull(),
+  modifiers: jsonb("modifiers"), // Store item modifications as JSON
   createdAt: timestamp("created_at").defaultNow(),
 });
 
@@ -431,20 +445,20 @@ export type InsertWasteEntry = z.infer<typeof insertWasteEntrySchema>;
 export type InventoryTransaction = typeof inventoryTransactions.$inferSelect;
 export type InsertInventoryTransaction = z.infer<typeof insertInventoryTransactionSchema>;
 
-// Clover POS types
-export const insertCloverIntegrationSchema = createInsertSchema(cloverIntegrations).omit({ id: true, createdAt: true, updatedAt: true });
-export const insertCloverMenuItemSchema = createInsertSchema(cloverMenuItems).omit({ id: true, createdAt: true, updatedAt: true });
-export const insertCloverItemMappingSchema = createInsertSchema(cloverItemMappings).omit({ id: true, createdAt: true });
-export const insertCloverSaleSchema = createInsertSchema(cloverSales).omit({ id: true, createdAt: true });
-export const insertCloverSaleItemSchema = createInsertSchema(cloverSaleItems).omit({ id: true, createdAt: true });
+// Universal POS types
+export const insertPosIntegrationSchema = createInsertSchema(posIntegrations).omit({ id: true, createdAt: true, updatedAt: true });
+export const insertPosMenuItemSchema = createInsertSchema(posMenuItems).omit({ id: true, createdAt: true, updatedAt: true });
+export const insertPosItemMappingSchema = createInsertSchema(posItemMappings).omit({ id: true, createdAt: true });
+export const insertPosSaleSchema = createInsertSchema(posSales).omit({ id: true, createdAt: true });
+export const insertPosSaleItemSchema = createInsertSchema(posSaleItems).omit({ id: true, createdAt: true });
 
-export type CloverIntegration = typeof cloverIntegrations.$inferSelect;
-export type InsertCloverIntegration = z.infer<typeof insertCloverIntegrationSchema>;
-export type CloverMenuItem = typeof cloverMenuItems.$inferSelect;
-export type InsertCloverMenuItem = z.infer<typeof insertCloverMenuItemSchema>;
-export type CloverItemMapping = typeof cloverItemMappings.$inferSelect;
-export type InsertCloverItemMapping = z.infer<typeof insertCloverItemMappingSchema>;
-export type CloverSale = typeof cloverSales.$inferSelect;
-export type InsertCloverSale = z.infer<typeof insertCloverSaleSchema>;
-export type CloverSaleItem = typeof cloverSaleItems.$inferSelect;
-export type InsertCloverSaleItem = z.infer<typeof insertCloverSaleItemSchema>;
+export type PosIntegration = typeof posIntegrations.$inferSelect;
+export type InsertPosIntegration = z.infer<typeof insertPosIntegrationSchema>;
+export type PosMenuItem = typeof posMenuItems.$inferSelect;
+export type InsertPosMenuItem = z.infer<typeof insertPosMenuItemSchema>;
+export type PosItemMapping = typeof posItemMappings.$inferSelect;
+export type InsertPosItemMapping = z.infer<typeof insertPosItemMappingSchema>;
+export type PosSale = typeof posSales.$inferSelect;
+export type InsertPosSale = z.infer<typeof insertPosSaleSchema>;
+export type PosSaleItem = typeof posSaleItems.$inferSelect;
+export type InsertPosSaleItem = z.infer<typeof insertPosSaleItemSchema>;

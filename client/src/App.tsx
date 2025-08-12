@@ -14,7 +14,7 @@ import Vendors from "@/pages/vendors";
 import PurchaseOrders from "@/pages/purchase-orders";
 import Reports from "@/pages/reports";
 import WasteTracking from "@/pages/waste-tracking";
-import CloverIntegration from "@/pages/clover-integration";
+import PosIntegration from "@/pages/pos-integration";
 import Sidebar from "@/components/layout/sidebar";
 import Header from "@/components/layout/header";
 
@@ -45,7 +45,7 @@ function Router() {
               <Route path="/purchase-orders" component={PurchaseOrders} />
               <Route path="/reports" component={Reports} />
               <Route path="/waste-tracking" component={WasteTracking} />
-              <Route path="/clover-integration" component={CloverIntegration} />
+              <Route path="/pos-integration" component={PosIntegration} />
               <Route component={NotFound} />
             </Switch>
           </main>

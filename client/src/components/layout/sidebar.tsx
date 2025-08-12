@@ -13,7 +13,8 @@ import {
   Settings,
   Menu,
   X,
-  Utensils
+  Utensils,
+  CreditCard
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -25,7 +26,7 @@ const navigation = [
   { name: 'Vendors', href: '/vendors', icon: Building2 },
   { name: 'Reports', href: '/reports', icon: BarChart3 },
   { name: 'Waste Tracking', href: '/waste-tracking', icon: Trash2 },
-  { name: 'Clover POS', href: '/clover-integration', icon: Settings },
+  { name: 'POS Integration', href: '/pos-integration', icon: CreditCard },
 ];
 
 export default function Sidebar() {

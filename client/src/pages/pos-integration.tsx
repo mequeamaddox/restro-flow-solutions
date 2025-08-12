@@ -21,12 +21,15 @@ import {
   Link2, 
   DollarSign,
   Activity,
-  AlertTriangle 
+  AlertTriangle,
+  CreditCard
 } from "lucide-react";
 
-interface CloverIntegration {
+interface PosIntegration {
   id: string;
   locationId: string;
+  provider: string;
+  name: string;
   merchantId: string;
   environment: string;
   isActive: boolean;
@@ -34,37 +37,43 @@ interface CloverIntegration {
   createdAt: string;
 }
 
-interface CloverSale {
+interface PosSale {
   id: string;
-  cloverOrderId: string;
+  posOrderId: string;
   total: string;
   orderDate: string;
   inventoryProcessed: boolean;
   items?: Array<{
     itemName: string;
     quantity: number;
-    price: string;
+    unitPrice: string;
+    totalPrice: string;
   }>;
 }
 
-export default function CloverIntegration() {
+export default function PosIntegration() {
   const { toast } = useToast();
   const { selectedLocation } = useLocation();
   const [newIntegration, setNewIntegration] = useState({
+    provider: "spoton" as "spoton" | "clover" | "square" | "toast" | "revel",
+    name: "",
     merchantId: "",
-    accessToken: "",
+    credentials: {
+      accessToken: "",
+      apiKey: "",
+    },
     environment: "sandbox" as "sandbox" | "production",
   });
 
   // Fetch integrations for current location
   const { data: integrations = [], isLoading: integrationsLoading } = useQuery({
-    queryKey: ["/api/clover/integrations", selectedLocation?.id],
+    queryKey: ["/api/pos/integrations", selectedLocation?.id],
     enabled: !!selectedLocation?.id,
   });
 
   // Fetch recent sales data
   const { data: sales = [], isLoading: salesLoading } = useQuery({
-    queryKey: ["/api/clover/sales", selectedLocation?.id],
+    queryKey: ["/api/pos/sales", selectedLocation?.id],
     enabled: !!selectedLocation?.id,
   });
 
@@ -175,9 +184,9 @@ export default function CloverIntegration() {
     <div className="space-y-6 p-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold">Clover POS Integration</h1>
+          <h1 className="text-3xl font-bold">POS Integration</h1>
           <p className="text-muted-foreground">
-            Connect your Clover POS system for automatic inventory deduction
+            Connect your POS systems (SpotOn, Clover, Square, etc.) for automatic inventory deduction
           </p>
         </div>
       </div>
