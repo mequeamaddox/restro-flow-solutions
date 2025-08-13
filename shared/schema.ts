@@ -418,11 +418,81 @@ export const posSaleItems = pgTable("pos_sale_items", {
   createdAt: timestamp("created_at").defaultNow(),
 });
 
+// POS Integration schema exports
+export const insertPosIntegrationSchema = createInsertSchema(posIntegrations).omit({ id: true, createdAt: true, updatedAt: true });
+export const insertPosMenuItemSchema = createInsertSchema(posMenuItems).omit({ id: true, createdAt: true, updatedAt: true });
+export const insertPosItemMappingSchema = createInsertSchema(posItemMappings).omit({ id: true, createdAt: true });
+export const insertPosSaleSchema = createInsertSchema(posSales).omit({ id: true, createdAt: true });
+export const insertPosSaleItemSchema = createInsertSchema(posSaleItems).omit({ id: true, createdAt: true });
+
+// Relations for POS tables
+export const posIntegrationsRelations = relations(posIntegrations, ({ one, many }) => ({
+  location: one(locations, {
+    fields: [posIntegrations.locationId],
+    references: [locations.id],
+  }),
+  menuItems: many(posMenuItems),
+  sales: many(posSales),
+}));
+
+export const posMenuItemsRelations = relations(posMenuItems, ({ one, many }) => ({
+  integration: one(posIntegrations, {
+    fields: [posMenuItems.posIntegrationId],
+    references: [posIntegrations.id],
+  }),
+  mappings: many(posItemMappings),
+  saleItems: many(posSaleItems),
+}));
+
+export const posItemMappingsRelations = relations(posItemMappings, ({ one }) => ({
+  posMenuItem: one(posMenuItems, {
+    fields: [posItemMappings.posMenuItemId],
+    references: [posMenuItems.id],
+  }),
+  inventoryItem: one(inventoryItems, {
+    fields: [posItemMappings.inventoryItemId],
+    references: [inventoryItems.id],
+  }),
+}));
+
+export const posSalesRelations = relations(posSales, ({ one, many }) => ({
+  integration: one(posIntegrations, {
+    fields: [posSales.posIntegrationId],
+    references: [posIntegrations.id],
+  }),
+  location: one(locations, {
+    fields: [posSales.locationId],
+    references: [locations.id],
+  }),
+  items: many(posSaleItems),
+}));
+
+export const posSaleItemsRelations = relations(posSaleItems, ({ one }) => ({
+  sale: one(posSales, {
+    fields: [posSaleItems.posSaleId],
+    references: [posSales.id],
+  }),
+  posMenuItem: one(posMenuItems, {
+    fields: [posSaleItems.posMenuItemId],
+    references: [posMenuItems.id],
+  }),
+}));
+
 export type UpsertUser = typeof users.$inferInsert;
 export type User = typeof users.$inferSelect;
 export type Location = typeof locations.$inferSelect;
 export type InsertLocation = z.infer<typeof insertLocationSchema>;
 export type Category = typeof categories.$inferSelect;
+export type PosIntegration = typeof posIntegrations.$inferSelect;
+export type InsertPosIntegration = z.infer<typeof insertPosIntegrationSchema>;
+export type PosMenuItem = typeof posMenuItems.$inferSelect;
+export type InsertPosMenuItem = z.infer<typeof insertPosMenuItemSchema>;
+export type PosItemMapping = typeof posItemMappings.$inferSelect;
+export type InsertPosItemMapping = z.infer<typeof insertPosItemMappingSchema>;
+export type PosSale = typeof posSales.$inferSelect;
+export type InsertPosSale = z.infer<typeof insertPosSaleSchema>;
+export type PosSaleItem = typeof posSaleItems.$inferSelect;
+export type InsertPosSaleItem = z.infer<typeof insertPosSaleItemSchema>;
 export type InsertCategory = z.infer<typeof insertCategorySchema>;
 export type Vendor = typeof vendors.$inferSelect;
 export type InsertVendor = z.infer<typeof insertVendorSchema>;
@@ -445,20 +515,4 @@ export type InsertWasteEntry = z.infer<typeof insertWasteEntrySchema>;
 export type InventoryTransaction = typeof inventoryTransactions.$inferSelect;
 export type InsertInventoryTransaction = z.infer<typeof insertInventoryTransactionSchema>;
 
-// Universal POS types
-export const insertPosIntegrationSchema = createInsertSchema(posIntegrations).omit({ id: true, createdAt: true, updatedAt: true });
-export const insertPosMenuItemSchema = createInsertSchema(posMenuItems).omit({ id: true, createdAt: true, updatedAt: true });
-export const insertPosItemMappingSchema = createInsertSchema(posItemMappings).omit({ id: true, createdAt: true });
-export const insertPosSaleSchema = createInsertSchema(posSales).omit({ id: true, createdAt: true });
-export const insertPosSaleItemSchema = createInsertSchema(posSaleItems).omit({ id: true, createdAt: true });
 
-export type PosIntegration = typeof posIntegrations.$inferSelect;
-export type InsertPosIntegration = z.infer<typeof insertPosIntegrationSchema>;
-export type PosMenuItem = typeof posMenuItems.$inferSelect;
-export type InsertPosMenuItem = z.infer<typeof insertPosMenuItemSchema>;
-export type PosItemMapping = typeof posItemMappings.$inferSelect;
-export type InsertPosItemMapping = z.infer<typeof insertPosItemMappingSchema>;
-export type PosSale = typeof posSales.$inferSelect;
-export type InsertPosSale = z.infer<typeof insertPosSaleSchema>;
-export type PosSaleItem = typeof posSaleItems.$inferSelect;
-export type InsertPosSaleItem = z.infer<typeof insertPosSaleItemSchema>;

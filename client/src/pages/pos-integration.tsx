@@ -31,6 +31,7 @@ interface PosIntegration {
   provider: string;
   name: string;
   merchantId: string;
+  credentials: any;
   environment: string;
   isActive: boolean;
   lastSyncAt: string | null;
@@ -68,22 +69,28 @@ export default function PosIntegration() {
   // Fetch integrations for current location
   const { data: integrations = [], isLoading: integrationsLoading } = useQuery({
     queryKey: ["/api/pos/integrations", selectedLocation?.id],
+    queryFn: () => apiRequest(`/api/pos/integrations?locationId=${selectedLocation?.id}`),
     enabled: !!selectedLocation?.id,
   });
 
   // Fetch recent sales data
   const { data: sales = [], isLoading: salesLoading } = useQuery({
     queryKey: ["/api/pos/sales", selectedLocation?.id],
+    queryFn: () => apiRequest(`/api/pos/sales?locationId=${selectedLocation?.id}`),
     enabled: !!selectedLocation?.id,
   });
 
   // Create integration mutation
   const createIntegrationMutation = useMutation({
     mutationFn: async (data: typeof newIntegration) => {
-      return apiRequest("/api/clover/integrations", {
+      return apiRequest("/api/pos/integrations", {
         method: "POST",
         body: JSON.stringify({
-          ...data,
+          provider: data.provider,
+          name: data.name,
+          merchantId: data.merchantId,
+          credentials: data.credentials,
+          environment: data.environment,
           locationId: selectedLocation?.id,
         }),
       });
@@ -91,19 +98,24 @@ export default function PosIntegration() {
     onSuccess: () => {
       toast({
         title: "Success",
-        description: "Clover integration created successfully",
+        description: "POS integration created successfully",
       });
-      queryClient.invalidateQueries({ queryKey: ["/api/clover/integrations"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/pos/integrations"] });
       setNewIntegration({
+        provider: "spoton",
+        name: "",
         merchantId: "",
-        accessToken: "",
+        credentials: {
+          accessToken: "",
+          apiKey: "",
+        },
         environment: "sandbox",
       });
     },
     onError: () => {
       toast({
         title: "Error",
-        description: "Failed to create Clover integration",
+        description: "Failed to create POS integration",
         variant: "destructive",
       });
     },
@@ -112,16 +124,16 @@ export default function PosIntegration() {
   // Test connection mutation
   const testConnectionMutation = useMutation({
     mutationFn: async (integrationId: string) => {
-      return apiRequest(`/api/clover/integrations/${integrationId}/test`, {
-        method: "POST",
+      return apiRequest(`/api/pos/integrations/${integrationId}/test`, {
+        method: "GET",
       });
     },
     onSuccess: (data) => {
       toast({
         title: data.success ? "Connection Successful" : "Connection Failed",
         description: data.success 
-          ? "Successfully connected to Clover API" 
-          : "Failed to connect to Clover API. Check your credentials.",
+          ? "Successfully connected to POS API" 
+          : "Failed to connect to POS API. Check your credentials.",
         variant: data.success ? "default" : "destructive",
       });
     },
@@ -130,21 +142,21 @@ export default function PosIntegration() {
   // Sync menu items mutation
   const syncMenuItemsMutation = useMutation({
     mutationFn: async (integrationId: string) => {
-      return apiRequest(`/api/clover/integrations/${integrationId}/sync`, {
+      return apiRequest(`/api/pos/integrations/${integrationId}/sync`, {
         method: "POST",
       });
     },
     onSuccess: () => {
       toast({
         title: "Sync Complete",
-        description: "Menu items synced successfully from Clover",
+        description: "Menu items synced successfully from POS",
       });
-      queryClient.invalidateQueries({ queryKey: ["/api/clover/integrations"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/pos/integrations"] });
     },
     onError: () => {
       toast({
         title: "Sync Failed",
-        description: "Failed to sync menu items from Clover",
+        description: "Failed to sync menu items from POS",
         variant: "destructive",
       });
     },
@@ -153,7 +165,7 @@ export default function PosIntegration() {
   // Toggle integration status
   const toggleIntegrationMutation = useMutation({
     mutationFn: async ({ id, isActive }: { id: string; isActive: boolean }) => {
-      return apiRequest(`/api/clover/integrations/${id}`, {
+      return apiRequest(`/api/pos/integrations/${id}`, {
         method: "PUT",
         body: JSON.stringify({ isActive }),
       });
@@ -163,7 +175,7 @@ export default function PosIntegration() {
         title: "Success",
         description: "Integration status updated",
       });
-      queryClient.invalidateQueries({ queryKey: ["/api/clover/integrations"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/pos/integrations"] });
     },
   });
 
@@ -207,16 +219,49 @@ export default function PosIntegration() {
                 Add New Integration
               </CardTitle>
               <CardDescription>
-                Connect a new Clover merchant account to this location
+                Connect a new POS system to start syncing sales and inventory data
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-2">
+                  <Label htmlFor="provider">POS Provider</Label>
+                  <Select
+                    value={newIntegration.provider}
+                    onValueChange={(value: "spoton" | "clover" | "square" | "toast" | "revel") =>
+                      setNewIntegration({ ...newIntegration, provider: value })
+                    }
+                  >
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="spoton">SpotOn POS</SelectItem>
+                      <SelectItem value="clover">Clover POS</SelectItem>
+                      <SelectItem value="square">Square POS</SelectItem>
+                      <SelectItem value="toast">Toast POS</SelectItem>
+                      <SelectItem value="revel">Revel POS</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="name">Integration Name</Label>
+                  <Input
+                    id="name"
+                    placeholder="e.g., Bar Location - SpotOn"
+                    value={newIntegration.name}
+                    onChange={(e) =>
+                      setNewIntegration({ ...newIntegration, name: e.target.value })
+                    }
+                  />
+                </div>
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-2">
                   <Label htmlFor="merchantId">Merchant ID</Label>
                   <Input
                     id="merchantId"
-                    placeholder="Enter your Clover Merchant ID"
+                    placeholder="Enter your POS Merchant ID"
                     value={newIntegration.merchantId}
                     onChange={(e) =>
                       setNewIntegration({ ...newIntegration, merchantId: e.target.value })
@@ -245,18 +290,22 @@ export default function PosIntegration() {
                 <Label htmlFor="accessToken">Access Token</Label>
                 <Textarea
                   id="accessToken"
-                  placeholder="Enter your Clover API access token"
-                  value={newIntegration.accessToken}
+                  placeholder="Enter your POS API access token"
+                  value={newIntegration.credentials.accessToken}
                   onChange={(e) =>
-                    setNewIntegration({ ...newIntegration, accessToken: e.target.value })
+                    setNewIntegration({ 
+                      ...newIntegration, 
+                      credentials: { ...newIntegration.credentials, accessToken: e.target.value }
+                    })
                   }
                 />
               </div>
               <Button
                 onClick={() => createIntegrationMutation.mutate(newIntegration)}
                 disabled={
+                  !newIntegration.name ||
                   !newIntegration.merchantId ||
-                  !newIntegration.accessToken ||
+                  !newIntegration.credentials.accessToken ||
                   createIntegrationMutation.isPending
                 }
               >
@@ -282,22 +331,22 @@ export default function PosIntegration() {
                   <Settings className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
                   <h3 className="text-lg font-semibold mb-2">No Integrations Found</h3>
                   <p className="text-muted-foreground">
-                    Create your first Clover integration to start syncing sales data.
+                    Create your first POS integration to start syncing sales data.
                   </p>
                 </CardContent>
               </Card>
             ) : (
-              integrations.map((integration: CloverIntegration) => (
+              integrations.map((integration: PosIntegration) => (
                 <Card key={integration.id}>
                   <CardHeader>
                     <div className="flex items-center justify-between">
                       <div>
                         <CardTitle className="flex items-center gap-2">
                           <Link2 className="h-5 w-5" />
-                          Merchant ID: {integration.merchantId}
+                          {integration.name} ({integration.provider.toUpperCase()})
                         </CardTitle>
                         <CardDescription>
-                          Environment: {integration.environment}
+                          Merchant ID: {integration.merchantId} | Environment: {integration.environment}
                           {integration.lastSyncAt && (
                             <span className="ml-2">
                               • Last sync: {new Date(integration.lastSyncAt).toLocaleString()}
@@ -391,14 +440,14 @@ export default function PosIntegration() {
                 </div>
               ) : (
                 <div className="space-y-4">
-                  {sales.map((sale: CloverSale) => (
+                  {sales.map((sale: PosSale) => (
                     <div
                       key={sale.id}
                       className="border rounded-lg p-4 space-y-2"
                     >
                       <div className="flex items-center justify-between">
                         <div>
-                          <p className="font-semibold">Order #{sale.cloverOrderId}</p>
+                          <p className="font-semibold">Order #{sale.posOrderId}</p>
                           <p className="text-sm text-muted-foreground">
                             {new Date(sale.orderDate).toLocaleString()}
                           </p>
@@ -415,7 +464,7 @@ export default function PosIntegration() {
                           <p className="text-sm font-medium mb-1">Items:</p>
                           {sale.items.map((item, index) => (
                             <div key={index} className="text-sm text-muted-foreground">
-                              {item.quantity}x {item.itemName} - ${item.price}
+                              {item.quantity}x {item.itemName} - ${item.unitPrice}
                             </div>
                           ))}
                         </div>
