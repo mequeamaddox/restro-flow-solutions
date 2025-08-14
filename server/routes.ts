@@ -53,42 +53,38 @@ async function extractTextFromImage(buffer: Buffer): Promise<{ text: string; con
 
 async function extractTextFromPDF(buffer: Buffer): Promise<{ text: string; confidence: number }> {
   try {
-    // Use dynamic import for ES modules
-    const pdfParse = (await import('pdf-parse')).default;
-    const data = await pdfParse(buffer);
+    // For scanned PDFs (which most commercial invoices are), skip text extraction
+    // and go directly to OCR processing using Tesseract
+    console.log('Processing scanned PDF with OCR...');
     
-    if (data.text && data.text.trim().length > 0) {
-      // PDF has extractable text
-      console.log(`PDF text extracted successfully: ${data.text.length} characters`);
-      return { text: data.text, confidence: 95 };
-    } else {
-      // PDF is likely scanned - fall back to basic extraction
-      console.log('PDF appears to be scanned, no extractable text found');
-      return { text: 'No extractable text found in PDF. Please upload as image for OCR processing.', confidence: 10 };
-    }
+    const { createWorker } = await import('tesseract.js');
+    const worker = await createWorker('eng');
+    
+    // Configure OCR for better invoice recognition
+    await worker.setParameters({
+      tessedit_char_whitelist: '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz .,/$-:()&',
+      tessedit_pageseg_mode: '6', // Uniform block of text
+    });
+    
+    const { data: { text, confidence } } = await worker.recognize(buffer);
+    await worker.terminate();
+    
+    // Clean extracted text to remove any binary artifacts
+    const cleanText = text
+      .replace(/[^\x20-\x7E\n\r\t]/g, ' ') // Remove non-printable characters
+      .replace(/\s+/g, ' ') // Normalize whitespace
+      .trim();
+    
+    console.log('OCR extracted text preview:', cleanText.substring(0, 300));
+    
+    return { text: cleanText, confidence: Math.max(confidence, 25) }; // Minimum 25% confidence
+    
   } catch (error) {
-    console.error('PDF Processing Error:', error);
-    // If it's a file path error (common with pdf-parse), try alternative approach
-    if (error instanceof Error && error.message.includes('ENOENT')) {
-      console.log('Attempting alternative PDF processing...');
-      try {
-        // Try to extract readable text, filtering out binary content
-        const text = buffer.toString('utf-8', 0, Math.min(1000, buffer.length))
-          .replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F-\x9F]/g, '') // Remove control characters
-          .replace(/[^\x20-\x7E\s]/g, '') // Keep only printable ASCII and whitespace
-          .trim();
-        
-        if (text && text.length > 10) {
-          return { text: text, confidence: 30 };
-        }
-      } catch (fallbackError) {
-        console.log('Fallback also failed');
-      }
-    }
+    console.error('PDF OCR Processing Error:', error);
     
     // Return meaningful error message
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-    const errorText = `PDF processing failed: ${errorMessage}. Please upload as image for OCR processing.`;
+    const errorText = `PDF OCR processing failed: ${errorMessage}. Please try uploading as JPG/PNG image.`;
     return { 
       text: errorText, 
       confidence: 5 
