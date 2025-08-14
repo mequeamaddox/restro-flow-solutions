@@ -4,111 +4,100 @@
 @tailwind utilities;
 
 :root {
-  --background: hsl(0, 0%, 100%);
-  --foreground: hsl(210, 25%, 7.8431%);
-  --card: hsl(0, 0%, 100%);
-  --card-foreground: hsl(210, 25%, 7.8431%);
-  --popover: hsl(0, 0%, 100%);
-  --popover-foreground: hsl(210, 25%, 7.8431%);
-  --primary: hsl(207, 90%, 54%);
+  /* RestroFlow Dark Slate Theme - Light Mode (fallback) */
+  --background: hsl(210, 40%, 2%);
+  --foreground: hsl(0, 0%, 95%);
+  --card: hsl(215, 28%, 8%);
+  --card-foreground: hsl(0, 0%, 90%);
+  --popover: hsl(215, 28%, 8%);
+  --popover-foreground: hsl(0, 0%, 95%);
+  --primary: hsl(25, 95%, 53%);
   --primary-foreground: hsl(0, 0%, 100%);
-  --secondary: hsl(210, 25%, 7.8431%);
-  --secondary-foreground: hsl(0, 0%, 100%);
-  --muted: hsl(210, 40%, 96%);
-  --muted-foreground: hsl(210, 25%, 7.8431%);
-  --accent: hsl(210, 40%, 92%);
-  --accent-foreground: hsl(207, 90%, 54%);
+  --secondary: hsl(215, 20%, 15%);
+  --secondary-foreground: hsl(0, 0%, 85%);
+  --muted: hsl(215, 15%, 12%);
+  --muted-foreground: hsl(217, 10%, 60%);
+  --accent: hsl(215, 25%, 16%);
+  --accent-foreground: hsl(25, 95%, 53%);
   --destructive: hsl(0, 84%, 60%);
   --destructive-foreground: hsl(0, 0%, 100%);
-  --border: hsl(214, 32%, 91%);
-  --input: hsl(214, 32%, 91%);
-  --ring: hsl(207, 90%, 54%);
-  --chart-1: hsl(207, 90%, 54%);
-  --chart-2: hsl(159.7826, 100%, 36.0784%);
-  --chart-3: hsl(42.0290, 92.8251%, 56.2745%);
-  --chart-4: hsl(147.1429, 78.5047%, 41.9608%);
-  --chart-5: hsl(341.4894, 75.2000%, 50.9804%);
-  --sidebar: hsl(0, 0%, 100%);
-  --sidebar-foreground: hsl(210, 25%, 7.8431%);
-  --sidebar-primary: hsl(207, 90%, 54%);
+  --border: hsl(215, 20%, 20%);
+  --input: hsl(215, 25%, 16%);
+  --ring: hsl(25, 95%, 53%);
+  --chart-1: hsl(25, 95%, 53%);
+  --chart-2: hsl(10, 90%, 58%);
+  --chart-3: hsl(40, 90%, 55%);
+  --chart-4: hsl(120, 65%, 50%);
+  --chart-5: hsl(280, 70%, 60%);
+  --sidebar: hsl(215, 30%, 6%);
+  --sidebar-foreground: hsl(0, 0%, 90%);
+  --sidebar-primary: hsl(25, 95%, 53%);
   --sidebar-primary-foreground: hsl(0, 0%, 100%);
-  --sidebar-accent: hsl(210, 40%, 92%);
-  --sidebar-accent-foreground: hsl(207, 90%, 54%);
-  --sidebar-border: hsl(214, 32%, 91%);
-  --sidebar-ring: hsl(207, 90%, 54%);
+  --sidebar-accent: hsl(215, 25%, 12%);
+  --sidebar-accent-foreground: hsl(25, 95%, 53%);
+  --sidebar-border: hsl(215, 20%, 16%);
+  --sidebar-ring: hsl(25, 95%, 53%);
   --font-sans: 'Inter', sans-serif;
   --font-serif: Georgia, serif;
   --font-mono: 'SF Mono', Monaco, 'Cascadia Code', 'Roboto Mono', Consolas, 'Courier New', monospace;
   --radius: 0.75rem;
-  --shadow-2xs: 0px 1px 2px 0px hsl(0, 0%, 0%, 0.05);
-  --shadow-xs: 0px 1px 2px 0px hsl(0, 0%, 0%, 0.05);
-  --shadow-sm: 0px 1px 2px 0px hsl(0, 0%, 0%, 0.05), 0px 1px 3px 0px hsl(0, 0%, 0%, 0.1);
-  --shadow: 0px 1px 3px 0px hsl(0, 0%, 0%, 0.1), 0px 1px 2px 0px hsl(0, 0%, 0%, 0.06);
-  --shadow-md: 0px 4px 6px -1px hsl(0, 0%, 0%, 0.1), 0px 2px 4px -1px hsl(0, 0%, 0%, 0.06);
-  --shadow-lg: 0px 10px 15px -3px hsl(0, 0%, 0%, 0.1), 0px 4px 6px -2px hsl(0, 0%, 0%, 0.05);
-  --shadow-xl: 0px 20px 25px -5px hsl(0, 0%, 0%, 0.1), 0px 10px 10px -5px hsl(0, 0%, 0%, 0.04);
-  --shadow-2xl: 0px 25px 50px -12px hsl(0, 0%, 0%, 0.25);
+  --shadow-2xs: 0px 1px 2px 0px hsl(0, 0%, 0%, 0.3);
+  --shadow-xs: 0px 1px 2px 0px hsl(0, 0%, 0%, 0.3);
+  --shadow-sm: 0px 1px 2px 0px hsl(0, 0%, 0%, 0.3), 0px 1px 3px 0px hsl(0, 0%, 0%, 0.4);
+  --shadow: 0px 1px 3px 0px hsl(0, 0%, 0%, 0.4), 0px 1px 2px 0px hsl(0, 0%, 0%, 0.3);
+  --shadow-md: 0px 4px 6px -1px hsl(0, 0%, 0%, 0.4), 0px 2px 4px -1px hsl(0, 0%, 0%, 0.3);
+  --shadow-lg: 0px 10px 15px -3px hsl(0, 0%, 0%, 0.4), 0px 4px 6px -2px hsl(0, 0%, 0%, 0.3);
+  --shadow-xl: 0px 20px 25px -5px hsl(0, 0%, 0%, 0.5), 0px 10px 10px -5px hsl(0, 0%, 0%, 0.2);
+  --shadow-2xl: 0px 25px 50px -12px hsl(0, 0%, 0%, 0.6);
   --tracking-normal: 0em;
   --spacing: 0.25rem;
   
-  /* RestroFlow Primary Colors */
-  --primary-50: hsl(207, 100%, 97%);
-  --primary-100: hsl(207, 96%, 91%);
-  --primary-200: hsl(207, 97%, 82%);
-  --primary-300: hsl(207, 96%, 69%);
-  --primary-400: hsl(207, 91%, 56%);
-  --primary-500: hsl(207, 90%, 54%);
-  --primary-600: hsl(217, 91%, 60%);
-  --primary-700: hsl(221, 83%, 53%);
-  --primary-800: hsl(224, 76%, 48%);
-  --primary-900: hsl(226, 71%, 40%);
+  /* RestroFlow Restaurant Orange/Red Gradients */
+  --restaurant-orange: hsl(25, 95%, 53%);
+  --restaurant-red: hsl(10, 90%, 58%);
+  --restaurant-gradient: linear-gradient(135deg, hsl(25, 95%, 53%) 0%, hsl(10, 90%, 58%) 100%);
+  --restaurant-gradient-subtle: linear-gradient(135deg, hsl(25, 50%, 20%) 0%, hsl(10, 50%, 20%) 100%);
   
-  /* RestroFlow Secondary Colors */
-  --secondary-50: hsl(251, 100%, 98%);
-  --secondary-100: hsl(251, 91%, 95%);
-  --secondary-200: hsl(251, 95%, 90%);
-  --secondary-300: hsl(252, 95%, 85%);
-  --secondary-400: hsl(252, 91%, 73%);
-  --secondary-500: hsl(252, 84%, 60%);
-  --secondary-600: hsl(253, 78%, 51%);
-  --secondary-700: hsl(254, 68%, 43%);
-  --secondary-800: hsl(255, 57%, 36%);
-  --secondary-900: hsl(256, 52%, 28%);
+  /* Success and Status Colors */
+  --success: hsl(120, 65%, 50%);
+  --warning: hsl(40, 90%, 55%);
+  --info: hsl(200, 90%, 55%);
 }
 
 .dark {
-  --background: hsl(0, 0%, 0%);
-  --foreground: hsl(200, 6.6667%, 91.1765%);
-  --card: hsl(228, 9.8039%, 10%);
-  --card-foreground: hsl(0, 0%, 85.0980%);
-  --popover: hsl(0, 0%, 0%);
-  --popover-foreground: hsl(200, 6.6667%, 91.1765%);
-  --primary: hsl(207, 90%, 54%);
+  /* RestroFlow Dark Slate Theme - Main Dark Mode */
+  --background: hsl(210, 40%, 2%);
+  --foreground: hsl(0, 0%, 95%);
+  --card: hsl(215, 28%, 8%);
+  --card-foreground: hsl(0, 0%, 90%);
+  --popover: hsl(215, 30%, 6%);
+  --popover-foreground: hsl(0, 0%, 95%);
+  --primary: hsl(25, 95%, 53%);
   --primary-foreground: hsl(0, 0%, 100%);
-  --secondary: hsl(195, 15%, 95%);
-  --secondary-foreground: hsl(210, 25%, 7.8431%);
-  --muted: hsl(0, 0%, 9%);
-  --muted-foreground: hsl(210, 3.3898%, 46.2745%);
-  --accent: hsl(210, 40%, 8%);
-  --accent-foreground: hsl(207, 90%, 54%);
+  --secondary: hsl(215, 20%, 15%);
+  --secondary-foreground: hsl(0, 0%, 85%);
+  --muted: hsl(215, 15%, 12%);
+  --muted-foreground: hsl(217, 10%, 60%);
+  --accent: hsl(215, 25%, 16%);
+  --accent-foreground: hsl(25, 95%, 53%);
   --destructive: hsl(0, 84%, 60%);
   --destructive-foreground: hsl(0, 0%, 100%);
-  --border: hsl(210, 5.2632%, 14.9020%);
-  --input: hsl(207, 27%, 18%);
-  --ring: hsl(207, 90%, 54%);
-  --chart-1: hsl(207, 90%, 54%);
-  --chart-2: hsl(159.7826, 100%, 36.0784%);
-  --chart-3: hsl(42.0290, 92.8251%, 56.2745%);
-  --chart-4: hsl(147.1429, 78.5047%, 41.9608%);
-  --chart-5: hsl(341.4894, 75.2000%, 50.9804%);
-  --sidebar: hsl(228, 9.8039%, 10%);
-  --sidebar-foreground: hsl(0, 0%, 85.0980%);
-  --sidebar-primary: hsl(207, 90%, 54%);
+  --border: hsl(215, 20%, 20%);
+  --input: hsl(215, 25%, 16%);
+  --ring: hsl(25, 95%, 53%);
+  --chart-1: hsl(25, 95%, 53%);
+  --chart-2: hsl(10, 90%, 58%);
+  --chart-3: hsl(40, 90%, 55%);
+  --chart-4: hsl(120, 65%, 50%);
+  --chart-5: hsl(280, 70%, 60%);
+  --sidebar: hsl(215, 30%, 6%);
+  --sidebar-foreground: hsl(0, 0%, 90%);
+  --sidebar-primary: hsl(25, 95%, 53%);
   --sidebar-primary-foreground: hsl(0, 0%, 100%);
-  --sidebar-accent: hsl(210, 40%, 8%);
-  --sidebar-accent-foreground: hsl(207, 90%, 54%);
-  --sidebar-border: hsl(210, 5.2632%, 26%);
-  --sidebar-ring: hsl(207, 90%, 54%);
+  --sidebar-accent: hsl(215, 25%, 12%);
+  --sidebar-accent-foreground: hsl(25, 95%, 53%);
+  --sidebar-border: hsl(215, 20%, 16%);
+  --sidebar-ring: hsl(25, 95%, 53%);
 }
 
 @layer base {
@@ -116,9 +105,34 @@
     @apply border-border;
   }
 
+  html {
+    @apply dark;
+  }
+
   body {
     @apply font-sans antialiased bg-background text-foreground;
     font-family: var(--font-sans);
+    background: linear-gradient(135deg, hsl(210, 40%, 2%) 0%, hsl(215, 30%, 4%) 50%, hsl(220, 25%, 3%) 100%);
+    min-height: 100vh;
+  }
+
+  /* Restaurant-focused UI enhancements */
+  .restaurant-gradient {
+    background: var(--restaurant-gradient);
+  }
+
+  .restaurant-gradient-subtle {
+    background: var(--restaurant-gradient-subtle);
+  }
+
+  .glass-morphism {
+    backdrop-filter: blur(10px);
+    background: hsl(215, 28%, 8%, 0.8);
+    border: 1px solid hsl(215, 20%, 20%, 0.3);
+  }
+
+  .restaurant-glow {
+    box-shadow: 0 0 20px hsl(25, 95%, 53%, 0.2);
   }
 }
 
