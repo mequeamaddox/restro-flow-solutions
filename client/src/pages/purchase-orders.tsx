@@ -6,9 +6,10 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Textarea } from "@/components/ui/textarea";
-import { Plus, Search, FileText, Calendar, DollarSign, Building2 } from "lucide-react";
+import { Plus, Search, FileText, Calendar, DollarSign, Building2, Eye, Edit, Trash2, MoreVertical } from "lucide-react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { insertPurchaseOrderSchema } from "@shared/schema";
@@ -35,6 +36,8 @@ export default function PurchaseOrders() {
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("");
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
+  const [selectedOrder, setSelectedOrder] = useState<any>(null);
+  const [isDetailsDialogOpen, setIsDetailsDialogOpen] = useState(false);
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const { currentLocation } = useLocation();
@@ -124,6 +127,28 @@ export default function PurchaseOrders() {
 
   const onSubmit = (data: PurchaseOrderFormData) => {
     createPOMutation.mutate(data);
+  };
+
+  const handleViewDetails = (order: any) => {
+    setSelectedOrder(order);
+    setIsDetailsDialogOpen(true);
+  };
+
+  const handleEditOrder = (order: any) => {
+    // TODO: Implement edit functionality
+    toast({
+      title: "Edit Order",
+      description: "Edit functionality coming soon",
+    });
+  };
+
+  const handleDeleteOrder = (order: any) => {
+    // TODO: Implement delete functionality
+    toast({
+      title: "Delete Order",
+      description: "Delete functionality coming soon",
+      variant: "destructive",
+    });
   };
 
   const getStatusColor = (status: string) => {
@@ -353,9 +378,35 @@ export default function PurchaseOrders() {
                     <FileText className="h-5 w-5 text-primary-600" />
                     <CardTitle className="text-lg">{order.orderNumber}</CardTitle>
                   </div>
-                  <Badge className={getStatusColor(order.status!)}>
-                    {getStatusLabel(order.status!)}
-                  </Badge>
+                  <div className="flex items-center space-x-2">
+                    <Badge className={getStatusColor(order.status!)}>
+                      {getStatusLabel(order.status!)}
+                    </Badge>
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+                          <MoreVertical className="h-4 w-4" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        <DropdownMenuItem onClick={() => handleViewDetails(order)}>
+                          <Eye className="h-4 w-4 mr-2" />
+                          View Details
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => handleEditOrder(order)}>
+                          <Edit className="h-4 w-4 mr-2" />
+                          Edit Order
+                        </DropdownMenuItem>
+                        <DropdownMenuItem 
+                          onClick={() => handleDeleteOrder(order)}
+                          className="text-red-600 focus:text-red-600"
+                        >
+                          <Trash2 className="h-4 w-4 mr-2" />
+                          Delete Order
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  </div>
                 </div>
                 {order.vendor && (
                   <div className="flex items-center space-x-2">
@@ -392,9 +443,22 @@ export default function PurchaseOrders() {
                       </span>
                     </div>
                   )}
-                  <div className="pt-2 border-t">
-                    <Button variant="outline" size="sm" className="w-full">
+                  <div className="pt-2 border-t flex gap-2">
+                    <Button 
+                      variant="outline" 
+                      size="sm" 
+                      className="flex-1"
+                      onClick={() => handleViewDetails(order)}
+                    >
+                      <Eye className="h-4 w-4 mr-2" />
                       View Details
+                    </Button>
+                    <Button 
+                      variant="outline" 
+                      size="sm" 
+                      onClick={() => handleEditOrder(order)}
+                    >
+                      <Edit className="h-4 w-4" />
                     </Button>
                   </div>
                 </div>
@@ -419,6 +483,96 @@ export default function PurchaseOrders() {
           </CardContent>
         </Card>
       )}
+
+      {/* Order Details Dialog */}
+      <Dialog open={isDetailsDialogOpen} onOpenChange={setIsDetailsDialogOpen}>
+        <DialogContent className="sm:max-w-[700px]">
+          <DialogHeader>
+            <DialogTitle>Purchase Order Details</DialogTitle>
+          </DialogHeader>
+          {selectedOrder && (
+            <div className="space-y-6">
+              {/* Order Header */}
+              <div className="flex items-center justify-between pb-4 border-b">
+                <div>
+                  <h3 className="text-lg font-semibold">{selectedOrder.orderNumber}</h3>
+                  <p className="text-sm text-gray-600">
+                    Created {selectedOrder.createdAt ? format(new Date(selectedOrder.createdAt), 'PPP') : 'N/A'}
+                  </p>
+                </div>
+                <Badge className={getStatusColor(selectedOrder.status!)}>
+                  {getStatusLabel(selectedOrder.status!)}
+                </Badge>
+              </div>
+
+              {/* Order Information */}
+              <div className="grid grid-cols-2 gap-6">
+                <div className="space-y-4">
+                  <div>
+                    <label className="text-sm font-medium text-gray-500">Vendor</label>
+                    <p className="mt-1 text-sm">{selectedOrder.vendor?.name || 'N/A'}</p>
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium text-gray-500">Order Date</label>
+                    <p className="mt-1 text-sm">
+                      {selectedOrder.orderDate ? format(new Date(selectedOrder.orderDate), 'PPP') : 'N/A'}
+                    </p>
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium text-gray-500">Expected Delivery</label>
+                    <p className="mt-1 text-sm">
+                      {selectedOrder.expectedDeliveryDate 
+                        ? format(new Date(selectedOrder.expectedDeliveryDate), 'PPP') 
+                        : 'Not specified'}
+                    </p>
+                  </div>
+                </div>
+                <div className="space-y-4">
+                  <div>
+                    <label className="text-sm font-medium text-gray-500">Total Amount</label>
+                    <p className="mt-1 text-lg font-semibold text-green-600">
+                      ${parseFloat(selectedOrder.totalAmount || '0').toFixed(2)}
+                    </p>
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium text-gray-500">Created By</label>
+                    <p className="mt-1 text-sm">{selectedOrder.createdBy || 'System'}</p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Notes */}
+              {selectedOrder.notes && (
+                <div>
+                  <label className="text-sm font-medium text-gray-500">Notes</label>
+                  <p className="mt-1 text-sm bg-gray-50 p-3 rounded-md">{selectedOrder.notes}</p>
+                </div>
+              )}
+
+              {/* Action Buttons */}
+              <div className="flex justify-end space-x-3 pt-4 border-t">
+                <Button variant="outline" onClick={() => setIsDetailsDialogOpen(false)}>
+                  Close
+                </Button>
+                <Button 
+                  variant="outline"
+                  onClick={() => handleEditOrder(selectedOrder)}
+                >
+                  <Edit className="h-4 w-4 mr-2" />
+                  Edit Order
+                </Button>
+                <Button 
+                  variant="destructive"
+                  onClick={() => handleDeleteOrder(selectedOrder)}
+                >
+                  <Trash2 className="h-4 w-4 mr-2" />
+                  Delete Order
+                </Button>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
