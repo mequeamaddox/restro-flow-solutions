@@ -94,7 +94,7 @@ async function extractTextFromPDF(buffer: Buffer): Promise<{ text: string; confi
       }
       console.log('PDF appears to be scanned - proceeding with OCR conversion');
     } catch (pdfError) {
-      console.log('PDF text extraction failed, proceeding with OCR:', pdfError.message);
+      console.log('PDF text extraction failed, proceeding with OCR:', pdfError instanceof Error ? pdfError.message : String(pdfError));
     }
 
     // Step 2: Convert PDF pages to images and OCR each page
@@ -133,11 +133,11 @@ async function extractTextFromPDF(buffer: Buffer): Promise<{ text: string; confi
           }
         }
       } catch (pageError) {
-        console.log(`Page ${pageNum} processing failed:`, pageError.message);
+        console.log(`Page ${pageNum} processing failed:`, pageError instanceof Error ? pageError.message : String(pageError));
         // Continue with next page
         if (pageNum === 1) {
           // If first page fails, try a different approach
-          throw new Error(`Failed to process first page: ${pageError.message}`);
+          throw new Error(`Failed to process first page: ${pageError instanceof Error ? pageError.message : String(pageError)}`);
         }
       }
     }
@@ -891,9 +891,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         inventoryItemId: item.id,
         locationId: itemData.locationId,
         type: "in",
-        quantity: itemData.quantity,
+        quantity: itemData.quantity?.toString() || "0",
         reference: "Initial stock",
-        createdBy: (req.user as any)?.claims?.sub ?? "system",
+        createdBy: (req.user as any)?.claims?.sub || "system",
       });
       
       res.status(201).json(item);
