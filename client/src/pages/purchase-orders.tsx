@@ -38,6 +38,7 @@ export default function PurchaseOrders() {
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [selectedOrder, setSelectedOrder] = useState<any>(null);
   const [isDetailsDialogOpen, setIsDetailsDialogOpen] = useState(false);
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const { currentLocation } = useLocation();
@@ -118,6 +119,49 @@ export default function PurchaseOrders() {
     },
   });
 
+  const updatePOMutation = useMutation({
+    mutationFn: async (data: PurchaseOrderFormData) => {
+      if (!selectedOrder?.id) throw new Error('No order selected');
+      const poData = {
+        vendorId: data.vendorId,
+        status: data.status,
+        orderDate: data.orderDate,
+        expectedDeliveryDate: data.expectedDeliveryDate || null,
+        totalAmount: data.totalAmount,
+        notes: data.notes || null,
+      };
+      await apiRequest('PUT', `/api/purchase-orders/${selectedOrder.id}`, poData);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/purchase-orders'] });
+      setIsEditDialogOpen(false);
+      setSelectedOrder(null);
+      form.reset();
+      toast({
+        title: "Success",
+        description: "Purchase order updated successfully",
+      });
+    },
+    onError: (error) => {
+      if (isUnauthorizedError(error)) {
+        toast({
+          title: "Unauthorized",
+          description: "You are logged out. Logging in again...",
+          variant: "destructive",
+        });
+        setTimeout(() => {
+          window.location.href = "/api/login";
+        }, 500);
+        return;
+      }
+      toast({
+        title: "Error",
+        description: "Failed to update purchase order",
+        variant: "destructive",
+      });
+    },
+  });
+
   const filteredOrders = purchaseOrders?.filter((order: any) => {
     const matchesSearch = order.orderNumber?.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          order.vendor?.name?.toLowerCase().includes(searchTerm.toLowerCase());
@@ -126,7 +170,11 @@ export default function PurchaseOrders() {
   }) || [];
 
   const onSubmit = (data: PurchaseOrderFormData) => {
-    createPOMutation.mutate(data);
+    if (isEditDialogOpen && selectedOrder) {
+      updatePOMutation.mutate(data);
+    } else {
+      createPOMutation.mutate(data);
+    }
   };
 
   const handleViewDetails = (order: any) => {
@@ -135,11 +183,18 @@ export default function PurchaseOrders() {
   };
 
   const handleEditOrder = (order: any) => {
-    // TODO: Implement edit functionality
-    toast({
-      title: "Edit Order",
-      description: "Edit functionality coming soon",
+    setSelectedOrder(order);
+    // Pre-populate form with existing order data
+    form.reset({
+      vendorId: order.vendorId,
+      status: order.status,
+      orderDate: order.orderDate ? new Date(order.orderDate).toISOString().split('T')[0] : "",
+      expectedDeliveryDate: order.expectedDeliveryDate ? new Date(order.expectedDeliveryDate).toISOString().split('T')[0] : "",
+      totalAmount: order.totalAmount,
+      notes: order.notes || "",
     });
+    setIsDetailsDialogOpen(false);
+    setIsEditDialogOpen(true);
   };
 
   const handleDeleteOrder = (order: any) => {
@@ -308,10 +363,13 @@ export default function PurchaseOrders() {
                   </Button>
                   <Button
                     type="submit"
-                    disabled={createPOMutation.isPending}
+                    disabled={createPOMutation.isPending || updatePOMutation.isPending}
                     className="bg-primary-600 hover:bg-primary-700"
                   >
-                    {createPOMutation.isPending ? "Creating..." : "Create Purchase Order"}
+                    {isEditDialogOpen 
+                      ? (updatePOMutation.isPending ? "Updating..." : "Update Purchase Order")
+                      : (createPOMutation.isPending ? "Creating..." : "Create Purchase Order")
+                    }
                   </Button>
                 </div>
               </form>
@@ -319,6 +377,151 @@ export default function PurchaseOrders() {
           </DialogContent>
         </Dialog>
       </div>
+
+      {/* Edit Purchase Order Dialog */}
+      <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
+        <DialogContent className="sm:max-w-[600px]">
+          <DialogHeader>
+            <DialogTitle>Edit Purchase Order</DialogTitle>
+          </DialogHeader>
+          <Form {...form}>
+            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <FormField
+                  control={form.control}
+                  name="vendorId"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Vendor *</FormLabel>
+                      <Select onValueChange={field.onChange} value={field.value}>
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select vendor" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          {vendors?.map((vendor: any) => (
+                            <SelectItem key={vendor.id} value={vendor.id}>
+                              {vendor.name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="status"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Status</FormLabel>
+                      <Select onValueChange={field.onChange} value={field.value}>
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select status" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          <SelectItem value="draft">Draft</SelectItem>
+                          <SelectItem value="sent">Sent</SelectItem>
+                          <SelectItem value="confirmed">Confirmed</SelectItem>
+                          <SelectItem value="delivered">Delivered</SelectItem>
+                          <SelectItem value="cancelled">Cancelled</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <FormField
+                  control={form.control}
+                  name="orderDate"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Order Date *</FormLabel>
+                      <FormControl>
+                        <Input type="date" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="expectedDeliveryDate"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Expected Delivery Date</FormLabel>
+                      <FormControl>
+                        <Input type="date" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+              <FormField
+                control={form.control}
+                name="totalAmount"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Total Amount *</FormLabel>
+                    <FormControl>
+                      <Input 
+                        type="number" 
+                        step="0.01" 
+                        placeholder="0.00"
+                        {...field} 
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="notes"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Notes</FormLabel>
+                    <FormControl>
+                      <Textarea 
+                        placeholder="Additional notes..."
+                        {...field} 
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <div className="flex justify-end space-x-2 pt-4">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => {
+                    setIsEditDialogOpen(false);
+                    setSelectedOrder(null);
+                    form.reset();
+                  }}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  type="submit"
+                  disabled={updatePOMutation.isPending}
+                  className="bg-primary-600 hover:bg-primary-700"
+                >
+                  {updatePOMutation.isPending ? "Updating..." : "Update Purchase Order"}
+                </Button>
+              </div>
+            </form>
+          </Form>
+        </DialogContent>
+      </Dialog>
 
       {/* Filters */}
       <Card>

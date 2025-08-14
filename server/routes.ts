@@ -393,7 +393,39 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.put('/api/purchase-orders/:id', isAuthenticated, async (req, res) => {
     try {
       const { id } = req.params;
-      const orderData = insertPurchaseOrderSchema.partial().parse(req.body);
+      
+      // Convert string dates to Date objects and prepare data
+      const orderData = {
+        vendorId: req.body.vendorId,
+        status: req.body.status,
+        orderDate: req.body.orderDate ? new Date(req.body.orderDate) : undefined,
+        expectedDeliveryDate: req.body.expectedDeliveryDate ? new Date(req.body.expectedDeliveryDate) : null,
+        totalAmount: req.body.totalAmount,
+        notes: req.body.notes || null,
+      };
+      
+      const order = await storage.updatePurchaseOrder(id, orderData);
+      res.json(order);
+    } catch (error) {
+      console.error("Error updating purchase order:", error);
+      res.status(400).json({ message: "Failed to update purchase order" });
+    }
+  });
+
+  app.put('/api/purchase-orders/:id', isAuthenticated, async (req, res) => {
+    try {
+      const { id } = req.params;
+      
+      // Convert string dates to Date objects and prepare data
+      const orderData = {
+        vendorId: req.body.vendorId,
+        status: req.body.status,
+        orderDate: req.body.orderDate ? new Date(req.body.orderDate) : undefined,
+        expectedDeliveryDate: req.body.expectedDeliveryDate ? new Date(req.body.expectedDeliveryDate) : null,
+        totalAmount: req.body.totalAmount,
+        notes: req.body.notes || null,
+      };
+      
       const order = await storage.updatePurchaseOrder(id, orderData);
       res.json(order);
     } catch (error) {
