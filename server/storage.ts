@@ -12,6 +12,7 @@ import {
   purchaseOrderItems,
   wasteEntries,
   inventoryTransactions,
+  invoiceProcessing,
   type User,
   type UpsertUser,
   type Location,
@@ -965,78 +966,123 @@ export class DatabaseStorage implements IStorage {
   // Advanced MarginEdge-like Features Implementation
 
   async getInvoices(status?: string): Promise<any[]> {
-    // Mock data for comprehensive invoice management system
-    const mockInvoices = [
-      {
-        id: "inv-001",
-        invoiceNumber: "INV-2025-001",
-        vendor: { name: "Fresh Foods Inc." },
-        invoiceDate: new Date("2025-01-10"),
-        totalAmount: 1250.00,
-        status: "pending"
-      },
-      {
-        id: "inv-002",
-        invoiceNumber: "INV-2025-002", 
-        vendor: { name: "Premium Meats Co." },
-        invoiceDate: new Date("2025-01-12"),
-        totalAmount: 2100.50,
-        status: "approved"
-      },
-      {
-        id: "inv-003",
-        invoiceNumber: "INV-2025-003",
-        vendor: { name: "Organic Produce Ltd." },
-        invoiceDate: new Date("2025-01-14"),
-        totalAmount: 890.75,
-        status: "overdue"
-      },
-      {
-        id: "inv-004",
-        invoiceNumber: "INV-2025-004",
-        vendor: { name: "Dairy Distributors LLC" },
-        invoiceDate: new Date("2025-01-13"),
-        totalAmount: 675.30,
-        status: "paid"
-      },
-      {
-        id: "inv-005",
-        invoiceNumber: "INV-2025-005",
-        vendor: { name: "Beverage Supply Co." },
-        invoiceDate: new Date("2025-01-15"),
-        totalAmount: 1850.00,
-        status: "processing"
-      }
-    ];
+    try {
+      let query = db
+        .select()
+        .from(invoiceProcessing)
+        .leftJoin(vendors, eq(invoiceProcessing.vendorId, vendors.id))
+        .orderBy(desc(invoiceProcessing.createdAt));
 
-    return status && status !== 'all' 
-      ? mockInvoices.filter(inv => inv.status === status)
-      : mockInvoices;
+      if (status && status !== 'all') {
+        query = query.where(eq(invoiceProcessing.status, status));
+      }
+
+      const results = await query;
+      return results.map(row => ({
+        ...row.invoice_processing,
+        vendor: row.vendors || undefined,
+        totalAmount: parseFloat(row.invoice_processing.total || '0'),
+        subtotal: parseFloat(row.invoice_processing.subtotal || '0'),
+        tax: parseFloat(row.invoice_processing.tax || '0'),
+      }));
+    } catch (error) {
+      console.error('Error fetching invoices:', error);
+      return [];
+    }
   }
 
   async createInvoice(invoice: any): Promise<any> {
-    // Mock implementation - would normally insert into invoiceProcessing table
-    return {
-      id: `inv-${Date.now()}`,
-      ...invoice,
-      totalAmount: parseFloat(invoice.subtotal) + parseFloat(invoice.tax || 0),
-      createdAt: new Date(),
-      status: 'pending'
-    };
+    try {
+      // Calculate totals
+      const subtotal = parseFloat(invoice.subtotal || '0');
+      const tax = parseFloat(invoice.tax || '0');
+      const total = parseFloat(invoice.total || (subtotal + tax));
+
+      const invoiceData = {
+        id: invoice.id || `inv-${Date.now()}`,
+        invoiceNumber: invoice.invoiceNumber || `INV-${Date.now()}`,
+        vendorId: invoice.vendorId || null,
+        locationId: invoice.locationId || null,
+        invoiceDate: new Date(invoice.invoiceDate || Date.now()),
+        dueDate: invoice.dueDate ? new Date(invoice.dueDate) : null,
+        subtotal: subtotal.toString(),
+        tax: tax.toString(),
+        total: total.toString(),
+        status: invoice.status || 'pending',
+        uploadMethod: invoice.uploadMethod || 'upload',
+        ocrConfidence: invoice.ocrConfidence ? parseFloat(invoice.ocrConfidence).toString() : null,
+        lineItems: invoice.lineItems || null,
+        notes: invoice.notes || invoice.originalText || null,
+        processedAt: invoice.processedAt ? new Date(invoice.processedAt) : new Date(),
+      };
+
+      const [result] = await db.insert(invoiceProcessing).values(invoiceData).returning();
+      return {
+        ...result,
+        totalAmount: parseFloat(result.total || '0'),
+        subtotal: parseFloat(result.subtotal || '0'),
+        tax: parseFloat(result.tax || '0'),
+      };
+    } catch (error) {
+      console.error('Error creating invoice:', error);
+      throw error;
+    }
   }
 
   async updateInvoiceStatus(id: string, status: string): Promise<any> {
-    // Mock implementation
-    return { id, status, updatedAt: new Date() };
+    try {
+      const [result] = await db
+        .update(invoiceProcessing)
+        .set({ status })
+        .where(eq(invoiceProcessing.id, id))
+        .returning();
+      
+      return {
+        ...result,
+        totalAmount: parseFloat(result.total || '0'),
+        subtotal: parseFloat(result.subtotal || '0'),
+        tax: parseFloat(result.tax || '0'),
+      };
+    } catch (error) {
+      console.error('Error updating invoice status:', error);
+      throw error;
+    }
   }
 
   async getInvoiceStats(): Promise<any> {
-    return {
-      totalInvoices: 47,
-      pendingCount: 8,
-      overdueCount: 3,
-      totalAmount: 47250.00
-    };
+    try {
+      const [totalResult] = await db
+        .select({
+          count: sql`COUNT(*)`,
+          total: sql`COALESCE(SUM(CAST(total AS DECIMAL)), 0)`,
+        })
+        .from(invoiceProcessing);
+
+      const [pendingResult] = await db
+        .select({ count: sql`COUNT(*)` })
+        .from(invoiceProcessing)
+        .where(eq(invoiceProcessing.status, 'pending'));
+
+      const [overdueResult] = await db
+        .select({ count: sql`COUNT(*)` })
+        .from(invoiceProcessing)
+        .where(eq(invoiceProcessing.status, 'overdue'));
+
+      return {
+        totalInvoices: parseInt(totalResult.count as string) || 0,
+        pendingCount: parseInt(pendingResult.count as string) || 0,
+        overdueCount: parseInt(overdueResult.count as string) || 0,
+        totalAmount: parseFloat(totalResult.total as string) || 0,
+      };
+    } catch (error) {
+      console.error('Error fetching invoice stats:', error);
+      return {
+        totalInvoices: 0,
+        pendingCount: 0,
+        overdueCount: 0,
+        totalAmount: 0,
+      };
+    }
   }
 
   async getCostAlerts(locationId?: string): Promise<any[]> {
