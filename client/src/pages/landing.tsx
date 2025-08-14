@@ -31,8 +31,27 @@ export default function Landing() {
       }} />
       
       <div className="relative z-10">
+        {/* Navigation Bar */}
+        <nav className="container mx-auto px-4 pt-6">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center">
+              <div className="inline-flex items-center justify-center w-10 h-10 rounded-full bg-gradient-to-br from-orange-400 to-red-500 mr-3 shadow-lg">
+                <ChefHat className="h-5 w-5 text-white" />
+              </div>
+              <span className="text-xl font-bold text-white">RestroFlow</span>
+            </div>
+            <Button 
+              variant="outline"
+              className="bg-transparent border-2 border-orange-400 text-orange-400 hover:bg-orange-400 hover:text-white px-6 py-2 font-semibold rounded-full transition-all duration-300"
+              onClick={() => window.location.href = '/api/login'}
+            >
+              Login
+            </Button>
+          </div>
+        </nav>
+
         {/* Unique Hero Section */}
-        <header className="container mx-auto px-4 pt-20 pb-32">
+        <header className="container mx-auto px-4 pt-14 pb-32">
           <div className="text-center max-w-6xl mx-auto">
             {/* Logo and Brand */}
             <div className="mb-8">
