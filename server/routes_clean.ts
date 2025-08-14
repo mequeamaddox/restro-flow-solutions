@@ -43,68 +43,6 @@ const upload = multer({
 
 
 // OCR Access Helper Function
-async function checkOcrAccess(userId: string): Promise<{ hasAccess: boolean; creditsRemaining: number; plan: string }> {
-  const user = await storage.getUser(userId);
-  if (!user) {
-    return { hasAccess: false, creditsRemaining: 0, plan: 'free' };
-  }
-
-  const plan = user.subscriptionPlan || 'free';
-  const ocrCreditsUsed = user.ocrCreditsUsed || 0;
-  const maxOcrCredits = 5; // Free plan limit
-
-  if (plan === 'professional' || plan === 'enterprise') {
-    return { hasAccess: true, creditsRemaining: 999, plan };
-  }
-
-  const creditsRemaining = Math.max(0, maxOcrCredits - ocrCreditsUsed);
-  return { hasAccess: creditsRemaining > 0, creditsRemaining, plan };
-}
-
-export async function registerRoutes(app: Express): Promise<Server> {
-  // Auth middleware
-  await setupAuth(app);
-
-  // Auth routes
-  app.get('/api/auth/user', isAuthenticated, async (req: any, res) => {
-    try {
-      const userId = (req.user as any).claims.sub;
-      const user = await storage.getUser(userId);
-      res.json(user);
-    } catch (error) {
-      console.error("Error fetching user:", error);
-      res.status(500).json({ message: "Failed to fetch user" });
-    }
-  });
-
-  // Invoice Processing Routes
-  app.get('/api/invoices', isAuthenticated, async (req, res) => {
-    try {
-      const { status } = req.query;
-      const invoices = await storage.getInvoices(status as string);
-      res.json(invoices);
-    } catch (error) {
-      console.error("Error fetching invoices:", error);
-      res.status(500).json({ message: "Failed to fetch invoices" });
-    }
-  });
-
-  app.post('/api/invoices', isAuthenticated, async (req, res) => {
-    try {
-      const invoiceData = req.body;
-      const invoice = await storage.createInvoice(invoiceData);
-      res.status(201).json(invoice);
-    } catch (error) {
-      console.error("Error creating invoice:", error);
-      res.status(400).json({ message: "Failed to create invoice" });
-    }
-  });
-
-  app.put('/api/invoices/:id/status', isAuthenticated, async (req, res) => {
-    try {
-      const { id } = req.params;
-      const { status } = req.body;
-      const invoice = await storage.updateInvoiceStatus(id, status);
       res.json(invoice);
     } catch (error) {
       console.error("Error updating invoice status:", error);
