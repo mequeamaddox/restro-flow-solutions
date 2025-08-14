@@ -50,9 +50,7 @@ export default function InvoiceProcessing() {
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [uploadProgress, setUploadProgress] = useState<number>(0);
   const [isUploading, setIsUploading] = useState(false);
-  const [uploadMethod, setUploadMethod] = useState<"photo" | "upload">("upload");
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const [isUploadDialogOpen, setIsUploadDialogOpen] = useState(false);
 
   // Queries
   const { data: invoices = [], isLoading: invoicesLoading } = useQuery({
@@ -75,7 +73,6 @@ export default function InvoiceProcessing() {
     mutationFn: async (file: File) => {
       const formData = new FormData();
       formData.append("invoice", file);
-      formData.append("uploadMethod", uploadMethod);
 
       const response = await fetch("/api/invoices/upload", {
         method: "POST",
@@ -83,18 +80,19 @@ export default function InvoiceProcessing() {
       });
       
       if (!response.ok) {
-        throw new Error("Upload failed");
+        const errorData = await response.json();
+        throw new Error(errorData.message || "Upload failed");
       }
       
       return response.json();
     },
     onSuccess: (data) => {
       toast({ 
-        title: "Invoice uploaded successfully",
-        description: `OCR processing completed with ${data.ocrConfidence}% confidence`
+        title: "OCR Processing Complete",
+        description: `Invoice processed with ${data.ocrConfidence}% confidence`
       });
       queryClient.invalidateQueries({ queryKey: ["/api/invoices"] });
-      setIsUploadDialogOpen(false);
+      queryClient.invalidateQueries({ queryKey: ["/api/invoices/stats"] });
       setUploadProgress(0);
     },
     onError: (error) => {
@@ -221,233 +219,33 @@ export default function InvoiceProcessing() {
           <p className="text-slate-300 mt-2">Automated invoice management and approval workflow</p>
         </div>
         <div className="flex gap-3">
-          <Dialog open={isUploadDialogOpen} onOpenChange={setIsUploadDialogOpen}>
-            <DialogTrigger asChild>
-              <Button className="bg-gradient-to-r from-orange-400 to-red-500 hover:from-orange-500 hover:to-red-600 text-white shadow-lg">
-                <Upload className="h-4 w-4 mr-2" />
-                Upload Invoice
-              </Button>
-            </DialogTrigger>
-            <DialogContent className="bg-slate-800 border-slate-700 max-w-lg">
-              <DialogHeader>
-                <DialogTitle className="text-white flex items-center gap-2">
-                  <Scan className="h-5 w-5 text-orange-400" />
-                  Upload Invoice for OCR Processing
-                </DialogTitle>
-              </DialogHeader>
-              
-              <div className="space-y-6">
-                {/* Upload Method Selection */}
-                <div className="space-y-3">
-                  <label className="text-sm font-medium text-slate-200">Upload Method</label>
-                  <div className="grid grid-cols-2 gap-3">
-                    <Button
-                      type="button"
-                      variant={uploadMethod === "upload" ? "default" : "outline"}
-                      onClick={() => setUploadMethod("upload")}
-                      className="flex items-center gap-2"
-                    >
-                      <FileImage className="h-4 w-4" />
-                      File Upload
-                    </Button>
-                    <Button
-                      type="button"
-                      variant={uploadMethod === "photo" ? "default" : "outline"}
-                      onClick={() => setUploadMethod("photo")}
-                      className="flex items-center gap-2"
-                    >
-                      <Camera className="h-4 w-4" />
-                      Take Photo
-                    </Button>
-                  </div>
-                </div>
+          <Button 
+            className="bg-gradient-to-r from-orange-400 to-red-500 hover:from-orange-500 hover:to-red-600 text-white shadow-lg"
+            onClick={triggerFileUpload}
+            disabled={isUploading}
+          >
+            <Upload className="h-4 w-4 mr-2" />
+            {isUploading ? "Processing..." : "Upload Invoice"}
+          </Button>
+          
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="image/jpeg,image/png,image/jpg,application/pdf"
+            onChange={handleFileUpload}
+            className="hidden"
+          />
 
-                {/* File Upload Area */}
-                <div className="space-y-4">
-                  <div 
-                    className="border-2 border-dashed border-slate-600 rounded-lg p-8 text-center hover:border-orange-400 transition-colors cursor-pointer"
-                    onClick={triggerFileUpload}
-                  >
-                    <Upload className="h-12 w-12 text-slate-400 mx-auto mb-4" />
-                    <p className="text-slate-200 mb-2">
-                      {uploadMethod === "photo" ? "Take a photo of the invoice" : "Click to upload or drag and drop"}
-                    </p>
-                    <p className="text-sm text-slate-400">
-                      Supports JPEG, PNG, and PDF files up to 10MB
-                    </p>
-                  </div>
-
-                  <input
-                    ref={fileInputRef}
-                    type="file"
-                    accept="image/jpeg,image/png,image/jpg,application/pdf"
-                    onChange={handleFileUpload}
-                    className="hidden"
-                    capture={uploadMethod === "photo" ? "environment" : undefined}
-                  />
-
-                  {isUploading && (
-                    <div className="space-y-2">
-                      <div className="flex items-center justify-between text-sm">
-                        <span className="text-slate-300">Processing invoice...</span>
-                        <span className="text-orange-400">{uploadProgress}%</span>
-                      </div>
-                      <Progress value={uploadProgress} className="h-2" />
-                    </div>
-                  )}
-                </div>
-
-                <div className="bg-slate-700/50 rounded-lg p-4">
-                  <h4 className="text-sm font-medium text-white mb-2">OCR Processing Features</h4>
-                  <ul className="text-sm text-slate-300 space-y-1">
-                    <li>• Automatic vendor recognition and matching</li>
-                    <li>• Invoice number and date extraction</li>
-                    <li>• Line item parsing with quantities and prices</li>
-                    <li>• Tax calculation verification</li>
-                    <li>• Confidence scoring for accuracy</li>
-                  </ul>
-                </div>
+          {isUploading && (
+            <div className="flex items-center gap-3 bg-slate-800/80 backdrop-blur-sm border border-slate-700 rounded-lg px-4 py-2">
+              <div className="flex items-center gap-2 text-sm text-slate-300">
+                <Scan className="h-4 w-4 animate-pulse text-orange-400" />
+                Processing with OCR...
               </div>
-            </DialogContent>
-          </Dialog>
-
-          <Dialog>
-            <DialogTrigger asChild>
-              <Button variant="outline" className="border-slate-600 text-slate-200">
-                <FileText className="h-4 w-4 mr-2" />
-                Manual Entry
-              </Button>
-            </DialogTrigger>
-            <DialogContent className="bg-slate-800 border-slate-700 max-w-lg">
-              <DialogHeader>
-                <DialogTitle className="text-white">Manual Invoice Entry</DialogTitle>
-              </DialogHeader>
-            <Form {...form}>
-              <form onSubmit={form.handleSubmit((data) => createInvoiceMutation.mutate(data))} className="space-y-4">
-                <FormField
-                  control={form.control}
-                  name="vendorId"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel className="text-white">Vendor</FormLabel>
-                      <Select onValueChange={field.onChange} defaultValue={field.value}>
-                        <FormControl>
-                          <SelectTrigger className="bg-slate-700 border-slate-600">
-                            <SelectValue placeholder="Select vendor" />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          {vendors.map((vendor: any) => (
-                            <SelectItem key={vendor.id} value={vendor.id}>
-                              {vendor.name}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                
-                <div className="grid grid-cols-2 gap-4">
-                  <FormField
-                    control={form.control}
-                    name="invoiceNumber"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel className="text-white">Invoice Number</FormLabel>
-                        <FormControl>
-                          <Input {...field} className="bg-slate-700 border-slate-600" placeholder="INV-001" />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  
-                  <FormField
-                    control={form.control}
-                    name="invoiceDate"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel className="text-white">Invoice Date</FormLabel>
-                        <FormControl>
-                          <Input {...field} type="date" className="bg-slate-700 border-slate-600" />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                </div>
-
-                <div className="grid grid-cols-2 gap-4">
-                  <FormField
-                    control={form.control}
-                    name="subtotal"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel className="text-white">Subtotal</FormLabel>
-                        <FormControl>
-                          <Input 
-                            {...field} 
-                            type="number" 
-                            step="0.01"
-                            className="bg-slate-700 border-slate-600" 
-                            placeholder="0.00"
-                            onChange={(e) => field.onChange(parseFloat(e.target.value) || 0)}
-                          />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  
-                  <FormField
-                    control={form.control}
-                    name="tax"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel className="text-white">Tax</FormLabel>
-                        <FormControl>
-                          <Input 
-                            {...field} 
-                            type="number" 
-                            step="0.01"
-                            className="bg-slate-700 border-slate-600" 
-                            placeholder="0.00"
-                            onChange={(e) => field.onChange(parseFloat(e.target.value) || 0)}
-                          />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                </div>
-
-                <FormField
-                  control={form.control}
-                  name="notes"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel className="text-white">Notes</FormLabel>
-                      <FormControl>
-                        <Textarea {...field} className="bg-slate-700 border-slate-600" placeholder="Additional notes..." />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                <Button 
-                  type="submit" 
-                  disabled={createInvoiceMutation.isPending}
-                  className="w-full bg-gradient-to-r from-orange-400 to-red-500"
-                >
-                  {createInvoiceMutation.isPending ? "Creating..." : "Create Invoice"}
-                </Button>
-              </form>
-            </Form>
-            </DialogContent>
-          </Dialog>
+              <div className="text-sm text-orange-400 font-medium">{uploadProgress}%</div>
+              <Progress value={uploadProgress} className="h-2 w-20" />
+            </div>
+          )}
         </div>
       </div>
 
