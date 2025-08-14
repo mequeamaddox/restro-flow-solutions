@@ -457,7 +457,7 @@ export default function Settings() {
         <Card className="lg:col-span-3">
           <CardHeader>
             <CardTitle className="flex items-center">
-              <Settings className="h-5 w-5 mr-2" />
+              <SettingsIcon className="h-5 w-5 mr-2" />
               Preferences
             </CardTitle>
           </CardHeader>
