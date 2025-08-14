@@ -234,7 +234,7 @@ export default function InvoiceProcessing() {
           <input
             ref={fileInputRef}
             type="file"
-            accept="image/jpeg,image/png,image/jpg,application/pdf"
+            accept="image/jpeg,image/png,image/jpg,application/pdf,text/plain"
             onChange={handleFileUpload}
             className="hidden"
           />

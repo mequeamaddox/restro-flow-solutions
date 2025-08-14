@@ -59,19 +59,21 @@ async function extractTextFromPDF(buffer: Buffer): Promise<{ text: string; confi
     
     if (data.text && data.text.trim().length > 0) {
       // PDF has extractable text
+      console.log(`PDF text extracted successfully: ${data.text.length} characters`);
       return { text: data.text, confidence: 95 };
     } else {
-      // PDF is likely scanned - fall back to a basic extraction method
-      console.log('PDF appears to be scanned, attempting basic text extraction...');
-      return { text: data.text || 'No text found in PDF', confidence: 50 };
+      // PDF is likely scanned - fall back to basic extraction
+      console.log('PDF appears to be scanned, no extractable text found');
+      return { text: 'No extractable text found in PDF. Please upload as image for OCR processing.', confidence: 10 };
     }
   } catch (error) {
     console.error('PDF Processing Error:', error);
-    // Fall back to basic processing if pdf-parse fails
-    console.log('Falling back to basic PDF processing...');
+    // Try to extract basic text or return meaningful message
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    const errorText = `PDF processing failed: ${errorMessage}. Please upload as image for OCR processing.`;
     return { 
-      text: 'PDF processing failed - please upload as image for OCR', 
-      confidence: 0 
+      text: errorText, 
+      confidence: 5 
     };
   }
 }
@@ -237,13 +239,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       let ocrResult: { text: string; confidence: number };
       
-      // Process with OCR (works for both images and PDFs)
+      // Process with appropriate method based on file type
       if (req.file.mimetype === 'application/pdf') {
-        console.log('Processing PDF with OCR...');
+        console.log('Processing PDF with text extraction...');
         ocrResult = await extractTextFromPDF(req.file.buffer);
-      } else {
+      } else if (req.file.mimetype.startsWith('image/')) {
         console.log('Processing image with OCR...');
         ocrResult = await extractTextFromImage(req.file.buffer);
+      } else if (req.file.mimetype === 'text/plain') {
+        console.log('Processing text file directly...');
+        const text = req.file.buffer.toString('utf-8');
+        ocrResult = { text, confidence: 100 };
+      } else {
+        throw new Error('Unsupported file type. Please upload PDF, image, or text files.');
       }
 
       console.log('OCR completed with confidence:', ocrResult.confidence);
