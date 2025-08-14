@@ -53,15 +53,22 @@ async function extractTextFromImage(buffer: Buffer): Promise<{ text: string; con
 
 async function extractTextFromPDF(buffer: Buffer): Promise<{ text: string; confidence: number }> {
   try {
-    // For PDF files, we'll use OCR on the PDF as if it were an image
-    // This handles both scanned PDFs and text-based PDFs
-    const { data: { text, confidence } } = await Tesseract.recognize(buffer, 'eng', {
-      logger: info => console.log('PDF OCR Progress:', info),
-    });
-    return { text, confidence };
+    // For PDF files, we'll use pdf-parse to extract text first
+    // If that fails or returns empty, we'll need to implement PDF-to-image conversion
+    const pdfParse = await import('pdf-parse');
+    const data = await pdfParse.default(buffer);
+    
+    if (data.text && data.text.trim().length > 0) {
+      // PDF has extractable text
+      return { text: data.text, confidence: 95 };
+    } else {
+      // PDF is likely scanned - would need pdf2pic or similar for OCR
+      // For now, return a meaningful error
+      throw new Error('PDF appears to be scanned. OCR for scanned PDFs not yet implemented.');
+    }
   } catch (error) {
-    console.error('PDF OCR Error:', error);
-    throw new Error('Failed to process PDF with OCR');
+    console.error('PDF Processing Error:', error);
+    throw new Error('Failed to process PDF. Please ensure the PDF contains extractable text.');
   }
 }
 
@@ -161,7 +168,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Auth routes
   app.get('/api/auth/user', isAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId = (req.user as any).claims.sub;
       const user = await storage.getUser(userId);
       res.json(user);
     } catch (error) {
@@ -266,7 +273,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.error("Error processing invoice upload:", error);
       res.status(500).json({ 
         message: "Failed to process invoice upload",
-        error: error.message 
+        error: (error as Error).message 
       });
     }
   });
@@ -554,10 +561,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Create inventory transaction for initial stock
       await storage.createInventoryTransaction({
         inventoryItemId: item.id,
+        locationId: itemData.locationId,
         type: "in",
         quantity: itemData.quantity,
         reference: "Initial stock",
-        createdBy: req.user?.claims?.sub,
+        createdBy: (req.user as any)?.claims?.sub,
       });
       
       res.status(201).json(item);
@@ -739,7 +747,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         expectedDeliveryDate: req.body.expectedDeliveryDate && req.body.expectedDeliveryDate.trim() !== '' ? new Date(req.body.expectedDeliveryDate) : null,
         totalAmount: req.body.totalAmount,
         notes: req.body.notes || null,
-        createdBy: req.user?.claims?.sub,
+        createdBy: (req.user as any)?.claims?.sub,
       };
       
       const order = await storage.createPurchaseOrder(orderData);
@@ -826,18 +834,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const wasteData = insertWasteEntrySchema.parse({
         ...req.body,
-        reportedBy: req.user?.claims?.sub,
+        reportedBy: (req.user as any)?.claims?.sub,
       });
       const entry = await storage.createWasteEntry(wasteData);
       
       // Create inventory transaction for waste
       await storage.createInventoryTransaction({
         inventoryItemId: wasteData.inventoryItemId!,
+        locationId: wasteData.locationId,
         type: "out",
         quantity: wasteData.quantity,
         reference: `Waste: ${wasteData.reason}`,
         notes: wasteData.notes,
-        createdBy: req.user?.claims?.sub,
+        createdBy: (req.user as any)?.claims?.sub,
       });
       
       res.status(201).json(entry);
@@ -876,7 +885,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const transactionData = insertInventoryTransactionSchema.parse({
         ...req.body,
-        createdBy: req.user?.claims?.sub,
+        createdBy: (req.user as any)?.claims?.sub,
       });
       const transaction = await storage.createInventoryTransaction(transactionData);
       res.status(201).json(transaction);

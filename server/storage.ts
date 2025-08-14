@@ -97,6 +97,15 @@ export interface IStorage {
   addRecipeIngredient(ingredient: InsertRecipeIngredient): Promise<RecipeIngredient>;
   removeRecipeIngredient(id: string): Promise<void>;
 
+  // Menu item operations
+  getMenuItems(): Promise<MenuItem[]>;
+  getMenuItem(id: string): Promise<(MenuItem & { ingredients: (MenuItemIngredient & { inventoryItem: InventoryItem })[] }) | undefined>;
+  createMenuItem(menuItem: InsertMenuItem): Promise<MenuItem>;
+  updateMenuItem(id: string, menuItem: Partial<InsertMenuItem>): Promise<MenuItem>;
+  deleteMenuItem(id: string): Promise<void>;
+  addMenuItemIngredient(ingredient: InsertMenuItemIngredient): Promise<MenuItemIngredient>;
+  removeMenuItemIngredient(id: string): Promise<void>;
+
   // Purchase order operations
   getPurchaseOrders(): Promise<(PurchaseOrder & { vendor?: Vendor; items?: PurchaseOrderItem[] })[]>;
   getPurchaseOrder(id: string): Promise<(PurchaseOrder & { vendor?: Vendor; items: (PurchaseOrderItem & { inventoryItem: InventoryItem })[] }) | undefined>;
@@ -625,6 +634,15 @@ export class DatabaseStorage implements IStorage {
 
   async deleteMenuItem(id: string): Promise<void> {
     await db.delete(menuItems).where(eq(menuItems.id, id));
+  }
+
+  async addMenuItemIngredient(ingredient: InsertMenuItemIngredient): Promise<MenuItemIngredient> {
+    const [result] = await db.insert(menuItemIngredients).values(ingredient).returning();
+    return result;
+  }
+
+  async removeMenuItemIngredient(id: string): Promise<void> {
+    await db.delete(menuItemIngredients).where(eq(menuItemIngredients.id, id));
   }
 
   // Purchase order operations
