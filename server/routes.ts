@@ -111,15 +111,18 @@ function parseInvoiceFromText(text: string): any {
     lineItems: [] as any[]
   };
 
-  // Enhanced patterns for better invoice field detection
+  // Enhanced patterns for commercial restaurant invoices
   const patterns = {
-    invoiceNumber: /(?:invoice|inv|bill|receipt)\s*(?:number|no|#|num)?\s*:?\s*([A-Z0-9\-\/_]+)/i,
-    date: /(?:invoice\s+date|date|dated|issued)\s*:?\s*(\d{1,2}[\/\-\.]\d{1,2}[\/\-\.]\d{2,4}|\d{4}[\/\-\.]\d{1,2}[\/\-\.]\d{1,2}|(?:jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)[a-z]*\s+\d{1,2},?\s+\d{4})/i,
-    dueDate: /(?:due\s+date|payment\s+due|due)\s*:?\s*(\d{1,2}[\/\-\.]\d{1,2}[\/\-\.]\d{2,4}|\d{4}[\/\-\.]\d{1,2}[\/\-\.]\d{1,2}|(?:jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)[a-z]*\s+\d{1,2},?\s+\d{4})/i,
-    total: /(?:total|amount\s+due|balance\s+due|grand\s+total)\s*:?\s*\$?\s*([0-9,]+\.?\d*)/i,
-    subtotal: /(?:subtotal|sub-total|sub\s+total|amount)\s*:?\s*\$?\s*([0-9,]+\.?\d*)/i,
-    tax: /(?:tax|vat|sales\s+tax|gst|hst)\s*:?\s*\$?\s*([0-9,]+\.?\d*)/i,
-    vendor: /(?:from|bill\s+to|vendor|supplier|company)\s*:?\s*([A-Za-z][A-Za-z\s&\.,'-]{2,40})/i
+    invoiceNumber: /(?:invoice|inv|bill|receipt|ref|order)\s*(?:number|no|#|num)?\s*:?\s*([A-Z0-9\-\/_]{3,20})/i,
+    date: /(?:invoice\s+date|date|dated|issued|order\s+date)\s*:?\s*(\d{1,2}[\/\-\.]\d{1,2}[\/\-\.]\d{2,4}|\d{4}[\/\-\.]\d{1,2}[\/\-\.]\d{1,2}|(?:jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)[a-z]*\s+\d{1,2},?\s+\d{4})/i,
+    dueDate: /(?:due\s+date|payment\s+due|due|terms)\s*:?\s*(\d{1,2}[\/\-\.]\d{1,2}[\/\-\.]\d{2,4}|\d{4}[\/\-\.]\d{1,2}[\/\-\.]\d{1,2}|(?:jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)[a-z]*\s+\d{1,2},?\s+\d{4}|net\s+\d+)/i,
+    total: /(?:total|amount\s+due|balance\s+due|grand\s+total|final\s+total|order\s+total)\s*:?\s*\$?\s*([0-9,]+\.?\d*)/i,
+    subtotal: /(?:subtotal|sub-total|sub\s+total|merchandise|order\s+amount)\s*:?\s*\$?\s*([0-9,]+\.?\d*)/i,
+    tax: /(?:tax|vat|sales\s+tax|gst|hst|state\s+tax)\s*:?\s*\$?\s*([0-9,]+\.?\d*)/i,
+    // Enhanced vendor patterns for food service companies
+    vendor: /^([A-Z][A-Za-z\s&\.,'-]+(?:food|supply|service|market|seafood|repair|inc|llc|corp|company|co)\b.*)/im,
+    // Common food service company names
+    companyNames: /\b(inland\s+food|food\s+lion|atlantic\s+food|c&c\s+seafood|sysco|us\s+foods|performance\s+food|reinhart|gordon\s+food)\b/i
   };
 
   // Extract information with better logic
@@ -175,18 +178,42 @@ function parseInvoiceFromText(text: string): any {
     }
   }
 
-  // Smart vendor extraction from first meaningful lines
+  // Smart vendor extraction for food service companies
   if (!invoiceData.vendorName && lines.length > 0) {
-    for (let i = 0; i < Math.min(8, lines.length); i++) {
-      const line = lines[i].replace(/[^\w\s&\.,'-]/g, '').trim();
-      if (line.length > 3 && line.length < 60 && 
-          !patterns.invoiceNumber.test(line) && 
-          !patterns.date.test(line) &&
-          !patterns.total.test(line) &&
-          !/^\d+$/.test(line) &&
-          !/^[A-Z]{1,3}$/.test(line)) {
-        invoiceData.vendorName = line;
-        break;
+    // First check for known company names anywhere in text
+    const fullText = lines.join(' ');
+    const companyMatch = fullText.match(patterns.companyNames);
+    if (companyMatch) {
+      invoiceData.vendorName = companyMatch[1]
+        .replace(/\b\w/g, l => l.toUpperCase()) // Title case
+        .trim();
+    } else {
+      // Look for company-like patterns in header
+      for (let i = 0; i < Math.min(12, lines.length); i++) {
+        const line = lines[i].replace(/[^\w\s&\.,'-]/g, '').trim();
+        
+        // Skip obvious non-company lines
+        if (line.length < 4 || line.length > 80 || 
+            patterns.invoiceNumber.test(line) || 
+            patterns.date.test(line) ||
+            patterns.total.test(line) ||
+            /^\d+$/.test(line) ||
+            /^[A-Z]{1,3}$/.test(line) ||
+            /^(page|po box|phone|fax|email|www)/i.test(line)) {
+          continue;
+        }
+        
+        // Look for food service indicators
+        if (/\b(food|supply|service|market|seafood|repair|restaurant|culinary|inc|llc|corp|company|co)\b/i.test(line)) {
+          invoiceData.vendorName = line;
+          break;
+        }
+        
+        // Generic company name patterns (first non-address line)
+        if (i < 3 && !/\d{3,}/.test(line) && !/\b(street|st|ave|avenue|road|rd|blvd|drive|dr|suite|ste)\b/i.test(line)) {
+          invoiceData.vendorName = line;
+          break;
+        }
       }
     }
   }
@@ -213,17 +240,33 @@ function parseInvoiceFromText(text: string): any {
     invoiceData.total = invoiceData.subtotal;
   }
 
-  // Ensure we have at least some amount
+  // Enhanced amount detection for commercial invoices
   if (!invoiceData.total && !invoiceData.subtotal) {
-    // Look for any dollar amount in the text
-    const amountMatch = text.match(/\$\s*([0-9,]+\.?\d*)/);
-    if (amountMatch) {
-      const amount = parseFloat(amountMatch[1].replace(/,/g, ''));
-      if (amount > 0) {
-        invoiceData.total = amount;
-        invoiceData.subtotal = amount;
+    // Look for prominent dollar amounts (likely totals)
+    const amountMatches = text.match(/\$\s*([0-9,]+\.?\d*)/g);
+    if (amountMatches) {
+      const amounts = amountMatches
+        .map(match => parseFloat(match.replace(/[\$,]/g, '')))
+        .filter(amount => amount > 10) // Filter out small amounts
+        .sort((a, b) => b - a); // Sort largest first
+      
+      if (amounts.length > 0) {
+        invoiceData.total = amounts[0]; // Use largest amount as total
+        if (amounts.length > 1) {
+          invoiceData.subtotal = amounts[1]; // Second largest as subtotal
+        } else {
+          invoiceData.subtotal = amounts[0];
+        }
       }
     }
+  }
+
+  // Better vendor name cleanup
+  if (invoiceData.vendorName) {
+    invoiceData.vendorName = invoiceData.vendorName
+      .replace(/\b(inc|llc|corp|company|co)\b\.?/gi, match => match.toUpperCase())
+      .replace(/\s+/g, ' ')
+      .trim();
   }
 
   return invoiceData;

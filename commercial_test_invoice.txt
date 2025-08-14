@@ -1,0 +1,25 @@
+INLAND FOODS
+1234 Distribution Way
+Food Service Division
+
+Invoice Number: IF-2025-3401
+Invoice Date: March 7, 2025
+Order Date: March 5, 2025
+
+Bill To:
+RestroFlow Restaurant
+456 Restaurant Row
+Downtown, ST 12345
+
+Description                          Qty      Unit Price    Total
+Fresh Ground Beef 80/20             100 lbs    $8.95      $895.00
+Chicken Breast Boneless              50 lbs   $12.45      $622.50
+Frozen French Fries                  10 cases  $24.95     $249.50
+Restaurant Quality Cheese            25 lbs    $9.85      $246.25
+
+                                    Subtotal: $2,013.25
+                                    Sales Tax:  $161.06
+                                       Total: $2,174.31
+
+Terms: Net 30 Days
+Thank you for your business!
