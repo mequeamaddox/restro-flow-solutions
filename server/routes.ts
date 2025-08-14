@@ -53,38 +53,44 @@ async function extractTextFromImage(buffer: Buffer): Promise<{ text: string; con
 
 async function extractTextFromPDF(buffer: Buffer): Promise<{ text: string; confidence: number }> {
   try {
-    // For scanned PDFs (which most commercial invoices are), skip text extraction
-    // and go directly to OCR processing using Tesseract
-    console.log('Processing scanned PDF with OCR...');
+    // First try text extraction using pdf-parse
+    console.log('Processing PDF with text extraction...');
     
-    const { createWorker } = await import('tesseract.js');
-    const worker = await createWorker('eng');
+    const pdfParse = await import('pdf-parse');
+    const data = await pdfParse.default(buffer);
     
-    // Configure OCR for better invoice recognition
-    await worker.setParameters({
-      tessedit_char_whitelist: '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz .,/$-:()&',
-      tessedit_pageseg_mode: '6', // Uniform block of text
-    });
+    if (data.text && data.text.trim().length > 50) {
+      // PDF has extractable text
+      console.log('PDF text extracted successfully');
+      return { text: data.text.trim(), confidence: 95 };
+    }
     
-    const { data: { text, confidence } } = await worker.recognize(buffer);
-    await worker.terminate();
+    // If no text found or insufficient text, fall back to OCR
+    console.log('PDF appears to be scanned, attempting OCR processing...');
     
-    // Clean extracted text to remove any binary artifacts
-    const cleanText = text
-      .replace(/[^\x20-\x7E\n\r\t]/g, ' ') // Remove non-printable characters
-      .replace(/\s+/g, ' ') // Normalize whitespace
-      .trim();
+    // For now, return a fallback message since direct PDF OCR is complex
+    // In a production environment, you'd convert PDF to image first
+    const fallbackText = `
+      Scanned PDF detected. Please convert to JPG/PNG for better text extraction.
+      
+      To process this invoice:
+      1. Save/export as JPG or PNG image
+      2. Upload the image file instead
+      
+      This will provide better OCR accuracy for invoice processing.
+    `;
     
-    console.log('OCR extracted text preview:', cleanText.substring(0, 300));
-    
-    return { text: cleanText, confidence: Math.max(confidence, 25) }; // Minimum 25% confidence
+    return { 
+      text: fallbackText, 
+      confidence: 10 
+    };
     
   } catch (error) {
-    console.error('PDF OCR Processing Error:', error);
+    console.error('PDF Processing Error:', error);
     
     // Return meaningful error message
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-    const errorText = `PDF OCR processing failed: ${errorMessage}. Please try uploading as JPG/PNG image.`;
+    const errorText = `PDF processing failed: ${errorMessage}. Please try uploading as JPG/PNG image for better results.`;
     return { 
       text: errorText, 
       confidence: 5 
@@ -792,7 +798,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         type: "in",
         quantity: itemData.quantity,
         reference: "Initial stock",
-        createdBy: (req.user as any)?.claims?.sub,
+        createdBy: (req.user as any)?.claims?.sub ?? "system",
       });
       
       res.status(201).json(item);
@@ -1291,8 +1297,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const sales = salesResult.rows[0];
       const purchases = purchaseResult.rows[0];
       
-      const totalRevenue = parseFloat(sales.total_revenue) || 0;
-      const totalPurchases = parseFloat(purchases.total_purchases) || 0;
+      const totalRevenue = parseFloat(String(sales.total_revenue)) || 0;
+      const totalPurchases = parseFloat(String(purchases.total_purchases)) || 0;
       const grossProfit = totalRevenue - totalPurchases;
       const grossMarginPercentage = totalRevenue > 0 ? (grossProfit / totalRevenue) * 100 : 0;
       
@@ -1300,8 +1306,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         period: { startDate, endDate },
         revenue: {
           total: totalRevenue,
-          transactionCount: parseInt(sales.transaction_count) || 0,
-          averageTicket: sales.transaction_count > 0 ? totalRevenue / parseInt(sales.transaction_count) : 0
+          transactionCount: parseInt(String(sales.transaction_count)) || 0,
+          averageTicket: Number(sales.transaction_count) > 0 ? totalRevenue / parseInt(String(sales.transaction_count)) : 0
         },
         cogs: {
           total: totalPurchases,
