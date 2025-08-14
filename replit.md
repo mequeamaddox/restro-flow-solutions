@@ -26,7 +26,7 @@ Following MarginEdge platform analysis, RestroFlow has been enhanced with:
 
 ### Automated Cost Control
 - **Price Monitoring**: Automatic tracking of ingredient price changes with threshold-based alerts
-- **Waste Tracking Analytics**: Real-time waste cost analysis and trend identification
+- **Comprehensive Waste Tracking**: Real-time tracking of all waste types including plate waste (customer leftovers), kitchen waste, prep waste, and spoilage
 - **Inventory Turnover Analysis**: Automated calculation of inventory efficiency metrics
 - **Budget Management**: Period-based budget tracking with variance analysis
 

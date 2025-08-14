@@ -132,6 +132,9 @@ export default function WasteTracking() {
       case 'damaged': return 'bg-yellow-100 text-yellow-800';
       case 'overproduction': return 'bg-blue-100 text-blue-800';
       case 'preparation_error': return 'bg-purple-100 text-purple-800';
+      case 'plate_waste': return 'bg-pink-100 text-pink-800';
+      case 'kitchen_waste': return 'bg-indigo-100 text-indigo-800';
+      case 'trim_waste': return 'bg-green-100 text-green-800';
       default: return 'bg-gray-100 text-gray-800';
     }
   };
@@ -224,6 +227,9 @@ export default function WasteTracking() {
                             <SelectItem value="damaged">Damaged</SelectItem>
                             <SelectItem value="overproduction">Overproduction</SelectItem>
                             <SelectItem value="preparation_error">Preparation Error</SelectItem>
+                            <SelectItem value="plate_waste">Plate Waste (Customer Leftovers)</SelectItem>
+                            <SelectItem value="kitchen_waste">Kitchen Waste</SelectItem>
+                            <SelectItem value="trim_waste">Trim/Prep Waste</SelectItem>
                             <SelectItem value="other">Other</SelectItem>
                           </SelectContent>
                         </Select>
@@ -270,8 +276,21 @@ export default function WasteTracking() {
         </Dialog>
       </div>
 
+      {/* Waste Categories Info */}
+      <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
+        <h3 className="font-medium text-blue-900 mb-2">Waste Categories Explained</h3>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-2 text-sm text-blue-800">
+          <div><strong>Plate Waste:</strong> Food served to customers but not eaten</div>
+          <div><strong>Kitchen Waste:</strong> Food wasted during cooking process</div>
+          <div><strong>Trim Waste:</strong> Natural waste from food prep (peels, bones, etc.)</div>
+          <div><strong>Overproduction:</strong> Made too much food for demand</div>
+          <div><strong>Preparation Error:</strong> Mistakes during food preparation</div>
+          <div><strong>Expired/Spoiled:</strong> Food past its usable date</div>
+        </div>
+      </div>
+
       {/* Waste Stats */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Total Waste Cost</CardTitle>
@@ -294,6 +313,18 @@ export default function WasteTracking() {
               {wasteStats?.totalEntries || 0}
             </div>
             <p className="text-xs text-muted-foreground">All time</p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Waste Percentage</CardTitle>
+            <AlertTriangle className="h-4 w-4 text-amber-600" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-amber-600">
+              {wasteStats?.totalCost ? ((wasteStats.totalCost / 1000) * 100).toFixed(1) : '0.0'}%
+            </div>
+            <p className="text-xs text-muted-foreground">Of estimated sales</p>
           </CardContent>
         </Card>
       </div>
@@ -322,6 +353,9 @@ export default function WasteTracking() {
                 <SelectItem value="damaged">Damaged</SelectItem>
                 <SelectItem value="overproduction">Overproduction</SelectItem>
                 <SelectItem value="preparation_error">Preparation Error</SelectItem>
+                <SelectItem value="plate_waste">Plate Waste (Customer Leftovers)</SelectItem>
+                <SelectItem value="kitchen_waste">Kitchen Waste</SelectItem>
+                <SelectItem value="trim_waste">Trim/Prep Waste</SelectItem>
                 <SelectItem value="other">Other</SelectItem>
               </SelectContent>
             </Select>
