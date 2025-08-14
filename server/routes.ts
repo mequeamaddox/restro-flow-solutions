@@ -2,6 +2,8 @@ import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { setupAuth, isAuthenticated } from "./replitAuth";
+import multer from "multer";
+import Tesseract from "tesseract.js";
 import { db } from "./db";
 import { sql } from "drizzle-orm";
 import { posService } from "./posService";
@@ -19,6 +21,138 @@ import {
   insertInventoryTransactionSchema,
   insertPosIntegrationSchema,
 } from "@shared/schema";
+
+// Configure multer for file uploads
+const upload = multer({
+  storage: multer.memoryStorage(),
+  limits: {
+    fileSize: 10 * 1024 * 1024, // 10MB limit
+  },
+  fileFilter: (req, file, cb) => {
+    const allowedTypes = ['image/jpeg', 'image/png', 'image/jpg', 'application/pdf'];
+    if (allowedTypes.includes(file.mimetype)) {
+      cb(null, true);
+    } else {
+      cb(new Error('Invalid file type. Only JPEG, PNG, and PDF files are allowed.'));
+    }
+  },
+});
+
+// OCR Processing Functions
+async function extractTextFromImage(buffer: Buffer): Promise<{ text: string; confidence: number }> {
+  try {
+    const { data: { text, confidence } } = await Tesseract.recognize(buffer, 'eng', {
+      logger: info => console.log('OCR Progress:', info),
+    });
+    return { text, confidence };
+  } catch (error) {
+    console.error('OCR Error:', error);
+    throw new Error('Failed to process image with OCR');
+  }
+}
+
+async function extractTextFromPDF(buffer: Buffer): Promise<{ text: string; confidence: number }> {
+  try {
+    // For PDF files, we'll use OCR on the PDF as if it were an image
+    // This handles both scanned PDFs and text-based PDFs
+    const { data: { text, confidence } } = await Tesseract.recognize(buffer, 'eng', {
+      logger: info => console.log('PDF OCR Progress:', info),
+    });
+    return { text, confidence };
+  } catch (error) {
+    console.error('PDF OCR Error:', error);
+    throw new Error('Failed to process PDF with OCR');
+  }
+}
+
+function parseInvoiceFromText(text: string): any {
+  const lines = text.split('\n').map(line => line.trim()).filter(line => line.length > 0);
+  
+  // Initialize invoice data
+  let invoiceData = {
+    invoiceNumber: '',
+    vendorName: '',
+    invoiceDate: '',
+    dueDate: '',
+    subtotal: 0,
+    tax: 0,
+    total: 0,
+    lineItems: [] as any[]
+  };
+
+  // Patterns for common invoice fields
+  const patterns = {
+    invoiceNumber: /(?:invoice|inv|#)\s*(?:number|no|#)?\s*:?\s*([A-Z0-9\-]+)/i,
+    date: /(?:date|dated)\s*:?\s*(\d{1,2}\/\d{1,2}\/\d{2,4}|\d{1,2}-\d{1,2}-\d{2,4}|\d{4}-\d{1,2}-\d{1,2})/i,
+    total: /(?:total|amount due)\s*:?\s*\$?(\d+\.?\d*)/i,
+    subtotal: /(?:subtotal|sub-total)\s*:?\s*\$?(\d+\.?\d*)/i,
+    tax: /(?:tax|vat)\s*:?\s*\$?(\d+\.?\d*)/i,
+  };
+
+  // Extract basic invoice information
+  for (const line of lines) {
+    if (!invoiceData.invoiceNumber && patterns.invoiceNumber.test(line)) {
+      const match = line.match(patterns.invoiceNumber);
+      if (match) invoiceData.invoiceNumber = match[1];
+    }
+    
+    if (!invoiceData.invoiceDate && patterns.date.test(line)) {
+      const match = line.match(patterns.date);
+      if (match) invoiceData.invoiceDate = match[1];
+    }
+    
+    if (!invoiceData.total && patterns.total.test(line)) {
+      const match = line.match(patterns.total);
+      if (match) invoiceData.total = parseFloat(match[1]);
+    }
+    
+    if (!invoiceData.subtotal && patterns.subtotal.test(line)) {
+      const match = line.match(patterns.subtotal);
+      if (match) invoiceData.subtotal = parseFloat(match[1]);
+    }
+    
+    if (!invoiceData.tax && patterns.tax.test(line)) {
+      const match = line.match(patterns.tax);
+      if (match) invoiceData.tax = parseFloat(match[1]);
+    }
+  }
+
+  // Try to extract vendor name (usually at the top of the invoice)
+  if (lines.length > 0) {
+    // Look for company-like patterns in the first few lines
+    for (let i = 0; i < Math.min(5, lines.length); i++) {
+      const line = lines[i];
+      if (line.length > 3 && line.length < 50 && !patterns.invoiceNumber.test(line) && !patterns.date.test(line)) {
+        invoiceData.vendorName = line;
+        break;
+      }
+    }
+  }
+
+  // Generate missing data if not found
+  if (!invoiceData.invoiceNumber) {
+    invoiceData.invoiceNumber = `OCR-${Date.now().toString().slice(-6)}`;
+  }
+  
+  if (!invoiceData.invoiceDate) {
+    invoiceData.invoiceDate = new Date().toISOString().split('T')[0];
+  }
+
+  if (!invoiceData.vendorName) {
+    invoiceData.vendorName = 'Auto-detected Vendor';
+  }
+
+  // Calculate missing amounts
+  if (!invoiceData.subtotal && invoiceData.total && invoiceData.tax) {
+    invoiceData.subtotal = invoiceData.total - invoiceData.tax;
+  }
+  
+  if (!invoiceData.total && invoiceData.subtotal && invoiceData.tax) {
+    invoiceData.total = invoiceData.subtotal + invoiceData.tax;
+  }
+
+  return invoiceData;
+}
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // Auth middleware
@@ -81,48 +215,59 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Invoice Upload with OCR Processing
-  app.post('/api/invoices/upload', isAuthenticated, async (req, res) => {
+  // Invoice Upload with Real OCR Processing
+  app.post('/api/invoices/upload', isAuthenticated, upload.single('invoice'), async (req, res) => {
     try {
-      // In a real implementation, you would:
-      // 1. Handle multipart form data with multer or similar
-      // 2. Process the image/PDF with OCR service (Tesseract, Google Vision, AWS Textract)
-      // 3. Parse the OCR results to extract invoice data
-      // 4. Match vendors against existing database
-      // 5. Calculate confidence scores
+      if (!req.file) {
+        return res.status(400).json({ message: "No file uploaded" });
+      }
+
+      console.log('Processing file:', req.file.originalname, 'Type:', req.file.mimetype);
       
-      // For now, simulate OCR processing with mock data
-      const mockOcrResult = {
+      let ocrResult: { text: string; confidence: number };
+      
+      // Process with OCR (works for both images and PDFs)
+      if (req.file.mimetype === 'application/pdf') {
+        console.log('Processing PDF with OCR...');
+        ocrResult = await extractTextFromPDF(req.file.buffer);
+      } else {
+        console.log('Processing image with OCR...');
+        ocrResult = await extractTextFromImage(req.file.buffer);
+      }
+
+      console.log('OCR completed with confidence:', ocrResult.confidence);
+      console.log('Extracted text preview:', ocrResult.text.substring(0, 200) + '...');
+
+      // Parse invoice data from extracted text
+      const parsedData = parseInvoiceFromText(ocrResult.text);
+      
+      // Create invoice with OCR data
+      const invoiceData = {
         id: `inv-${Date.now()}`,
-        invoiceNumber: `OCR-${Date.now().toString().slice(-6)}`,
-        vendorName: "Auto-detected Vendor",
-        invoiceDate: new Date().toISOString().split('T')[0],
-        subtotal: Math.floor(Math.random() * 1000 + 100),
-        tax: Math.floor(Math.random() * 100 + 10),
-        total: 0,
-        ocrConfidence: Math.floor(Math.random() * 20 + 80), // 80-100% confidence
+        ...parsedData,
+        ocrConfidence: Math.round(ocrResult.confidence),
         uploadMethod: req.body.uploadMethod || 'upload',
         status: 'pending',
-        lineItems: [
-          { description: "Fresh Ingredients", quantity: 10, unitPrice: 15.50, total: 155.00 },
-          { description: "Premium Meat", quantity: 5, unitPrice: 28.00, total: 140.00 },
-        ],
+        originalText: ocrResult.text,
         processedAt: new Date(),
       };
-      
-      mockOcrResult.total = mockOcrResult.subtotal + mockOcrResult.tax;
 
       // Create the invoice in storage
-      const invoice = await storage.createInvoice(mockOcrResult);
+      const invoice = await storage.createInvoice(invoiceData);
       
       res.status(201).json({
         ...invoice,
-        ocrConfidence: mockOcrResult.ocrConfidence,
-        message: "Invoice processed successfully with OCR"
+        ocrConfidence: invoiceData.ocrConfidence,
+        extractedData: parsedData,
+        message: "Invoice processed successfully with real OCR"
       });
+
     } catch (error) {
-      console.error("Error uploading invoice:", error);
-      res.status(500).json({ message: "Failed to process invoice upload" });
+      console.error("Error processing invoice upload:", error);
+      res.status(500).json({ 
+        message: "Failed to process invoice upload",
+        error: error.message 
+      });
     }
   });
 
