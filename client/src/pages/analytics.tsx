@@ -180,6 +180,8 @@ export default function Analytics() {
           <TabsTrigger value="profit-loss">P&L Report</TabsTrigger>
           <TabsTrigger value="cost-analysis">Cost Analysis</TabsTrigger>
           <TabsTrigger value="trends">Trends</TabsTrigger>
+          <TabsTrigger value="inventory-reports">Inventory Reports</TabsTrigger>
+          <TabsTrigger value="vendor-reports">Vendor Reports</TabsTrigger>
         </TabsList>
 
         <TabsContent value="overview" className="space-y-6">
@@ -509,6 +511,96 @@ export default function Analytics() {
               )}
             </CardContent>
           </Card>
+        </TabsContent>
+
+        <TabsContent value="inventory-reports" className="space-y-6">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <Card>
+              <CardHeader>
+                <CardTitle>Low Stock Items</CardTitle>
+                <CardDescription>Items that need to be reordered</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <p className="text-muted-foreground">No low stock items currently</p>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle>Inventory Turnover</CardTitle>
+                <CardDescription>How quickly inventory is being used</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <p className="text-muted-foreground">
+                  Turnover rate: {parseFloat(biData?.inventoryTurnover || '0').toFixed(2)}x per period
+                </p>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle>Value by Category</CardTitle>
+                <CardDescription>Inventory value breakdown</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <p className="text-muted-foreground">Category breakdown coming soon</p>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle>Expiration Tracking</CardTitle>
+                <CardDescription>Items approaching expiration</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <p className="text-muted-foreground">No items expiring soon</p>
+              </CardContent>
+            </Card>
+          </div>
+        </TabsContent>
+
+        <TabsContent value="vendor-reports" className="space-y-6">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <Card>
+              <CardHeader>
+                <CardTitle>Vendor Performance</CardTitle>
+                <CardDescription>Delivery times and order accuracy</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <p className="text-muted-foreground">No vendor performance data available</p>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle>Purchase History</CardTitle>
+                <CardDescription>Recent orders by vendor</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <p className="text-muted-foreground">No recent purchases</p>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle>Price Comparisons</CardTitle>
+                <CardDescription>Compare prices across vendors</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <p className="text-muted-foreground">Price comparison data coming soon</p>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle>Payment Terms</CardTitle>
+                <CardDescription>Outstanding payments and terms</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <p className="text-muted-foreground">No outstanding payments</p>
+              </CardContent>
+            </Card>
+          </div>
         </TabsContent>
       </Tabs>
     </div>

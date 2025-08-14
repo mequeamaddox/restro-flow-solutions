@@ -51,10 +51,10 @@ function Router() {
               <Route path="/recipes" component={Recipes} />
               <Route path="/vendors" component={Vendors} />
               <Route path="/purchase-orders" component={PurchaseOrders} />
-              <Route path="/reports" component={Reports} />
               <Route path="/waste-tracking" component={WasteTracking} />
               <Route path="/pos-integration" component={PosIntegration} />
               <Route path="/analytics" component={Analytics} />
+              <Route path="/reports" component={Analytics} />
               <Route path="/barcode-test" component={BarcodeTest} />
               <Route path="/settings" component={Settings} />
               <Route component={NotFound} />

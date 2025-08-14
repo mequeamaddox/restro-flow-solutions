@@ -598,7 +598,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const locationId = req.query.locationId;
       const result = await db.execute(sql`
         SELECT * FROM cost_alerts 
-        WHERE location_id = ${locationId} AND is_active = true
+        WHERE location_id = ${locationId}::uuid AND is_active = true
         ORDER BY severity DESC, created_at DESC
         LIMIT 20
       `);
@@ -623,7 +623,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       const result = await db.execute(sql`
         SELECT * FROM business_intelligence 
-        WHERE location_id = ${locationId} AND ${dateCondition}
+        WHERE location_id = ${locationId}::uuid AND report_date >= CURRENT_DATE - INTERVAL '30 days'
         ORDER BY report_date DESC
         LIMIT 1
       `);
@@ -657,16 +657,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
         SELECT COALESCE(SUM(CAST(total AS DECIMAL)), 0) as total_revenue,
                COUNT(*) as transaction_count
         FROM pos_sales 
-        WHERE location_id = ${locationId} 
-        AND order_date BETWEEN ${startDate.toISOString()} AND ${endDate.toISOString()}
+        WHERE location_id = ${locationId}::uuid 
+        AND order_date BETWEEN ${startDate.toISOString()}::timestamp AND ${endDate.toISOString()}::timestamp
       `);
 
       // Get purchase data
       const purchaseResult = await db.execute(sql`
         SELECT COALESCE(SUM(CAST(total AS DECIMAL)), 0) as total_purchases
         FROM purchase_orders 
-        WHERE location_id = ${locationId} 
-        AND order_date BETWEEN ${startDate.toISOString()} AND ${endDate.toISOString()}
+        WHERE location_id = ${locationId}::uuid 
+        AND order_date BETWEEN ${startDate.toISOString()}::timestamp AND ${endDate.toISOString()}::timestamp
         AND status = 'completed'
       `);
 
