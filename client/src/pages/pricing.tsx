@@ -11,10 +11,10 @@ export default function Pricing() {
   const plans = [
     {
       name: "Essential",
-      monthlyPrice: 89,
-      annualPrice: 71, // 20% discount
+      monthlyPrice: 149,
+      annualPrice: 119, // 20% discount
       period: "per location",
-      description: "Complete solution for single locations",
+      description: "Core features for growing restaurants",
       icon: ChefHat,
       color: "from-blue-500 to-cyan-500",
       popular: false,
@@ -29,15 +29,15 @@ export default function Pricing() {
         "Mobile app access",
         "Email & chat support",
         "Basic POS integration",
-        "Unlimited inventory items"
+        "Up to 3 locations"
       ]
     },
     {
       name: "Professional",
-      monthlyPrice: 179,
-      annualPrice: 143, // 20% discount  
+      monthlyPrice: 199,
+      annualPrice: 159, // 20% discount  
       period: "per location",
-      description: "Most popular - matches MarginEdge features for 45% less",
+      description: "Most popular - complete MarginEdge alternative for 40% less",
       icon: Star,
       color: "from-orange-500 to-red-500", 
       popular: true,
@@ -45,7 +45,7 @@ export default function Pricing() {
       features: [
         "Everything in Essential",
         "Advanced analytics dashboard",
-        "Multi-location management", 
+        "Unlimited locations", 
         "All POS/accounting integrations",
         "Automated invoice processing (24-48hr)",
         "Budget tracking & variance analysis",
@@ -161,16 +161,16 @@ export default function Pricing() {
                   <div className="text-center">
                     <div className="text-lg font-semibold text-slate-300 mb-2">RestroFlow Professional</div>
                     <div className="text-3xl font-bold text-green-400">
-                      ${billingCycle === 'monthly' ? '179' : '143'}/mo
+                      ${billingCycle === 'monthly' ? '199' : '159'}/mo
                     </div>
                     <div className="text-sm text-orange-300 font-semibold">
-                      Save ${billingCycle === 'monthly' ? '$151' : '$154'}/mo per location
+                      Save ${billingCycle === 'monthly' ? '$131' : '$138'}/mo per location
                     </div>
                   </div>
                 </div>
                 <div className="mt-4 pt-4 border-t border-slate-600">
                   <div className="text-lg font-bold text-orange-300">
-                    Annual Savings: ${billingCycle === 'monthly' ? '$1,812' : '$1,848'} per location
+                    Annual Savings: ${billingCycle === 'monthly' ? '$1,572' : '$1,656'} per location
                   </div>
                 </div>
               </div>
