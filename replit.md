@@ -12,7 +12,10 @@ Following MarginEdge platform analysis, RestroFlow has been enhanced with:
 
 ### Invoice Processing System Implementation (August 2025)
 - **Real Database Operations**: Replaced mock invoice data with actual PostgreSQL database operations for invoice creation, reading, and statistics
-- **Advanced File Processing**: Comprehensive file upload support for PDFs (text extraction), images (OCR), and text files with confidence scoring
+- **Advanced Free OCR Processing**: Comprehensive PDF-to-image conversion with enhanced Tesseract OCR for multi-page scanned invoices
+- **Smart Processing Pipeline**: Automatic text extraction for text-based PDFs, fallback to OCR for scanned documents
+- **Multi-page PDF Support**: Converts PDF pages to high-resolution images (200 DPI) for optimal OCR accuracy
+- **Enhanced Tesseract Configuration**: Optimized OCR settings for invoice processing with character whitelisting and LSTM engine
 - **Data Sanitization**: Robust text processing to handle binary content and prevent UTF-8 encoding errors in database storage
 - **Expandable Detail Views**: Fully functional invoice detail dialogs showing complete information including OCR confidence, vendor details, and processing notes
 - **Real-time Statistics**: Database-driven invoice counts and statistics replacing mock data for accurate dashboard metrics
