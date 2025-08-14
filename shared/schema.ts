@@ -480,6 +480,152 @@ export const posSaleItemsRelations = relations(posSaleItems, ({ one }) => ({
 
 export type UpsertUser = typeof users.$inferInsert;
 export type User = typeof users.$inferSelect;
+
+// Security and Audit Tables
+export const securityLogs = pgTable("security_logs", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").references(() => users.id),
+  action: varchar("action", { length: 100 }).notNull(), // login, logout, access_denied, data_export, etc.
+  resource: varchar("resource", { length: 255 }), // table/endpoint accessed
+  ipAddress: varchar("ip_address", { length: 45 }),
+  userAgent: varchar("user_agent", { length: 500 }),
+  sessionId: varchar("session_id"),
+  severity: varchar("severity", { enum: ["low", "medium", "high", "critical"] }).default("low"),
+  metadata: jsonb("metadata"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const auditLogs = pgTable("audit_logs", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").references(() => users.id),
+  locationId: varchar("location_id").references(() => locations.id),
+  tableName: varchar("table_name", { length: 100 }).notNull(),
+  recordId: varchar("record_id").notNull(),
+  action: varchar("action", { enum: ["create", "update", "delete"] }).notNull(),
+  oldValues: jsonb("old_values"),
+  newValues: jsonb("new_values"),
+  changedFields: jsonb("changed_fields"),
+  reason: varchar("reason", { length: 500 }),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const costAlerts = pgTable("cost_alerts", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  locationId: varchar("location_id").references(() => locations.id),
+  alertType: varchar("alert_type", { enum: ["price_variance", "budget_exceeded", "waste_threshold", "low_margin"] }).notNull(),
+  itemId: varchar("item_id").references(() => inventoryItems.id),
+  threshold: decimal("threshold", { precision: 10, scale: 2 }),
+  actualValue: decimal("actual_value", { precision: 10, scale: 2 }),
+  variance: decimal("variance", { precision: 8, scale: 2 }),
+  severity: varchar("severity", { enum: ["low", "medium", "high", "critical"] }).default("medium"),
+  isActive: boolean("is_active").default(true),
+  acknowledgedBy: varchar("acknowledged_by").references(() => users.id),
+  acknowledgedAt: timestamp("acknowledged_at"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const businessIntelligence = pgTable("business_intelligence", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  locationId: varchar("location_id").references(() => locations.id),
+  reportDate: timestamp("report_date").notNull(),
+  totalRevenue: decimal("total_revenue", { precision: 12, scale: 2 }).default("0"),
+  totalCogs: decimal("total_cogs", { precision: 12, scale: 2 }).default("0"),
+  grossMargin: decimal("gross_margin", { precision: 8, scale: 2 }).default("0"),
+  foodCostPercentage: decimal("food_cost_percentage", { precision: 5, scale: 2 }).default("0"),
+  laborCostPercentage: decimal("labor_cost_percentage", { precision: 5, scale: 2 }).default("0"),
+  wastePercentage: decimal("waste_percentage", { precision: 5, scale: 2 }).default("0"),
+  inventoryTurnover: decimal("inventory_turnover", { precision: 8, scale: 2 }).default("0"),
+  avgOrderValue: decimal("avg_order_value", { precision: 10, scale: 2 }).default("0"),
+  customerCount: integer("customer_count").default(0),
+  topSellingItems: jsonb("top_selling_items"),
+  lowPerformingItems: jsonb("low_performing_items"),
+  trends: jsonb("trends"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const invoiceProcessing = pgTable("invoice_processing", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  vendorId: varchar("vendor_id").references(() => vendors.id),
+  locationId: varchar("location_id").references(() => locations.id),
+  invoiceNumber: varchar("invoice_number", { length: 100 }).notNull(),
+  invoiceDate: timestamp("invoice_date").notNull(),
+  dueDate: timestamp("due_date"),
+  subtotal: decimal("subtotal", { precision: 12, scale: 2 }).notNull(),
+  tax: decimal("tax", { precision: 10, scale: 2 }).default("0"),
+  total: decimal("total", { precision: 12, scale: 2 }).notNull(),
+  status: varchar("status", { enum: ["pending", "approved", "paid", "disputed", "cancelled"] }).default("pending"),
+  paymentMethod: varchar("payment_method", { enum: ["check", "ach", "wire", "credit_card"] }),
+  paymentDate: timestamp("payment_date"),
+  uploadMethod: varchar("upload_method", { enum: ["photo", "email", "upload", "edi"] }),
+  ocrConfidence: decimal("ocr_confidence", { precision: 5, scale: 2 }),
+  lineItems: jsonb("line_items"),
+  notes: text("notes"),
+  approvedBy: varchar("approved_by").references(() => users.id),
+  processedAt: timestamp("processed_at"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const priceMonitoring = pgTable("price_monitoring", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  inventoryItemId: varchar("inventory_item_id").references(() => inventoryItems.id),
+  vendorId: varchar("vendor_id").references(() => vendors.id),
+  previousPrice: decimal("previous_price", { precision: 10, scale: 2 }),
+  currentPrice: decimal("current_price", { precision: 10, scale: 2 }),
+  priceChange: decimal("price_change", { precision: 10, scale: 2 }),
+  percentageChange: decimal("percentage_change", { precision: 8, scale: 2 }),
+  threshold: decimal("threshold", { precision: 8, scale: 2 }).default("10.00"),
+  alertSent: boolean("alert_sent").default(false),
+  invoiceId: varchar("invoice_id").references(() => invoiceProcessing.id),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const userPermissions = pgTable("user_permissions", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").references(() => users.id),
+  locationId: varchar("location_id").references(() => locations.id),
+  role: varchar("role", { enum: ["owner", "manager", "assistant_manager", "kitchen_manager", "staff", "accountant"] }).notNull(),
+  permissions: jsonb("permissions").notNull(), // Array of permission strings
+  isActive: boolean("is_active").default(true),
+  grantedBy: varchar("granted_by").references(() => users.id),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const budgets = pgTable("budgets", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  locationId: varchar("location_id").references(() => locations.id),
+  category: varchar("category", { enum: ["food", "beverage", "labor", "utilities", "marketing", "maintenance"] }).notNull(),
+  period: varchar("period", { enum: ["daily", "weekly", "monthly", "quarterly", "yearly"] }).notNull(),
+  budgetAmount: decimal("budget_amount", { precision: 12, scale: 2 }).notNull(),
+  actualAmount: decimal("actual_amount", { precision: 12, scale: 2 }).default("0"),
+  variance: decimal("variance", { precision: 12, scale: 2 }).default("0"),
+  variancePercentage: decimal("variance_percentage", { precision: 8, scale: 2 }).default("0"),
+  startDate: timestamp("start_date").notNull(),
+  endDate: timestamp("end_date").notNull(),
+  isActive: boolean("is_active").default(true),
+  notes: text("notes"),
+  createdBy: varchar("created_by").references(() => users.id),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export type SecurityLog = typeof securityLogs.$inferSelect;
+export type AuditLog = typeof auditLogs.$inferSelect;
+export type CostAlert = typeof costAlerts.$inferSelect;
+export type BusinessIntelligence = typeof businessIntelligence.$inferSelect;
+export type InvoiceProcessing = typeof invoiceProcessing.$inferSelect;
+export type PriceMonitoring = typeof priceMonitoring.$inferSelect;
+export type UserPermission = typeof userPermissions.$inferSelect;
+export type Budget = typeof budgets.$inferSelect;
+
+export type InsertSecurityLog = typeof securityLogs.$inferInsert;
+export type InsertAuditLog = typeof auditLogs.$inferInsert;
+export type InsertCostAlert = typeof costAlerts.$inferInsert;
+export type InsertBusinessIntelligence = typeof businessIntelligence.$inferInsert;
+export type InsertInvoiceProcessing = typeof invoiceProcessing.$inferInsert;
+export type InsertPriceMonitoring = typeof priceMonitoring.$inferInsert;
+export type InsertUserPermission = typeof userPermissions.$inferInsert;
+export type InsertBudget = typeof budgets.$inferInsert;
 export type Location = typeof locations.$inferSelect;
 export type InsertLocation = z.infer<typeof insertLocationSchema>;
 export type Category = typeof categories.$inferSelect;

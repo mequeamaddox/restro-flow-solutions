@@ -2,9 +2,33 @@
 
 ## Overview
 
-RestroFlow is a comprehensive restaurant inventory management system built with a modern full-stack architecture. The application provides real-time inventory tracking, recipe costing, vendor management, purchase order creation, and waste tracking capabilities. It's designed to help restaurants optimize their food costs, reduce waste, and streamline their supply chain operations.
+RestroFlow is a comprehensive enterprise-grade restaurant inventory management system built with a modern full-stack architecture. Inspired by MarginEdge platform capabilities, the application provides real-time inventory tracking, recipe costing, vendor management, purchase order creation, waste tracking, advanced analytics, and enterprise security features. It's designed to help restaurants optimize their food costs, reduce waste, streamline supply chain operations, and provide business intelligence for data-driven decisions.
 
-The system features a React-based frontend with TypeScript, a Node.js/Express backend, PostgreSQL database with Drizzle ORM, and integrates Replit authentication for user management.
+The system features a React-based frontend with TypeScript, a Node.js/Express backend, PostgreSQL database with Drizzle ORM, enterprise-grade security middleware, comprehensive audit logging, real-time cost monitoring, and automated alerting systems.
+
+## Recent Enterprise Fortification (August 2025)
+
+Following MarginEdge platform analysis, RestroFlow has been enhanced with:
+
+### Enterprise Security Features
+- **SOC2-style Security Standards**: Rate limiting, security headers (Helmet), input validation
+- **Comprehensive Audit Logging**: All user actions and data changes tracked with full context
+- **Security Event Monitoring**: Real-time logging of authentication, authorization, and suspicious activities
+- **Role-based Access Control**: Granular permissions system with location-specific access controls
+- **Data Encryption & Privacy**: Sensitive data sanitization and secure transmission protocols
+
+### Advanced Analytics & Business Intelligence
+- **Real-time Cost Monitoring**: Automated tracking of food costs, waste percentages, and margin analysis
+- **Daily Business Intelligence Reports**: Comprehensive P&L analysis with trend calculations
+- **Intelligent Cost Alerts**: Automated alerts for price variances, budget overruns, and waste thresholds
+- **Performance Benchmarking**: Industry-standard targets and variance tracking
+- **MarginEdge-style Reporting**: Daily controllable P&L, theoretical vs actual analysis, multi-location comparison
+
+### Automated Cost Control
+- **Price Monitoring**: Automatic tracking of ingredient price changes with threshold-based alerts
+- **Waste Tracking Analytics**: Real-time waste cost analysis and trend identification
+- **Inventory Turnover Analysis**: Automated calculation of inventory efficiency metrics
+- **Budget Management**: Period-based budget tracking with variance analysis
 
 ## User Preferences
 

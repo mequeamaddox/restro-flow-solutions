@@ -726,6 +726,161 @@ export class DatabaseStorage implements IStorage {
       foodCostPercentage,
     };
   }
+
+  // Security and audit methods
+  async createSecurityLog(data: any): Promise<any> {
+    try {
+      const result = await db.execute(sql`
+        INSERT INTO security_logs (user_id, action, resource, ip_address, user_agent, session_id, severity, metadata)
+        VALUES (${data.userId}, ${data.action}, ${data.resource}, ${data.ipAddress}, ${data.userAgent}, ${data.sessionId}, ${data.severity}, ${data.metadata})
+        RETURNING *
+      `);
+      return result.rows[0];
+    } catch (error) {
+      console.error('Failed to create security log:', error);
+      throw error;
+    }
+  }
+
+  async createAuditLog(data: any): Promise<any> {
+    try {
+      const result = await db.execute(sql`
+        INSERT INTO audit_logs (user_id, location_id, table_name, record_id, action, old_values, new_values, changed_fields, reason)
+        VALUES (${data.userId}, ${data.locationId}, ${data.tableName}, ${data.recordId}, ${data.action}, ${data.oldValues}, ${data.newValues}, ${data.changedFields}, ${data.reason})
+        RETURNING *
+      `);
+      return result.rows[0];
+    } catch (error) {
+      console.error('Failed to create audit log:', error);
+      throw error;
+    }
+  }
+
+  async getUserPermissions(userId: string): Promise<any[]> {
+    try {
+      const result = await db.execute(sql`
+        SELECT * FROM user_permissions WHERE user_id = ${userId} AND is_active = true
+      `);
+      return result.rows;
+    } catch (error) {
+      console.error('Failed to get user permissions:', error);
+      return [];
+    }
+  }
+
+  async createCostAlert(data: any): Promise<any> {
+    try {
+      const result = await db.execute(sql`
+        INSERT INTO cost_alerts (location_id, alert_type, item_id, threshold, actual_value, variance, severity)
+        VALUES (${data.locationId}, ${data.alertType}, ${data.itemId}, ${data.threshold}, ${data.actualValue}, ${data.variance}, ${data.severity})
+        RETURNING *
+      `);
+      return result.rows[0];
+    } catch (error) {
+      console.error('Failed to create cost alert:', error);
+      throw error;
+    }
+  }
+
+  async createBusinessIntelligence(data: any): Promise<any> {
+    try {
+      const result = await db.execute(sql`
+        INSERT INTO business_intelligence (location_id, report_date, total_revenue, total_cogs, gross_margin, 
+                                          food_cost_percentage, waste_percentage, inventory_turnover, avg_order_value, 
+                                          customer_count, top_selling_items, low_performing_items, trends)
+        VALUES (${data.locationId}, ${data.reportDate}, ${data.totalRevenue}, ${data.totalCogs}, ${data.grossMargin},
+                ${data.foodCostPercentage}, ${data.wastePercentage}, ${data.inventoryTurnover}, ${data.avgOrderValue},
+                ${data.customerCount}, ${data.topSellingItems}, ${data.lowPerformingItems}, ${data.trends})
+        RETURNING *
+      `);
+      return result.rows[0];
+    } catch (error) {
+      console.error('Failed to create business intelligence:', error);
+      throw error;
+    }
+  }
+
+  async getBusinessIntelligenceByDate(locationId: string, date: Date): Promise<any | null> {
+    try {
+      const result = await db.execute(sql`
+        SELECT * FROM business_intelligence 
+        WHERE location_id = ${locationId} AND DATE(report_date) = DATE(${date.toISOString()})
+        ORDER BY created_at DESC LIMIT 1
+      `);
+      return result.rows[0] || null;
+    } catch (error) {
+      console.error('Failed to get business intelligence by date:', error);
+      return null;
+    }
+  }
+
+  async createPriceMonitoring(data: any): Promise<any> {
+    try {
+      const result = await db.execute(sql`
+        INSERT INTO price_monitoring (inventory_item_id, vendor_id, previous_price, current_price, 
+                                     price_change, percentage_change, threshold, alert_sent, invoice_id)
+        VALUES (${data.inventoryItemId}, ${data.vendorId}, ${data.previousPrice}, ${data.currentPrice},
+                ${data.priceChange}, ${data.percentageChange}, ${data.threshold}, ${data.alertSent}, ${data.invoiceId})
+        RETURNING *
+      `);
+      return result.rows[0];
+    } catch (error) {
+      console.error('Failed to create price monitoring:', error);
+      throw error;
+    }
+  }
+
+  async getLatestPriceMonitoring(inventoryItemId: string, vendorId: string): Promise<any | null> {
+    try {
+      const result = await db.execute(sql`
+        SELECT * FROM price_monitoring 
+        WHERE inventory_item_id = ${inventoryItemId} AND vendor_id = ${vendorId}
+        ORDER BY created_at DESC LIMIT 1
+      `);
+      return result.rows[0] || null;
+    } catch (error) {
+      console.error('Failed to get latest price monitoring:', error);
+      return null;
+    }
+  }
+
+  async getPosSalesByDateRange(locationId: string, startDate: Date, endDate: Date): Promise<any[]> {
+    return await db.select().from(posSales)
+      .where(and(
+        eq(posSales.locationId, locationId),
+        gte(posSales.orderDate, startDate),
+        lte(posSales.orderDate, endDate)
+      ));
+  }
+
+  async getInventoryTransactionsByDateRange(locationId: string, startDate: Date, endDate: Date, type?: string): Promise<any[]> {
+    const conditions = [
+      eq(inventoryTransactions.locationId, locationId),
+      gte(inventoryTransactions.createdAt, startDate),
+      lte(inventoryTransactions.createdAt, endDate)
+    ];
+    
+    if (type) {
+      conditions.push(eq(inventoryTransactions.type, type));
+    }
+
+    return await db.select().from(inventoryTransactions)
+      .where(and(...conditions));
+  }
+
+  async getPurchaseOrdersByDateRange(locationId: string, startDate: Date, endDate: Date): Promise<any[]> {
+    return await db.select().from(purchaseOrders)
+      .where(and(
+        eq(purchaseOrders.locationId, locationId),
+        gte(purchaseOrders.orderDate, startDate),
+        lte(purchaseOrders.orderDate, endDate)
+      ));
+  }
+
+  async getInventoryByLocation(locationId: string): Promise<any[]> {
+    return await db.select().from(inventoryItems)
+      .where(eq(inventoryItems.locationId, locationId));
+  }
 }
 
 export const storage = new DatabaseStorage();

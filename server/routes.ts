@@ -2,6 +2,8 @@ import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { setupAuth, isAuthenticated } from "./replitAuth";
+import { db } from "./db";
+import { sql } from "drizzle-orm";
 import { posService } from "./posService";
 import {
   insertLocationSchema,
@@ -587,6 +589,116 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error processing POS webhook:", error);
       res.status(500).json({ message: "Failed to process webhook" });
+    }
+  });
+
+  // Analytics routes
+  app.get('/api/analytics/alerts', isAuthenticated, async (req: any, res) => {
+    try {
+      const locationId = req.query.locationId;
+      const result = await db.execute(sql`
+        SELECT * FROM cost_alerts 
+        WHERE location_id = ${locationId} AND is_active = true
+        ORDER BY severity DESC, created_at DESC
+        LIMIT 20
+      `);
+      res.json(result.rows);
+    } catch (error) {
+      console.error("Error fetching alerts:", error);
+      res.status(500).json({ message: "Failed to fetch alerts" });
+    }
+  });
+
+  app.get('/api/analytics/business-intelligence', isAuthenticated, async (req: any, res) => {
+    try {
+      const locationId = req.query.locationId;
+      const period = req.query.period || 'today';
+      
+      let dateCondition = sql`DATE(report_date) = CURRENT_DATE`;
+      if (period === 'week') {
+        dateCondition = sql`report_date >= CURRENT_DATE - INTERVAL '7 days'`;
+      } else if (period === 'month') {
+        dateCondition = sql`report_date >= CURRENT_DATE - INTERVAL '30 days'`;
+      }
+      
+      const result = await db.execute(sql`
+        SELECT * FROM business_intelligence 
+        WHERE location_id = ${locationId} AND ${dateCondition}
+        ORDER BY report_date DESC
+        LIMIT 1
+      `);
+      
+      res.json(result.rows[0] || null);
+    } catch (error) {
+      console.error("Error fetching business intelligence:", error);
+      res.status(500).json({ message: "Failed to fetch analytics data" });
+    }
+  });
+
+  app.get('/api/analytics/profit-loss', isAuthenticated, async (req: any, res) => {
+    try {
+      const locationId = req.query.locationId;
+      const period = req.query.period || 'today';
+      
+      // Calculate date range
+      let startDate = new Date();
+      startDate.setHours(0, 0, 0, 0);
+      let endDate = new Date();
+      endDate.setHours(23, 59, 59, 999);
+      
+      if (period === 'week') {
+        startDate.setDate(startDate.getDate() - 7);
+      } else if (period === 'month') {
+        startDate.setMonth(startDate.getMonth() - 1);
+      }
+
+      // Get sales data
+      const salesResult = await db.execute(sql`
+        SELECT COALESCE(SUM(CAST(total AS DECIMAL)), 0) as total_revenue,
+               COUNT(*) as transaction_count
+        FROM pos_sales 
+        WHERE location_id = ${locationId} 
+        AND order_date BETWEEN ${startDate.toISOString()} AND ${endDate.toISOString()}
+      `);
+
+      // Get purchase data
+      const purchaseResult = await db.execute(sql`
+        SELECT COALESCE(SUM(CAST(total AS DECIMAL)), 0) as total_purchases
+        FROM purchase_orders 
+        WHERE location_id = ${locationId} 
+        AND order_date BETWEEN ${startDate.toISOString()} AND ${endDate.toISOString()}
+        AND status = 'completed'
+      `);
+
+      const sales = salesResult.rows[0];
+      const purchases = purchaseResult.rows[0];
+      
+      const totalRevenue = parseFloat(sales.total_revenue) || 0;
+      const totalPurchases = parseFloat(purchases.total_purchases) || 0;
+      const grossProfit = totalRevenue - totalPurchases;
+      const grossMarginPercentage = totalRevenue > 0 ? (grossProfit / totalRevenue) * 100 : 0;
+      
+      const report = {
+        period: { startDate, endDate },
+        revenue: {
+          total: totalRevenue,
+          transactionCount: parseInt(sales.transaction_count) || 0,
+          averageTicket: sales.transaction_count > 0 ? totalRevenue / parseInt(sales.transaction_count) : 0
+        },
+        cogs: {
+          total: totalPurchases,
+          percentage: totalRevenue > 0 ? (totalPurchases / totalRevenue) * 100 : 0
+        },
+        margins: {
+          grossProfit,
+          grossMarginPercentage
+        }
+      };
+      
+      res.json(report);
+    } catch (error) {
+      console.error("Error generating P&L report:", error);
+      res.status(500).json({ message: "Failed to generate P&L report" });
     }
   });
 
