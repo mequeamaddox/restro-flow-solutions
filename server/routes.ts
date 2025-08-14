@@ -588,9 +588,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
         } else {
           return res.status(403).json({
             message: "Advanced OCR for images requires a premium subscription",
+            reason: "image_ocr_blocked",
             plan: ocrAccess.plan,
             creditsRemaining: ocrAccess.creditsRemaining,
-            upgradeRequired: true
+            upgradeRequired: true,
+            upgradeUrl: "/pricing"
           });
         }
         
@@ -602,9 +604,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
         // No OCR access remaining
         return res.status(403).json({
           message: "OCR processing limit exceeded. Upgrade to premium for unlimited access",
+          reason: "credits_exhausted",
           plan: ocrAccess.plan,
           creditsRemaining: ocrAccess.creditsRemaining,
-          upgradeRequired: true
+          upgradeRequired: true,
+          upgradeUrl: "/pricing"
         });
       }
 
