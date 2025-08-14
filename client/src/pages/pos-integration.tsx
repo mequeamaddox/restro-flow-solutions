@@ -54,7 +54,7 @@ interface PosSale {
 
 export default function PosIntegration() {
   const { toast } = useToast();
-  const { selectedLocation } = useLocation();
+  const { currentLocation: selectedLocation } = useLocation();
   const [newIntegration, setNewIntegration] = useState({
     provider: "spoton" as "spoton" | "clover" | "square" | "toast" | "revel",
     name: "",
@@ -69,22 +69,21 @@ export default function PosIntegration() {
   // Fetch integrations for current location
   const { data: integrations = [], isLoading: integrationsLoading } = useQuery({
     queryKey: ["/api/pos/integrations", selectedLocation?.id],
-    queryFn: () => apiRequest(`/api/pos/integrations?locationId=${selectedLocation?.id}`),
     enabled: !!selectedLocation?.id,
   });
 
   // Fetch recent sales data
   const { data: sales = [], isLoading: salesLoading } = useQuery({
     queryKey: ["/api/pos/sales", selectedLocation?.id],
-    queryFn: () => apiRequest(`/api/pos/sales?locationId=${selectedLocation?.id}`),
     enabled: !!selectedLocation?.id,
   });
 
   // Create integration mutation
   const createIntegrationMutation = useMutation({
     mutationFn: async (data: typeof newIntegration) => {
-      return apiRequest("/api/pos/integrations", {
+      const response = await fetch("/api/pos/integrations", {
         method: "POST",
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           provider: data.provider,
           name: data.name,
@@ -94,6 +93,7 @@ export default function PosIntegration() {
           locationId: selectedLocation?.id,
         }),
       });
+      return response.json();
     },
     onSuccess: () => {
       toast({
@@ -124,9 +124,9 @@ export default function PosIntegration() {
   // Test connection mutation
   const testConnectionMutation = useMutation({
     mutationFn: async (integrationId: string) => {
-      return apiRequest(`/api/pos/integrations/${integrationId}/test`, {
-        method: "GET",
-      });
+      const response = await fetch(`/api/pos/integrations/${integrationId}/test`);
+      const data = await response.json();
+      return data;
     },
     onSuccess: (data) => {
       toast({
@@ -142,9 +142,10 @@ export default function PosIntegration() {
   // Sync menu items mutation
   const syncMenuItemsMutation = useMutation({
     mutationFn: async (integrationId: string) => {
-      return apiRequest(`/api/pos/integrations/${integrationId}/sync`, {
+      const response = await fetch(`/api/pos/integrations/${integrationId}/sync`, {
         method: "POST",
       });
+      return response.json();
     },
     onSuccess: () => {
       toast({
@@ -165,10 +166,12 @@ export default function PosIntegration() {
   // Toggle integration status
   const toggleIntegrationMutation = useMutation({
     mutationFn: async ({ id, isActive }: { id: string; isActive: boolean }) => {
-      return apiRequest(`/api/pos/integrations/${id}`, {
+      const response = await fetch(`/api/pos/integrations/${id}`, {
         method: "PUT",
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ isActive }),
       });
+      return response.json();
     },
     onSuccess: () => {
       toast({
@@ -185,7 +188,7 @@ export default function PosIntegration() {
         <Alert>
           <AlertTriangle className="h-4 w-4" />
           <AlertDescription>
-            Please select a location to manage Clover integrations.
+            Please select a location to manage POS integrations.
           </AlertDescription>
         </Alert>
       </div>
