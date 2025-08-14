@@ -547,9 +547,9 @@ export const businessIntelligence = pgTable("business_intelligence", {
 });
 
 export const invoiceProcessing = pgTable("invoice_processing", {
-  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  vendorId: varchar("vendor_id").references(() => vendors.id),
-  locationId: varchar("location_id").references(() => locations.id),
+  id: uuid("id").primaryKey().default(sql`gen_random_uuid()`),
+  vendorId: uuid("vendor_id").references(() => vendors.id),
+  locationId: uuid("location_id").references(() => locations.id),
   invoiceNumber: varchar("invoice_number", { length: 100 }).notNull(),
   invoiceDate: timestamp("invoice_date").notNull(),
   dueDate: timestamp("due_date"),
