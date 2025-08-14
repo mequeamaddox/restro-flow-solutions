@@ -528,11 +528,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.log('Processing file:', req.file.originalname, 'Type:', req.file.mimetype);
       
       // Check OCR access for current user
-      if (!req.user?.id) {
+      const userId = (req.user as any)?.claims?.sub;
+      if (!userId) {
         return res.status(401).json({ message: "User not authenticated" });
       }
       
-      const ocrAccess = await storage.checkOcrAccess(req.user.id);
+      const ocrAccess = await storage.checkOcrAccess(userId);
       console.log('OCR access check:', ocrAccess);
       
       // Extract vendor hint from filename
@@ -594,8 +595,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
         
         // Update OCR credits used for free users
-        const user = await storage.getUser(req.user.id);
-        await storage.updateOcrCreditsUsed(req.user.id, (user?.ocrCreditsUsed || 0) + 1);
+        const user = await storage.getUser(userId);
+        await storage.updateOcrCreditsUsed(userId, (user?.ocrCreditsUsed || 0) + 1);
         
       } else {
         // No OCR access remaining
@@ -670,12 +671,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Subscription and OCR Management Routes
   app.get('/api/user/subscription', isAuthenticated, async (req, res) => {
     try {
-      if (!req.user?.id) {
+      const userId = (req.user as any)?.claims?.sub;
+      if (!userId) {
         return res.status(401).json({ message: "User not authenticated" });
       }
       
-      const ocrAccess = await storage.checkOcrAccess(req.user.id);
-      const user = await storage.getUser(req.user.id);
+      const ocrAccess = await storage.checkOcrAccess(userId);
+      const user = await storage.getUser(userId);
       
       res.json({
         plan: ocrAccess.plan,
@@ -694,7 +696,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post('/api/user/upgrade-plan', isAuthenticated, async (req, res) => {
     try {
-      if (!req.user?.id) {
+      const userId = (req.user as any)?.claims?.sub;
+      if (!userId) {
         return res.status(401).json({ message: "User not authenticated" });
       }
       
@@ -706,7 +709,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // For now, we'll simulate upgrading without Stripe
       // This will be replaced with actual Stripe integration when keys are provided
-      const updatedUser = await storage.updateUserSubscription(req.user.id, {
+      const updatedUser = await storage.updateUserSubscription(userId, {
         subscriptionPlan: plan as 'professional' | 'enterprise',
         subscriptionStatus: 'active',
         ocrCreditsLimit: 999, // Unlimited for premium
@@ -726,12 +729,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post('/api/user/reset-credits', isAuthenticated, async (req, res) => {
     try {
-      if (!req.user?.id) {
+      const userId = (req.user as any)?.claims?.sub;
+      if (!userId) {
         return res.status(401).json({ message: "User not authenticated" });
       }
       
       // Only allow for development/testing purposes
-      const updatedUser = await storage.resetOcrCredits(req.user.id);
+      const updatedUser = await storage.resetOcrCredits(userId);
       
       res.json({
         message: "OCR credits reset successfully",
