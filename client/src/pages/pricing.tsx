@@ -7,64 +7,73 @@ import { Link } from "wouter";
 export default function Pricing() {
   const plans = [
     {
-      name: "Starter",
-      price: 29,
+      name: "Essential",
+      price: 89,
       period: "per location/month",
-      description: "Perfect for single location restaurants",
+      description: "Complete solution for single locations",
       icon: ChefHat,
       color: "from-blue-500 to-cyan-500",
       popular: false,
+      savings: "vs MarginEdge $330/mo",
       features: [
         "Real-time inventory tracking",
-        "Basic recipe costing",
-        "Purchase order management",
-        "Waste tracking",
-        "Email support",
+        "Recipe costing & management",
+        "Purchase order automation",
+        "Comprehensive waste tracking",
+        "Daily P&L statements",
+        "Price alerts & monitoring",
         "Mobile app access",
-        "Up to 500 items",
-        "Basic reporting"
+        "Email & chat support",
+        "Basic POS integration",
+        "Unlimited inventory items"
       ]
     },
     {
       name: "Professional",
-      price: 59,
+      price: 149,
       period: "per location/month",
-      description: "Most popular for growing restaurants",
+      description: "Most popular - full feature restaurant management",
       icon: Star,
       color: "from-orange-500 to-red-500",
       popular: true,
+      savings: "vs MarginEdge $330/mo",
       features: [
-        "Everything in Starter",
+        "Everything in Essential",
         "Advanced analytics dashboard",
         "Multi-location management",
-        "POS system integration",
-        "Automated reorder points",
-        "Custom reporting",
-        "Priority support",
-        "Unlimited items",
+        "All POS system integrations",
+        "Automated invoice processing",
+        "Budget tracking & variance analysis",
+        "Theoretical vs actual reporting",
+        "Priority phone support",
         "API access",
-        "Advanced cost controls"
+        "Custom report builder",
+        "Vendor bill payment",
+        "Menu engineering analysis"
       ]
     },
     {
       name: "Enterprise",
-      price: 99,
+      price: 199,
       period: "per location/month",
-      description: "For restaurant chains and franchises",
+      description: "For restaurant chains and large operations",
       icon: Crown,
       color: "from-purple-500 to-pink-500",
       popular: false,
+      savings: "vs MarginEdge $330/mo",
       features: [
         "Everything in Professional",
         "White-label solution",
         "Custom integrations",
         "Dedicated account manager",
-        "Advanced security features",
-        "Custom training sessions",
-        "SLA guarantees",
+        "Advanced security & compliance",
+        "Custom training & onboarding",
+        "SLA guarantees (99.9% uptime)",
         "Multi-brand management",
-        "Advanced permissions",
-        "Custom workflows"
+        "Advanced user permissions",
+        "Custom workflows & automation",
+        "Commission transfers",
+        "Enterprise-grade reporting"
       ]
     }
   ];
@@ -111,10 +120,29 @@ export default function Pricing() {
                 Success Plan
               </span>
             </h1>
-            <p className="text-xl text-slate-300 mb-12 max-w-3xl mx-auto">
+            <p className="text-xl text-slate-300 mb-8 max-w-3xl mx-auto">
               Join over 2,400+ restaurants saving an average of $127,000 per year on food costs. 
-              Start your 14-day free trial today.
+              <strong className="text-orange-400">Up to 40% less than MarginEdge.</strong>
             </p>
+            
+            {/* Competitive Comparison */}
+            <div className="bg-slate-800/50 rounded-2xl p-6 max-w-2xl mx-auto mb-12 border border-orange-500/20">
+              <div className="text-center">
+                <div className="text-sm text-slate-400 mb-2">Compare to MarginEdge</div>
+                <div className="flex items-center justify-center space-x-8">
+                  <div>
+                    <div className="text-2xl font-bold text-red-400 line-through">$330/mo</div>
+                    <div className="text-xs text-slate-400">MarginEdge</div>
+                  </div>
+                  <div className="text-orange-400 text-2xl">→</div>
+                  <div>
+                    <div className="text-2xl font-bold text-green-400">$149/mo</div>
+                    <div className="text-xs text-slate-400">RestroFlow Pro</div>
+                  </div>
+                </div>
+                <div className="text-sm text-orange-300 mt-3 font-semibold">Save $2,172 per year per location</div>
+              </div>
+            </div>
             
             {/* Trust Indicators */}
             <div className="flex items-center justify-center space-x-8 mb-16">
@@ -165,6 +193,11 @@ export default function Pricing() {
                           <span className="text-slate-400 ml-2">/{plan.period.split('/')[1]}</span>
                         </div>
                         <div className="text-sm text-slate-400 mt-1">{plan.period.split('/')[0]}</div>
+                        {plan.savings && (
+                          <div className="text-xs text-green-400 mt-2 font-semibold">
+                            Save ${330 - plan.price}/mo {plan.savings}
+                          </div>
+                        )}
                       </div>
                     </CardHeader>
                     

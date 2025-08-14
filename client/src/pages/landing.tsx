@@ -84,8 +84,8 @@ export default function Landing() {
                 <div className="text-sm text-slate-400 uppercase tracking-wide">Waste Cut</div>
               </div>
               <div className="text-center">
-                <div className="text-4xl font-black text-green-400 mb-2">$127K</div>
-                <div className="text-sm text-slate-400 uppercase tracking-wide">Avg Saved/Year</div>
+                <div className="text-4xl font-black text-green-400 mb-2">40%</div>
+                <div className="text-sm text-slate-400 uppercase tracking-wide">Less Than Competitors</div>
               </div>
               <div className="text-center">
                 <div className="text-4xl font-black text-blue-400 mb-2">15min</div>
