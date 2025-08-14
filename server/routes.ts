@@ -242,20 +242,46 @@ function parseInvoiceFromText(text: string): any {
 
   // Enhanced amount detection for commercial invoices
   if (!invoiceData.total && !invoiceData.subtotal) {
-    // Look for prominent dollar amounts (likely totals)
-    const amountMatches = text.match(/\$\s*([0-9,]+\.?\d*)/g);
+    // Look for all dollar amounts with enhanced pattern matching
+    const amountMatches = text.match(/\$?\s*([0-9,]{1,8}\.?\d{0,2})/g);
     if (amountMatches) {
       const amounts = amountMatches
-        .map(match => parseFloat(match.replace(/[\$,]/g, '')))
-        .filter(amount => amount > 10) // Filter out small amounts
+        .map(match => {
+          const cleanAmount = match.replace(/[\$,\s]/g, '');
+          return parseFloat(cleanAmount);
+        })
+        .filter(amount => amount >= 10 && amount <= 999999) // Reasonable invoice range
         .sort((a, b) => b - a); // Sort largest first
       
       if (amounts.length > 0) {
-        invoiceData.total = amounts[0]; // Use largest amount as total
-        if (amounts.length > 1) {
-          invoiceData.subtotal = amounts[1]; // Second largest as subtotal
+        // Use context-aware assignment
+        const totalLine = lines.find(line => 
+          /(?:total|grand\s+total|amount\s+due|balance\s+due|final)/i.test(line) && 
+          /\$?\s*[0-9,]+\.?\d*/.test(line)
+        );
+        
+        if (totalLine) {
+          const totalMatch = totalLine.match(/\$?\s*([0-9,]+\.?\d*)/);
+          if (totalMatch) {
+            invoiceData.total = parseFloat(totalMatch[1].replace(/,/g, ''));
+          }
         } else {
-          invoiceData.subtotal = amounts[0];
+          invoiceData.total = amounts[0]; // Use largest amount as fallback
+        }
+        
+        // Find subtotal
+        const subtotalLine = lines.find(line => 
+          /(?:subtotal|sub-total|merchandise|order\s+amount)/i.test(line) && 
+          /\$?\s*[0-9,]+\.?\d*/.test(line)
+        );
+        
+        if (subtotalLine) {
+          const subtotalMatch = subtotalLine.match(/\$?\s*([0-9,]+\.?\d*)/);
+          if (subtotalMatch) {
+            invoiceData.subtotal = parseFloat(subtotalMatch[1].replace(/,/g, ''));
+          }
+        } else if (amounts.length > 1) {
+          invoiceData.subtotal = amounts[1]; // Second largest as fallback
         }
       }
     }
@@ -320,6 +346,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error updating invoice status:", error);
       res.status(400).json({ message: "Failed to update invoice status" });
+    }
+  });
+
+  app.delete('/api/invoices/:id', isAuthenticated, async (req, res) => {
+    try {
+      const { id } = req.params;
+      await storage.deleteInvoice(id);
+      res.json({ message: "Invoice deleted successfully" });
+    } catch (error) {
+      console.error("Error deleting invoice:", error);
+      res.status(400).json({ message: "Failed to delete invoice" });
     }
   });
 

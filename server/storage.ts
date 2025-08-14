@@ -1054,6 +1054,17 @@ export class DatabaseStorage implements IStorage {
     }
   }
 
+  async deleteInvoice(id: string): Promise<void> {
+    try {
+      await db
+        .delete(invoiceProcessing)
+        .where(eq(invoiceProcessing.id, id));
+    } catch (error) {
+      console.error('Error deleting invoice:', error);
+      throw error;
+    }
+  }
+
   async getInvoiceStats(): Promise<any> {
     try {
       const [totalResult] = await db

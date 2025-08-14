@@ -28,7 +28,8 @@ import {
   Eye,
   Camera,
   FileImage,
-  Scan
+  Scan,
+  Trash2
 } from "lucide-react";
 import { format } from "date-fns";
 
@@ -135,6 +136,34 @@ export default function InvoiceProcessing() {
     onSuccess: () => {
       toast({ title: "Invoice status updated" });
       queryClient.invalidateQueries({ queryKey: ["/api/invoices"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/invoices/stats"] });
+    },
+    onError: (error) => {
+      toast({
+        title: "Update failed",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
+  const deleteInvoiceMutation = useMutation({
+    mutationFn: (id: string) => 
+      apiRequest("DELETE", `/api/invoices/${id}`),
+    onSuccess: () => {
+      toast({ 
+        title: "Invoice deleted",
+        description: "Invoice has been successfully deleted"
+      });
+      queryClient.invalidateQueries({ queryKey: ["/api/invoices"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/invoices/stats"] });
+    },
+    onError: (error) => {
+      toast({
+        title: "Delete failed",
+        description: error.message,
+        variant: "destructive",
+      });
     },
   });
 
@@ -561,6 +590,15 @@ export default function InvoiceProcessing() {
                             <CheckCircle className="h-4 w-4 text-green-400" />
                           </Button>
                         )}
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => deleteInvoiceMutation.mutate(invoice.id)}
+                          disabled={deleteInvoiceMutation.isPending}
+                          className="text-red-400 hover:text-red-300 hover:bg-red-400/10"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
                       </div>
                     </TableCell>
                   </TableRow>
