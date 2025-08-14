@@ -102,12 +102,12 @@ export default function Landing() {
               <Button 
                 size="lg" 
                 className="bg-gradient-to-r from-orange-500 to-red-600 hover:from-orange-600 hover:to-red-700 text-white px-12 py-4 text-lg font-bold rounded-full shadow-2xl transform hover:scale-105 transition-all duration-300"
-                onClick={() => window.location.href = '/api/login'}
+                onClick={() => window.location.href = '/pricing'}
               >
-                Start Saving Money Now
+                Get Started - Free Trial
               </Button>
               <div className="text-slate-400 text-sm">
-                No contracts • Cancel anytime • Setup in 15 minutes
+                14-day free trial • No credit card required • Setup in 15 minutes
               </div>
             </div>
           </div>

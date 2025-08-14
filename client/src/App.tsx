@@ -8,6 +8,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { LocationProvider } from "@/contexts/LocationContext";
 import NotFound from "@/pages/not-found";
 import Landing from "@/pages/landing";
+import Pricing from "@/pages/pricing";
 import Dashboard from "@/pages/dashboard";
 import Inventory from "@/pages/inventory";
 import Recipes from "@/pages/recipes";
@@ -30,6 +31,7 @@ function Router() {
     return (
       <Switch>
         <Route path="/" component={Landing} />
+        <Route path="/pricing" component={Pricing} />
         <Route component={NotFound} />
       </Switch>
     );
