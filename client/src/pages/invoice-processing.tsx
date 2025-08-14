@@ -32,6 +32,7 @@ import {
   Trash2
 } from "lucide-react";
 import { format } from "date-fns";
+import { SubscriptionBanner } from "@/components/subscription/subscription-banner";
 
 const invoiceSchema = z.object({
   vendorId: z.string().min(1, "Vendor is required"),
@@ -280,6 +281,9 @@ export default function InvoiceProcessing() {
           )}
         </div>
       </div>
+
+      {/* Subscription Banner */}
+      <SubscriptionBanner />
 
       {/* Stats Cards */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-6">

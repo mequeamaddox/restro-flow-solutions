@@ -38,6 +38,10 @@ export const locations = pgTable("locations", {
   createdAt: timestamp("created_at").defaultNow(),
 });
 
+// Subscription plans enum
+export const subscriptionPlanEnum = pgEnum("subscription_plan", ["free", "professional", "enterprise"]);
+export const subscriptionStatusEnum = pgEnum("subscription_status", ["active", "inactive", "cancelled", "past_due"]);
+
 // User storage table (required for Replit Auth)
 export const users = pgTable("users", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
@@ -47,6 +51,14 @@ export const users = pgTable("users", {
   profileImageUrl: varchar("profile_image_url"),
   role: varchar("role").default("staff"), // admin, manager, staff
   defaultLocationId: uuid("default_location_id").references(() => locations.id),
+  // Subscription fields
+  subscriptionPlan: subscriptionPlanEnum("subscription_plan").default("free"),
+  subscriptionStatus: subscriptionStatusEnum("subscription_status").default("inactive"),
+  stripeCustomerId: varchar("stripe_customer_id"),
+  stripeSubscriptionId: varchar("stripe_subscription_id"),
+  subscriptionEndDate: timestamp("subscription_end_date"),
+  ocrCreditsUsed: integer("ocr_credits_used").default(0),
+  ocrCreditsLimit: integer("ocr_credits_limit").default(5), // Free tier gets 5 OCR processes
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });

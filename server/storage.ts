@@ -62,6 +62,19 @@ export interface IStorage {
   // User operations (required for Replit Auth)
   getUser(id: string): Promise<User | undefined>;
   upsertUser(user: UpsertUser): Promise<User>;
+  
+  // Subscription operations
+  updateUserSubscription(userId: string, subscriptionData: { 
+    subscriptionPlan?: 'free' | 'professional' | 'enterprise';
+    subscriptionStatus?: 'active' | 'inactive' | 'cancelled' | 'past_due';
+    stripeCustomerId?: string;
+    stripeSubscriptionId?: string;
+    subscriptionEndDate?: Date;
+    ocrCreditsLimit?: number;
+  }): Promise<User>;
+  updateOcrCreditsUsed(userId: string, creditsUsed: number): Promise<User>;
+  checkOcrAccess(userId: string): Promise<{ hasAccess: boolean; creditsRemaining: number; plan: string }>;
+  resetOcrCredits(userId: string): Promise<User>;
 
   // Location operations
   getLocations(): Promise<Location[]>;
@@ -217,6 +230,72 @@ export class DatabaseStorage implements IStorage {
           updatedAt: new Date(),
         },
       })
+      .returning();
+    return user;
+  }
+
+  // Subscription operations
+  async updateUserSubscription(userId: string, subscriptionData: { 
+    subscriptionPlan?: 'free' | 'professional' | 'enterprise';
+    subscriptionStatus?: 'active' | 'inactive' | 'cancelled' | 'past_due';
+    stripeCustomerId?: string;
+    stripeSubscriptionId?: string;
+    subscriptionEndDate?: Date;
+    ocrCreditsLimit?: number;
+  }): Promise<User> {
+    const [user] = await db
+      .update(users)
+      .set({
+        ...subscriptionData,
+        updatedAt: new Date(),
+      })
+      .where(eq(users.id, userId))
+      .returning();
+    return user;
+  }
+
+  async updateOcrCreditsUsed(userId: string, creditsUsed: number): Promise<User> {
+    const [user] = await db
+      .update(users)
+      .set({
+        ocrCreditsUsed: creditsUsed,
+        updatedAt: new Date(),
+      })
+      .where(eq(users.id, userId))
+      .returning();
+    return user;
+  }
+
+  async checkOcrAccess(userId: string): Promise<{ hasAccess: boolean; creditsRemaining: number; plan: string }> {
+    const user = await this.getUser(userId);
+    if (!user) {
+      return { hasAccess: false, creditsRemaining: 0, plan: 'free' };
+    }
+
+    const plan = user.subscriptionPlan || 'free';
+    const creditsUsed = user.ocrCreditsUsed || 0;
+    const creditsLimit = user.ocrCreditsLimit || 5;
+    
+    // Premium users have unlimited OCR access
+    if (plan === 'professional' || plan === 'enterprise') {
+      return { hasAccess: true, creditsRemaining: 999, plan };
+    }
+    
+    // Free users have limited credits
+    const creditsRemaining = Math.max(0, creditsLimit - creditsUsed);
+    const hasAccess = creditsRemaining > 0;
+    
+    return { hasAccess, creditsRemaining, plan };
+  }
+
+  async resetOcrCredits(userId: string): Promise<User> {
+    const [user] = await db
+      .update(users)
+      .set({
+        ocrCreditsUsed: 0,
+        updatedAt: new Date(),
+      })
+      .where(eq(users.id, userId))
       .returning();
     return user;
   }

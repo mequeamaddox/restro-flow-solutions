@@ -10,6 +10,15 @@ The system features a React-based frontend with TypeScript, a Node.js/Express ba
 
 Following MarginEdge platform analysis, RestroFlow has been enhanced with:
 
+### Premium OCR Monetization System (August 2025)
+- **Subscription-Based OCR Access**: OCR processing moved to premium tiers for revenue generation
+- **Free Tier Limitations**: 5 OCR credits per month for basic PDF text extraction only
+- **Premium Unlimited Access**: Professional and Enterprise plans include unlimited OCR processing
+- **Advanced OCR Features**: Image recognition and scanned invoice processing restricted to premium users
+- **Credit Tracking System**: Real-time monitoring of OCR usage with database-backed credit management
+- **Upgrade Prompts**: Intelligent UI messaging encouraging free users to upgrade for advanced features
+- **Revenue Model**: Freemium approach where basic users can upgrade to unlock full OCR capabilities
+
 ### Invoice Processing System Implementation (August 2025)
 - **Real Database Operations**: Replaced mock invoice data with actual PostgreSQL database operations for invoice creation, reading, and statistics
 - **Advanced Free OCR Processing**: Comprehensive PDF-to-image conversion with enhanced Tesseract OCR for multi-page scanned invoices

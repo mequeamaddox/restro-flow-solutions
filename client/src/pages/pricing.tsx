@@ -10,51 +10,51 @@ export default function Pricing() {
   
   const plans = [
     {
-      name: "Essential",
-      monthlyPrice: 149,
-      annualPrice: 119, // 20% discount
-      period: "per location",
-      description: "Core features for growing restaurants",
+      name: "Free",
+      monthlyPrice: 0,
+      annualPrice: 0,
+      period: "forever",
+      description: "Get started with basic features",
       icon: ChefHat,
-      color: "from-blue-500 to-cyan-500",
+      color: "from-slate-500 to-gray-500",
       popular: false,
-      competitorPrice: 330,
+      competitorPrice: 0,
       features: [
+        "5 OCR invoice processes/month",
+        "Basic text extraction (PDFs only)",
         "Real-time inventory tracking",
         "Recipe costing & management", 
         "Purchase order automation",
         "Comprehensive waste tracking",
         "Daily P&L statements",
-        "Price alerts & monitoring",
-        "Mobile app access",
-        "Email & chat support",
-        "Basic POS integration",
-        "Up to 3 locations"
+        "Email support",
+        "1 location only"
       ]
     },
     {
       name: "Professional",
-      monthlyPrice: 199,
-      annualPrice: 159, // 20% discount  
+      monthlyPrice: 179,
+      annualPrice: 143, // 20% discount  
       period: "per location",
-      description: "Most popular - complete MarginEdge alternative for 40% less",
+      description: "Most popular - complete MarginEdge alternative with unlimited OCR",
       icon: Star,
       color: "from-orange-500 to-red-500", 
       popular: true,
       competitorPrice: 330,
       features: [
-        "Everything in Essential",
+        "Everything in Free",
+        "Unlimited OCR invoice processing",
+        "Advanced image OCR (scanned invoices)",
+        "Support for all file types (PDF, Images)",
         "Advanced analytics dashboard",
         "Unlimited locations", 
         "All POS/accounting integrations",
         "Automated invoice processing (24-48hr)",
         "Budget tracking & variance analysis",
         "Theoretical vs actual reporting",
-        "Vendor bill payment processing",
         "Menu engineering analysis", 
         "Priority phone support",
-        "API access",
-        "Custom report builder"
+        "API access"
       ]
     },
     {
@@ -69,6 +69,8 @@ export default function Pricing() {
       competitorPrice: 480, // vs premium competitor solution
       features: [
         "Everything in Professional",
+        "Priority OCR processing (<1 minute)",
+        "Batch invoice processing",
         "Smart scale integration",
         "White-label solution",
         "Custom integrations", 

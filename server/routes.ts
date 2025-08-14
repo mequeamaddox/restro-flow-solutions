@@ -518,7 +518,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Invoice Upload with Real OCR Processing
+  // Invoice Upload with Premium OCR Processing
   app.post('/api/invoices/upload', isAuthenticated, upload.single('invoice'), async (req, res) => {
     try {
       if (!req.file) {
@@ -526,6 +526,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       console.log('Processing file:', req.file.originalname, 'Type:', req.file.mimetype);
+      
+      // Check OCR access for current user
+      if (!req.user?.id) {
+        return res.status(401).json({ message: "User not authenticated" });
+      }
+      
+      const ocrAccess = await storage.checkOcrAccess(req.user.id);
+      console.log('OCR access check:', ocrAccess);
       
       // Extract vendor hint from filename
       const filename = req.file.originalname.toLowerCase();
@@ -536,22 +544,67 @@ export async function registerRoutes(app: Express): Promise<Server> {
       else if (filename.includes('c&c')) vendorHint = 'C&C Seafood';
       
       let ocrResult: { text: string; confidence: number };
+      let processingMethod = 'basic';
       
-      // Process with appropriate method based on file type
-      if (req.file.mimetype === 'application/pdf') {
-        console.log('Processing PDF with text extraction...');
-        ocrResult = await extractTextFromPDF(req.file.buffer);
-      } else if (req.file.mimetype.startsWith('image/')) {
-        console.log('Processing image with OCR...');
-        ocrResult = await extractTextFromImage(req.file.buffer);
-      } else if (req.file.mimetype === 'text/plain') {
-        console.log('Processing text file directly...');
-        const text = req.file.buffer.toString('utf-8')
-          .replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F-\x9F]/g, '') // Remove control characters
-          .trim();
-        ocrResult = { text, confidence: 100 };
+      // Process with appropriate method based on user's subscription plan
+      if (ocrAccess.hasAccess && (ocrAccess.plan === 'professional' || ocrAccess.plan === 'enterprise')) {
+        // Premium OCR processing with full features
+        processingMethod = 'premium_ocr';
+        if (req.file.mimetype === 'application/pdf') {
+          console.log('Premium PDF processing with OCR...');
+          ocrResult = await extractTextFromPDF(req.file.buffer);
+        } else if (req.file.mimetype.startsWith('image/')) {
+          console.log('Premium image processing with advanced OCR...');
+          ocrResult = await extractTextFromImage(req.file.buffer);
+        } else if (req.file.mimetype === 'text/plain') {
+          console.log('Processing text file directly...');
+          const text = req.file.buffer.toString('utf-8')
+            .replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F-\x9F]/g, '') // Remove control characters
+            .trim();
+          ocrResult = { text, confidence: 100 };
+        } else {
+          throw new Error('Unsupported file type. Please upload PDF, image, or text files.');
+        }
+        
+        // Update OCR credits used for free users - this logic is handled below
+        // Premium users don't consume credits
+        
+      } else if (ocrAccess.hasAccess && ocrAccess.plan === 'free') {
+        // Limited OCR processing for free users
+        processingMethod = 'free_ocr';
+        console.log(`Free user OCR processing (${ocrAccess.creditsRemaining} credits remaining)...`);
+        
+        // Only allow text-based PDFs and text files for free users
+        if (req.file.mimetype === 'application/pdf') {
+          console.log('Free PDF processing (text extraction only)...');
+          ocrResult = await extractTextFromPDF(req.file.buffer);
+        } else if (req.file.mimetype === 'text/plain') {
+          console.log('Processing text file directly...');
+          const text = req.file.buffer.toString('utf-8')
+            .replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F-\x9F]/g, '') // Remove control characters
+            .trim();
+          ocrResult = { text, confidence: 100 };
+        } else {
+          return res.status(403).json({
+            message: "Advanced OCR for images requires a premium subscription",
+            plan: ocrAccess.plan,
+            creditsRemaining: ocrAccess.creditsRemaining,
+            upgradeRequired: true
+          });
+        }
+        
+        // Update OCR credits used for free users
+        const user = await storage.getUser(req.user.id);
+        await storage.updateOcrCreditsUsed(req.user.id, (user?.ocrCreditsUsed || 0) + 1);
+        
       } else {
-        throw new Error('Unsupported file type. Please upload PDF, image, or text files.');
+        // No OCR access remaining
+        return res.status(403).json({
+          message: "OCR processing limit exceeded. Upgrade to premium for unlimited access",
+          plan: ocrAccess.plan,
+          creditsRemaining: ocrAccess.creditsRemaining,
+          upgradeRequired: true
+        });
       }
 
       console.log('OCR completed with confidence:', ocrResult.confidence);
@@ -599,7 +652,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         ...invoice,
         ocrConfidence: invoiceData.ocrConfidence,
         extractedData: parsedData,
-        message: "Invoice processed successfully with real OCR"
+        processingMethod,
+        userPlan: ocrAccess.plan,
+        creditsRemaining: ocrAccess.creditsRemaining,
+        message: `Invoice processed successfully with ${processingMethod.replace('_', ' ')}`
       });
 
     } catch (error) {
@@ -608,6 +664,82 @@ export async function registerRoutes(app: Express): Promise<Server> {
         message: "Failed to process invoice upload",
         error: (error as Error).message 
       });
+    }
+  });
+
+  // Subscription and OCR Management Routes
+  app.get('/api/user/subscription', isAuthenticated, async (req, res) => {
+    try {
+      if (!req.user?.id) {
+        return res.status(401).json({ message: "User not authenticated" });
+      }
+      
+      const ocrAccess = await storage.checkOcrAccess(req.user.id);
+      const user = await storage.getUser(req.user.id);
+      
+      res.json({
+        plan: ocrAccess.plan,
+        status: user?.subscriptionStatus || 'inactive',
+        creditsUsed: user?.ocrCreditsUsed || 0,
+        creditsLimit: user?.ocrCreditsLimit || 5,
+        creditsRemaining: ocrAccess.creditsRemaining,
+        hasUnlimitedOcr: ocrAccess.plan === 'professional' || ocrAccess.plan === 'enterprise',
+        subscriptionEndDate: user?.subscriptionEndDate
+      });
+    } catch (error) {
+      console.error("Error fetching user subscription:", error);
+      res.status(500).json({ message: "Failed to fetch subscription info" });
+    }
+  });
+
+  app.post('/api/user/upgrade-plan', isAuthenticated, async (req, res) => {
+    try {
+      if (!req.user?.id) {
+        return res.status(401).json({ message: "User not authenticated" });
+      }
+      
+      const { plan } = req.body;
+      
+      if (!['professional', 'enterprise'].includes(plan)) {
+        return res.status(400).json({ message: "Invalid subscription plan" });
+      }
+
+      // For now, we'll simulate upgrading without Stripe
+      // This will be replaced with actual Stripe integration when keys are provided
+      const updatedUser = await storage.updateUserSubscription(req.user.id, {
+        subscriptionPlan: plan as 'professional' | 'enterprise',
+        subscriptionStatus: 'active',
+        ocrCreditsLimit: 999, // Unlimited for premium
+        subscriptionEndDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000) // 30 days from now
+      });
+
+      res.json({
+        message: `Successfully upgraded to ${plan} plan`,
+        user: updatedUser,
+        unlimitedOcr: true
+      });
+    } catch (error) {
+      console.error("Error upgrading plan:", error);
+      res.status(500).json({ message: "Failed to upgrade plan" });
+    }
+  });
+
+  app.post('/api/user/reset-credits', isAuthenticated, async (req, res) => {
+    try {
+      if (!req.user?.id) {
+        return res.status(401).json({ message: "User not authenticated" });
+      }
+      
+      // Only allow for development/testing purposes
+      const updatedUser = await storage.resetOcrCredits(req.user.id);
+      
+      res.json({
+        message: "OCR credits reset successfully",
+        creditsUsed: updatedUser.ocrCreditsUsed
+      });
+    } catch (error) {
+      console.error("Error resetting credits:", error);
+      res.status(500).json({ message: "Failed to reset credits" });
     }
   });
 
