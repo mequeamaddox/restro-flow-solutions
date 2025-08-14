@@ -54,27 +54,35 @@ async function extractTextFromImage(buffer: Buffer): Promise<{ text: string; con
   try {
     console.log('Processing image with enhanced Tesseract OCR...');
     
-    const { data: { text, confidence } } = await Tesseract.recognize(buffer, tesseractConfig.lang, {
-      logger: (m) => {
-        if (m.status === 'recognizing text') {
-          console.log(`OCR Progress: ${Math.round(m.progress * 100)}%`);
-        }
-      },
-      ...tesseractConfig.options
-    });
+    // Create Tesseract worker with proper error handling
+    const worker = await Tesseract.createWorker(tesseractConfig.lang);
     
-    // Clean up the text
-    const cleanText = text
-      .replace(/[^\x20-\x7E\n\r\t]/g, ' ') // Remove non-printable characters
-      .replace(/\s+/g, ' ') // Normalize whitespace
-      .trim();
-    
-    console.log(`OCR completed with ${confidence.toFixed(1)}% confidence, ${cleanText.length} characters`);
-    
-    return { text: cleanText, confidence: Math.round(confidence) };
+    try {
+      await worker.setParameters(tesseractConfig.options);
+      
+      const { data: { text, confidence } } = await worker.recognize(buffer);
+      
+      // Clean up the text
+      const cleanText = text
+        .replace(/[^\x20-\x7E\n\r\t]/g, ' ') // Remove non-printable characters
+        .replace(/\s+/g, ' ') // Normalize whitespace
+        .trim();
+      
+      console.log(`OCR completed with ${confidence.toFixed(1)}% confidence, ${cleanText.length} characters`);
+      
+      await worker.terminate();
+      return { text: cleanText, confidence: Math.round(confidence) };
+    } catch (ocrError) {
+      await worker.terminate();
+      throw ocrError;
+    }
   } catch (error) {
     console.error('Tesseract OCR Error:', error);
-    throw new Error('Failed to process image with OCR');
+    // Return a fallback response instead of throwing
+    return { 
+      text: 'OCR processing failed. Please try uploading the document as individual images for better results.', 
+      confidence: 0 
+    };
   }
 }
 
@@ -100,96 +108,93 @@ async function extractTextFromPDF(buffer: Buffer): Promise<{ text: string; confi
     // Step 2: Convert PDF pages to images and OCR each page
     console.log('Converting PDF pages to images for OCR processing...');
     
-    const convert = fromBuffer(buffer, {
-      density: 200, // High DPI for better OCR accuracy
-      saveFilename: "page",
-      savePath: "/tmp",
-      format: "png",
-      width: 1200,
-      height: 1600,
-      quality: 100
-    });
+    try {
+      const convert = fromBuffer(buffer, {
+        density: 150, // Reduced density for better compatibility
+        saveFilename: "page",
+        savePath: "./temp", // Use relative path instead of /tmp
+        format: "png",
+        width: 800,  // Reduced size for better compatibility
+        height: 1000,
+        quality: 90
+      });
 
-    // Process multiple pages
-    const maxPages = 5; // Process first 5 pages to avoid timeout
-    const allTextResults: Array<{ text: string; confidence: number; page: number }> = [];
-    
-    for (let pageNum = 1; pageNum <= maxPages; pageNum++) {
-      try {
-        console.log(`Processing page ${pageNum}...`);
-        
-        const pageResult = await convert(pageNum, { responseType: "buffer" });
-        
-        if (pageResult.buffer) {
-          const ocrResult = await extractTextFromImage(pageResult.buffer);
+      // Process just the first page to avoid timeouts
+      const maxPages = 1;
+      let processedText = '';
+      let totalConfidence = 0;
+      let successfulPages = 0;
+      
+      for (let pageNum = 1; pageNum <= maxPages; pageNum++) {
+        try {
+          console.log(`Processing page ${pageNum}...`);
           
-          if (ocrResult.text.trim().length > 20) { // Only include pages with meaningful content
-            allTextResults.push({
-              text: ocrResult.text,
-              confidence: ocrResult.confidence,
-              page: pageNum
-            });
-            console.log(`Page ${pageNum}: ${ocrResult.text.length} characters, ${ocrResult.confidence}% confidence`);
+          const pageResult = await convert(pageNum, { responseType: "buffer" });
+          
+          if (pageResult && pageResult.buffer) {
+            const ocrResult = await extractTextFromImage(pageResult.buffer);
+            
+            if (ocrResult.text.trim().length > 20 && ocrResult.confidence > 0) {
+              processedText += `=== Page ${pageNum} ===\n${ocrResult.text}\n\n`;
+              totalConfidence += ocrResult.confidence;
+              successfulPages++;
+              console.log(`Page ${pageNum}: ${ocrResult.text.length} characters, ${ocrResult.confidence}% confidence`);
+            }
           }
-        }
-      } catch (pageError) {
-        console.log(`Page ${pageNum} processing failed:`, pageError instanceof Error ? pageError.message : String(pageError));
-        // Continue with next page
-        if (pageNum === 1) {
-          // If first page fails, try a different approach
-          throw new Error(`Failed to process first page: ${pageError instanceof Error ? pageError.message : String(pageError)}`);
+        } catch (pageError) {
+          console.log(`Page ${pageNum} processing failed:`, pageError instanceof Error ? pageError.message : String(pageError));
+          // Continue processing but don't fail completely
         }
       }
+
+      // Return results if we have any successful processing
+      if (successfulPages > 0) {
+        const averageConfidence = totalConfidence / successfulPages;
+        console.log(`Successfully processed ${successfulPages} pages with average ${averageConfidence.toFixed(1)}% confidence`);
+        
+        return {
+          text: processedText.trim(),
+          confidence: Math.round(averageConfidence)
+        };
+      }
+    } catch (conversionError) {
+      console.log('PDF to image conversion failed:', conversionError instanceof Error ? conversionError.message : String(conversionError));
     }
 
-    // Step 3: Combine results from all pages
-    if (allTextResults.length === 0) {
-      throw new Error('No text could be extracted from any pages');
-    }
-
-    const combinedText = allTextResults
-      .map(result => `=== Page ${result.page} ===\n${result.text}`)
-      .join('\n\n');
-    
-    const averageConfidence = allTextResults.reduce((sum, result) => 
-      sum + result.confidence, 0) / allTextResults.length;
-
-    console.log(`Successfully processed ${allTextResults.length} pages with average ${averageConfidence.toFixed(1)}% confidence`);
-    console.log(`Total extracted text: ${combinedText.length} characters`);
-
-    return {
-      text: combinedText,
-      confidence: Math.round(averageConfidence)
-    };
-
-  } catch (error) {
-    console.error('Comprehensive PDF OCR failed:', error);
-    
-    // Final fallback with helpful message
-    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    // Fallback: Return a helpful message for manual processing
+    console.log('All PDF processing attempts failed, providing fallback guidance');
     const fallbackText = `
-Free OCR Processing Failed: ${errorMessage}
+PDF Processing Unavailable
 
-For this scanned PDF (${Math.round(buffer.length / 1024 / 1024)}MB, likely 22 pages):
+This PDF document could not be automatically processed. 
 
-Alternative Processing Options:
-1. Split PDF into individual images (recommended)
-   - Use online tools to convert PDF pages to JPG/PNG
-   - Upload individual images through the system
-   - Each image will process much more reliably
+Recommended alternatives:
+1. Convert PDF pages to individual JPG/PNG images using online tools
+2. Upload each page as a separate image file
+3. For text-based PDFs, copy and paste the text directly
 
-2. Reduce file size
-   - Large PDFs (>10MB) may timeout during processing
-   - Compress or split the PDF before uploading
-
-3. Better scan quality
-   - Higher contrast and resolution improve OCR accuracy
-   - Ensure text is clear and not skewed
-
-The system successfully processes individual images with 70-85% accuracy.
+The system works best with individual image files of invoices.
     `;
 
     return { text: fallbackText, confidence: 10 };
+
+  } catch (error) {
+    console.error('PDF processing error:', error);
+    
+    const fallbackText = `
+PDF Processing Error
+
+Unable to process this PDF file automatically.
+
+Please try:
+1. Converting to individual image files (JPG/PNG)
+2. Ensuring the file is not corrupted
+3. Using a smaller file size if possible
+
+The system is optimized for individual invoice images.
+    `;
+
+    return { text: fallbackText, confidence: 5 };
   }
 }
 
