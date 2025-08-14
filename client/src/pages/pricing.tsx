@@ -18,7 +18,7 @@ export default function Pricing() {
       icon: ChefHat,
       color: "from-blue-500 to-cyan-500",
       popular: false,
-      marginEdgePrice: 330,
+      competitorPrice: 330,
       features: [
         "Real-time inventory tracking",
         "Recipe costing & management", 
@@ -41,7 +41,7 @@ export default function Pricing() {
       icon: Star,
       color: "from-orange-500 to-red-500", 
       popular: true,
-      marginEdgePrice: 330,
+      competitorPrice: 330,
       features: [
         "Everything in Essential",
         "Advanced analytics dashboard",
@@ -66,10 +66,10 @@ export default function Pricing() {
       icon: Crown,
       color: "from-purple-500 to-pink-500",
       popular: false,
-      marginEdgePrice: 480, // vs MarginEdge + Freepour
+      competitorPrice: 480, // vs premium competitor solution
       features: [
         "Everything in Professional",
-        "Smart scale integration (Freepour alternative)",
+        "Smart scale integration",
         "White-label solution",
         "Custom integrations", 
         "Dedicated account manager",
@@ -128,7 +128,7 @@ export default function Pricing() {
             </h1>
             <p className="text-xl text-slate-300 mb-8 max-w-3xl mx-auto">
               Join over 2,400+ restaurants saving an average of $127,000 per year on food costs. 
-              <strong className="text-orange-400">Up to 40% less than MarginEdge.</strong>
+              <strong className="text-orange-400">Up to 50% less than leading competitors.</strong>
             </p>
             
             {/* Billing Toggle */}
@@ -151,12 +151,12 @@ export default function Pricing() {
             {/* Competitive Comparison */}
             <div className="bg-slate-800/50 rounded-2xl p-6 max-w-3xl mx-auto mb-12 border border-orange-500/20">
               <div className="text-center">
-                <div className="text-sm text-slate-400 mb-4">Direct MarginEdge Comparison</div>
+                <div className="text-sm text-slate-400 mb-4">Industry Price Comparison</div>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div className="text-center">
-                    <div className="text-lg font-semibold text-slate-300 mb-2">MarginEdge Standard</div>
+                    <div className="text-lg font-semibold text-slate-300 mb-2">Leading Competitor</div>
                     <div className="text-3xl font-bold text-red-400 line-through">$330/mo</div>
-                    <div className="text-sm text-slate-400">($297/mo annual)</div>
+                    <div className="text-sm text-slate-400">Industry standard pricing</div>
                   </div>
                   <div className="text-center">
                     <div className="text-lg font-semibold text-slate-300 mb-2">RestroFlow Professional</div>
@@ -164,13 +164,13 @@ export default function Pricing() {
                       ${billingCycle === 'monthly' ? '199' : '159'}/mo
                     </div>
                     <div className="text-sm text-orange-300 font-semibold">
-                      Save ${billingCycle === 'monthly' ? '$131' : '$138'}/mo per location
+                      Save ${billingCycle === 'monthly' ? '$131' : '$171'}/mo per location
                     </div>
                   </div>
                 </div>
                 <div className="mt-4 pt-4 border-t border-slate-600">
                   <div className="text-lg font-bold text-orange-300">
-                    Annual Savings: ${billingCycle === 'monthly' ? '$1,572' : '$1,656'} per location
+                    Annual Savings: ${billingCycle === 'monthly' ? '$1,572' : '$2,052'} per location
                   </div>
                 </div>
               </div>
@@ -347,7 +347,7 @@ export default function Pricing() {
                           </div>
                         )}
                         <div className="text-xs text-orange-300 mt-2 font-semibold">
-                          vs MarginEdge ${plan.marginEdgePrice}/mo - Save ${plan.marginEdgePrice - (billingCycle === 'monthly' ? plan.monthlyPrice : plan.annualPrice)}/mo
+                          vs competitors ${plan.competitorPrice}/mo - Save ${plan.competitorPrice - (billingCycle === 'monthly' ? plan.monthlyPrice : plan.annualPrice)}/mo
                         </div>
                       </div>
                     </CardHeader>
@@ -432,7 +432,7 @@ export default function Pricing() {
                     Total Monthly Cost: ${billingCycle === 'monthly' ? '477' : '381'}/mo for both locations
                   </div>
                   <div className="text-sm text-slate-300 mt-1">
-                    vs MarginEdge: $660/mo - Save ${billingCycle === 'monthly' ? '$183' : '$279'}/mo (${billingCycle === 'monthly' ? '$2,196' : '$3,348'}/year)
+                    vs leading competitors: $660/mo - Save ${billingCycle === 'monthly' ? '$183' : '$279'}/mo (${billingCycle === 'monthly' ? '$2,196' : '$3,348'}/year)
                   </div>
                 </div>
               </CardContent>
