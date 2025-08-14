@@ -55,7 +55,10 @@ export default function InvoiceProcessing() {
   // Queries
   const { data: invoices = [], isLoading: invoicesLoading } = useQuery({
     queryKey: ["/api/invoices", statusFilter],
-    queryFn: () => apiRequest("GET", `/api/invoices?status=${statusFilter}`).then(r => r.json()),
+    queryFn: async () => {
+      const params = statusFilter !== "all" ? `?status=${statusFilter}` : "";
+      return apiRequest("GET", `/api/invoices${params}`).then(r => r.json());
+    },
   });
 
   const { data: vendors = [] } = useQuery({
@@ -304,20 +307,36 @@ export default function InvoiceProcessing() {
       <Card className="bg-slate-800/80 backdrop-blur-sm border-slate-700">
         <CardHeader>
           <div className="flex justify-between items-center">
-            <CardTitle className="text-white">Recent Invoices</CardTitle>
-            <Select value={statusFilter} onValueChange={setStatusFilter}>
-              <SelectTrigger className="w-48 bg-slate-700 border-slate-600">
-                <SelectValue placeholder="Filter by status" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Statuses</SelectItem>
-                <SelectItem value="pending">Pending</SelectItem>
-                <SelectItem value="processing">Processing</SelectItem>
-                <SelectItem value="approved">Approved</SelectItem>
-                <SelectItem value="paid">Paid</SelectItem>
-                <SelectItem value="overdue">Overdue</SelectItem>
-              </SelectContent>
-            </Select>
+            <div>
+              <CardTitle className="text-white">Invoice Management</CardTitle>
+              <CardDescription className="text-slate-400 mt-1">
+                View, approve, and manage all invoices. Click the eye icon to see detailed information.
+              </CardDescription>
+            </div>
+            <div className="flex gap-3">
+              <Select value={statusFilter} onValueChange={setStatusFilter}>
+                <SelectTrigger className="w-48 bg-slate-700 border-slate-600 text-white">
+                  <SelectValue placeholder="Filter by status" />
+                </SelectTrigger>
+                <SelectContent className="bg-slate-800 border-slate-700">
+                  <SelectItem value="all">All Statuses</SelectItem>
+                  <SelectItem value="pending">Pending</SelectItem>
+                  <SelectItem value="processing">Processing</SelectItem>
+                  <SelectItem value="approved">Approved</SelectItem>
+                  <SelectItem value="paid">Paid</SelectItem>
+                  <SelectItem value="rejected">Rejected</SelectItem>
+                  <SelectItem value="overdue">Overdue</SelectItem>
+                </SelectContent>
+              </Select>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => queryClient.invalidateQueries({ queryKey: ["/api/invoices"] })}
+                className="border-slate-600 text-slate-300 hover:bg-slate-700"
+              >
+                Refresh
+              </Button>
+            </div>
           </div>
         </CardHeader>
         <CardContent>
@@ -347,23 +366,188 @@ export default function InvoiceProcessing() {
                 </TableRow>
               ) : (
                 invoices.map((invoice: any) => (
-                  <TableRow key={invoice.id} className="border-slate-700">
+                  <TableRow key={invoice.id} className="border-slate-700 hover:bg-slate-800/50 cursor-pointer">
                     <TableCell className="text-white font-medium">{invoice.invoiceNumber}</TableCell>
-                    <TableCell className="text-slate-300">{invoice.vendor?.name}</TableCell>
+                    <TableCell className="text-slate-300">{invoice.vendor?.name || invoice.vendorName}</TableCell>
                     <TableCell className="text-slate-300">
-                      {format(new Date(invoice.invoiceDate), 'MMM dd, yyyy')}
+                      {invoice.invoiceDate ? format(new Date(invoice.invoiceDate), 'MMM dd, yyyy') : 'N/A'}
                     </TableCell>
-                    <TableCell className="text-slate-300">${invoice.totalAmount?.toLocaleString()}</TableCell>
+                    <TableCell className="text-slate-300">${(invoice.totalAmount || invoice.total || 0).toLocaleString()}</TableCell>
                     <TableCell>{getStatusBadge(invoice.status)}</TableCell>
                     <TableCell>
                       <div className="flex space-x-2">
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => setSelectedInvoice(invoice)}
-                        >
-                          <Eye className="h-4 w-4" />
-                        </Button>
+                        <Dialog>
+                          <DialogTrigger asChild>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => setSelectedInvoice(invoice)}
+                            >
+                              <Eye className="h-4 w-4" />
+                            </Button>
+                          </DialogTrigger>
+                          <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto bg-slate-900 border-slate-700">
+                            <DialogHeader>
+                              <DialogTitle className="text-white text-xl">
+                                Invoice Details - {invoice.invoiceNumber}
+                              </DialogTitle>
+                            </DialogHeader>
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 py-4">
+                              {/* Basic Information */}
+                              <div className="space-y-4">
+                                <h3 className="text-lg font-semibold text-white border-b border-slate-700 pb-2">
+                                  Basic Information
+                                </h3>
+                                <div className="space-y-2">
+                                  <div className="flex justify-between">
+                                    <span className="text-slate-400">Invoice Number:</span>
+                                    <span className="text-white font-medium">{invoice.invoiceNumber}</span>
+                                  </div>
+                                  <div className="flex justify-between">
+                                    <span className="text-slate-400">Vendor:</span>
+                                    <span className="text-white">{invoice.vendor?.name || invoice.vendorName || 'N/A'}</span>
+                                  </div>
+                                  <div className="flex justify-between">
+                                    <span className="text-slate-400">Date:</span>
+                                    <span className="text-white">
+                                      {invoice.invoiceDate ? format(new Date(invoice.invoiceDate), 'MMM dd, yyyy') : 'N/A'}
+                                    </span>
+                                  </div>
+                                  <div className="flex justify-between">
+                                    <span className="text-slate-400">Due Date:</span>
+                                    <span className="text-white">
+                                      {invoice.dueDate ? format(new Date(invoice.dueDate), 'MMM dd, yyyy') : 'N/A'}
+                                    </span>
+                                  </div>
+                                  <div className="flex justify-between">
+                                    <span className="text-slate-400">Status:</span>
+                                    <div>{getStatusBadge(invoice.status)}</div>
+                                  </div>
+                                </div>
+                              </div>
+
+                              {/* Financial Information */}
+                              <div className="space-y-4">
+                                <h3 className="text-lg font-semibold text-white border-b border-slate-700 pb-2">
+                                  Financial Details
+                                </h3>
+                                <div className="space-y-2">
+                                  <div className="flex justify-between">
+                                    <span className="text-slate-400">Subtotal:</span>
+                                    <span className="text-white">${(invoice.subtotal || 0).toLocaleString()}</span>
+                                  </div>
+                                  <div className="flex justify-between">
+                                    <span className="text-slate-400">Tax:</span>
+                                    <span className="text-white">${(invoice.tax || 0).toLocaleString()}</span>
+                                  </div>
+                                  <div className="flex justify-between border-t border-slate-700 pt-2">
+                                    <span className="text-slate-400 font-semibold">Total Amount:</span>
+                                    <span className="text-green-400 font-bold text-lg">
+                                      ${(invoice.totalAmount || invoice.total || 0).toLocaleString()}
+                                    </span>
+                                  </div>
+                                </div>
+                              </div>
+
+                              {/* OCR Information (if available) */}
+                              {invoice.ocrConfidence && (
+                                <div className="md:col-span-2 space-y-4">
+                                  <h3 className="text-lg font-semibold text-white border-b border-slate-700 pb-2">
+                                    OCR Processing
+                                  </h3>
+                                  <div className="bg-slate-800 rounded-lg p-4">
+                                    <div className="flex justify-between items-center mb-2">
+                                      <span className="text-slate-400">OCR Confidence:</span>
+                                      <span className={`font-medium ${
+                                        invoice.ocrConfidence > 80 ? 'text-green-400' :
+                                        invoice.ocrConfidence > 60 ? 'text-yellow-400' : 'text-red-400'
+                                      }`}>
+                                        {invoice.ocrConfidence}%
+                                      </span>
+                                    </div>
+                                    <div className="text-sm text-slate-400">
+                                      Upload Method: {invoice.uploadMethod || 'Manual'}
+                                    </div>
+                                    {invoice.processedAt && (
+                                      <div className="text-sm text-slate-400">
+                                        Processed: {format(new Date(invoice.processedAt), 'MMM dd, yyyy HH:mm')}
+                                      </div>
+                                    )}
+                                  </div>
+                                </div>
+                              )}
+
+                              {/* Original Text (if available) */}
+                              {invoice.originalText && (
+                                <div className="md:col-span-2 space-y-4">
+                                  <h3 className="text-lg font-semibold text-white border-b border-slate-700 pb-2">
+                                    Extracted Text
+                                  </h3>
+                                  <div className="bg-slate-800 rounded-lg p-4 max-h-40 overflow-y-auto">
+                                    <pre className="text-sm text-slate-300 whitespace-pre-wrap">
+                                      {invoice.originalText.substring(0, 500)}
+                                      {invoice.originalText.length > 500 && '...'}
+                                    </pre>
+                                  </div>
+                                </div>
+                              )}
+
+                              {/* Notes */}
+                              {invoice.notes && (
+                                <div className="md:col-span-2 space-y-4">
+                                  <h3 className="text-lg font-semibold text-white border-b border-slate-700 pb-2">
+                                    Notes
+                                  </h3>
+                                  <div className="bg-slate-800 rounded-lg p-4">
+                                    <p className="text-slate-300">{invoice.notes}</p>
+                                  </div>
+                                </div>
+                              )}
+                            </div>
+
+                            {/* Action Buttons */}
+                            <div className="flex justify-end space-x-3 border-t border-slate-700 pt-4">
+                              {invoice.status === 'pending' && (
+                                <>
+                                  <Button
+                                    variant="outline"
+                                    onClick={() => updateInvoiceStatusMutation.mutate({ 
+                                      id: invoice.id, 
+                                      status: 'rejected' 
+                                    })}
+                                    disabled={updateInvoiceStatusMutation.isPending}
+                                    className="border-red-600 text-red-400 hover:bg-red-600 hover:text-white"
+                                  >
+                                    Reject
+                                  </Button>
+                                  <Button
+                                    onClick={() => updateInvoiceStatusMutation.mutate({ 
+                                      id: invoice.id, 
+                                      status: 'approved' 
+                                    })}
+                                    disabled={updateInvoiceStatusMutation.isPending}
+                                    className="bg-green-600 hover:bg-green-700 text-white"
+                                  >
+                                    <CheckCircle className="h-4 w-4 mr-2" />
+                                    Approve
+                                  </Button>
+                                </>
+                              )}
+                              {invoice.status === 'approved' && (
+                                <Button
+                                  onClick={() => updateInvoiceStatusMutation.mutate({ 
+                                    id: invoice.id, 
+                                    status: 'paid' 
+                                  })}
+                                  disabled={updateInvoiceStatusMutation.isPending}
+                                  className="bg-emerald-600 hover:bg-emerald-700 text-white"
+                                >
+                                  Mark as Paid
+                                </Button>
+                              )}
+                            </div>
+                          </DialogContent>
+                        </Dialog>
                         {invoice.status === 'pending' && (
                           <Button
                             variant="ghost"

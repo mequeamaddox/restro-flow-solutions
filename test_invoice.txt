@@ -1,0 +1,8 @@
+INVOICE
+Invoice Number: INV-2025-999
+Date: 2025-01-14
+Vendor: Test Company LLC
+Description: Test supplies
+Amount: 50.00
+Tax: 2.00
+Total: 62.00
