@@ -49,7 +49,13 @@ export default function PurchaseOrders() {
   });
 
   const form = useForm<InsertPurchaseOrder>({
-    resolver: zodResolver(insertPurchaseOrderSchema),
+    resolver: zodResolver(insertPurchaseOrderSchema.omit({ 
+      id: true, 
+      orderNumber: true, 
+      locationId: true, 
+      createdAt: true, 
+      updatedAt: true 
+    })),
     defaultValues: {
       vendorId: "",
       orderDate: new Date().toISOString().split('T')[0],
