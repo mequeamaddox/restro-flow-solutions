@@ -11,12 +11,25 @@ import { Textarea } from "@/components/ui/textarea";
 import { Plus, Search, FileText, Calendar, DollarSign, Building2 } from "lucide-react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { insertPurchaseOrderSchema, type InsertPurchaseOrder } from "@shared/schema";
+import { insertPurchaseOrderSchema } from "@shared/schema";
+import { z } from "zod";
 import { useToast } from "@/hooks/use-toast";
 import { isUnauthorizedError } from "@/lib/authUtils";
 import { apiRequest } from "@/lib/queryClient";
 import { format } from "date-fns";
 import { useLocation } from "@/contexts/LocationContext";
+
+// Create a form-specific schema for purchase orders
+const purchaseOrderFormSchema = z.object({
+  vendorId: z.string().min(1, "Vendor is required"),
+  status: z.enum(["draft", "sent", "confirmed", "delivered", "cancelled"]).default("draft"),
+  orderDate: z.string().min(1, "Order date is required"),
+  expectedDeliveryDate: z.string().optional(),
+  totalAmount: z.string().min(1, "Total amount is required"),
+  notes: z.string().optional(),
+});
+
+type PurchaseOrderFormData = z.infer<typeof purchaseOrderFormSchema>;
 
 export default function PurchaseOrders() {
   const [searchTerm, setSearchTerm] = useState("");
@@ -48,29 +61,28 @@ export default function PurchaseOrders() {
     enabled: !!currentLocation,
   });
 
-  const form = useForm<InsertPurchaseOrder>({
-    resolver: zodResolver(insertPurchaseOrderSchema.omit({ 
-      id: true, 
-      orderNumber: true, 
-      locationId: true, 
-      createdAt: true, 
-      updatedAt: true 
-    })),
+  const form = useForm<PurchaseOrderFormData>({
+    resolver: zodResolver(purchaseOrderFormSchema),
     defaultValues: {
       vendorId: "",
       orderDate: new Date().toISOString().split('T')[0],
       expectedDeliveryDate: "",
       status: "draft",
-      total: "0",
+      totalAmount: "0",
       notes: "",
     },
   });
 
   const createPOMutation = useMutation({
-    mutationFn: async (data: InsertPurchaseOrder) => {
+    mutationFn: async (data: PurchaseOrderFormData) => {
       const poData = {
-        ...data,
+        vendorId: data.vendorId,
         locationId: currentLocation?.id,
+        status: data.status,
+        orderDate: data.orderDate,
+        expectedDeliveryDate: data.expectedDeliveryDate || null,
+        totalAmount: data.totalAmount,
+        notes: data.notes || null,
       };
       await apiRequest('POST', '/api/purchase-orders', poData);
     },
@@ -110,7 +122,7 @@ export default function PurchaseOrders() {
     return matchesSearch && matchesStatus;
   }) || [];
 
-  const onSubmit = (data: InsertPurchaseOrder) => {
+  const onSubmit = (data: PurchaseOrderFormData) => {
     createPOMutation.mutate(data);
   };
 
@@ -229,7 +241,7 @@ export default function PurchaseOrders() {
                 </div>
                 <FormField
                   control={form.control}
-                  name="total"
+                  name="totalAmount"
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>Total Amount *</FormLabel>
