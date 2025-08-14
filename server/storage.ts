@@ -564,6 +564,46 @@ export class DatabaseStorage implements IStorage {
     await db.delete(recipeIngredients).where(eq(recipeIngredients.id, id));
   }
 
+  // Menu item operations
+  async getMenuItems(): Promise<MenuItem[]> {
+    return await db.select().from(menuItems).orderBy(menuItems.name);
+  }
+
+  async getMenuItem(id: string): Promise<(MenuItem & { ingredients: (MenuItemIngredient & { inventoryItem: InventoryItem })[] }) | undefined> {
+    const [menuItem] = await db.select().from(menuItems).where(eq(menuItems.id, id));
+    if (!menuItem) return undefined;
+
+    const ingredients = await db
+      .select()
+      .from(menuItemIngredients)
+      .innerJoin(inventoryItems, eq(menuItemIngredients.inventoryItemId, inventoryItems.id))
+      .where(eq(menuItemIngredients.menuItemId, id))
+      .then(rows => rows.map(row => ({
+        ...row.menu_item_ingredients,
+        inventoryItem: row.inventory_items,
+      })));
+
+    return { ...menuItem, ingredients };
+  }
+
+  async createMenuItem(menuItem: InsertMenuItem): Promise<MenuItem> {
+    const [result] = await db.insert(menuItems).values(menuItem).returning();
+    return result;
+  }
+
+  async updateMenuItem(id: string, menuItem: Partial<InsertMenuItem>): Promise<MenuItem> {
+    const [result] = await db
+      .update(menuItems)
+      .set({ ...menuItem, updatedAt: new Date() })
+      .where(eq(menuItems.id, id))
+      .returning();
+    return result;
+  }
+
+  async deleteMenuItem(id: string): Promise<void> {
+    await db.delete(menuItems).where(eq(menuItems.id, id));
+  }
+
   // Purchase order operations
   async getPurchaseOrders(): Promise<(PurchaseOrder & { vendor?: Vendor; items?: PurchaseOrderItem[] })[]> {
     return await db

@@ -10,6 +10,7 @@ import {
   insertCategorySchema,
   insertVendorSchema,
   insertInventoryItemSchema,
+  insertRecipeSchema,
   insertMenuItemSchema,
   insertMenuItemIngredientSchema,
   insertPurchaseOrderSchema,
@@ -254,7 +255,67 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Menu Items & Recipes
+  // Recipes
   app.get('/api/recipes', isAuthenticated, async (req, res) => {
+    try {
+      const recipes = await storage.getRecipes();
+      res.json(recipes);
+    } catch (error) {
+      console.error("Error fetching recipes:", error);
+      res.status(500).json({ message: "Failed to fetch recipes" });
+    }
+  });
+
+  app.get('/api/recipes/:id', isAuthenticated, async (req, res) => {
+    try {
+      const { id } = req.params;
+      const recipe = await storage.getRecipe(id);
+      if (!recipe) {
+        return res.status(404).json({ message: "Recipe not found" });
+      }
+      res.json(recipe);
+    } catch (error) {
+      console.error("Error fetching recipe:", error);
+      res.status(500).json({ message: "Failed to fetch recipe" });
+    }
+  });
+
+  app.post('/api/recipes', isAuthenticated, async (req, res) => {
+    try {
+      const recipeData = insertRecipeSchema.parse(req.body);
+      const recipe = await storage.createRecipe(recipeData);
+      res.status(201).json(recipe);
+    } catch (error) {
+      console.error("Error creating recipe:", error);
+      res.status(400).json({ message: "Failed to create recipe" });
+    }
+  });
+
+  app.put('/api/recipes/:id', isAuthenticated, async (req, res) => {
+    try {
+      const { id } = req.params;
+      const recipeData = insertRecipeSchema.partial().parse(req.body);
+      const recipe = await storage.updateRecipe(id, recipeData);
+      res.json(recipe);
+    } catch (error) {
+      console.error("Error updating recipe:", error);
+      res.status(400).json({ message: "Failed to update recipe" });
+    }
+  });
+
+  app.delete('/api/recipes/:id', isAuthenticated, async (req, res) => {
+    try {
+      const { id } = req.params;
+      await storage.deleteRecipe(id);
+      res.status(204).send();
+    } catch (error) {
+      console.error("Error deleting recipe:", error);
+      res.status(400).json({ message: "Failed to delete recipe" });
+    }
+  });
+
+  // Menu items (separate from recipes)
+  app.get('/api/menu-items', isAuthenticated, async (req, res) => {
     try {
       const menuItems = await storage.getMenuItems();
       res.json(menuItems);
@@ -264,21 +325,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get('/api/recipes/:id', isAuthenticated, async (req, res) => {
-    try {
-      const { id } = req.params;
-      const menuItem = await storage.getMenuItem(id);
-      if (!menuItem) {
-        return res.status(404).json({ message: "Menu item not found" });
-      }
-      res.json(menuItem);
-    } catch (error) {
-      console.error("Error fetching menu item:", error);
-      res.status(500).json({ message: "Failed to fetch menu item" });
-    }
-  });
-
-  app.post('/api/recipes', isAuthenticated, async (req, res) => {
+  app.post('/api/menu-items', isAuthenticated, async (req, res) => {
     try {
       const menuItemData = insertMenuItemSchema.parse(req.body);
       const menuItem = await storage.createMenuItem(menuItemData);
@@ -286,29 +333,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error creating menu item:", error);
       res.status(400).json({ message: "Failed to create menu item" });
-    }
-  });
-
-  app.put('/api/recipes/:id', isAuthenticated, async (req, res) => {
-    try {
-      const { id } = req.params;
-      const menuItemData = insertMenuItemSchema.partial().parse(req.body);
-      const menuItem = await storage.updateMenuItem(id, menuItemData);
-      res.json(menuItem);
-    } catch (error) {
-      console.error("Error updating menu item:", error);
-      res.status(400).json({ message: "Failed to update menu item" });
-    }
-  });
-
-  app.delete('/api/recipes/:id', isAuthenticated, async (req, res) => {
-    try {
-      const { id } = req.params;
-      await storage.deleteMenuItem(id);
-      res.status(204).send();
-    } catch (error) {
-      console.error("Error deleting menu item:", error);
-      res.status(400).json({ message: "Failed to delete menu item" });
     }
   });
 

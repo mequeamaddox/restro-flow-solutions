@@ -97,8 +97,11 @@ export const recipes = pgTable("recipes", {
   id: uuid("id").primaryKey().default(sql`gen_random_uuid()`),
   name: varchar("name", { length: 200 }).notNull(),
   description: text("description"),
+  category: varchar("category", { length: 50 }).notNull(),
   servingSize: integer("serving_size").notNull().default(1),
-  instructions: text("instructions"),
+  prepTime: integer("prep_time").notNull(), // minutes
+  cookTime: integer("cook_time").notNull().default(0), // minutes
+  instructions: text("instructions").notNull(),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
