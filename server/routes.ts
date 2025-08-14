@@ -111,56 +111,87 @@ function parseInvoiceFromText(text: string): any {
     lineItems: [] as any[]
   };
 
-  // Patterns for common invoice fields
+  // Enhanced patterns for better invoice field detection
   const patterns = {
-    invoiceNumber: /(?:invoice|inv|#)\s*(?:number|no|#)?\s*:?\s*([A-Z0-9\-]+)/i,
-    date: /(?:date|dated)\s*:?\s*(\d{1,2}\/\d{1,2}\/\d{2,4}|\d{1,2}-\d{1,2}-\d{2,4}|\d{4}-\d{1,2}-\d{1,2})/i,
-    total: /(?:total|amount due)\s*:?\s*\$?(\d+\.?\d*)/i,
-    subtotal: /(?:subtotal|sub-total)\s*:?\s*\$?(\d+\.?\d*)/i,
-    tax: /(?:tax|vat)\s*:?\s*\$?(\d+\.?\d*)/i,
+    invoiceNumber: /(?:invoice|inv|bill|receipt)\s*(?:number|no|#|num)?\s*:?\s*([A-Z0-9\-\/_]+)/i,
+    date: /(?:invoice\s+date|date|dated|issued)\s*:?\s*(\d{1,2}[\/\-\.]\d{1,2}[\/\-\.]\d{2,4}|\d{4}[\/\-\.]\d{1,2}[\/\-\.]\d{1,2}|(?:jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)[a-z]*\s+\d{1,2},?\s+\d{4})/i,
+    dueDate: /(?:due\s+date|payment\s+due|due)\s*:?\s*(\d{1,2}[\/\-\.]\d{1,2}[\/\-\.]\d{2,4}|\d{4}[\/\-\.]\d{1,2}[\/\-\.]\d{1,2}|(?:jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)[a-z]*\s+\d{1,2},?\s+\d{4})/i,
+    total: /(?:total|amount\s+due|balance\s+due|grand\s+total)\s*:?\s*\$?\s*([0-9,]+\.?\d*)/i,
+    subtotal: /(?:subtotal|sub-total|sub\s+total|amount)\s*:?\s*\$?\s*([0-9,]+\.?\d*)/i,
+    tax: /(?:tax|vat|sales\s+tax|gst|hst)\s*:?\s*\$?\s*([0-9,]+\.?\d*)/i,
+    vendor: /(?:from|bill\s+to|vendor|supplier|company)\s*:?\s*([A-Za-z][A-Za-z\s&\.,'-]{2,40})/i
   };
 
-  // Extract basic invoice information
+  // Extract information with better logic
   for (const line of lines) {
-    if (!invoiceData.invoiceNumber && patterns.invoiceNumber.test(line)) {
-      const match = line.match(patterns.invoiceNumber);
-      if (match) invoiceData.invoiceNumber = match[1];
+    const cleanLine = line.replace(/[^\w\s\$\.\-\/,:]/g, ' ').trim();
+    
+    if (!invoiceData.invoiceNumber && patterns.invoiceNumber.test(cleanLine)) {
+      const match = cleanLine.match(patterns.invoiceNumber);
+      if (match && match[1].length > 2) {
+        invoiceData.invoiceNumber = match[1];
+      }
     }
     
-    if (!invoiceData.invoiceDate && patterns.date.test(line)) {
-      const match = line.match(patterns.date);
+    if (!invoiceData.invoiceDate && patterns.date.test(cleanLine)) {
+      const match = cleanLine.match(patterns.date);
       if (match) invoiceData.invoiceDate = match[1];
     }
     
-    if (!invoiceData.total && patterns.total.test(line)) {
-      const match = line.match(patterns.total);
-      if (match) invoiceData.total = parseFloat(match[1]);
+    if (!invoiceData.dueDate && patterns.dueDate.test(cleanLine)) {
+      const match = cleanLine.match(patterns.dueDate);
+      if (match) invoiceData.dueDate = match[1];
     }
     
-    if (!invoiceData.subtotal && patterns.subtotal.test(line)) {
-      const match = line.match(patterns.subtotal);
-      if (match) invoiceData.subtotal = parseFloat(match[1]);
+    if (!invoiceData.total && patterns.total.test(cleanLine)) {
+      const match = cleanLine.match(patterns.total);
+      if (match) {
+        const amount = parseFloat(match[1].replace(/,/g, ''));
+        if (amount > 0) invoiceData.total = amount;
+      }
     }
     
-    if (!invoiceData.tax && patterns.tax.test(line)) {
-      const match = line.match(patterns.tax);
-      if (match) invoiceData.tax = parseFloat(match[1]);
+    if (!invoiceData.subtotal && patterns.subtotal.test(cleanLine)) {
+      const match = cleanLine.match(patterns.subtotal);
+      if (match) {
+        const amount = parseFloat(match[1].replace(/,/g, ''));
+        if (amount > 0) invoiceData.subtotal = amount;
+      }
+    }
+    
+    if (!invoiceData.tax && patterns.tax.test(cleanLine)) {
+      const match = cleanLine.match(patterns.tax);
+      if (match) {
+        const amount = parseFloat(match[1].replace(/,/g, ''));
+        if (amount >= 0) invoiceData.tax = amount;
+      }
+    }
+
+    if (!invoiceData.vendorName && patterns.vendor.test(cleanLine)) {
+      const match = cleanLine.match(patterns.vendor);
+      if (match && match[1].length > 3) {
+        invoiceData.vendorName = match[1].trim();
+      }
     }
   }
 
-  // Try to extract vendor name (usually at the top of the invoice)
-  if (lines.length > 0) {
-    // Look for company-like patterns in the first few lines
-    for (let i = 0; i < Math.min(5, lines.length); i++) {
-      const line = lines[i];
-      if (line.length > 3 && line.length < 50 && !patterns.invoiceNumber.test(line) && !patterns.date.test(line)) {
+  // Smart vendor extraction from first meaningful lines
+  if (!invoiceData.vendorName && lines.length > 0) {
+    for (let i = 0; i < Math.min(8, lines.length); i++) {
+      const line = lines[i].replace(/[^\w\s&\.,'-]/g, '').trim();
+      if (line.length > 3 && line.length < 60 && 
+          !patterns.invoiceNumber.test(line) && 
+          !patterns.date.test(line) &&
+          !patterns.total.test(line) &&
+          !/^\d+$/.test(line) &&
+          !/^[A-Z]{1,3}$/.test(line)) {
         invoiceData.vendorName = line;
         break;
       }
     }
   }
 
-  // Generate missing data if not found
+  // Generate fallback data if not found
   if (!invoiceData.invoiceNumber) {
     invoiceData.invoiceNumber = `OCR-${Date.now().toString().slice(-6)}`;
   }
@@ -170,16 +201,29 @@ function parseInvoiceFromText(text: string): any {
   }
 
   if (!invoiceData.vendorName) {
-    invoiceData.vendorName = 'Auto-detected Vendor';
+    invoiceData.vendorName = 'Unidentified Vendor';
   }
 
-  // Calculate missing amounts
+  // Smart amount calculations
   if (!invoiceData.subtotal && invoiceData.total && invoiceData.tax) {
     invoiceData.subtotal = invoiceData.total - invoiceData.tax;
-  }
-  
-  if (!invoiceData.total && invoiceData.subtotal && invoiceData.tax) {
+  } else if (!invoiceData.total && invoiceData.subtotal && invoiceData.tax) {
     invoiceData.total = invoiceData.subtotal + invoiceData.tax;
+  } else if (!invoiceData.total && invoiceData.subtotal && !invoiceData.tax) {
+    invoiceData.total = invoiceData.subtotal;
+  }
+
+  // Ensure we have at least some amount
+  if (!invoiceData.total && !invoiceData.subtotal) {
+    // Look for any dollar amount in the text
+    const amountMatch = text.match(/\$\s*([0-9,]+\.?\d*)/);
+    if (amountMatch) {
+      const amount = parseFloat(amountMatch[1].replace(/,/g, ''));
+      if (amount > 0) {
+        invoiceData.total = amount;
+        invoiceData.subtotal = amount;
+      }
+    }
   }
 
   return invoiceData;

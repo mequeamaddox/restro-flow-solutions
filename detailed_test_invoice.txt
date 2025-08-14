@@ -1,0 +1,25 @@
+INVOICE
+ABC Restaurant Supply Company
+123 Main Street, City State 12345
+
+Invoice Number: INV-2025-1001
+Invoice Date: February 14, 2025
+Due Date: March 15, 2025
+
+Bill To:
+RestroFlow Restaurant
+456 Oak Avenue
+Downtown, State 67890
+
+Description                    Qty    Price    Total
+Fresh Ground Beef 80/20        50 lbs  .50   25.00
+Organic Lettuce Mix            10 cases 2.00  20.00
+Premium Cheese Blend           25 lbs  .75   68.75
+Kitchen Cleaning Supplies      5 units 5.00  5.00
+
+                              Subtotal: 88.75
+                              Sales Tax: 3.10
+                              Total: 51.85
+
+Payment Terms: Net 30 Days
+Thank you for your business!
