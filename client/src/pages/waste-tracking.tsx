@@ -107,11 +107,11 @@ export default function WasteTracking() {
     },
   });
 
-  const filteredEntries = wasteEntries?.filter(entry => {
-    const matchesSearch = entry.inventoryItem.name.toLowerCase().includes(searchTerm.toLowerCase());
+  const filteredEntries = wasteEntries?.filter((entry: any) => {
+    const matchesSearch = entry.inventoryItem?.name?.toLowerCase().includes(searchTerm.toLowerCase()) || false;
     const matchesReason = !reasonFilter || entry.reason === reasonFilter;
     return matchesSearch && matchesReason;
-  });
+  }) || [];
 
   const onSubmit = (data: InsertWasteEntry) => {
     const selectedItem = inventoryItems?.find(item => item.id === data.inventoryItemId);
@@ -311,12 +311,12 @@ export default function WasteTracking() {
                 className="pl-10"
               />
             </div>
-            <Select value={reasonFilter} onValueChange={setReasonFilter}>
+            <Select value={reasonFilter || "all"} onValueChange={(value) => setReasonFilter(value === "all" ? "" : value)}>
               <SelectTrigger className="w-full md:w-48">
                 <SelectValue placeholder="All Reasons" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">All Reasons</SelectItem>
+                <SelectItem value="all">All Reasons</SelectItem>
                 <SelectItem value="expired">Expired</SelectItem>
                 <SelectItem value="spoiled">Spoiled</SelectItem>
                 <SelectItem value="damaged">Damaged</SelectItem>

@@ -49,25 +49,57 @@ interface BusinessIntelligence {
   trends: any;
 }
 
+interface PLReport {
+  period: { startDate: Date; endDate: Date };
+  revenue: {
+    total: number;
+    transactionCount: number;
+    averageTicket: number;
+  };
+  cogs: {
+    total: number;
+    percentage: number;
+  };
+  margins: {
+    grossProfit: number;
+    grossMarginPercentage: number;
+  };
+}
+
 export default function Analytics() {
   const { currentLocation } = useLocation();
   const [selectedPeriod, setSelectedPeriod] = useState<string>("today");
 
   // Fetch cost alerts
-  const { data: alerts = [], isLoading: alertsLoading } = useQuery({
+  const { data: alerts = [], isLoading: alertsLoading } = useQuery<Alert[]>({
     queryKey: ["/api/analytics/alerts", currentLocation?.id],
+    queryFn: async () => {
+      const response = await fetch(`/api/analytics/alerts?locationId=${currentLocation?.id}`);
+      if (!response.ok) return [];
+      return response.json();
+    },
     enabled: !!currentLocation?.id,
   });
 
   // Fetch business intelligence data
-  const { data: biData, isLoading: biLoading } = useQuery({
+  const { data: biData, isLoading: biLoading } = useQuery<BusinessIntelligence | null>({
     queryKey: ["/api/analytics/business-intelligence", currentLocation?.id, selectedPeriod],
+    queryFn: async () => {
+      const response = await fetch(`/api/analytics/business-intelligence?locationId=${currentLocation?.id}&period=${selectedPeriod}`);
+      if (!response.ok) return null;
+      return response.json();
+    },
     enabled: !!currentLocation?.id,
   });
 
   // Fetch P&L report
-  const { data: plReport, isLoading: plLoading } = useQuery({
+  const { data: plReport, isLoading: plLoading } = useQuery<PLReport | null>({
     queryKey: ["/api/analytics/profit-loss", currentLocation?.id, selectedPeriod],
+    queryFn: async () => {
+      const response = await fetch(`/api/analytics/profit-loss?locationId=${currentLocation?.id}&period=${selectedPeriod}`);
+      if (!response.ok) return null;
+      return response.json();
+    },
     enabled: !!currentLocation?.id,
   });
 
