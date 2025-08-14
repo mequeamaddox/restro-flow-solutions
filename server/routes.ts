@@ -122,7 +122,7 @@ function parseInvoiceFromText(text: string): any {
     // Enhanced vendor patterns for food service companies
     vendor: /^([A-Z][A-Za-z\s&\.,'-]+(?:food|supply|service|market|seafood|repair|inc|llc|corp|company|co)\b.*)/im,
     // Common food service company names
-    companyNames: /\b(inland\s+food|food\s+lion|atlantic\s+food|c&c\s+seafood|sysco|us\s+foods|performance\s+food|reinhart|gordon\s+food)\b/i
+    companyNames: /\b(inland\s+food|food\s+lion|atlantic\s+food|atlantic.*food.*repair|c&c\s+seafood|sysco|us\s+foods|performance\s+food|reinhart|gordon\s+food)\b/i
   };
 
   // Extract information with better logic
@@ -216,6 +216,17 @@ function parseInvoiceFromText(text: string): any {
         }
       }
     }
+  }
+
+  // Try to extract vendor from filename if available
+  if (!invoiceData.vendorName && text.includes('Atlantic')) {
+    invoiceData.vendorName = 'Atlantic Food Service Repairs';
+  } else if (!invoiceData.vendorName && text.includes('Inland')) {
+    invoiceData.vendorName = 'Inland Foods';
+  } else if (!invoiceData.vendorName && text.includes('Food Lion')) {
+    invoiceData.vendorName = 'Food Lion';
+  } else if (!invoiceData.vendorName && text.includes('C&C')) {
+    invoiceData.vendorName = 'C&C Seafood';
   }
 
   // Generate fallback data if not found
@@ -379,6 +390,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       console.log('Processing file:', req.file.originalname, 'Type:', req.file.mimetype);
       
+      // Extract vendor hint from filename
+      const filename = req.file.originalname.toLowerCase();
+      let vendorHint = '';
+      if (filename.includes('atlantic')) vendorHint = 'Atlantic Food Service Repairs';
+      else if (filename.includes('inland')) vendorHint = 'Inland Foods';
+      else if (filename.includes('food lion')) vendorHint = 'Food Lion';
+      else if (filename.includes('c&c')) vendorHint = 'C&C Seafood';
+      
       let ocrResult: { text: string; confidence: number };
       
       // Process with appropriate method based on file type
@@ -403,6 +422,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Parse invoice data from extracted text
       const parsedData = parseInvoiceFromText(ocrResult.text);
+      
+      // Use vendor hint from filename if no vendor was detected
+      if (!parsedData.vendorName || parsedData.vendorName === 'Unidentified Vendor') {
+        if (vendorHint) {
+          parsedData.vendorName = vendorHint;
+        }
+      }
       
       // Sanitize original text to prevent database encoding issues
       const sanitizedText = ocrResult.text
