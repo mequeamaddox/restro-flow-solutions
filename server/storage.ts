@@ -999,7 +999,6 @@ export class DatabaseStorage implements IStorage {
       const total = parseFloat(invoice.total || (subtotal + tax));
 
       const invoiceData = {
-        id: invoice.id || `inv-${Date.now()}`,
         invoiceNumber: invoice.invoiceNumber || `INV-${Date.now()}`,
         vendorId: invoice.vendorId || null,
         locationId: invoice.locationId || null,

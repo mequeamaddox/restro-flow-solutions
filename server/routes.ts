@@ -276,7 +276,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Create invoice with OCR data
       const invoiceData = {
-        id: `inv-${Date.now()}`,
         ...parsedData,
         ocrConfidence: Math.round(ocrResult.confidence),
         uploadMethod: req.body.uploadMethod || 'upload',
