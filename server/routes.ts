@@ -366,10 +366,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post('/api/purchase-orders', isAuthenticated, async (req, res) => {
     try {
-      const orderData = insertPurchaseOrderSchema.parse({
-        ...req.body,
+      // Generate order number
+      const orderNumber = `PO-${Date.now()}`;
+      
+      // Convert string dates to Date objects and prepare data
+      const orderData = {
+        orderNumber,
+        vendorId: req.body.vendorId,
+        locationId: req.body.locationId,
+        status: req.body.status || "draft",
+        orderDate: req.body.orderDate ? new Date(req.body.orderDate) : new Date(),
+        expectedDeliveryDate: req.body.expectedDeliveryDate ? new Date(req.body.expectedDeliveryDate) : null,
+        totalAmount: req.body.totalAmount,
+        notes: req.body.notes || null,
         createdBy: req.user?.claims?.sub,
-      });
+      };
+      
       const order = await storage.createPurchaseOrder(orderData);
       res.status(201).json(order);
     } catch (error) {
