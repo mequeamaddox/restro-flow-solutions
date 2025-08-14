@@ -1011,7 +1011,13 @@ export class DatabaseStorage implements IStorage {
         uploadMethod: invoice.uploadMethod || 'upload',
         ocrConfidence: invoice.ocrConfidence ? parseFloat(invoice.ocrConfidence).toString() : null,
         lineItems: invoice.lineItems || null,
-        notes: invoice.notes || invoice.originalText || null,
+        notes: invoice.notes || (invoice.originalText ? 
+          invoice.originalText
+            .replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F-\x9F]/g, '') // Remove control characters
+            .replace(/[^\x20-\x7E\s]/g, '') // Keep only printable ASCII and whitespace
+            .substring(0, 1000) // Limit length
+            .trim() || null 
+          : null),
         processedAt: invoice.processedAt ? new Date(invoice.processedAt) : new Date(),
       };
 

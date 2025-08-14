@@ -1,0 +1,10 @@
+INVOICE
+Invoice Number: INV-TEST-001
+Date: January 14, 2025
+Vendor: Test Restaurant Supplies
+Description: Kitchen equipment and supplies
+Subtotal: ,250.00
+Tax: 00.00
+Total: ,350.00
+Due Date: February 14, 2025
+Status: Pending

@@ -72,10 +72,14 @@ async function extractTextFromPDF(buffer: Buffer): Promise<{ text: string; confi
     if (error instanceof Error && error.message.includes('ENOENT')) {
       console.log('Attempting alternative PDF processing...');
       try {
-        // Try to create a text fallback
-        const text = buffer.toString('utf-8', 0, Math.min(1000, buffer.length));
-        if (text && text.trim().length > 10) {
-          return { text: text.trim(), confidence: 60 };
+        // Try to extract readable text, filtering out binary content
+        const text = buffer.toString('utf-8', 0, Math.min(1000, buffer.length))
+          .replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F-\x9F]/g, '') // Remove control characters
+          .replace(/[^\x20-\x7E\s]/g, '') // Keep only printable ASCII and whitespace
+          .trim();
+        
+        if (text && text.length > 10) {
+          return { text: text, confidence: 30 };
         }
       } catch (fallbackError) {
         console.log('Fallback also failed');
@@ -262,7 +266,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         ocrResult = await extractTextFromImage(req.file.buffer);
       } else if (req.file.mimetype === 'text/plain') {
         console.log('Processing text file directly...');
-        const text = req.file.buffer.toString('utf-8');
+        const text = req.file.buffer.toString('utf-8')
+          .replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F-\x9F]/g, '') // Remove control characters
+          .trim();
         ocrResult = { text, confidence: 100 };
       } else {
         throw new Error('Unsupported file type. Please upload PDF, image, or text files.');
@@ -274,13 +280,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Parse invoice data from extracted text
       const parsedData = parseInvoiceFromText(ocrResult.text);
       
+      // Sanitize original text to prevent database encoding issues
+      const sanitizedText = ocrResult.text
+        .replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F-\x9F]/g, '') // Remove control characters
+        .substring(0, 2000) // Limit text length
+        .trim();
+      
       // Create invoice with OCR data
       const invoiceData = {
         ...parsedData,
         ocrConfidence: Math.round(ocrResult.confidence),
         uploadMethod: req.body.uploadMethod || 'upload',
         status: 'pending',
-        originalText: ocrResult.text,
+        originalText: sanitizedText,
         processedAt: new Date(),
       };
 
