@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Bell, Search, MapPin, Menu } from "lucide-react";
+import { Bell, Search, MapPin, Menu, Utensils } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useQuery } from "@tanstack/react-query";
@@ -23,14 +23,14 @@ export default function Header({ onMobileMenuToggle }: HeaderProps = {}) {
   const lowStockCount = (lowStockItems as any[])?.length || 0;
 
   return (
-    <header className="bg-white shadow-sm border-b border-gray-200 sticky top-0 z-30">
+    <header className="bg-slate-900/80 backdrop-blur-sm shadow-2xl border-b border-slate-700/50 sticky top-0 z-30">
       <div className="flex items-center justify-between px-4 py-4 lg:px-6">
         <div className="flex items-center">
           {/* Mobile menu button */}
           <Button
             variant="ghost"
             size="sm"
-            className="lg:hidden mr-2"
+            className="lg:hidden mr-2 text-slate-300 hover:text-white hover:bg-slate-700/50"
             onClick={onMobileMenuToggle}
           >
             <Menu className="h-6 w-6" />
@@ -38,19 +38,17 @@ export default function Header({ onMobileMenuToggle }: HeaderProps = {}) {
           
           {/* App logo and title on mobile */}
           <div className="lg:hidden flex items-center">
-            <img 
-              src={logoImg} 
-              alt="RestroFlow Logo" 
-              className="h-8 w-auto mr-2"
-            />
-            <h1 className="text-lg font-semibold text-gray-900">RestroFlow</h1>
+            <div className="inline-flex items-center justify-center w-8 h-8 rounded-full bg-gradient-to-br from-orange-400 to-red-500 mr-2 shadow-lg">
+              <Search className="h-4 w-4 text-white" />
+            </div>
+            <h1 className="text-lg font-semibold text-white">RestroFlow</h1>
           </div>
         </div>
         
         <div className="flex items-center space-x-2 lg:space-x-4">
           {/* Location Selector - Hidden on mobile, shown in sidebar */}
           <div className="hidden lg:flex items-center space-x-2">
-            <MapPin className="h-4 w-4 text-gray-400" />
+            <MapPin className="h-4 w-4 text-slate-400" />
             <Select 
               value={currentLocation?.id} 
               onValueChange={(value) => {
@@ -58,7 +56,7 @@ export default function Header({ onMobileMenuToggle }: HeaderProps = {}) {
                 if (location) setCurrentLocation(location);
               }}
             >
-              <SelectTrigger className="w-40">
+              <SelectTrigger className="w-40 bg-slate-800/50 border-slate-600 text-slate-200">
                 <SelectValue placeholder="Select location" />
               </SelectTrigger>
               <SelectContent>
@@ -73,11 +71,11 @@ export default function Header({ onMobileMenuToggle }: HeaderProps = {}) {
 
           {/* Search - Hidden on mobile, shown on md+ */}
           <div className="relative hidden md:block">
-            <Search className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
+            <Search className="absolute left-3 top-3 h-4 w-4 text-slate-400" />
             <Input
               type="search"
               placeholder="Search inventory..."
-              className="pl-10 pr-4 py-2 w-64"
+              className="pl-10 pr-4 py-2 w-64 bg-slate-800/50 border-slate-600 text-slate-200 placeholder-slate-400"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
             />
@@ -85,12 +83,12 @@ export default function Header({ onMobileMenuToggle }: HeaderProps = {}) {
           
           {/* Notifications */}
           <div className="relative">
-            <Button variant="ghost" size="sm" className="relative">
-              <Bell className="h-5 w-5 text-gray-400" />
+            <Button variant="ghost" size="sm" className="relative text-slate-300 hover:text-white hover:bg-slate-700/50">
+              <Bell className="h-5 w-5" />
               {lowStockCount > 0 && (
                 <Badge 
                   variant="destructive" 
-                  className="absolute -top-1 -right-1 h-5 w-5 rounded-full p-0 flex items-center justify-center text-xs"
+                  className="absolute -top-1 -right-1 h-5 w-5 rounded-full p-0 flex items-center justify-center text-xs bg-gradient-to-r from-orange-500 to-red-600"
                 >
                   {lowStockCount > 99 ? '99+' : lowStockCount}
                 </Badge>
@@ -99,8 +97,8 @@ export default function Header({ onMobileMenuToggle }: HeaderProps = {}) {
           </div>
           
           {/* Mobile search button */}
-          <Button variant="ghost" size="sm" className="md:hidden">
-            <Search className="h-5 w-5 text-gray-400" />
+          <Button variant="ghost" size="sm" className="md:hidden text-slate-300 hover:text-white hover:bg-slate-700/50">
+            <Search className="h-5 w-5" />
           </Button>
         </div>
       </div>

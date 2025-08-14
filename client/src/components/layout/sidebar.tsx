@@ -61,26 +61,24 @@ export default function Sidebar({ isMobileMenuOpen = false, setIsMobileMenuOpen 
 
       {/* Sidebar */}
       <div className={cn(
-        "fixed left-0 top-0 h-full w-64 bg-white shadow-lg z-50 transform transition-transform duration-300 ease-in-out lg:translate-x-0 lg:static lg:z-auto flex flex-col",
+        "fixed left-0 top-0 h-full w-64 bg-slate-800/95 backdrop-blur-sm border-r border-slate-700/50 shadow-2xl z-50 transform transition-transform duration-300 ease-in-out lg:translate-x-0 lg:static lg:z-auto flex flex-col",
         mobileMenuOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"
       )}>
         {/* Header */}
-        <div className="p-6 border-b border-gray-200">
+        <div className="p-6 border-b border-slate-700/50">
           <div className="flex items-center mb-4">
-            <img 
-              src={logoImg} 
-              alt="RestroFlow Logo" 
-              className="h-10 w-auto mr-3"
-            />
+            <div className="inline-flex items-center justify-center w-10 h-10 rounded-full bg-gradient-to-br from-orange-400 to-red-500 mr-3 shadow-lg">
+              <Utensils className="h-5 w-5 text-white" />
+            </div>
             <div>
-              <h1 className="text-xl font-bold text-gray-800">RestroFlow</h1>
-              <p className="text-sm text-gray-600">Inventory Management</p>
+              <h1 className="text-xl font-bold text-white">RestroFlow</h1>
+              <p className="text-sm text-slate-300">Inventory Management</p>
             </div>
           </div>
           
           {/* Location Switcher */}
           <div className="space-y-2">
-            <div className="flex items-center text-xs font-medium text-gray-500 uppercase tracking-wide">
+            <div className="flex items-center text-xs font-medium text-slate-400 uppercase tracking-wide">
               <MapPin className="h-3 w-3 mr-1" />
               Current Location
             </div>
@@ -125,8 +123,8 @@ export default function Sidebar({ isMobileMenuOpen = false, setIsMobileMenuOpen 
                   <Link href={item.href}>
                     <div
                       className={cn(
-                        "flex items-center px-6 py-3 text-gray-700 hover:bg-gray-50 transition-colors cursor-pointer",
-                        isActive && "bg-primary-50 border-r-4 border-primary-500 text-primary-700"
+                        "flex items-center px-6 py-3 text-slate-300 hover:bg-slate-700/50 hover:text-white transition-all duration-200 cursor-pointer rounded-r-2xl mr-4",
+                        isActive && "bg-gradient-to-r from-orange-500/20 to-red-500/20 border-r-4 border-orange-400 text-white"
                       )}
                       onClick={() => setMobileMenuOpen(false)}
                     >
@@ -141,16 +139,16 @@ export default function Sidebar({ isMobileMenuOpen = false, setIsMobileMenuOpen 
         </nav>
 
         {/* User Profile */}
-        <div className="mt-auto p-4 border-t border-gray-200 bg-white">
+        <div className="mt-auto p-4 border-t border-slate-700/50 bg-slate-900/50">
           <div className="flex items-center">
-            <div className="w-8 h-8 bg-primary-500 rounded-full flex items-center justify-center text-white text-sm font-medium">
+            <div className="w-8 h-8 bg-gradient-to-br from-orange-400 to-red-500 rounded-full flex items-center justify-center text-white text-sm font-medium">
               {(user as any)?.firstName ? (user as any).firstName.charAt(0) : (user as any)?.email?.charAt(0) || 'U'}
             </div>
             <div className="ml-3 flex-1 min-w-0">
-              <p className="text-sm font-medium text-gray-700 truncate">
+              <p className="text-sm font-medium text-white truncate">
                 {(user as any)?.firstName || (user as any)?.email || 'User'}
               </p>
-              <p className="text-xs text-gray-500 truncate">
+              <p className="text-xs text-slate-400 truncate">
                 {(user as any)?.role || 'Staff'}
               </p>
             </div>
@@ -159,7 +157,7 @@ export default function Sidebar({ isMobileMenuOpen = false, setIsMobileMenuOpen 
                 variant="ghost"
                 size="sm"
                 onClick={() => setMobileMenuOpen(false)}
-                className="ml-2"
+                className="ml-2 text-slate-400 hover:text-white hover:bg-slate-700/50"
                 title="Settings"
               >
                 <Settings className="h-4 w-4" />
@@ -168,12 +166,12 @@ export default function Sidebar({ isMobileMenuOpen = false, setIsMobileMenuOpen 
           </div>
           
           {/* Logout Button */}
-          <div className="mt-2 pt-2 border-t border-gray-100">
+          <div className="mt-2 pt-2 border-t border-slate-700/50">
             <Button
               variant="ghost"
               size="sm"
               onClick={() => window.location.href = '/api/logout'}
-              className="w-full justify-start text-red-600 hover:text-red-700 hover:bg-red-50"
+              className="w-full justify-start text-red-400 hover:text-red-300 hover:bg-red-900/20"
             >
               Logout
             </Button>

@@ -37,29 +37,39 @@ function Router() {
 
   return (
     <LocationProvider>
-      <div className="flex h-screen bg-gray-50">
-        <Sidebar 
-          isMobileMenuOpen={isMobileMenuOpen} 
-          setIsMobileMenuOpen={setIsMobileMenuOpen} 
-        />
-        <div className="flex-1 flex flex-col overflow-hidden">
-          <Header onMobileMenuToggle={() => setIsMobileMenuOpen(!isMobileMenuOpen)} />
-          <main className="flex-1 overflow-y-auto">
-            <Switch>
-              <Route path="/" component={Dashboard} />
-              <Route path="/inventory" component={Inventory} />
-              <Route path="/recipes" component={Recipes} />
-              <Route path="/vendors" component={Vendors} />
-              <Route path="/purchase-orders" component={PurchaseOrders} />
-              <Route path="/waste-tracking" component={WasteTracking} />
-              <Route path="/pos-integration" component={PosIntegration} />
-              <Route path="/analytics" component={Analytics} />
-              <Route path="/reports" component={Analytics} />
-              <Route path="/barcode-test" component={BarcodeTest} />
-              <Route path="/settings" component={Settings} />
-              <Route component={NotFound} />
-            </Switch>
-          </main>
+      <div className="flex h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 relative overflow-hidden">
+        {/* Background Pattern */}
+        <div className="absolute inset-0 opacity-5">
+          <div className="absolute top-20 left-20 w-32 h-32 rounded-full bg-orange-400 blur-3xl"></div>
+          <div className="absolute top-40 right-32 w-24 h-24 rounded-full bg-green-400 blur-2xl"></div>
+          <div className="absolute bottom-32 left-1/3 w-40 h-40 rounded-full bg-yellow-400 blur-3xl"></div>
+          <div className="absolute bottom-20 right-20 w-28 h-28 rounded-full bg-red-400 blur-2xl"></div>
+        </div>
+        
+        <div className="relative z-10 flex w-full">
+          <Sidebar 
+            isMobileMenuOpen={isMobileMenuOpen} 
+            setIsMobileMenuOpen={setIsMobileMenuOpen} 
+          />
+          <div className="flex-1 flex flex-col overflow-hidden">
+            <Header onMobileMenuToggle={() => setIsMobileMenuOpen(!isMobileMenuOpen)} />
+            <main className="flex-1 overflow-y-auto">
+              <Switch>
+                <Route path="/" component={Dashboard} />
+                <Route path="/inventory" component={Inventory} />
+                <Route path="/recipes" component={Recipes} />
+                <Route path="/vendors" component={Vendors} />
+                <Route path="/purchase-orders" component={PurchaseOrders} />
+                <Route path="/waste-tracking" component={WasteTracking} />
+                <Route path="/pos-integration" component={PosIntegration} />
+                <Route path="/analytics" component={Analytics} />
+                <Route path="/reports" component={Analytics} />
+                <Route path="/barcode-test" component={BarcodeTest} />
+                <Route path="/settings" component={Settings} />
+                <Route component={NotFound} />
+              </Switch>
+            </main>
+          </div>
         </div>
       </div>
     </LocationProvider>
