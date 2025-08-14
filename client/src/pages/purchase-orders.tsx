@@ -1,27 +1,112 @@
 import { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
+import { Textarea } from "@/components/ui/textarea";
 import { Plus, Search, FileText, Calendar, DollarSign, Building2 } from "lucide-react";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { insertPurchaseOrderSchema, type InsertPurchaseOrder } from "@shared/schema";
+import { useToast } from "@/hooks/use-toast";
+import { isUnauthorizedError } from "@/lib/authUtils";
+import { apiRequest } from "@/lib/queryClient";
 import { format } from "date-fns";
+import { useLocation } from "@/contexts/LocationContext";
 
 export default function PurchaseOrders() {
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("");
+  const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
+  const { currentLocation } = useLocation();
 
-  const { data: purchaseOrders, isLoading } = useQuery({
-    queryKey: ['/api/purchase-orders'],
+  const { data: purchaseOrders = [], isLoading } = useQuery({
+    queryKey: ['/api/purchase-orders', currentLocation?.id],
+    queryFn: async () => {
+      const params = currentLocation?.id ? `?locationId=${currentLocation.id}` : '';
+      const response = await fetch(`/api/purchase-orders${params}`);
+      if (!response.ok) return [];
+      return response.json();
+    },
+    enabled: !!currentLocation,
   });
 
-  const filteredOrders = purchaseOrders?.filter(order => {
-    const matchesSearch = order.orderNumber.toLowerCase().includes(searchTerm.toLowerCase()) ||
+  const { data: vendors = [] } = useQuery({
+    queryKey: ['/api/vendors', currentLocation?.id],
+    queryFn: async () => {
+      const params = currentLocation?.id ? `?locationId=${currentLocation.id}` : '';
+      const response = await fetch(`/api/vendors${params}`);
+      if (!response.ok) return [];
+      return response.json();
+    },
+    enabled: !!currentLocation,
+  });
+
+  const form = useForm<InsertPurchaseOrder>({
+    resolver: zodResolver(insertPurchaseOrderSchema),
+    defaultValues: {
+      vendorId: "",
+      orderDate: new Date().toISOString().split('T')[0],
+      expectedDeliveryDate: "",
+      status: "draft",
+      total: "0",
+      notes: "",
+    },
+  });
+
+  const createPOMutation = useMutation({
+    mutationFn: async (data: InsertPurchaseOrder) => {
+      const poData = {
+        ...data,
+        locationId: currentLocation?.id,
+      };
+      await apiRequest('POST', '/api/purchase-orders', poData);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/purchase-orders'] });
+      setIsCreateDialogOpen(false);
+      form.reset();
+      toast({
+        title: "Success",
+        description: "Purchase order created successfully",
+      });
+    },
+    onError: (error) => {
+      if (isUnauthorizedError(error)) {
+        toast({
+          title: "Unauthorized",
+          description: "You are logged out. Logging in again...",
+          variant: "destructive",
+        });
+        setTimeout(() => {
+          window.location.href = "/api/login";
+        }, 500);
+        return;
+      }
+      toast({
+        title: "Error",
+        description: "Failed to create purchase order",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const filteredOrders = purchaseOrders?.filter((order: any) => {
+    const matchesSearch = order.orderNumber?.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          order.vendor?.name?.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesStatus = !statusFilter || statusFilter === 'all' || order.status === statusFilter;
     return matchesSearch && matchesStatus;
-  });
+  }) || [];
+
+  const onSubmit = (data: InsertPurchaseOrder) => {
+    createPOMutation.mutate(data);
+  };
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -46,16 +131,150 @@ export default function PurchaseOrders() {
           <h1 className="text-2xl font-semibold text-gray-900">Purchase Orders</h1>
           <p className="text-gray-600">Manage supplier orders and deliveries</p>
         </div>
-        <Button 
-          className="bg-primary-600 hover:bg-primary-700"
-          onClick={() => {
-            // TODO: Open purchase order creation dialog
-            console.log("Create Purchase Order clicked");
-          }}
-        >
-          <Plus className="h-4 w-4 mr-2" />
-          Create Purchase Order
-        </Button>
+        <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
+          <DialogTrigger asChild>
+            <Button className="bg-primary-600 hover:bg-primary-700">
+              <Plus className="h-4 w-4 mr-2" />
+              Create Purchase Order
+            </Button>
+          </DialogTrigger>
+          <DialogContent className="sm:max-w-[600px]">
+            <DialogHeader>
+              <DialogTitle>Create Purchase Order</DialogTitle>
+            </DialogHeader>
+            <Form {...form}>
+              <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+                <div className="grid grid-cols-2 gap-4">
+                  <FormField
+                    control={form.control}
+                    name="vendorId"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Vendor *</FormLabel>
+                        <Select onValueChange={field.onChange} value={field.value}>
+                          <FormControl>
+                            <SelectTrigger>
+                              <SelectValue placeholder="Select vendor" />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            {vendors.map((vendor: any) => (
+                              <SelectItem key={vendor.id} value={vendor.id}>
+                                {vendor.name}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={form.control}
+                    name="status"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Status</FormLabel>
+                        <Select onValueChange={field.onChange} value={field.value}>
+                          <FormControl>
+                            <SelectTrigger>
+                              <SelectValue placeholder="Select status" />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            <SelectItem value="draft">Draft</SelectItem>
+                            <SelectItem value="sent">Sent</SelectItem>
+                            <SelectItem value="confirmed">Confirmed</SelectItem>
+                            <SelectItem value="delivered">Delivered</SelectItem>
+                          </SelectContent>
+                        </Select>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <FormField
+                    control={form.control}
+                    name="orderDate"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Order Date *</FormLabel>
+                        <FormControl>
+                          <Input type="date" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={form.control}
+                    name="expectedDeliveryDate"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Expected Delivery</FormLabel>
+                        <FormControl>
+                          <Input type="date" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
+                <FormField
+                  control={form.control}
+                  name="total"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Total Amount *</FormLabel>
+                      <FormControl>
+                        <Input 
+                          type="number" 
+                          step="0.01" 
+                          placeholder="0.00"
+                          {...field} 
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="notes"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Notes</FormLabel>
+                      <FormControl>
+                        <Textarea 
+                          placeholder="Additional notes or special instructions..."
+                          {...field} 
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <div className="flex justify-end space-x-2 pt-4">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => setIsCreateDialogOpen(false)}
+                  >
+                    Cancel
+                  </Button>
+                  <Button
+                    type="submit"
+                    disabled={createPOMutation.isPending}
+                    className="bg-primary-600 hover:bg-primary-700"
+                  >
+                    {createPOMutation.isPending ? "Creating..." : "Create Purchase Order"}
+                  </Button>
+                </div>
+              </form>
+            </Form>
+          </DialogContent>
+        </Dialog>
       </div>
 
       {/* Filters */}
@@ -71,7 +290,7 @@ export default function PurchaseOrders() {
                 className="pl-10"
               />
             </div>
-            <Select value={statusFilter} onValueChange={setStatusFilter}>
+            <Select value={statusFilter || "all"} onValueChange={(value) => setStatusFilter(value === "all" ? "" : value)}>
               <SelectTrigger className="w-full md:w-48">
                 <SelectValue placeholder="All Statuses" />
               </SelectTrigger>
