@@ -196,8 +196,122 @@ export default function Pricing() {
           </div>
         </header>
 
+        {/* Add-Ons Section */}
+        <section className="container mx-auto px-4 pb-12">
+          <div className="max-w-4xl mx-auto text-center mb-16">
+            <h2 className="text-3xl font-bold text-white mb-6">Premium Add-Ons</h2>
+            <p className="text-slate-300 mb-8">Specialized features for bars, breweries, and complex operations</p>
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {/* Bar Operations Add-On */}
+              <Card className="bg-slate-800/80 backdrop-blur-sm border-amber-500/50 hover:border-amber-400/70 transition-all duration-300">
+                <CardHeader className="text-center pb-4">
+                  <div className="w-14 h-14 rounded-xl bg-gradient-to-br from-amber-500 to-orange-600 flex items-center justify-center mx-auto mb-4 shadow-lg">
+                    <svg className="h-7 w-7 text-white" fill="currentColor" viewBox="0 0 24 24">
+                      <path d="M5 12V7a1 1 0 011-1h12a1 1 0 011 1v5M5 12l1.5 6h11L19 12M5 12h14M9 3v3M15 3v3"/>
+                    </svg>
+                  </div>
+                  <CardTitle className="text-xl font-bold text-white mb-2">Bar & Beverage Operations</CardTitle>
+                  <CardDescription className="text-slate-300">Specialized inventory for liquor, beer, wine & cocktails</CardDescription>
+                </CardHeader>
+                <CardContent className="text-center">
+                  <div className="mb-4">
+                    <div className="text-3xl font-black text-amber-400">+$79</div>
+                    <div className="text-sm text-slate-400">per location/month</div>
+                    {billingCycle === 'annual' && (
+                      <div className="text-xs text-green-400 mt-1 font-semibold">
+                        Annual: +$63/mo (20% off)
+                      </div>
+                    )}
+                  </div>
+                  <ul className="text-left space-y-2 text-sm">
+                    <li className="flex items-start">
+                      <Check className="h-4 w-4 text-amber-400 mr-2 mt-0.5 flex-shrink-0" />
+                      <span className="text-slate-300">Liquor inventory tracking by oz/ml</span>
+                    </li>
+                    <li className="flex items-start">
+                      <Check className="h-4 w-4 text-amber-400 mr-2 mt-0.5 flex-shrink-0" />
+                      <span className="text-slate-300">Cocktail recipe costing</span>
+                    </li>
+                    <li className="flex items-start">
+                      <Check className="h-4 w-4 text-amber-400 mr-2 mt-0.5 flex-shrink-0" />
+                      <span className="text-slate-300">Pour cost analysis</span>
+                    </li>
+                    <li className="flex items-start">
+                      <Check className="h-4 w-4 text-amber-400 mr-2 mt-0.5 flex-shrink-0" />
+                      <span className="text-slate-300">Beverage waste tracking</span>
+                    </li>
+                    <li className="flex items-start">
+                      <Check className="h-4 w-4 text-amber-400 mr-2 mt-0.5 flex-shrink-0" />
+                      <span className="text-slate-300">Happy hour pricing</span>
+                    </li>
+                    <li className="flex items-start">
+                      <Check className="h-4 w-4 text-amber-400 mr-2 mt-0.5 flex-shrink-0" />
+                      <span className="text-slate-300">SpotOn POS integration</span>
+                    </li>
+                  </ul>
+                </CardContent>
+              </Card>
+
+              {/* Multi-Location Management Add-On */}
+              <Card className="bg-slate-800/80 backdrop-blur-sm border-blue-500/50 hover:border-blue-400/70 transition-all duration-300">
+                <CardHeader className="text-center pb-4">
+                  <div className="w-14 h-14 rounded-xl bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center mx-auto mb-4 shadow-lg">
+                    <svg className="h-7 w-7 text-white" fill="currentColor" viewBox="0 0 24 24">
+                      <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
+                    </svg>
+                  </div>
+                  <CardTitle className="text-xl font-bold text-white mb-2">Advanced Analytics</CardTitle>
+                  <CardDescription className="text-slate-300">Enterprise-grade reporting & business intelligence</CardDescription>
+                </CardHeader>
+                <CardContent className="text-center">
+                  <div className="mb-4">
+                    <div className="text-3xl font-black text-blue-400">+$49</div>
+                    <div className="text-sm text-slate-400">per location/month</div>
+                    {billingCycle === 'annual' && (
+                      <div className="text-xs text-green-400 mt-1 font-semibold">
+                        Annual: +$39/mo (20% off)
+                      </div>
+                    )}
+                  </div>
+                  <ul className="text-left space-y-2 text-sm">
+                    <li className="flex items-start">
+                      <Check className="h-4 w-4 text-blue-400 mr-2 mt-0.5 flex-shrink-0" />
+                      <span className="text-slate-300">Real-time P&L dashboards</span>
+                    </li>
+                    <li className="flex items-start">
+                      <Check className="h-4 w-4 text-blue-400 mr-2 mt-0.5 flex-shrink-0" />
+                      <span className="text-slate-300">Cross-location comparisons</span>
+                    </li>
+                    <li className="flex items-start">
+                      <Check className="h-4 w-4 text-blue-400 mr-2 mt-0.5 flex-shrink-0" />
+                      <span className="text-slate-300">Predictive cost forecasting</span>
+                    </li>
+                    <li className="flex items-start">
+                      <Check className="h-4 w-4 text-blue-400 mr-2 mt-0.5 flex-shrink-0" />
+                      <span className="text-slate-300">Custom KPI tracking</span>
+                    </li>
+                    <li className="flex items-start">
+                      <Check className="h-4 w-4 text-blue-400 mr-2 mt-0.5 flex-shrink-0" />
+                      <span className="text-slate-300">Automated alerts</span>
+                    </li>
+                    <li className="flex items-start">
+                      <Check className="h-4 w-4 text-blue-400 mr-2 mt-0.5 flex-shrink-0" />
+                      <span className="text-slate-300">Executive reporting</span>
+                    </li>
+                  </ul>
+                </CardContent>
+              </Card>
+            </div>
+          </div>
+        </section>
+
         {/* Pricing Cards */}
         <section className="container mx-auto px-4 pb-20">
+          <div className="max-w-4xl mx-auto text-center mb-12">
+            <h2 className="text-3xl font-bold text-white mb-4">Core Restaurant Plans</h2>
+            <p className="text-slate-300">Choose your base plan, then add specialized features as needed</p>
+          </div>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-7xl mx-auto">
             {plans.map((plan, index) => {
               const Icon = plan.icon;
@@ -266,6 +380,66 @@ export default function Pricing() {
           </div>
         </section>
 
+        {/* Example Pricing Calculator */}
+        <section className="container mx-auto px-4 pb-12">
+          <div className="max-w-4xl mx-auto">
+            <Card className="bg-gradient-to-r from-slate-800/80 to-slate-700/80 backdrop-blur-sm border-orange-500/30">
+              <CardHeader className="text-center">
+                <CardTitle className="text-2xl font-bold text-white mb-2">Example: Restaurant + Bar</CardTitle>
+                <CardDescription className="text-slate-300">Typical setup for your business model</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div className="text-center p-6 bg-slate-800/50 rounded-xl">
+                    <h3 className="text-lg font-semibold text-white mb-4">Table Service Restaurant</h3>
+                    <div className="space-y-2 text-sm">
+                      <div className="flex justify-between">
+                        <span className="text-slate-300">Professional Plan</span>
+                        <span className="text-white">${billingCycle === 'monthly' ? '199' : '159'}/mo</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-slate-300">Clover POS Integration</span>
+                        <span className="text-green-400">Included</span>
+                      </div>
+                    </div>
+                  </div>
+                  
+                  <div className="text-center p-6 bg-slate-800/50 rounded-xl">
+                    <h3 className="text-lg font-semibold text-white mb-4">Bar & Grill Location</h3>
+                    <div className="space-y-2 text-sm">
+                      <div className="flex justify-between">
+                        <span className="text-slate-300">Professional Plan</span>
+                        <span className="text-white">${billingCycle === 'monthly' ? '199' : '159'}/mo</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-slate-300">Bar Operations Add-on</span>
+                        <span className="text-amber-400">+${billingCycle === 'monthly' ? '79' : '63'}/mo</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-slate-300">SpotOn POS Integration</span>
+                        <span className="text-green-400">Included</span>
+                      </div>
+                      <div className="border-t border-slate-600 mt-2 pt-2 flex justify-between font-semibold">
+                        <span className="text-white">Total per location</span>
+                        <span className="text-orange-400">${billingCycle === 'monthly' ? '278' : '222'}/mo</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                
+                <div className="mt-6 text-center p-4 bg-green-900/20 rounded-xl border border-green-500/30">
+                  <div className="text-lg font-bold text-green-400">
+                    Total Monthly Cost: ${billingCycle === 'monthly' ? '477' : '381'}/mo for both locations
+                  </div>
+                  <div className="text-sm text-slate-300 mt-1">
+                    vs MarginEdge: $660/mo - Save ${billingCycle === 'monthly' ? '$183' : '$279'}/mo (${billingCycle === 'monthly' ? '$2,196' : '$3,348'}/year)
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        </section>
+
         {/* FAQ Section */}
         <section className="container mx-auto px-4 pb-20">
           <div className="max-w-4xl mx-auto text-center">
@@ -274,22 +448,22 @@ export default function Pricing() {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-8 text-left">
               <div>
                 <h3 className="text-lg font-semibold text-white mb-2">How does the free trial work?</h3>
-                <p className="text-slate-300 text-sm">Start with any plan for 14 days completely free. No credit card required. Full access to all features.</p>
+                <p className="text-slate-300 text-sm">Start with any plan for 14 days completely free. No credit card required. Full access to all features and add-ons.</p>
               </div>
               
               <div>
-                <h3 className="text-lg font-semibold text-white mb-2">Can I change plans anytime?</h3>
-                <p className="text-slate-300 text-sm">Yes! Upgrade or downgrade your plan at any time. Changes take effect immediately on your next billing cycle.</p>
+                <h3 className="text-lg font-semibold text-white mb-2">Can I add bar operations to existing plans?</h3>
+                <p className="text-slate-300 text-sm">Yes! Add the Bar & Beverage Operations add-on to any plan. Perfect for restaurants with bars or separate bar locations.</p>
               </div>
               
               <div>
                 <h3 className="text-lg font-semibold text-white mb-2">What POS systems do you integrate with?</h3>
-                <p className="text-slate-300 text-sm">We integrate with major POS systems including Toast, Square, Clover, SpotOn, and many others.</p>
+                <p className="text-slate-300 text-sm">We integrate with major POS systems including Toast, Square, Clover, SpotOn, and many others. Bar add-on includes specialized SpotOn integration.</p>
               </div>
               
               <div>
-                <h3 className="text-lg font-semibold text-white mb-2">Is there a setup fee?</h3>
-                <p className="text-slate-300 text-sm">No setup fees ever. We'll help you get started with free onboarding and training sessions.</p>
+                <h3 className="text-lg font-semibold text-white mb-2">Can I use different plans for different locations?</h3>
+                <p className="text-slate-300 text-sm">Absolutely! Mix and match plans per location. Your restaurant might use Professional while your bar uses Professional + Bar Operations.</p>
               </div>
             </div>
           </div>
