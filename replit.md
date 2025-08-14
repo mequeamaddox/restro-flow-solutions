@@ -24,6 +24,14 @@ Following MarginEdge platform analysis, RestroFlow has been enhanced with:
 - **Authentic Testimonials**: Real customer stories and specific savings numbers instead of generic testimonials
 - **Conversion Optimization**: Urgency-driven CTAs and benefit-focused messaging throughout the page
 
+### Competitive Pricing Strategy (August 2025)
+- **MarginEdge Analysis**: Direct competitor pricing research ($330/month standard, $480/month with Freepour)
+- **40-48% Cost Savings**: RestroFlow positioned 40-48% below MarginEdge pricing across all tiers
+- **Professional Plan**: $179/month ($143 annual) vs MarginEdge $330/month - saves $1,848/year per location
+- **Annual Discounts**: 20% discount for annual subscriptions across all plans
+- **Feature Parity**: Professional plan matches MarginEdge's core features while maintaining significant cost advantage
+- **Interactive Pricing**: Monthly/Annual billing toggle with real-time savings calculations
+
 ### Enterprise Security Features
 - **SOC2-style Security Standards**: Rate limiting, security headers (Helmet), input validation
 - **Comprehensive Audit Logging**: All user actions and data changes tracked with full context

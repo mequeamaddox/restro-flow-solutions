@@ -3,21 +3,25 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Check, ArrowLeft, Star, Zap, Crown, ChefHat } from "lucide-react";
 import { Link } from "wouter";
+import { useState } from "react";
 
 export default function Pricing() {
+  const [billingCycle, setBillingCycle] = useState<'monthly' | 'annual'>('monthly');
+  
   const plans = [
     {
       name: "Essential",
-      price: 89,
-      period: "per location/month",
+      monthlyPrice: 89,
+      annualPrice: 71, // 20% discount
+      period: "per location",
       description: "Complete solution for single locations",
       icon: ChefHat,
       color: "from-blue-500 to-cyan-500",
       popular: false,
-      savings: "vs MarginEdge $330/mo",
+      marginEdgePrice: 330,
       features: [
         "Real-time inventory tracking",
-        "Recipe costing & management",
+        "Recipe costing & management", 
         "Purchase order automation",
         "Comprehensive waste tracking",
         "Daily P&L statements",
@@ -30,48 +34,50 @@ export default function Pricing() {
     },
     {
       name: "Professional",
-      price: 149,
-      period: "per location/month",
-      description: "Most popular - full feature restaurant management",
+      monthlyPrice: 179,
+      annualPrice: 143, // 20% discount  
+      period: "per location",
+      description: "Most popular - matches MarginEdge features for 45% less",
       icon: Star,
-      color: "from-orange-500 to-red-500",
+      color: "from-orange-500 to-red-500", 
       popular: true,
-      savings: "vs MarginEdge $330/mo",
+      marginEdgePrice: 330,
       features: [
         "Everything in Essential",
         "Advanced analytics dashboard",
-        "Multi-location management",
-        "All POS system integrations",
-        "Automated invoice processing",
+        "Multi-location management", 
+        "All POS/accounting integrations",
+        "Automated invoice processing (24-48hr)",
         "Budget tracking & variance analysis",
         "Theoretical vs actual reporting",
+        "Vendor bill payment processing",
+        "Menu engineering analysis", 
         "Priority phone support",
         "API access",
-        "Custom report builder",
-        "Vendor bill payment",
-        "Menu engineering analysis"
+        "Custom report builder"
       ]
     },
     {
       name: "Enterprise",
-      price: 199,
-      period: "per location/month",
-      description: "For restaurant chains and large operations",
+      monthlyPrice: 249,
+      annualPrice: 199, // 20% discount
+      period: "per location", 
+      description: "Premium features for restaurant chains",
       icon: Crown,
       color: "from-purple-500 to-pink-500",
       popular: false,
-      savings: "vs MarginEdge $330/mo",
+      marginEdgePrice: 480, // vs MarginEdge + Freepour
       features: [
         "Everything in Professional",
+        "Smart scale integration (Freepour alternative)",
         "White-label solution",
-        "Custom integrations",
+        "Custom integrations", 
         "Dedicated account manager",
         "Advanced security & compliance",
         "Custom training & onboarding",
         "SLA guarantees (99.9% uptime)",
         "Multi-brand management",
         "Advanced user permissions",
-        "Custom workflows & automation",
         "Commission transfers",
         "Enterprise-grade reporting"
       ]
@@ -125,22 +131,48 @@ export default function Pricing() {
               <strong className="text-orange-400">Up to 40% less than MarginEdge.</strong>
             </p>
             
+            {/* Billing Toggle */}
+            <div className="flex items-center justify-center space-x-4 mb-8">
+              <span className={`text-lg ${billingCycle === 'monthly' ? 'text-white' : 'text-slate-400'}`}>Monthly</span>
+              <button
+                onClick={() => setBillingCycle(billingCycle === 'monthly' ? 'annual' : 'monthly')}
+                className="relative inline-flex h-8 w-16 items-center rounded-full bg-slate-700 transition-colors focus:outline-none focus:ring-2 focus:ring-orange-500 focus:ring-offset-2"
+              >
+                <span
+                  className={`inline-block h-6 w-6 transform rounded-full bg-orange-500 transition-transform ${
+                    billingCycle === 'annual' ? 'translate-x-8' : 'translate-x-1'
+                  }`}
+                />
+              </button>
+              <span className={`text-lg ${billingCycle === 'annual' ? 'text-white' : 'text-slate-400'}`}>Annual</span>
+              <Badge className="bg-green-500 text-white ml-2">Save 20%</Badge>
+            </div>
+
             {/* Competitive Comparison */}
-            <div className="bg-slate-800/50 rounded-2xl p-6 max-w-2xl mx-auto mb-12 border border-orange-500/20">
+            <div className="bg-slate-800/50 rounded-2xl p-6 max-w-3xl mx-auto mb-12 border border-orange-500/20">
               <div className="text-center">
-                <div className="text-sm text-slate-400 mb-2">Compare to MarginEdge</div>
-                <div className="flex items-center justify-center space-x-8">
-                  <div>
-                    <div className="text-2xl font-bold text-red-400 line-through">$330/mo</div>
-                    <div className="text-xs text-slate-400">MarginEdge</div>
+                <div className="text-sm text-slate-400 mb-4">Direct MarginEdge Comparison</div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div className="text-center">
+                    <div className="text-lg font-semibold text-slate-300 mb-2">MarginEdge Standard</div>
+                    <div className="text-3xl font-bold text-red-400 line-through">$330/mo</div>
+                    <div className="text-sm text-slate-400">($297/mo annual)</div>
                   </div>
-                  <div className="text-orange-400 text-2xl">→</div>
-                  <div>
-                    <div className="text-2xl font-bold text-green-400">$149/mo</div>
-                    <div className="text-xs text-slate-400">RestroFlow Pro</div>
+                  <div className="text-center">
+                    <div className="text-lg font-semibold text-slate-300 mb-2">RestroFlow Professional</div>
+                    <div className="text-3xl font-bold text-green-400">
+                      ${billingCycle === 'monthly' ? '179' : '143'}/mo
+                    </div>
+                    <div className="text-sm text-orange-300 font-semibold">
+                      Save ${billingCycle === 'monthly' ? '$151' : '$154'}/mo per location
+                    </div>
                   </div>
                 </div>
-                <div className="text-sm text-orange-300 mt-3 font-semibold">Save $2,172 per year per location</div>
+                <div className="mt-4 pt-4 border-t border-slate-600">
+                  <div className="text-lg font-bold text-orange-300">
+                    Annual Savings: ${billingCycle === 'monthly' ? '$1,812' : '$1,848'} per location
+                  </div>
+                </div>
               </div>
             </div>
             
@@ -189,15 +221,20 @@ export default function Pricing() {
                       
                       <div className="mb-6">
                         <div className="flex items-baseline justify-center">
-                          <span className="text-4xl font-black text-white">${plan.price}</span>
-                          <span className="text-slate-400 ml-2">/{plan.period.split('/')[1]}</span>
+                          <span className="text-4xl font-black text-white">
+                            ${billingCycle === 'monthly' ? plan.monthlyPrice : plan.annualPrice}
+                          </span>
+                          <span className="text-slate-400 ml-2">/month</span>
                         </div>
-                        <div className="text-sm text-slate-400 mt-1">{plan.period.split('/')[0]}</div>
-                        {plan.savings && (
-                          <div className="text-xs text-green-400 mt-2 font-semibold">
-                            Save ${330 - plan.price}/mo {plan.savings}
+                        <div className="text-sm text-slate-400 mt-1">{plan.period}</div>
+                        {billingCycle === 'annual' && (
+                          <div className="text-xs text-green-400 mt-1 font-semibold">
+                            Billed annually • Save ${plan.monthlyPrice - plan.annualPrice}/mo
                           </div>
                         )}
+                        <div className="text-xs text-orange-300 mt-2 font-semibold">
+                          vs MarginEdge ${plan.marginEdgePrice}/mo - Save ${plan.marginEdgePrice - (billingCycle === 'monthly' ? plan.monthlyPrice : plan.annualPrice)}/mo
+                        </div>
                       </div>
                     </CardHeader>
                     
