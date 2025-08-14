@@ -17,7 +17,11 @@ import {
   X,
   Utensils,
   CreditCard,
-  MapPin
+  MapPin,
+  FileText,
+  DollarSign,
+  TrendingUp,
+  Target
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import logoImg from "@assets/IMG_20250812_004328_1754973838131.png";
@@ -28,6 +32,9 @@ const navigation = [
   { name: 'Recipes', href: '/recipes', icon: ChefHat },
   { name: 'Purchase Orders', href: '/purchase-orders', icon: ShoppingCart },
   { name: 'Vendors', href: '/vendors', icon: Building2 },
+  { name: 'Invoice Processing', href: '/invoice-processing', icon: FileText },
+  { name: 'Cost Monitoring', href: '/cost-monitoring', icon: DollarSign },
+  { name: 'Business Intelligence', href: '/business-intelligence', icon: TrendingUp },
   { name: 'Analytics & Reports', href: '/analytics', icon: BarChart3 },
   { name: 'Waste Tracking', href: '/waste-tracking', icon: Trash2 },
   { name: 'POS Integration', href: '/pos-integration', icon: CreditCard },

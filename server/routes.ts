@@ -36,6 +36,152 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Invoice Processing Routes
+  app.get('/api/invoices', isAuthenticated, async (req, res) => {
+    try {
+      const { status } = req.query;
+      const invoices = await storage.getInvoices(status as string);
+      res.json(invoices);
+    } catch (error) {
+      console.error("Error fetching invoices:", error);
+      res.status(500).json({ message: "Failed to fetch invoices" });
+    }
+  });
+
+  app.post('/api/invoices', isAuthenticated, async (req, res) => {
+    try {
+      const invoiceData = req.body;
+      const invoice = await storage.createInvoice(invoiceData);
+      res.status(201).json(invoice);
+    } catch (error) {
+      console.error("Error creating invoice:", error);
+      res.status(400).json({ message: "Failed to create invoice" });
+    }
+  });
+
+  app.put('/api/invoices/:id/status', isAuthenticated, async (req, res) => {
+    try {
+      const { id } = req.params;
+      const { status } = req.body;
+      const invoice = await storage.updateInvoiceStatus(id, status);
+      res.json(invoice);
+    } catch (error) {
+      console.error("Error updating invoice status:", error);
+      res.status(400).json({ message: "Failed to update invoice status" });
+    }
+  });
+
+  app.get('/api/invoices/stats', isAuthenticated, async (req, res) => {
+    try {
+      const stats = await storage.getInvoiceStats();
+      res.json(stats);
+    } catch (error) {
+      console.error("Error fetching invoice stats:", error);
+      res.status(500).json({ message: "Failed to fetch invoice stats" });
+    }
+  });
+
+  // Cost Monitoring Routes
+  app.get('/api/cost-alerts', isAuthenticated, async (req, res) => {
+    try {
+      const { location } = req.query;
+      const alerts = await storage.getCostAlerts(location as string);
+      res.json(alerts);
+    } catch (error) {
+      console.error("Error fetching cost alerts:", error);
+      res.status(500).json({ message: "Failed to fetch cost alerts" });
+    }
+  });
+
+  app.get('/api/price-monitoring', isAuthenticated, async (req, res) => {
+    try {
+      const { range } = req.query;
+      const monitoring = await storage.getPriceMonitoring(range as string);
+      res.json(monitoring);
+    } catch (error) {
+      console.error("Error fetching price monitoring:", error);
+      res.status(500).json({ message: "Failed to fetch price monitoring" });
+    }
+  });
+
+  app.get('/api/cost-trends', isAuthenticated, async (req, res) => {
+    try {
+      const { range, location } = req.query;
+      const trends = await storage.getCostTrends(range as string, location as string);
+      res.json(trends);
+    } catch (error) {
+      console.error("Error fetching cost trends:", error);
+      res.status(500).json({ message: "Failed to fetch cost trends" });
+    }
+  });
+
+  app.get('/api/budget-tracking', isAuthenticated, async (req, res) => {
+    try {
+      const { location } = req.query;
+      const tracking = await storage.getBudgetTracking(location as string);
+      res.json(tracking);
+    } catch (error) {
+      console.error("Error fetching budget tracking:", error);
+      res.status(500).json({ message: "Failed to fetch budget tracking" });
+    }
+  });
+
+  // Business Intelligence Routes
+  app.get('/api/business-intelligence/daily-pnl', isAuthenticated, async (req, res) => {
+    try {
+      const { range, location } = req.query;
+      const pnl = await storage.getDailyPnL(range as string, location as string);
+      res.json(pnl);
+    } catch (error) {
+      console.error("Error fetching daily P&L:", error);
+      res.status(500).json({ message: "Failed to fetch daily P&L" });
+    }
+  });
+
+  app.get('/api/business-intelligence/kpis', isAuthenticated, async (req, res) => {
+    try {
+      const { range, location } = req.query;
+      const kpis = await storage.getKPIMetrics(range as string, location as string);
+      res.json(kpis);
+    } catch (error) {
+      console.error("Error fetching KPIs:", error);
+      res.status(500).json({ message: "Failed to fetch KPIs" });
+    }
+  });
+
+  app.get('/api/business-intelligence/profitability', isAuthenticated, async (req, res) => {
+    try {
+      const { range, location } = req.query;
+      const analysis = await storage.getProfitabilityAnalysis(range as string, location as string);
+      res.json(analysis);
+    } catch (error) {
+      console.error("Error fetching profitability analysis:", error);
+      res.status(500).json({ message: "Failed to fetch profitability analysis" });
+    }
+  });
+
+  app.get('/api/business-intelligence/menu-performance', isAuthenticated, async (req, res) => {
+    try {
+      const { range, location } = req.query;
+      const performance = await storage.getMenuPerformance(range as string, location as string);
+      res.json(performance);
+    } catch (error) {
+      console.error("Error fetching menu performance:", error);
+      res.status(500).json({ message: "Failed to fetch menu performance" });
+    }
+  });
+
+  app.get('/api/business-intelligence/cost-analysis', isAuthenticated, async (req, res) => {
+    try {
+      const { range, location } = req.query;
+      const analysis = await storage.getCostAnalysis(range as string, location as string);
+      res.json(analysis);
+    } catch (error) {
+      console.error("Error fetching cost analysis:", error);
+      res.status(500).json({ message: "Failed to fetch cost analysis" });
+    }
+  });
+
   // Locations
   app.get('/api/locations', isAuthenticated, async (req, res) => {
     try {

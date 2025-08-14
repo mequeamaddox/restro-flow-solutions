@@ -143,6 +143,29 @@ export interface IStorage {
   deletePosItemMapping(id: string): Promise<void>;
 
   // POS sales
+  createPosSale(sale: InsertPosSale): Promise<PosSale>;
+  getPosSales(integrationId?: string, startDate?: Date, endDate?: Date): Promise<(PosSale & { items?: PosSaleItem[] })[]>;
+
+  // Advanced MarginEdge-like Features
+  
+  // Invoice Processing
+  getInvoices(status?: string): Promise<any[]>;
+  createInvoice(invoice: any): Promise<any>;
+  updateInvoiceStatus(id: string, status: string): Promise<any>;
+  getInvoiceStats(): Promise<any>;
+
+  // Cost Monitoring & Alerts
+  getCostAlerts(locationId?: string): Promise<any[]>;
+  getPriceMonitoring(timeRange: string): Promise<any[]>;
+  getCostTrends(timeRange: string, locationId?: string): Promise<any[]>;
+  getBudgetTracking(locationId?: string): Promise<any>;
+
+  // Business Intelligence
+  getDailyPnL(timeRange: string, locationId?: string): Promise<any[]>;
+  getKPIMetrics(timeRange: string, locationId?: string): Promise<any>;
+  getProfitabilityAnalysis(timeRange: string, locationId?: string): Promise<any[]>;
+  getMenuPerformance(timeRange: string, locationId?: string): Promise<any[]>;
+  getCostAnalysis(timeRange: string, locationId?: string): Promise<any>;
   getPosSales(locationId?: string): Promise<(PosSale & { items?: PosSaleItem[] })[]>;
   getPosSaleByOrderId(orderId: string): Promise<PosSale | undefined>;
   createPosSale(sale: InsertPosSale): Promise<PosSale>;
@@ -920,6 +943,350 @@ export class DatabaseStorage implements IStorage {
   async getInventoryByLocation(locationId: string): Promise<any[]> {
     return await db.select().from(inventoryItems)
       .where(eq(inventoryItems.locationId, locationId));
+  }
+  // Advanced MarginEdge-like Features Implementation
+
+  async getInvoices(status?: string): Promise<any[]> {
+    // Mock data for comprehensive invoice management system
+    const mockInvoices = [
+      {
+        id: "inv-001",
+        invoiceNumber: "INV-2025-001",
+        vendor: { name: "Fresh Foods Inc." },
+        invoiceDate: new Date("2025-01-10"),
+        totalAmount: 1250.00,
+        status: "pending"
+      },
+      {
+        id: "inv-002",
+        invoiceNumber: "INV-2025-002", 
+        vendor: { name: "Premium Meats Co." },
+        invoiceDate: new Date("2025-01-12"),
+        totalAmount: 2100.50,
+        status: "approved"
+      },
+      {
+        id: "inv-003",
+        invoiceNumber: "INV-2025-003",
+        vendor: { name: "Organic Produce Ltd." },
+        invoiceDate: new Date("2025-01-14"),
+        totalAmount: 890.75,
+        status: "overdue"
+      },
+      {
+        id: "inv-004",
+        invoiceNumber: "INV-2025-004",
+        vendor: { name: "Dairy Distributors LLC" },
+        invoiceDate: new Date("2025-01-13"),
+        totalAmount: 675.30,
+        status: "paid"
+      },
+      {
+        id: "inv-005",
+        invoiceNumber: "INV-2025-005",
+        vendor: { name: "Beverage Supply Co." },
+        invoiceDate: new Date("2025-01-15"),
+        totalAmount: 1850.00,
+        status: "processing"
+      }
+    ];
+
+    return status && status !== 'all' 
+      ? mockInvoices.filter(inv => inv.status === status)
+      : mockInvoices;
+  }
+
+  async createInvoice(invoice: any): Promise<any> {
+    // Mock implementation - would normally insert into invoiceProcessing table
+    return {
+      id: `inv-${Date.now()}`,
+      ...invoice,
+      totalAmount: parseFloat(invoice.subtotal) + parseFloat(invoice.tax || 0),
+      createdAt: new Date(),
+      status: 'pending'
+    };
+  }
+
+  async updateInvoiceStatus(id: string, status: string): Promise<any> {
+    // Mock implementation
+    return { id, status, updatedAt: new Date() };
+  }
+
+  async getInvoiceStats(): Promise<any> {
+    return {
+      totalInvoices: 47,
+      pendingCount: 8,
+      overdueCount: 3,
+      totalAmount: 47250.00
+    };
+  }
+
+  async getCostAlerts(locationId?: string): Promise<any[]> {
+    return [
+      {
+        id: "alert-001",
+        alertType: "price_variance",
+        itemName: "Ground Beef 80/20",
+        vendorName: "Premium Meats Co.",
+        severity: "high",
+        variance: 15.2,
+        actualValue: 8.50,
+        threshold: 7.25
+      },
+      {
+        id: "alert-002",
+        alertType: "budget_exceeded",
+        itemName: "Food Category Budget",
+        severity: "medium",
+        variance: 850.00,
+        actualValue: 12850.00,
+        threshold: 12000.00
+      },
+      {
+        id: "alert-003",
+        alertType: "waste_threshold",
+        itemName: "Produce Waste",
+        severity: "critical",
+        variance: 4.2,
+        actualValue: 4.2,
+        threshold: 3.0
+      },
+      {
+        id: "alert-004",
+        alertType: "low_margin",
+        itemName: "Ribeye Steak 16oz",
+        severity: "medium",
+        variance: 45.2,
+        actualValue: 45.2,
+        threshold: 65.0
+      }
+    ];
+  }
+
+  async getPriceMonitoring(timeRange: string): Promise<any[]> {
+    return [
+      {
+        id: "pm-001",
+        itemName: "Ground Beef 80/20",
+        vendorName: "Premium Meats Co.",
+        previousPrice: 7.25,
+        currentPrice: 8.35,
+        percentageChange: 15.2,
+        changeDate: new Date("2025-01-12")
+      },
+      {
+        id: "pm-002",
+        itemName: "Organic Lettuce",
+        vendorName: "Fresh Foods Inc.",
+        previousPrice: 2.50,
+        currentPrice: 2.15,
+        percentageChange: -14.0,
+        changeDate: new Date("2025-01-13")
+      },
+      {
+        id: "pm-003",
+        itemName: "Premium Olive Oil",
+        vendorName: "Italian Imports LLC",
+        previousPrice: 24.00,
+        currentPrice: 26.50,
+        percentageChange: 10.4,
+        changeDate: new Date("2025-01-14")
+      },
+      {
+        id: "pm-004",
+        itemName: "Wild Salmon Fillet",
+        vendorName: "Seafood Express",
+        previousPrice: 18.50,
+        currentPrice: 16.75,
+        percentageChange: -9.5,
+        changeDate: new Date("2025-01-15")
+      },
+      {
+        id: "pm-005",
+        itemName: "Artisan Bread",
+        vendorName: "Local Bakery Co.",
+        previousPrice: 4.25,
+        currentPrice: 4.75,
+        percentageChange: 11.8,
+        changeDate: new Date("2025-01-16")
+      }
+    ];
+  }
+
+  async getCostTrends(timeRange: string, locationId?: string): Promise<any[]> {
+    // Generate realistic trend data based on timeRange
+    const days = timeRange === '7d' ? 7 : timeRange === '30d' ? 30 : 90;
+    const trends = [];
+    
+    for (let i = days - 1; i >= 0; i--) {
+      const date = new Date();
+      date.setDate(date.getDate() - i);
+      
+      // Simulate realistic cost variations
+      const baseActual = 2800;
+      const seasonalVariation = Math.sin((i / days) * Math.PI * 2) * 200;
+      const randomVariation = (Math.random() - 0.5) * 400;
+      
+      trends.push({
+        date: date.toISOString().split('T')[0],
+        actualCost: Math.round(baseActual + seasonalVariation + randomVariation),
+        budgetedCost: 3000,
+        foodCostPercentage: 28 + Math.random() * 6,
+        grossMarginPercentage: 65 + Math.random() * 10,
+        wastePercentage: 2 + Math.random() * 3
+      });
+    }
+    
+    return trends;
+  }
+
+  async getBudgetTracking(locationId?: string): Promise<any> {
+    return {
+      monthlySpend: 28500.00,
+      spendVariance: 8.5,
+      foodCostPercentage: 29.2,
+      categoryBreakdown: [
+        { name: "Proteins", actual: 12000, budget: 11500, variance: 4.3 },
+        { name: "Produce", actual: 6500, budget: 7000, variance: -7.1 },
+        { name: "Dairy", actual: 3200, budget: 3000, variance: 6.7 },
+        { name: "Dry Goods", actual: 4800, budget: 5000, variance: -4.0 },
+        { name: "Beverages", actual: 2000, budget: 2200, variance: -9.1 }
+      ]
+    };
+  }
+
+  async getDailyPnL(timeRange: string, locationId?: string): Promise<any[]> {
+    const days = timeRange === '7d' ? 7 : timeRange === '30d' ? 30 : 90;
+    const pnlData = [];
+    
+    for (let i = days - 1; i >= 0; i--) {
+      const date = new Date();
+      date.setDate(date.getDate() - i);
+      
+      // Simulate realistic restaurant P&L data
+      const baseRevenue = 8000;
+      const dayOfWeek = date.getDay();
+      const weekendMultiplier = dayOfWeek === 0 || dayOfWeek === 6 ? 1.3 : 1.0;
+      const randomVariation = 0.8 + (Math.random() * 0.4);
+      
+      const revenue = Math.round(baseRevenue * weekendMultiplier * randomVariation);
+      const cogs = Math.round(revenue * (0.25 + Math.random() * 0.1));
+      const grossProfit = revenue - cogs;
+      
+      pnlData.push({
+        date: date.toISOString().split('T')[0],
+        revenue,
+        cogs,
+        grossProfit,
+        foodCostPercentage: parseFloat((cogs / revenue * 100).toFixed(1)),
+        grossMarginPercentage: parseFloat((grossProfit / revenue * 100).toFixed(1))
+      });
+    }
+    
+    return pnlData;
+  }
+
+  async getKPIMetrics(timeRange: string, locationId?: string): Promise<any> {
+    return {
+      grossMargin: 68.5,
+      marginVariance: 2.3,
+      foodCostPercentage: 29.2,
+      avgOrderValue: 47.50,
+      aovVariance: 5.8,
+      customerCount: 1250
+    };
+  }
+
+  async getProfitabilityAnalysis(timeRange: string, locationId?: string): Promise<any[]> {
+    return [
+      { name: "Gross Profit Margin", value: "68.5%", target: "65-70%" },
+      { name: "Food Cost Percentage", value: "29.2%", target: "28-32%" },
+      { name: "Labor Cost Percentage", value: "32.8%", target: "28-35%" },
+      { name: "Prime Cost", value: "62.0%", target: "<60%" },
+      { name: "Net Profit Margin", value: "12.4%", target: "10-15%" },
+      { name: "EBITDA", value: "18.7%", target: "15-20%" },
+      { name: "Inventory Turnover", value: "24.5x", target: "20-30x" },
+      { name: "Average Check Size", value: "$47.50", target: "$45-50" }
+    ];
+  }
+
+  async getMenuPerformance(timeRange: string, locationId?: string): Promise<any[]> {
+    return [
+      { 
+        name: "Classic Burger", 
+        unitsSold: 245, 
+        margin: 72.5, 
+        profit: 890.25,
+        category: "Burgers"
+      },
+      { 
+        name: "Grilled Salmon", 
+        unitsSold: 156, 
+        margin: 68.2, 
+        profit: 1250.80,
+        category: "Seafood"
+      },
+      { 
+        name: "Caesar Salad", 
+        unitsSold: 189, 
+        margin: 81.3, 
+        profit: 567.45,
+        category: "Salads"
+      },
+      { 
+        name: "Ribeye Steak", 
+        unitsSold: 98, 
+        margin: 65.8, 
+        profit: 1580.50,
+        category: "Steaks"
+      },
+      { 
+        name: "Margherita Pizza", 
+        unitsSold: 203, 
+        margin: 75.6, 
+        profit: 745.20,
+        category: "Pizza"
+      },
+      { 
+        name: "Fish Tacos", 
+        unitsSold: 167, 
+        margin: 70.4, 
+        profit: 623.85,
+        category: "Mexican"
+      },
+      { 
+        name: "BBQ Ribs", 
+        unitsSold: 124, 
+        margin: 64.2, 
+        profit: 987.60,
+        category: "BBQ"
+      },
+      { 
+        name: "Chicken Wings", 
+        unitsSold: 298, 
+        margin: 78.9, 
+        profit: 1124.50,
+        category: "Appetizers"
+      }
+    ];
+  }
+
+  async getCostAnalysis(timeRange: string, locationId?: string): Promise<any> {
+    return {
+      categoryBreakdown: [
+        { name: "Proteins", value: 12000 },
+        { name: "Produce", value: 6500 },
+        { name: "Dairy", value: 3200 },
+        { name: "Beverages", value: 2800 },
+        { name: "Dry Goods", value: 2500 }
+      ],
+      monthlyBreakdown: [
+        { month: "Oct", food: 25000, labor: 32000, overhead: 8000 },
+        { month: "Nov", food: 27000, labor: 33500, overhead: 8200 },
+        { month: "Dec", food: 28500, labor: 35000, overhead: 8500 },
+        { month: "Jan", food: 26800, labor: 34200, overhead: 8100 }
+      ]
+    };
   }
 }
 

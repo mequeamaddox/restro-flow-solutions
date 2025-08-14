@@ -20,6 +20,9 @@ import PosIntegration from "@/pages/pos-integration";
 import Analytics from "@/pages/analytics";
 import BarcodeTest from "@/pages/barcode-test";
 import Settings from "@/pages/settings";
+import InvoiceProcessing from "@/pages/invoice-processing";
+import CostMonitoring from "@/pages/cost-monitoring";
+import BusinessIntelligence from "@/pages/business-intelligence";
 import Sidebar from "@/components/layout/sidebar";
 import Header from "@/components/layout/header";
 
@@ -66,6 +69,9 @@ function Router() {
                 <Route path="/pos-integration" component={PosIntegration} />
                 <Route path="/analytics" component={Analytics} />
                 <Route path="/reports" component={Analytics} />
+                <Route path="/invoice-processing" component={InvoiceProcessing} />
+                <Route path="/cost-monitoring" component={CostMonitoring} />
+                <Route path="/business-intelligence" component={BusinessIntelligence} />
                 <Route path="/barcode-test" component={BarcodeTest} />
                 <Route path="/settings" component={Settings} />
                 <Route component={NotFound} />
