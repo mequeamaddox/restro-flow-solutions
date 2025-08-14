@@ -21,7 +21,10 @@ import {
   FileText,
   DollarSign,
   TrendingUp,
-  Target
+  Target,
+  Activity,
+  Bot,
+  Brain
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import logoImg from "@assets/IMG_20250812_004328_1754973838131.png";
@@ -32,7 +35,10 @@ const navigation = [
   { name: 'Recipes', href: '/recipes', icon: ChefHat },
   { name: 'Purchase Orders', href: '/purchase-orders', icon: ShoppingCart },
   { name: 'Vendors', href: '/vendors', icon: Building2 },
-  { name: 'Invoice Processing', href: '/invoice-processing', icon: FileText },
+  { name: 'Invoice Processing', href: '/invoice-processing', icon: FileText, badge: 'OCR' },
+  { name: 'Real-Time Analytics', href: '/real-time-analytics', icon: Activity, badge: 'LIVE' },
+  { name: 'Demand Forecasting', href: '/forecasting', icon: Brain, badge: 'AI' },
+  { name: 'Automated Ordering', href: '/automated-ordering', icon: Bot, badge: 'AUTO' },
   { name: 'Cost Monitoring', href: '/cost-monitoring', icon: DollarSign },
   { name: 'Business Intelligence', href: '/business-intelligence', icon: TrendingUp },
   { name: 'Analytics & Reports', href: '/analytics', icon: BarChart3 },
@@ -136,7 +142,18 @@ export default function Sidebar({ isMobileMenuOpen = false, setIsMobileMenuOpen 
                       onClick={() => setMobileMenuOpen(false)}
                     >
                       <Icon className="h-5 w-5 mr-3" />
-                      {item.name}
+                      <span className="flex-1">{item.name}</span>
+                      {(item as any).badge && (
+                        <span className={cn(
+                          "ml-2 px-2 py-0.5 text-xs font-bold rounded-full",
+                          (item as any).badge === 'LIVE' ? "bg-green-500/20 text-green-400" :
+                          (item as any).badge === 'AI' ? "bg-purple-500/20 text-purple-400" :
+                          (item as any).badge === 'AUTO' ? "bg-blue-500/20 text-blue-400" :
+                          "bg-orange-500/20 text-orange-400"
+                        )}>
+                          {(item as any).badge}
+                        </span>
+                      )}
                     </div>
                   </Link>
                 </li>

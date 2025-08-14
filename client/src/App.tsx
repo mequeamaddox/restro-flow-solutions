@@ -23,6 +23,9 @@ import Settings from "@/pages/settings";
 import InvoiceProcessing from "@/pages/invoice-processing";
 import CostMonitoring from "@/pages/cost-monitoring";
 import BusinessIntelligence from "@/pages/business-intelligence";
+import AutomatedOrdering from "@/pages/automated-ordering";
+import Forecasting from "@/pages/forecasting";
+import RealTimeAnalytics from "@/pages/real-time-analytics";
 import Sidebar from "@/components/layout/sidebar";
 import Header from "@/components/layout/header";
 
@@ -72,6 +75,9 @@ function Router() {
                 <Route path="/invoice-processing" component={InvoiceProcessing} />
                 <Route path="/cost-monitoring" component={CostMonitoring} />
                 <Route path="/business-intelligence" component={BusinessIntelligence} />
+                <Route path="/automated-ordering" component={AutomatedOrdering} />
+                <Route path="/forecasting" component={Forecasting} />
+                <Route path="/real-time-analytics" component={RealTimeAnalytics} />
                 <Route path="/barcode-test" component={BarcodeTest} />
                 <Route path="/settings" component={Settings} />
                 <Route component={NotFound} />

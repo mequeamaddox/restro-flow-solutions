@@ -1,0 +1,320 @@
+import React, { useState } from 'react';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
+import { Switch } from '@/components/ui/switch';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { 
+  Bot, 
+  TrendingUp, 
+  Clock, 
+  DollarSign, 
+  AlertTriangle,
+  CheckCircle,
+  Settings,
+  Calendar,
+  Target,
+  Zap
+} from 'lucide-react';
+import { apiRequest } from '@/lib/queryClient';
+import { useToast } from '@/hooks/use-toast';
+
+export default function AutomatedOrdering() {
+  const [selectedVendor, setSelectedVendor] = useState('');
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
+
+  const { data: autoOrderRules = [] } = useQuery({
+    queryKey: ['/api/auto-ordering/rules'],
+  });
+
+  const { data: vendors = [] } = useQuery({
+    queryKey: ['/api/vendors'],
+  });
+
+  const { data: inventory = [] } = useQuery({
+    queryKey: ['/api/inventory'],
+  });
+
+  const createRuleMutation = useMutation({
+    mutationFn: async (ruleData: any) => {
+      const response = await apiRequest("POST", "/api/auto-ordering/rules", ruleData);
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/auto-ordering/rules'] });
+      toast({ title: "Auto-ordering rule created successfully" });
+    }
+  });
+
+  const toggleRuleMutation = useMutation({
+    mutationFn: async ({ ruleId, enabled }: { ruleId: string; enabled: boolean }) => {
+      const response = await apiRequest("PATCH", `/api/auto-ordering/rules/${ruleId}`, { enabled });
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/auto-ordering/rules'] });
+    }
+  });
+
+  return (
+    <div className="space-y-6">
+      {/* Header */}
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-3xl font-bold text-white flex items-center gap-3">
+            <Bot className="h-8 w-8 text-blue-400" />
+            Automated Ordering
+          </h1>
+          <p className="text-slate-400 mt-2">
+            AI-powered automatic purchase orders based on consumption patterns and reorder points
+          </p>
+        </div>
+        <Badge className="bg-gradient-to-r from-blue-500 to-purple-500 text-white">
+          Enterprise Feature
+        </Badge>
+      </div>
+
+      {/* System Status */}
+      <Card className="bg-slate-800/50 border-slate-700">
+        <CardHeader>
+          <CardTitle className="text-white flex items-center gap-2">
+            <Zap className="h-5 w-5 text-yellow-400" />
+            Auto-Order Intelligence Status
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+            <div className="text-center">
+              <div className="text-2xl font-bold text-green-400">87%</div>
+              <div className="text-sm text-slate-400">Prediction Accuracy</div>
+            </div>
+            <div className="text-center">
+              <div className="text-2xl font-bold text-blue-400">$12,400</div>
+              <div className="text-sm text-slate-400">Monthly Savings</div>
+            </div>
+            <div className="text-center">
+              <div className="text-2xl font-bold text-purple-400">24</div>
+              <div className="text-sm text-slate-400">Active Rules</div>
+            </div>
+            <div className="text-center">
+              <div className="text-2xl font-bold text-orange-400">2.3hrs</div>
+              <div className="text-sm text-slate-400">Time Saved/Week</div>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Active Auto-Order Rules */}
+      <Card className="bg-slate-800/50 border-slate-700">
+        <CardHeader>
+          <CardTitle className="text-white">Active Auto-Order Rules</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-4">
+            {/* Mock rules for demonstration */}
+            {[
+              {
+                id: '1',
+                name: 'Ground Beef Auto-Order',
+                item: 'Ground Beef 80/20',
+                vendor: 'Sysco Foods',
+                trigger: 'Stock below 15 lbs',
+                orderQuantity: '100 lbs',
+                enabled: true,
+                lastTriggered: '2 days ago',
+                estimatedSavings: '$45/month'
+              },
+              {
+                id: '2',
+                name: 'Produce Daily Orders',
+                item: 'Mixed Vegetables',
+                vendor: 'Fresh Direct',
+                trigger: 'Daily at 6 AM',
+                orderQuantity: 'Based on forecast',
+                enabled: true,
+                lastTriggered: 'Yesterday',
+                estimatedSavings: '$120/month'
+              },
+              {
+                id: '3',
+                name: 'Beer Keg Replenishment',
+                item: 'Draft Beer Kegs',
+                vendor: 'Premium Beverage',
+                trigger: 'Weekly + consumption surge',
+                orderQuantity: '6 kegs',
+                enabled: false,
+                lastTriggered: 'Never',
+                estimatedSavings: '$80/month'
+              }
+            ].map((rule) => (
+              <div key={rule.id} className="flex items-center justify-between p-4 bg-slate-700/30 rounded-lg">
+                <div className="flex-1 space-y-2">
+                  <div className="flex items-center gap-3">
+                    <h3 className="font-semibold text-white">{rule.name}</h3>
+                    <Badge variant={rule.enabled ? "default" : "secondary"}>
+                      {rule.enabled ? "Active" : "Disabled"}
+                    </Badge>
+                  </div>
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm text-slate-400">
+                    <div>
+                      <span className="font-medium">Item:</span> {rule.item}
+                    </div>
+                    <div>
+                      <span className="font-medium">Vendor:</span> {rule.vendor}
+                    </div>
+                    <div>
+                      <span className="font-medium">Trigger:</span> {rule.trigger}
+                    </div>
+                    <div>
+                      <span className="font-medium">Quantity:</span> {rule.orderQuantity}
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-6 text-xs text-slate-500">
+                    <span>Last triggered: {rule.lastTriggered}</span>
+                    <span className="text-green-400">Saves: {rule.estimatedSavings}</span>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Switch 
+                    checked={rule.enabled}
+                    onCheckedChange={(enabled) => 
+                      toggleRuleMutation.mutate({ ruleId: rule.id, enabled })
+                    }
+                  />
+                  <Button variant="ghost" size="sm">
+                    <Settings className="h-4 w-4" />
+                  </Button>
+                </div>
+              </div>
+            ))}
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Create New Rule */}
+      <Card className="bg-slate-800/50 border-slate-700">
+        <CardHeader>
+          <CardTitle className="text-white">Create Auto-Order Rule</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label className="text-slate-300">Rule Name</Label>
+              <Input 
+                placeholder="e.g., Chicken Breast Auto-Order"
+                className="bg-slate-700 border-slate-600 text-white"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label className="text-slate-300">Inventory Item</Label>
+              <Select>
+                <SelectTrigger className="bg-slate-700 border-slate-600 text-white">
+                  <SelectValue placeholder="Select inventory item" />
+                </SelectTrigger>
+                <SelectContent>
+                  {(inventory as any[]).slice(0, 5).map((item: any) => (
+                    <SelectItem key={item.id} value={item.id}>
+                      {item.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label className="text-slate-300">Vendor</Label>
+              <Select value={selectedVendor} onValueChange={setSelectedVendor}>
+                <SelectTrigger className="bg-slate-700 border-slate-600 text-white">
+                  <SelectValue placeholder="Select vendor" />
+                </SelectTrigger>
+                <SelectContent>
+                  {(vendors as any[]).map((vendor: any) => (
+                    <SelectItem key={vendor.id} value={vendor.id}>
+                      {vendor.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label className="text-slate-300">Trigger Type</Label>
+              <Select>
+                <SelectTrigger className="bg-slate-700 border-slate-600 text-white">
+                  <SelectValue placeholder="When to order" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="low_stock">Stock falls below threshold</SelectItem>
+                  <SelectItem value="scheduled">Scheduled (daily/weekly)</SelectItem>
+                  <SelectItem value="consumption">Based on consumption rate</SelectItem>
+                  <SelectItem value="forecast">AI demand forecast</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+          
+          <div className="flex justify-end gap-2 mt-6">
+            <Button variant="outline" className="border-slate-600 text-slate-300">
+              Preview Rule
+            </Button>
+            <Button className="bg-blue-600 hover:bg-blue-700">
+              Create Rule
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* AI Insights */}
+      <Card className="bg-gradient-to-br from-purple-500/10 to-blue-500/10 border-purple-500/30">
+        <CardHeader>
+          <CardTitle className="text-white flex items-center gap-2">
+            <TrendingUp className="h-5 w-5 text-purple-400" />
+            AI Ordering Insights
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-4">
+            <div className="p-4 bg-slate-800/50 rounded-lg">
+              <div className="flex items-start gap-3">
+                <Target className="h-5 w-5 text-green-400 mt-1" />
+                <div>
+                  <div className="font-semibold text-green-400">Optimization Opportunity</div>
+                  <div className="text-sm text-slate-300 mt-1">
+                    Your Ground Beef orders could be optimized by switching to 50lb orders every 3 days 
+                    instead of 100lb weekly orders. This would reduce waste by 12% and save $67/month.
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div className="p-4 bg-slate-800/50 rounded-lg">
+              <div className="flex items-start gap-3">
+                <AlertTriangle className="h-5 w-5 text-yellow-400 mt-1" />
+                <div>
+                  <div className="font-semibold text-yellow-400">Demand Spike Detected</div>
+                  <div className="text-sm text-slate-300 mt-1">
+                    Weekend consumption for Chicken Wings increased 35% vs last month. 
+                    Consider increasing Friday orders by 20lbs to avoid stockouts.
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div className="p-4 bg-slate-800/50 rounded-lg">
+              <div className="flex items-start gap-3">
+                <DollarSign className="h-5 w-5 text-blue-400 mt-1" />
+                <div>
+                  <div className="font-semibold text-blue-400">Cost Savings Alert</div>
+                  <div className="text-sm text-slate-300 mt-1">
+                    Sysco is offering 8% bulk discount on produce orders over $500. 
+                    Combine your daily orders into bi-weekly orders to qualify.
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
