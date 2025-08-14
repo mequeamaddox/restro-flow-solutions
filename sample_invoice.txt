@@ -1,0 +1,9 @@
+INVOICE
+Invoice Number: TEST-2025-001
+Date: January 14, 2025
+Vendor: RestroFlow Supplies Inc.
+Description: Restaurant inventory supplies
+Subtotal: 50.00
+Tax: 6.00
+Total: 86.00
+Due Date: February 14, 2025

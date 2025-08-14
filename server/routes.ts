@@ -53,8 +53,8 @@ async function extractTextFromImage(buffer: Buffer): Promise<{ text: string; con
 
 async function extractTextFromPDF(buffer: Buffer): Promise<{ text: string; confidence: number }> {
   try {
-    // Import pdf-parse dynamically to avoid module loading issues
-    const pdfParse = require('pdf-parse');
+    // Use dynamic import for ES modules
+    const pdfParse = (await import('pdf-parse')).default;
     const data = await pdfParse(buffer);
     
     if (data.text && data.text.trim().length > 0) {
