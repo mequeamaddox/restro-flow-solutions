@@ -282,6 +282,9 @@ export interface IStorage {
   getMessages(): Promise<Message[]>;
   createMessage(message: InsertMessage): Promise<Message>;
   markMessageAsRead(messageId: string, userId: string): Promise<void>;
+  
+  // HR Analytics
+  getHRAnalytics(): Promise<any>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -1834,6 +1837,86 @@ export class DatabaseStorage implements IStorage {
       .where(eq(timeOffRequests.id, id))
       .returning();
     return updated;
+  }
+
+  // HR Analytics
+  async getHRAnalytics(): Promise<any> {
+    try {
+      // Get all relevant data for analytics
+      const [
+        employees,
+        shifts,
+        tasks, 
+        timeEntries,
+        timeOffRequests,
+        messages
+      ] = await Promise.all([
+        this.getEmployees(),
+        this.getShifts(),
+        this.getTasks(),
+        this.getTimeEntries(),
+        this.getTimeOffRequests(),
+        this.getMessages()
+      ]);
+
+      // Calculate analytics
+      const today = new Date().toISOString().split('T')[0];
+      const thisWeekStart = new Date();
+      thisWeekStart.setDate(thisWeekStart.getDate() - thisWeekStart.getDay());
+      const thisWeekEnd = new Date(thisWeekStart);
+      thisWeekEnd.setDate(thisWeekStart.getDate() + 7);
+
+      const analytics = {
+        // Basic counts
+        totalEmployees: employees.length,
+        activeEmployees: employees.filter((emp: any) => emp.status === 'active').length,
+        currentlyWorking: timeEntries.filter((entry: any) => entry.status === 'clocked-in').length,
+        
+        // Today's metrics
+        todayShifts: shifts.filter((shift: any) => shift.date === today).length,
+        pendingTasks: tasks.filter((task: any) => task.status !== 'completed').length,
+        unreadMessages: messages.filter((msg: any) => !msg.readBy?.length).length,
+        
+        // Time off
+        pendingTimeOff: timeOffRequests.filter((req: any) => req.status === 'pending').length,
+        approvedTimeOff: timeOffRequests.filter((req: any) => req.status === 'approved').length,
+        
+        // Weekly analytics
+        weeklyShifts: shifts.filter((shift: any) => {
+          const shiftDate = new Date(shift.date);
+          return shiftDate >= thisWeekStart && shiftDate < thisWeekEnd;
+        }).length,
+        
+        // Labor hours calculation
+        totalWeeklyHours: shifts.reduce((total: number, shift: any) => {
+          const shiftDate = new Date(shift.date);
+          if (shiftDate >= thisWeekStart && shiftDate < thisWeekEnd) {
+            const start = new Date(`2000-01-01T${shift.startTime}`);
+            const end = new Date(`2000-01-01T${shift.endTime}`);
+            const hours = (end.getTime() - start.getTime()) / (1000 * 60 * 60);
+            const actualHours = Math.max(0, hours - (shift.breakDuration / 60));
+            return total + actualHours;
+          }
+          return total;
+        }, 0),
+        
+        // Performance metrics
+        taskCompletionRate: tasks.length > 0 ? 
+          ((tasks.length - tasks.filter((task: any) => task.status !== 'completed').length) / tasks.length) * 100 : 100,
+        
+        // Recent activity
+        recentMessages: messages.slice(0, 5),
+        upcomingShifts: shifts
+          .filter((shift: any) => new Date(shift.date) >= new Date())
+          .sort((a: any, b: any) => new Date(a.date).getTime() - new Date(b.date).getTime())
+          .slice(0, 10)
+      };
+
+      return analytics;
+    } catch (error) {
+      console.error('Error calculating HR analytics:', error);
+      throw error;
+    }
   }
 }
 

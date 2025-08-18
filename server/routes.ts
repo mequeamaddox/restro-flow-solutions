@@ -1339,6 +1339,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // HR Analytics and Reports
+  app.get('/api/hr/analytics', isAuthenticated, async (req, res) => {
+    try {
+      const analytics = await storage.getHRAnalytics();
+      res.json(analytics);
+    } catch (error) {
+      console.error('Error fetching HR analytics:', error);
+      res.status(500).json({ message: 'Failed to fetch HR analytics' });
+    }
+  });
+
   // HR Tasks
   app.get('/api/hr/tasks', isAuthenticated, async (req, res) => {
     try {
