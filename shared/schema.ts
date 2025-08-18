@@ -502,7 +502,7 @@ export const taskCompletions = pgTable("task_completions", {
 // Team messaging and announcements
 export const messages = pgTable("messages", {
   id: uuid("id").primaryKey().default(sql`gen_random_uuid()`),
-  senderId: uuid("sender_id").references(() => users.id),
+  senderId: varchar("sender_id").references(() => users.id), // Changed from uuid to varchar to match users.id
   recipientType: varchar("recipient_type", { length: 20 }).notNull(), // individual, department, location, all
   recipientId: uuid("recipient_id"), // employee/department/location ID
   title: varchar("title"), // Using title instead of subject to match database
