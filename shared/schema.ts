@@ -426,15 +426,13 @@ export const employees = pgTable("employees", {
 // Employee schedules and shifts
 export const shifts = pgTable("shifts", {
   id: uuid("id").primaryKey().default(sql`gen_random_uuid()`),
-  employeeId: uuid("employee_id").references(() => employees.id).notNull(),
-  locationId: uuid("location_id").references(() => locations.id).notNull(),
-  departmentId: uuid("department_id").references(() => departments.id),
-  startTime: timestamp("start_time").notNull(),
-  endTime: timestamp("end_time").notNull(),
+  employeeId: uuid("employee_id").references(() => employees.id),
+  date: date("date").notNull(),
+  startTime: varchar("start_time").notNull(), // time format
+  endTime: varchar("end_time").notNull(), // time format
   breakDuration: integer("break_duration").default(0), // minutes
-  status: shiftStatusEnum("status").default("scheduled"),
+  status: varchar("status").default("scheduled"),
   notes: text("notes"),
-  createdBy: varchar("created_by").references(() => users.id),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
@@ -475,21 +473,13 @@ export const timeOffRequests = pgTable("time_off_requests", {
 export const tasks = pgTable("tasks", {
   id: uuid("id").primaryKey().default(sql`gen_random_uuid()`),
   title: varchar("title", { length: 200 }).notNull(),
-  description: text("description").notNull(),
-  assignedTo: uuid("assigned_to").references(() => employees.id).notNull(),
-  assignedBy: varchar("assigned_by").references(() => users.id).notNull(),
-  locationId: uuid("location_id").references(() => locations.id).notNull(),
-  departmentId: uuid("department_id").references(() => departments.id),
-  priority: taskPriorityEnum("priority").default("medium"),
-  category: taskCategoryEnum("category").default("other"),
+  description: text("description"),
+  assignedTo: uuid("assigned_to").references(() => employees.id),
+  createdBy: uuid("created_by").references(() => users.id),
+  priority: varchar("priority").default("medium"),
+  status: varchar("status").default("pending"),
   dueDate: timestamp("due_date"),
-  estimatedHours: decimal("estimated_hours", { precision: 5, scale: 2 }),
-  status: taskStatusEnum("status").default("pending"),
   completedAt: timestamp("completed_at"),
-  completionNotes: text("completion_notes"),
-  attachments: jsonb("attachments"), // array of file URLs
-  isRecurring: boolean("is_recurring").default(false),
-  recurrencePattern: jsonb("recurrence_pattern"), // {frequency, interval, days}
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
@@ -512,16 +502,13 @@ export const taskCompletions = pgTable("task_completions", {
 // Team messaging and announcements
 export const messages = pgTable("messages", {
   id: uuid("id").primaryKey().default(sql`gen_random_uuid()`),
-  senderId: varchar("sender_id").references(() => users.id).notNull(),
+  senderId: uuid("sender_id").references(() => users.id),
   recipientType: varchar("recipient_type", { length: 20 }).notNull(), // individual, department, location, all
   recipientId: uuid("recipient_id"), // employee/department/location ID
-  subject: varchar("subject"),
+  title: varchar("title"), // Using title instead of subject to match database
   content: text("content").notNull(),
-  messageType: messageTypeEnum("message_type").default("message"),
-  priority: messagePriorityEnum("priority").default("normal"),
-  readBy: jsonb("read_by").default('[]'), // array of {userId, readAt}
-  attachments: jsonb("attachments"), // array of file URLs
-  expiresAt: timestamp("expires_at"),
+  messageType: varchar("message_type").default("message"),
+  priority: varchar("priority").default("normal"),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
