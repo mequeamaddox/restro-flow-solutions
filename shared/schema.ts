@@ -562,19 +562,15 @@ export const performanceReviews = pgTable("performance_reviews", {
 // Time tracking and attendance
 export const timeEntries = pgTable("time_entries", {
   id: uuid("id").primaryKey().default(sql`gen_random_uuid()`),
-  employeeId: uuid("employee_id").references(() => employees.id).notNull(),
+  employeeId: uuid("employee_id").references(() => employees.id),
   shiftId: uuid("shift_id").references(() => shifts.id),
-  clockInTime: timestamp("clock_in_time").defaultNow(),
+  clockInTime: timestamp("clock_in_time").notNull(),
   clockOutTime: timestamp("clock_out_time"),
   breakStartTime: timestamp("break_start_time"),
   breakEndTime: timestamp("break_end_time"),
   totalHours: decimal("total_hours", { precision: 5, scale: 2 }),
-  overtimeHours: decimal("overtime_hours", { precision: 5, scale: 2 }).default("0"),
-  status: timeEntryStatusEnum("status").default("clocked-in"),
-  location: jsonb("location"), // GPS coordinates if mobile
+  status: varchar("status").default("clocked-in"),
   notes: text("notes"),
-  approvedBy: varchar("approved_by").references(() => users.id),
-  approvedAt: timestamp("approved_at"),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
