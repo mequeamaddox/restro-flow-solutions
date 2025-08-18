@@ -34,11 +34,11 @@ export default function HRTimeClock() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
-  const { data: employees = [], isLoading: employeesLoading } = useQuery({
+  const { data: employees = [], isLoading: employeesLoading } = useQuery<Employee[]>({
     queryKey: ['/api/hr/employees'],
   });
 
-  const { data: timeEntries = [], isLoading: entriesLoading } = useQuery({
+  const { data: timeEntries = [], isLoading: entriesLoading } = useQuery<TimeEntry[]>({
     queryKey: ['/api/hr/time-entries'],
   });
 
