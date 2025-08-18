@@ -359,7 +359,268 @@ export const insertPurchaseOrderItemSchema = createInsertSchema(purchaseOrderIte
 export const insertWasteEntrySchema = createInsertSchema(wasteEntries).omit({ id: true, createdAt: true });
 export const insertInventoryTransactionSchema = createInsertSchema(inventoryTransactions).omit({ id: true, createdAt: true });
 
-// Types
+// HR Enums (needed for tables)
+export const employeeStatusEnum = pgEnum("employee_status", ["active", "inactive", "terminated", "on-leave"]);
+export const shiftStatusEnum = pgEnum("shift_status", ["scheduled", "confirmed", "completed", "no-show", "cancelled"]);
+export const timeOffTypeEnum = pgEnum("time_off_type", ["vacation", "sick", "personal", "bereavement", "other"]);
+export const timeOffStatusEnum = pgEnum("time_off_status", ["pending", "approved", "denied", "cancelled"]);
+export const taskStatusEnum = pgEnum("task_status", ["pending", "in-progress", "completed", "cancelled", "overdue"]);
+export const taskPriorityEnum = pgEnum("task_priority", ["low", "medium", "high", "urgent"]);
+export const taskCategoryEnum = pgEnum("task_category", ["cleaning", "inventory", "maintenance", "training", "admin", "other"]);
+export const messageTypeEnum = pgEnum("message_type", ["message", "announcement", "alert", "reminder"]);
+export const messagePriorityEnum = pgEnum("message_priority", ["normal", "high", "urgent"]);
+export const reviewStatusEnum = pgEnum("review_status", ["draft", "pending-employee", "completed", "archived"]);
+export const timeEntryStatusEnum = pgEnum("time_entry_status", ["clocked-in", "on-break", "clocked-out"]);
+
+// Employee Management Tables (HR Add-on)
+// Departments and organizational structure
+export const departments = pgTable("departments", {
+  id: uuid("id").primaryKey().default(sql`gen_random_uuid()`),
+  name: varchar("name", { length: 100 }).notNull(),
+  description: text("description"),
+  managerId: uuid("manager_id"), // Will reference employees table
+  locationId: uuid("location_id").references(() => locations.id).notNull(),
+  budget: decimal("budget", { precision: 12, scale: 2 }),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// Job positions and roles
+export const positions = pgTable("positions", {
+  id: uuid("id").primaryKey().default(sql`gen_random_uuid()`),
+  title: varchar("title", { length: 100 }).notNull(),
+  description: text("description"),
+  departmentId: uuid("department_id").references(() => departments.id).notNull(),
+  minHourlyRate: decimal("min_hourly_rate", { precision: 10, scale: 2 }),
+  maxHourlyRate: decimal("max_hourly_rate", { precision: 10, scale: 2 }),
+  permissions: jsonb("permissions"), // role-based access
+  requirements: text("requirements"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// Employee profiles and basic info
+export const employees = pgTable("employees", {
+  id: uuid("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").references(() => users.id), // Optional link to system users
+  employeeNumber: varchar("employee_number", { length: 20 }).notNull().unique(),
+  firstName: varchar("first_name", { length: 50 }).notNull(),
+  lastName: varchar("last_name", { length: 50 }).notNull(),
+  email: varchar("email"),
+  phone: varchar("phone", { length: 20 }).notNull(),
+  emergencyContact: jsonb("emergency_contact"), // {name, phone, relationship}
+  address: jsonb("address"), // {street, city, state, zip}
+  dateOfBirth: timestamp("date_of_birth"),
+  hireDate: timestamp("hire_date").notNull(),
+  terminationDate: timestamp("termination_date"),
+  status: employeeStatusEnum("status").default("active"),
+  locationId: uuid("location_id").references(() => locations.id).notNull(),
+  departmentId: uuid("department_id").references(() => departments.id),
+  positionId: uuid("position_id").references(() => positions.id),
+  hourlyRate: decimal("hourly_rate", { precision: 10, scale: 2 }),
+  salary: decimal("salary", { precision: 12, scale: 2 }),
+  profilePhoto: varchar("profile_photo"),
+  notes: text("notes"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// Employee schedules and shifts
+export const shifts = pgTable("shifts", {
+  id: uuid("id").primaryKey().default(sql`gen_random_uuid()`),
+  employeeId: uuid("employee_id").references(() => employees.id).notNull(),
+  locationId: uuid("location_id").references(() => locations.id).notNull(),
+  departmentId: uuid("department_id").references(() => departments.id),
+  startTime: timestamp("start_time").notNull(),
+  endTime: timestamp("end_time").notNull(),
+  breakDuration: integer("break_duration").default(0), // minutes
+  status: shiftStatusEnum("status").default("scheduled"),
+  notes: text("notes"),
+  createdBy: varchar("created_by").references(() => users.id),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// Employee availability preferences
+export const availability = pgTable("availability", {
+  id: uuid("id").primaryKey().default(sql`gen_random_uuid()`),
+  employeeId: uuid("employee_id").references(() => employees.id).notNull(),
+  dayOfWeek: integer("day_of_week").notNull(), // 0-6, Sunday=0
+  startTime: varchar("start_time", { length: 8 }).notNull(), // HH:MM:SS format
+  endTime: varchar("end_time", { length: 8 }).notNull(),
+  isAvailable: boolean("is_available").default(true),
+  notes: varchar("notes"),
+  effectiveDate: timestamp("effective_date").defaultNow(),
+  endDate: timestamp("end_date"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// Time-off requests and approvals
+export const timeOffRequests = pgTable("time_off_requests", {
+  id: uuid("id").primaryKey().default(sql`gen_random_uuid()`),
+  employeeId: uuid("employee_id").references(() => employees.id).notNull(),
+  requestType: timeOffTypeEnum("request_type").notNull(),
+  startDate: timestamp("start_date").notNull(),
+  endDate: timestamp("end_date").notNull(),
+  totalHours: decimal("total_hours", { precision: 5, scale: 2 }).notNull(),
+  reason: text("reason"),
+  status: timeOffStatusEnum("status").default("pending"),
+  approvedBy: varchar("approved_by").references(() => users.id),
+  approvalDate: timestamp("approval_date"),
+  notes: text("notes"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// Task assignments and tracking
+export const tasks = pgTable("tasks", {
+  id: uuid("id").primaryKey().default(sql`gen_random_uuid()`),
+  title: varchar("title", { length: 200 }).notNull(),
+  description: text("description").notNull(),
+  assignedTo: uuid("assigned_to").references(() => employees.id).notNull(),
+  assignedBy: varchar("assigned_by").references(() => users.id).notNull(),
+  locationId: uuid("location_id").references(() => locations.id).notNull(),
+  departmentId: uuid("department_id").references(() => departments.id),
+  priority: taskPriorityEnum("priority").default("medium"),
+  category: taskCategoryEnum("category").default("other"),
+  dueDate: timestamp("due_date"),
+  estimatedHours: decimal("estimated_hours", { precision: 5, scale: 2 }),
+  status: taskStatusEnum("status").default("pending"),
+  completedAt: timestamp("completed_at"),
+  completionNotes: text("completion_notes"),
+  attachments: jsonb("attachments"), // array of file URLs
+  isRecurring: boolean("is_recurring").default(false),
+  recurrencePattern: jsonb("recurrence_pattern"), // {frequency, interval, days}
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// Task completion tracking and verification
+export const taskCompletions = pgTable("task_completions", {
+  id: uuid("id").primaryKey().default(sql`gen_random_uuid()`),
+  taskId: uuid("task_id").references(() => tasks.id).notNull(),
+  employeeId: uuid("employee_id").references(() => employees.id).notNull(),
+  completedAt: timestamp("completed_at").defaultNow(),
+  actualHours: decimal("actual_hours", { precision: 5, scale: 2 }),
+  notes: text("notes"),
+  photos: jsonb("photos"), // array of photo URLs
+  verifiedBy: varchar("verified_by").references(() => users.id),
+  verifiedAt: timestamp("verified_at"),
+  rating: integer("rating"), // 1-5 scale
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+// Team messaging and announcements
+export const messages = pgTable("messages", {
+  id: uuid("id").primaryKey().default(sql`gen_random_uuid()`),
+  senderId: varchar("sender_id").references(() => users.id).notNull(),
+  recipientType: varchar("recipient_type", { length: 20 }).notNull(), // individual, department, location, all
+  recipientId: uuid("recipient_id"), // employee/department/location ID
+  subject: varchar("subject"),
+  content: text("content").notNull(),
+  messageType: messageTypeEnum("message_type").default("message"),
+  priority: messagePriorityEnum("priority").default("normal"),
+  readBy: jsonb("read_by").default('[]'), // array of {userId, readAt}
+  attachments: jsonb("attachments"), // array of file URLs
+  expiresAt: timestamp("expires_at"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// Message threads and conversations
+export const messageThreads = pgTable("message_threads", {
+  id: uuid("id").primaryKey().default(sql`gen_random_uuid()`),
+  originalMessageId: uuid("original_message_id").references(() => messages.id).notNull(),
+  participants: jsonb("participants").notNull(), // array of user IDs
+  subject: varchar("subject").notNull(),
+  lastMessageAt: timestamp("last_message_at").defaultNow(),
+  isActive: boolean("is_active").default(true),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// Employee performance reviews and metrics
+export const performanceReviews = pgTable("performance_reviews", {
+  id: uuid("id").primaryKey().default(sql`gen_random_uuid()`),
+  employeeId: uuid("employee_id").references(() => employees.id).notNull(),
+  reviewerId: varchar("reviewer_id").references(() => users.id).notNull(),
+  reviewPeriodStart: timestamp("review_period_start").notNull(),
+  reviewPeriodEnd: timestamp("review_period_end").notNull(),
+  overallRating: decimal("overall_rating", { precision: 3, scale: 2 }), // 1.00-5.00 scale
+  categories: jsonb("categories"), // {category: rating} pairs
+  strengths: text("strengths"),
+  areasForImprovement: text("areas_for_improvement"),
+  goals: jsonb("goals"), // array of goal objects
+  actionItems: jsonb("action_items"), // array of action items
+  employeeComments: text("employee_comments"),
+  status: reviewStatusEnum("status").default("draft"),
+  scheduledDate: timestamp("scheduled_date"),
+  completedDate: timestamp("completed_date"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// Time tracking and attendance
+export const timeEntries = pgTable("time_entries", {
+  id: uuid("id").primaryKey().default(sql`gen_random_uuid()`),
+  employeeId: uuid("employee_id").references(() => employees.id).notNull(),
+  shiftId: uuid("shift_id").references(() => shifts.id),
+  clockInTime: timestamp("clock_in_time").defaultNow(),
+  clockOutTime: timestamp("clock_out_time"),
+  breakStartTime: timestamp("break_start_time"),
+  breakEndTime: timestamp("break_end_time"),
+  totalHours: decimal("total_hours", { precision: 5, scale: 2 }),
+  overtimeHours: decimal("overtime_hours", { precision: 5, scale: 2 }).default("0"),
+  status: timeEntryStatusEnum("status").default("clocked-in"),
+  location: jsonb("location"), // GPS coordinates if mobile
+  notes: text("notes"),
+  approvedBy: varchar("approved_by").references(() => users.id),
+  approvedAt: timestamp("approved_at"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// HR Insert schemas and Types (moved here after table definitions)
+export const insertDepartmentSchema = createInsertSchema(departments).omit({ id: true, createdAt: true, updatedAt: true });
+export const insertPositionSchema = createInsertSchema(positions).omit({ id: true, createdAt: true, updatedAt: true });
+export const insertEmployeeSchema = createInsertSchema(employees).omit({ id: true, createdAt: true, updatedAt: true });
+export const insertShiftSchema = createInsertSchema(shifts).omit({ id: true, createdAt: true, updatedAt: true });
+export const insertAvailabilitySchema = createInsertSchema(availability).omit({ id: true, createdAt: true, updatedAt: true });
+export const insertTimeOffRequestSchema = createInsertSchema(timeOffRequests).omit({ id: true, createdAt: true, updatedAt: true });
+export const insertTaskSchema = createInsertSchema(tasks).omit({ id: true, createdAt: true, updatedAt: true });
+export const insertTaskCompletionSchema = createInsertSchema(taskCompletions).omit({ id: true, createdAt: true });
+export const insertMessageSchema = createInsertSchema(messages).omit({ id: true, createdAt: true, updatedAt: true });
+export const insertMessageThreadSchema = createInsertSchema(messageThreads).omit({ id: true, createdAt: true, updatedAt: true });
+export const insertPerformanceReviewSchema = createInsertSchema(performanceReviews).omit({ id: true, createdAt: true, updatedAt: true });
+export const insertTimeEntrySchema = createInsertSchema(timeEntries).omit({ id: true, createdAt: true, updatedAt: true });
+
+// HR Types
+export type Department = typeof departments.$inferSelect;
+export type InsertDepartment = z.infer<typeof insertDepartmentSchema>;
+export type Position = typeof positions.$inferSelect;
+export type InsertPosition = z.infer<typeof insertPositionSchema>;
+export type Employee = typeof employees.$inferSelect;
+export type InsertEmployee = z.infer<typeof insertEmployeeSchema>;
+export type Shift = typeof shifts.$inferSelect;
+export type InsertShift = z.infer<typeof insertShiftSchema>;
+export type Availability = typeof availability.$inferSelect;
+export type InsertAvailability = z.infer<typeof insertAvailabilitySchema>;
+export type TimeOffRequest = typeof timeOffRequests.$inferSelect;
+export type InsertTimeOffRequest = z.infer<typeof insertTimeOffRequestSchema>;
+export type Task = typeof tasks.$inferSelect;
+export type InsertTask = z.infer<typeof insertTaskSchema>;
+export type TaskCompletion = typeof taskCompletions.$inferSelect;
+export type InsertTaskCompletion = z.infer<typeof insertTaskCompletionSchema>;
+export type Message = typeof messages.$inferSelect;
+export type InsertMessage = z.infer<typeof insertMessageSchema>;
+export type MessageThread = typeof messageThreads.$inferSelect;
+export type InsertMessageThread = z.infer<typeof insertMessageThreadSchema>;
+export type PerformanceReview = typeof performanceReviews.$inferSelect;
+export type InsertPerformanceReview = z.infer<typeof insertPerformanceReviewSchema>;
+export type TimeEntry = typeof timeEntries.$inferSelect;
+export type InsertTimeEntry = z.infer<typeof insertTimeEntrySchema>;
+
 // Universal POS Integration Tables
 export const posProviderEnum = pgEnum("pos_provider", ["clover", "spoton", "square", "toast", "revel"]);
 

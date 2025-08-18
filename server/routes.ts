@@ -1181,6 +1181,180 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // HR Employee Management Add-on API Endpoints (15 endpoints)
+  
+  // HR Departments
+  app.get('/api/hr/departments', isAuthenticated, async (req, res) => {
+    try {
+      const departments = await storage.getDepartments();
+      res.json(departments);
+    } catch (error) {
+      console.error('Error fetching departments:', error);
+      res.status(500).json({ message: 'Failed to fetch departments' });
+    }
+  });
+
+  app.post('/api/hr/departments', isAuthenticated, async (req, res) => {
+    try {
+      const department = await storage.createDepartment(req.body);
+      res.status(201).json(department);
+    } catch (error) {
+      console.error('Error creating department:', error);
+      res.status(500).json({ message: 'Failed to create department' });
+    }
+  });
+
+  app.put('/api/hr/departments/:id', isAuthenticated, async (req, res) => {
+    try {
+      const department = await storage.updateDepartment(req.params.id, req.body);
+      res.json(department);
+    } catch (error) {
+      console.error('Error updating department:', error);
+      res.status(500).json({ message: 'Failed to update department' });
+    }
+  });
+
+  // HR Positions
+  app.get('/api/hr/positions', isAuthenticated, async (req, res) => {
+    try {
+      const positions = await storage.getPositions();
+      res.json(positions);
+    } catch (error) {
+      console.error('Error fetching positions:', error);
+      res.status(500).json({ message: 'Failed to fetch positions' });
+    }
+  });
+
+  app.post('/api/hr/positions', isAuthenticated, async (req, res) => {
+    try {
+      const position = await storage.createPosition(req.body);
+      res.status(201).json(position);
+    } catch (error) {
+      console.error('Error creating position:', error);
+      res.status(500).json({ message: 'Failed to create position' });
+    }
+  });
+
+  // HR Employees
+  app.get('/api/hr/employees', isAuthenticated, async (req, res) => {
+    try {
+      const employees = await storage.getEmployees();
+      res.json(employees);
+    } catch (error) {
+      console.error('Error fetching employees:', error);
+      res.status(500).json({ message: 'Failed to fetch employees' });
+    }
+  });
+
+  app.post('/api/hr/employees', isAuthenticated, async (req, res) => {
+    try {
+      const employee = await storage.createEmployee(req.body);
+      res.status(201).json(employee);
+    } catch (error) {
+      console.error('Error creating employee:', error);
+      res.status(500).json({ message: 'Failed to create employee' });
+    }
+  });
+
+  app.put('/api/hr/employees/:id', isAuthenticated, async (req, res) => {
+    try {
+      const employee = await storage.updateEmployee(req.params.id, req.body);
+      res.json(employee);
+    } catch (error) {
+      console.error('Error updating employee:', error);
+      res.status(500).json({ message: 'Failed to update employee' });
+    }
+  });
+
+  // HR Scheduling
+  app.get('/api/hr/shifts', isAuthenticated, async (req, res) => {
+    try {
+      const shifts = await storage.getShifts();
+      res.json(shifts);
+    } catch (error) {
+      console.error('Error fetching shifts:', error);
+      res.status(500).json({ message: 'Failed to fetch shifts' });
+    }
+  });
+
+  app.post('/api/hr/shifts', isAuthenticated, async (req, res) => {
+    try {
+      const shift = await storage.createShift(req.body);
+      res.status(201).json(shift);
+    } catch (error) {
+      console.error('Error creating shift:', error);
+      res.status(500).json({ message: 'Failed to create shift' });
+    }
+  });
+
+  // HR Tasks
+  app.get('/api/hr/tasks', isAuthenticated, async (req, res) => {
+    try {
+      const tasks = await storage.getTasks();
+      res.json(tasks);
+    } catch (error) {
+      console.error('Error fetching tasks:', error);
+      res.status(500).json({ message: 'Failed to fetch tasks' });
+    }
+  });
+
+  app.post('/api/hr/tasks', isAuthenticated, async (req, res) => {
+    try {
+      const task = await storage.createTask(req.body);
+      res.status(201).json(task);
+    } catch (error) {
+      console.error('Error creating task:', error);
+      res.status(500).json({ message: 'Failed to create task' });
+    }
+  });
+
+  // HR Time Clock
+  app.post('/api/hr/time-clock/in/:employeeId', isAuthenticated, async (req, res) => {
+    try {
+      const { shiftId } = req.body;
+      const entry = await storage.clockIn(req.params.employeeId, shiftId);
+      res.status(201).json(entry);
+    } catch (error) {
+      console.error('Error clocking in:', error);
+      res.status(500).json({ message: 'Failed to clock in' });
+    }
+  });
+
+  app.post('/api/hr/time-clock/out/:entryId', isAuthenticated, async (req, res) => {
+    try {
+      const entry = await storage.clockOut(req.params.entryId);
+      res.json(entry);
+    } catch (error) {
+      console.error('Error clocking out:', error);
+      res.status(500).json({ message: 'Failed to clock out' });
+    }
+  });
+
+  // HR Messaging
+  app.get('/api/hr/messages', isAuthenticated, async (req, res) => {
+    try {
+      const messages = await storage.getMessages();
+      res.json(messages);
+    } catch (error) {
+      console.error('Error fetching messages:', error);
+      res.status(500).json({ message: 'Failed to fetch messages' });
+    }
+  });
+
+  app.post('/api/hr/messages', isAuthenticated, async (req, res) => {
+    try {
+      const messageData = {
+        ...req.body,
+        senderId: (req.user as any)?.claims?.sub,
+      };
+      const message = await storage.createMessage(messageData);
+      res.status(201).json(message);
+    } catch (error) {
+      console.error('Error creating message:', error);
+      res.status(500).json({ message: 'Failed to create message' });
+    }
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }

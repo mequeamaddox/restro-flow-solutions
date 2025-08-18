@@ -24,7 +24,12 @@ import {
   Target,
   Activity,
   Bot,
-  Brain
+  Brain,
+  Users,
+  Calendar,
+  CheckSquare,
+  Clock,
+  MessageSquare
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import logoImg from "@assets/IMG_20250812_004328_1754973838131.png";
@@ -45,6 +50,14 @@ const navigation = [
   { name: 'Waste Tracking', href: '/waste-tracking', icon: Trash2 },
   { name: 'POS Integration', href: '/pos-integration', icon: CreditCard },
   { name: 'Settings', href: '/settings', icon: Settings },
+];
+
+const hrNavigation = [
+  { name: 'HR Dashboard', href: '/hr/dashboard', icon: Users, badge: 'ADD-ON' },
+  { name: 'Employees', href: '/hr/employees', icon: Users },
+  { name: 'Time Clock', href: '/hr/time-clock', icon: Clock },
+  { name: 'Tasks', href: '/hr/tasks', icon: CheckSquare },
+  { name: 'Messaging', href: '/hr/messaging', icon: MessageSquare },
 ];
 
 interface SidebarProps {
@@ -126,40 +139,85 @@ export default function Sidebar({ isMobileMenuOpen = false, setIsMobileMenuOpen 
 
         {/* Navigation */}
         <nav className="mt-6 flex-1 overflow-y-auto pb-20">
-          <ul className="space-y-1">
-            {navigation.map((item) => {
-              const isActive = currentPath === item.href;
-              const Icon = item.icon;
-              
-              return (
-                <li key={item.name}>
-                  <Link href={item.href}>
-                    <div
-                      className={cn(
-                        "flex items-center px-6 py-3 text-slate-300 hover:bg-slate-700/50 hover:text-white transition-all duration-200 cursor-pointer rounded-r-2xl mr-4",
-                        isActive && "bg-gradient-to-r from-orange-500/20 to-red-500/20 border-r-4 border-orange-400 text-white"
-                      )}
-                      onClick={() => setMobileMenuOpen(false)}
-                    >
-                      <Icon className="h-5 w-5 mr-3" />
-                      <span className="flex-1">{item.name}</span>
-                      {(item as any).badge && (
-                        <span className={cn(
-                          "ml-2 px-2 py-0.5 text-xs font-bold rounded-full",
-                          (item as any).badge === 'LIVE' ? "bg-green-500/20 text-green-400" :
-                          (item as any).badge === 'AI' ? "bg-purple-500/20 text-purple-400" :
-                          (item as any).badge === 'AUTO' ? "bg-blue-500/20 text-blue-400" :
-                          "bg-orange-500/20 text-orange-400"
-                        )}>
-                          {(item as any).badge}
-                        </span>
-                      )}
-                    </div>
-                  </Link>
-                </li>
-              );
-            })}
-          </ul>
+          {/* Core Platform */}
+          <div className="mb-6">
+            <div className="px-6 py-2 text-xs font-semibold text-slate-400 uppercase tracking-wide">
+              Core Platform
+            </div>
+            <ul className="space-y-1">
+              {navigation.map((item) => {
+                const isActive = currentPath === item.href;
+                const Icon = item.icon;
+                
+                return (
+                  <li key={item.name}>
+                    <Link href={item.href}>
+                      <div
+                        className={cn(
+                          "flex items-center px-6 py-3 text-slate-300 hover:bg-slate-700/50 hover:text-white transition-all duration-200 cursor-pointer rounded-r-2xl mr-4",
+                          isActive && "bg-gradient-to-r from-orange-500/20 to-red-500/20 border-r-4 border-orange-400 text-white"
+                        )}
+                        onClick={() => setMobileMenuOpen(false)}
+                      >
+                        <Icon className="h-5 w-5 mr-3" />
+                        <span className="flex-1">{item.name}</span>
+                        {(item as any).badge && (
+                          <span className={cn(
+                            "ml-2 px-2 py-0.5 text-xs font-bold rounded-full",
+                            (item as any).badge === 'LIVE' ? "bg-green-500/20 text-green-400" :
+                            (item as any).badge === 'AI' ? "bg-purple-500/20 text-purple-400" :
+                            (item as any).badge === 'AUTO' ? "bg-blue-500/20 text-blue-400" :
+                            "bg-orange-500/20 text-orange-400"
+                          )}>
+                            {(item as any).badge}
+                          </span>
+                        )}
+                      </div>
+                    </Link>
+                  </li>
+                );
+              })}
+            </ul>
+          </div>
+
+          {/* HR Employee Management Add-on */}
+          <div>
+            <div className="px-6 py-2 text-xs font-semibold text-slate-400 uppercase tracking-wide">
+              Employee Management Add-on
+            </div>
+            <ul className="space-y-1">
+              {hrNavigation.map((item) => {
+                const isActive = currentPath === item.href;
+                const Icon = item.icon;
+                
+                return (
+                  <li key={item.name}>
+                    <Link href={item.href}>
+                      <div
+                        className={cn(
+                          "flex items-center px-6 py-3 text-slate-300 hover:bg-slate-700/50 hover:text-white transition-all duration-200 cursor-pointer rounded-r-2xl mr-4",
+                          isActive && "bg-gradient-to-r from-blue-500/20 to-indigo-500/20 border-r-4 border-blue-400 text-white"
+                        )}
+                        onClick={() => setMobileMenuOpen(false)}
+                      >
+                        <Icon className="h-5 w-5 mr-3" />
+                        <span className="flex-1">{item.name}</span>
+                        {(item as any).badge && (
+                          <span className={cn(
+                            "ml-2 px-2 py-0.5 text-xs font-bold rounded-full",
+                            (item as any).badge === 'ADD-ON' ? "bg-blue-500/20 text-blue-400" :
+                            "bg-gray-500/20 text-gray-400"
+                          )}>
+                            {(item as any).badge}
+                          </span>
+                        )}
+                      </div>
+                    </Link>
+                  </li>
+                );
+              })}
+            </ul>
+          </div>
         </nav>
 
         {/* User Profile */}

@@ -26,6 +26,11 @@ import BusinessIntelligence from "@/pages/business-intelligence";
 import AutomatedOrdering from "@/pages/automated-ordering";
 import Forecasting from "@/pages/forecasting";
 import RealTimeAnalytics from "@/pages/real-time-analytics";
+import HRDashboard from "@/pages/hr-dashboard";
+import HREmployees from "@/pages/hr-employees";
+import HRTimeClock from "@/pages/hr-time-clock";
+import HRTasks from "@/pages/hr-tasks";
+import HRMessaging from "@/pages/hr-messaging";
 import Sidebar from "@/components/layout/sidebar";
 import Header from "@/components/layout/header";
 
@@ -80,6 +85,13 @@ function Router() {
                 <Route path="/real-time-analytics" component={RealTimeAnalytics} />
                 <Route path="/barcode-test" component={BarcodeTest} />
                 <Route path="/settings" component={Settings} />
+                {/* HR Employee Management Add-on Routes */}
+                <Route path="/hr" component={HRDashboard} />
+                <Route path="/hr/dashboard" component={HRDashboard} />
+                <Route path="/hr/employees" component={HREmployees} />
+                <Route path="/hr/time-clock" component={HRTimeClock} />
+                <Route path="/hr/tasks" component={HRTasks} />
+                <Route path="/hr/messaging" component={HRMessaging} />
                 <Route component={NotFound} />
               </Switch>
             </main>

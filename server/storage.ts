@@ -54,9 +54,46 @@ import {
   type InsertPosSale,
   type PosSaleItem,
   type InsertPosSaleItem,
+  // HR imports
+  departments,
+  positions,
+  employees,
+  shifts,
+  availability,
+  timeOffRequests,
+  tasks,
+  taskCompletions,
+  messages,
+  messageThreads,
+  performanceReviews,
+  timeEntries,
+  type Department,
+  type InsertDepartment,
+  type Position,
+  type InsertPosition,
+  type Employee,
+  type InsertEmployee,
+  type Shift,
+  type InsertShift,
+  type Availability,
+  type InsertAvailability,
+  type TimeOffRequest,
+  type InsertTimeOffRequest,
+  type Task,
+  type InsertTask,
+  type TaskCompletion,
+  type InsertTaskCompletion,
+  type Message,
+  type InsertMessage,
+  type MessageThread,
+  type InsertMessageThread,
+  type PerformanceReview,
+  type InsertPerformanceReview,
+  type TimeEntry,
+  type InsertTimeEntry,
 } from "@shared/schema";
 import { db } from "./db";
-import { eq, sql, desc, and, gte, lte, ilike, sum } from "drizzle-orm";
+import { eq, sql, desc, and, gte, lte, ilike, sum, isNull, asc } from "drizzle-orm";
 
 export interface IStorage {
   // User operations (required for Replit Auth)
@@ -197,6 +234,54 @@ export interface IStorage {
   // POS sale items
   createPosSaleItem(saleItem: InsertPosSaleItem): Promise<PosSaleItem>;
   updatePosSaleItem(id: string, saleItem: Partial<InsertPosSaleItem>): Promise<PosSaleItem>;
+
+  // HR Department operations
+  getDepartments(): Promise<Department[]>;
+  getDepartment(id: string): Promise<Department | undefined>;
+  createDepartment(department: InsertDepartment): Promise<Department>;
+  updateDepartment(id: string, department: Partial<InsertDepartment>): Promise<Department>;
+  deleteDepartment(id: string): Promise<void>;
+
+  // HR Position operations  
+  getPositions(): Promise<Position[]>;
+  getPosition(id: string): Promise<Position | undefined>;
+  createPosition(position: InsertPosition): Promise<Position>;
+  updatePosition(id: string, position: Partial<InsertPosition>): Promise<Position>;
+  deletePosition(id: string): Promise<void>;
+
+  // HR Employee operations
+  getEmployees(): Promise<(Employee & { department?: Department; position?: Position })[]>;
+  getEmployee(id: string): Promise<(Employee & { department?: Department; position?: Position }) | undefined>;
+  createEmployee(employee: InsertEmployee): Promise<Employee>;
+  updateEmployee(id: string, employee: Partial<InsertEmployee>): Promise<Employee>;
+  deleteEmployee(id: string): Promise<void>;
+
+  // HR Shift operations
+  getShifts(): Promise<(Shift & { employee?: Employee })[]>;
+  getShift(id: string): Promise<(Shift & { employee?: Employee }) | undefined>;
+  createShift(shift: InsertShift): Promise<Shift>;
+  updateShift(id: string, shift: Partial<InsertShift>): Promise<Shift>;
+  deleteShift(id: string): Promise<void>;
+
+  // HR Task operations
+  getTasks(): Promise<(Task & { assignedEmployee?: Employee })[]>;
+  getTask(id: string): Promise<(Task & { assignedEmployee?: Employee }) | undefined>;
+  createTask(task: InsertTask): Promise<Task>;
+  updateTask(id: string, task: Partial<InsertTask>): Promise<Task>;
+  deleteTask(id: string): Promise<void>;
+
+  // HR Time Entry operations (for time clock)
+  getTimeEntries(): Promise<(TimeEntry & { employee?: Employee })[]>;
+  getActiveTimeEntry(employeeId: string): Promise<TimeEntry | undefined>;
+  clockIn(employeeId: string, shiftId?: string): Promise<TimeEntry>;
+  clockOut(entryId: string): Promise<TimeEntry>;
+  startBreak(entryId: string): Promise<TimeEntry>;
+  endBreak(entryId: string): Promise<TimeEntry>;
+
+  // HR Message operations
+  getMessages(): Promise<Message[]>;
+  createMessage(message: InsertMessage): Promise<Message>;
+  markMessageAsRead(messageId: string, userId: string): Promise<void>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -1446,6 +1531,341 @@ export class DatabaseStorage implements IStorage {
         { month: "Jan", food: 26800, labor: 34200, overhead: 8100 }
       ]
     };
+  }
+  // HR Department operations
+  async getDepartments(): Promise<Department[]> {
+    return await db.select().from(departments)
+      .leftJoin(employees, eq(departments.managerId, employees.id))
+      .orderBy(departments.name);
+  }
+
+  async getDepartment(id: string): Promise<Department | undefined> {
+    const [department] = await db.select().from(departments).where(eq(departments.id, id));
+    return department;
+  }
+
+  async createDepartment(department: InsertDepartment): Promise<Department> {
+    const [created] = await db.insert(departments).values(department).returning();
+    return created;
+  }
+
+  async updateDepartment(id: string, department: Partial<InsertDepartment>): Promise<Department> {
+    const [updated] = await db.update(departments)
+      .set({ ...department, updatedAt: new Date() })
+      .where(eq(departments.id, id))
+      .returning();
+    return updated;
+  }
+
+  async deleteDepartment(id: string): Promise<void> {
+    await db.delete(departments).where(eq(departments.id, id));
+  }
+
+  // HR Position operations
+  async getPositions(): Promise<Position[]> {
+    return await db.select().from(positions)
+      .leftJoin(departments, eq(positions.departmentId, departments.id))
+      .orderBy(positions.title);
+  }
+
+  async getPosition(id: string): Promise<Position | undefined> {
+    const [position] = await db.select().from(positions).where(eq(positions.id, id));
+    return position;
+  }
+
+  async createPosition(position: InsertPosition): Promise<Position> {
+    const [created] = await db.insert(positions).values(position).returning();
+    return created;
+  }
+
+  async updatePosition(id: string, position: Partial<InsertPosition>): Promise<Position> {
+    const [updated] = await db.update(positions)
+      .set({ ...position, updatedAt: new Date() })
+      .where(eq(positions.id, id))
+      .returning();
+    return updated;
+  }
+
+  async deletePosition(id: string): Promise<void> {
+    await db.delete(positions).where(eq(positions.id, id));
+  }
+
+  // HR Employee operations
+  async getEmployees(): Promise<(Employee & { department?: Department; position?: Position })[]> {
+    const result = await db.select({
+      id: employees.id,
+      userId: employees.userId,
+      employeeNumber: employees.employeeNumber,
+      firstName: employees.firstName,
+      lastName: employees.lastName,
+      email: employees.email,
+      phone: employees.phone,
+      emergencyContact: employees.emergencyContact,
+      address: employees.address,
+      dateOfBirth: employees.dateOfBirth,
+      hireDate: employees.hireDate,
+      terminationDate: employees.terminationDate,
+      status: employees.status,
+      locationId: employees.locationId,
+      departmentId: employees.departmentId,
+      positionId: employees.positionId,
+      hourlyRate: employees.hourlyRate,
+      salary: employees.salary,
+      profilePhoto: employees.profilePhoto,
+      notes: employees.notes,
+      createdAt: employees.createdAt,
+      updatedAt: employees.updatedAt,
+      department: departments,
+      position: positions,
+    })
+    .from(employees)
+    .leftJoin(departments, eq(employees.departmentId, departments.id))
+    .leftJoin(positions, eq(employees.positionId, positions.id))
+    .orderBy(employees.lastName, employees.firstName);
+    
+    return result;
+  }
+
+  async getEmployee(id: string): Promise<(Employee & { department?: Department; position?: Position }) | undefined> {
+    const [result] = await db.select({
+      id: employees.id,
+      userId: employees.userId,
+      employeeNumber: employees.employeeNumber,
+      firstName: employees.firstName,
+      lastName: employees.lastName,
+      email: employees.email,
+      phone: employees.phone,
+      emergencyContact: employees.emergencyContact,
+      address: employees.address,
+      dateOfBirth: employees.dateOfBirth,
+      hireDate: employees.hireDate,
+      terminationDate: employees.terminationDate,
+      status: employees.status,
+      locationId: employees.locationId,
+      departmentId: employees.departmentId,
+      positionId: employees.positionId,
+      hourlyRate: employees.hourlyRate,
+      salary: employees.salary,
+      profilePhoto: employees.profilePhoto,
+      notes: employees.notes,
+      createdAt: employees.createdAt,
+      updatedAt: employees.updatedAt,
+      department: departments,
+      position: positions,
+    })
+    .from(employees)
+    .leftJoin(departments, eq(employees.departmentId, departments.id))
+    .leftJoin(positions, eq(employees.positionId, positions.id))
+    .where(eq(employees.id, id));
+    
+    return result;
+  }
+
+  async createEmployee(employee: InsertEmployee): Promise<Employee> {
+    const [created] = await db.insert(employees).values(employee).returning();
+    return created;
+  }
+
+  async updateEmployee(id: string, employee: Partial<InsertEmployee>): Promise<Employee> {
+    const [updated] = await db.update(employees)
+      .set({ ...employee, updatedAt: new Date() })
+      .where(eq(employees.id, id))
+      .returning();
+    return updated;
+  }
+
+  async deleteEmployee(id: string): Promise<void> {
+    await db.delete(employees).where(eq(employees.id, id));
+  }
+
+  // HR Shift operations
+  async getShifts(): Promise<(Shift & { employee?: Employee })[]> {
+    const result = await db.select({
+      shift: shifts,
+      employee: employees,
+    })
+    .from(shifts)
+    .leftJoin(employees, eq(shifts.employeeId, employees.id))
+    .orderBy(shifts.startTime);
+    
+    return result.map(r => ({ ...r.shift, employee: r.employee || undefined }));
+  }
+
+  async getShift(id: string): Promise<(Shift & { employee?: Employee }) | undefined> {
+    const [result] = await db.select({
+      shift: shifts,
+      employee: employees,
+    })
+    .from(shifts)
+    .leftJoin(employees, eq(shifts.employeeId, employees.id))
+    .where(eq(shifts.id, id));
+    
+    return result ? { ...result.shift, employee: result.employee || undefined } : undefined;
+  }
+
+  async createShift(shift: InsertShift): Promise<Shift> {
+    const [created] = await db.insert(shifts).values(shift).returning();
+    return created;
+  }
+
+  async updateShift(id: string, shift: Partial<InsertShift>): Promise<Shift> {
+    const [updated] = await db.update(shifts)
+      .set({ ...shift, updatedAt: new Date() })
+      .where(eq(shifts.id, id))
+      .returning();
+    return updated;
+  }
+
+  async deleteShift(id: string): Promise<void> {
+    await db.delete(shifts).where(eq(shifts.id, id));
+  }
+
+  // HR Task operations
+  async getTasks(): Promise<(Task & { assignedEmployee?: Employee })[]> {
+    const result = await db.select({
+      task: tasks,
+      assignedEmployee: employees,
+    })
+    .from(tasks)
+    .leftJoin(employees, eq(tasks.assignedTo, employees.id))
+    .orderBy(tasks.dueDate);
+    
+    return result.map(r => ({ ...r.task, assignedEmployee: r.assignedEmployee || undefined }));
+  }
+
+  async getTask(id: string): Promise<(Task & { assignedEmployee?: Employee }) | undefined> {
+    const [result] = await db.select({
+      task: tasks,
+      assignedEmployee: employees,
+    })
+    .from(tasks)
+    .leftJoin(employees, eq(tasks.assignedTo, employees.id))
+    .where(eq(tasks.id, id));
+    
+    return result ? { ...result.task, assignedEmployee: result.assignedEmployee || undefined } : undefined;
+  }
+
+  async createTask(task: InsertTask): Promise<Task> {
+    const [created] = await db.insert(tasks).values(task).returning();
+    return created;
+  }
+
+  async updateTask(id: string, task: Partial<InsertTask>): Promise<Task> {
+    const [updated] = await db.update(tasks)
+      .set({ ...task, updatedAt: new Date() })
+      .where(eq(tasks.id, id))
+      .returning();
+    return updated;
+  }
+
+  async deleteTask(id: string): Promise<void> {
+    await db.delete(tasks).where(eq(tasks.id, id));
+  }
+
+  // HR Time Entry operations (for time clock)
+  async getTimeEntries(): Promise<(TimeEntry & { employee?: Employee })[]> {
+    const result = await db.select({
+      timeEntry: timeEntries,
+      employee: employees,
+    })
+    .from(timeEntries)
+    .leftJoin(employees, eq(timeEntries.employeeId, employees.id))
+    .orderBy(desc(timeEntries.clockInTime));
+    
+    return result.map(r => ({ ...r.timeEntry, employee: r.employee || undefined }));
+  }
+
+  async getActiveTimeEntry(employeeId: string): Promise<TimeEntry | undefined> {
+    const [entry] = await db.select().from(timeEntries)
+      .where(and(
+        eq(timeEntries.employeeId, employeeId),
+        isNull(timeEntries.clockOutTime)
+      ))
+      .orderBy(desc(timeEntries.clockInTime));
+    return entry;
+  }
+
+  async clockIn(employeeId: string, shiftId?: string): Promise<TimeEntry> {
+    const [entry] = await db.insert(timeEntries).values({
+      employeeId,
+      shiftId,
+      clockInTime: new Date(),
+      status: 'clocked-in',
+    }).returning();
+    return entry;
+  }
+
+  async clockOut(entryId: string): Promise<TimeEntry> {
+    const clockOutTime = new Date();
+    const [entry] = await db.select().from(timeEntries).where(eq(timeEntries.id, entryId));
+    
+    if (!entry) throw new Error('Time entry not found');
+    
+    const clockInTime = entry.clockInTime;
+    const totalHours = (clockOutTime.getTime() - clockInTime.getTime()) / (1000 * 60 * 60);
+    
+    const [updated] = await db.update(timeEntries)
+      .set({
+        clockOutTime,
+        totalHours: totalHours.toFixed(2),
+        status: 'clocked-out',
+        updatedAt: new Date(),
+      })
+      .where(eq(timeEntries.id, entryId))
+      .returning();
+    
+    return updated;
+  }
+
+  async startBreak(entryId: string): Promise<TimeEntry> {
+    const [updated] = await db.update(timeEntries)
+      .set({
+        breakStartTime: new Date(),
+        status: 'on-break',
+        updatedAt: new Date(),
+      })
+      .where(eq(timeEntries.id, entryId))
+      .returning();
+    
+    return updated;
+  }
+
+  async endBreak(entryId: string): Promise<TimeEntry> {
+    const [updated] = await db.update(timeEntries)
+      .set({
+        breakEndTime: new Date(),
+        status: 'clocked-in',
+        updatedAt: new Date(),
+      })
+      .where(eq(timeEntries.id, entryId))
+      .returning();
+    
+    return updated;
+  }
+
+  // HR Message operations
+  async getMessages(): Promise<Message[]> {
+    return await db.select().from(messages).orderBy(desc(messages.createdAt));
+  }
+
+  async createMessage(message: InsertMessage): Promise<Message> {
+    const [created] = await db.insert(messages).values(message).returning();
+    return created;
+  }
+
+  async markMessageAsRead(messageId: string, userId: string): Promise<void> {
+    const [message] = await db.select().from(messages).where(eq(messages.id, messageId));
+    if (!message) return;
+    
+    const readBy = Array.isArray(message.readBy) ? message.readBy : [];
+    const alreadyRead = readBy.some((r: any) => r.userId === userId);
+    
+    if (!alreadyRead) {
+      readBy.push({ userId, readAt: new Date() });
+      await db.update(messages)
+        .set({ readBy, updatedAt: new Date() })
+        .where(eq(messages.id, messageId));
+    }
   }
 }
 
