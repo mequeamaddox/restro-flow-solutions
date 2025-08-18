@@ -74,7 +74,7 @@ export default function HRMessaging() {
       content: formData.get('content'),
       messageType: formData.get('messageType') || 'announcement',
       recipientType: formData.get('recipientType') || 'all',
-      recipientId: formData.get('recipientId') || null,
+      recipientId: formData.get('recipientId') === 'none' ? null : formData.get('recipientId'),
       priority: formData.get('priority') || 'normal',
     };
 
@@ -233,7 +233,7 @@ export default function HRMessaging() {
                         <SelectValue placeholder="Select recipient..." />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="">None (All Employees)</SelectItem>
+                        <SelectItem value="none">None (All Employees)</SelectItem>
                         {departments.map((dept: any) => (
                           <SelectItem key={`dept-${dept.id}`} value={dept.id}>
                             🏢 {dept.name}

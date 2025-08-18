@@ -83,7 +83,7 @@ export default function HRTasks() {
     const taskData = {
       title: formData.get('title'),
       description: formData.get('description'),
-      assignedTo: formData.get('assignedTo') || null,
+      assignedTo: formData.get('assignedTo') === 'none' ? null : formData.get('assignedTo'),
       priority: formData.get('priority') || 'medium',
       dueDate: formData.get('dueDate') || null,
       status: 'pending',
@@ -207,6 +207,7 @@ export default function HRTasks() {
                           <SelectValue placeholder="Select employee" />
                         </SelectTrigger>
                         <SelectContent>
+                          <SelectItem value="none">Unassigned</SelectItem>
                           {employees.map((employee: any) => (
                             <SelectItem key={employee.id} value={employee.id}>
                               {employee.firstName} {employee.lastName}

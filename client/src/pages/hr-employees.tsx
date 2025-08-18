@@ -94,10 +94,10 @@ export default function HREmployees() {
       lastName: formData.get('lastName'),
       email: formData.get('email'),
       phone: formData.get('phone'),
-      departmentId: formData.get('departmentId') || null,
-      positionId: formData.get('positionId') || null,
+      departmentId: formData.get('departmentId') === 'none' ? null : formData.get('departmentId'),
+      positionId: formData.get('positionId') === 'none' ? null : formData.get('positionId'),
       hourlyRate: formData.get('hourlyRate') ? parseFloat(formData.get('hourlyRate') as string) : null,
-      hireDate: formData.get('hireDate'),
+      hireDate: formData.get('hireDate') || new Date().toISOString().split('T')[0],
       status: formData.get('status') || 'active',
       notes: formData.get('notes'),
     };
@@ -211,6 +211,7 @@ export default function HREmployees() {
                         <SelectValue placeholder="Select department" />
                       </SelectTrigger>
                       <SelectContent>
+                        <SelectItem value="none">No Department</SelectItem>
                         {departments.map((dept: any) => (
                           <SelectItem key={dept.id} value={dept.id}>
                             {dept.name}
@@ -227,6 +228,7 @@ export default function HREmployees() {
                         <SelectValue placeholder="Select position" />
                       </SelectTrigger>
                       <SelectContent>
+                        <SelectItem value="none">No Position</SelectItem>
                         {positions.map((pos: any) => (
                           <SelectItem key={pos.id} value={pos.id}>
                             {pos.title}

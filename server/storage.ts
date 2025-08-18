@@ -1534,9 +1534,7 @@ export class DatabaseStorage implements IStorage {
   }
   // HR Department operations
   async getDepartments(): Promise<Department[]> {
-    return await db.select().from(departments)
-      .leftJoin(employees, eq(departments.managerId, employees.id))
-      .orderBy(departments.name);
+    return await db.select().from(departments).orderBy(departments.name);
   }
 
   async getDepartment(id: string): Promise<Department | undefined> {
@@ -1563,9 +1561,7 @@ export class DatabaseStorage implements IStorage {
 
   // HR Position operations
   async getPositions(): Promise<Position[]> {
-    return await db.select().from(positions)
-      .leftJoin(departments, eq(positions.departmentId, departments.id))
-      .orderBy(positions.title);
+    return await db.select().from(positions).orderBy(positions.title);
   }
 
   async getPosition(id: string): Promise<Position | undefined> {
@@ -1591,73 +1587,12 @@ export class DatabaseStorage implements IStorage {
   }
 
   // HR Employee operations
-  async getEmployees(): Promise<(Employee & { department?: Department; position?: Position })[]> {
-    const result = await db.select({
-      id: employees.id,
-      userId: employees.userId,
-      employeeNumber: employees.employeeNumber,
-      firstName: employees.firstName,
-      lastName: employees.lastName,
-      email: employees.email,
-      phone: employees.phone,
-      emergencyContact: employees.emergencyContact,
-      address: employees.address,
-      dateOfBirth: employees.dateOfBirth,
-      hireDate: employees.hireDate,
-      terminationDate: employees.terminationDate,
-      status: employees.status,
-      locationId: employees.locationId,
-      departmentId: employees.departmentId,
-      positionId: employees.positionId,
-      hourlyRate: employees.hourlyRate,
-      salary: employees.salary,
-      profilePhoto: employees.profilePhoto,
-      notes: employees.notes,
-      createdAt: employees.createdAt,
-      updatedAt: employees.updatedAt,
-      department: departments,
-      position: positions,
-    })
-    .from(employees)
-    .leftJoin(departments, eq(employees.departmentId, departments.id))
-    .leftJoin(positions, eq(employees.positionId, positions.id))
-    .orderBy(employees.lastName, employees.firstName);
-    
-    return result;
+  async getEmployees(): Promise<Employee[]> {
+    return await db.select().from(employees).orderBy(employees.lastName, employees.firstName);
   }
 
-  async getEmployee(id: string): Promise<(Employee & { department?: Department; position?: Position }) | undefined> {
-    const [result] = await db.select({
-      id: employees.id,
-      userId: employees.userId,
-      employeeNumber: employees.employeeNumber,
-      firstName: employees.firstName,
-      lastName: employees.lastName,
-      email: employees.email,
-      phone: employees.phone,
-      emergencyContact: employees.emergencyContact,
-      address: employees.address,
-      dateOfBirth: employees.dateOfBirth,
-      hireDate: employees.hireDate,
-      terminationDate: employees.terminationDate,
-      status: employees.status,
-      locationId: employees.locationId,
-      departmentId: employees.departmentId,
-      positionId: employees.positionId,
-      hourlyRate: employees.hourlyRate,
-      salary: employees.salary,
-      profilePhoto: employees.profilePhoto,
-      notes: employees.notes,
-      createdAt: employees.createdAt,
-      updatedAt: employees.updatedAt,
-      department: departments,
-      position: positions,
-    })
-    .from(employees)
-    .leftJoin(departments, eq(employees.departmentId, departments.id))
-    .leftJoin(positions, eq(employees.positionId, positions.id))
-    .where(eq(employees.id, id));
-    
+  async getEmployee(id: string): Promise<Employee | undefined> {
+    const [result] = await db.select().from(employees).where(eq(employees.id, id));
     return result;
   }
 
