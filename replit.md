@@ -1,10 +1,26 @@
-# RestroFlow Inventory Management System
+# RestroFlow Restaurant Operations Platform
 
 ## Overview
 
-RestroFlow is a comprehensive enterprise-grade restaurant inventory management system built with a modern full-stack architecture. Inspired by MarginEdge platform capabilities, the application provides real-time inventory tracking, recipe costing, vendor management, purchase order creation, waste tracking, advanced analytics, and enterprise security features. It's designed to help restaurants optimize their food costs, reduce waste, streamline supply chain operations, and provide business intelligence for data-driven decisions.
+RestroFlow is a comprehensive enterprise-grade restaurant operations platform built with a modern full-stack architecture. The core system provides inventory management, OCR invoice processing, real-time analytics, and cost monitoring. The platform features a modular add-on architecture enabling restaurants to scale functionality as they grow.
+
+**Core Platform**: Inventory tracking, recipe costing, vendor management, purchase orders, waste tracking, OCR invoice processing with subscription-based monetization, and real-time business intelligence.
+
+**Employee Management Add-on**: Comprehensive HR system including scheduling, task management, team messaging, performance tracking, time clock functionality, and payroll integration.
 
 The system features a React-based frontend with TypeScript, a Node.js/Express backend, PostgreSQL database with Drizzle ORM, enterprise-grade security middleware, comprehensive audit logging, real-time cost monitoring, and automated alerting systems.
+
+## Latest Enterprise Features (August 2025)
+
+### Employee Management Add-on Architecture (August 2025)
+- **Modular Business Model**: Core platform ($179/month) + Employee Management Add-on ($79/month) for scalable revenue growth
+- **Comprehensive HR System**: Employee directory, scheduling, task management, team messaging, performance tracking, and time clock functionality
+- **Multi-location Support**: Department-based organization with location-specific employee management and cross-location analytics
+- **Advanced Scheduling**: Drag-and-drop schedule builder, availability management, conflict detection, and time-off request workflows
+- **Task Management System**: Assignment tracking, completion verification, recurring tasks, and performance metrics integration
+- **Team Communication**: Real-time messaging, announcements, notification center, and conversation threading
+- **Performance Analytics**: Employee reviews, productivity tracking, labor cost analysis, and attendance monitoring
+- **Security & Compliance**: Role-based access control, PII protection, audit logging, and GDPR/CCPA compliance features
 
 ## Latest Enterprise Features (August 2025)
 
@@ -55,10 +71,11 @@ Following MarginEdge platform analysis, RestroFlow has been enhanced with:
 
 ### Competitive Pricing Strategy (August 2025)
 - **MarginEdge Analysis**: Direct competitor pricing research ($330/month standard, $480/month with Freepour)
-- **40-48% Cost Savings**: RestroFlow positioned 40-48% below MarginEdge pricing across all tiers
+- **Modular Pricing Advantage**: Core RestroFlow $179/month + HR Add-on $79/month = $258/month (22% savings vs MarginEdge)
 - **Professional Plan**: $179/month ($143 annual) vs MarginEdge $330/month - saves $1,848/year per location
+- **Add-on Revenue Model**: Employee Management add-on increases ARPU by 44% while maintaining cost advantage
 - **Annual Discounts**: 20% discount for annual subscriptions across all plans
-- **Feature Parity**: Professional plan matches MarginEdge's core features while maintaining significant cost advantage
+- **Feature Differentiation**: Combined inventory + HR platform vs competitors' single-focus solutions
 - **Interactive Pricing**: Monthly/Annual billing toggle with real-time savings calculations
 
 ### Enterprise Security Features
@@ -88,6 +105,7 @@ Multi-location restaurant business: Table-top restaurant and bar & grill as seco
 Target features: Location-specific inventory, bar-specific items, separate analytics per location.
 POS Systems: Uses SpotOn POS at the bar, Clover at main restaurant - needs universal POS integration.
 UI Preference: Single Analytics & Reports page instead of separate pages for streamlined navigation.
+Business Strategy: Modular add-on approach for employee management to enable scalable revenue growth and market segmentation.
 
 ## System Architecture
 
