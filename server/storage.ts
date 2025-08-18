@@ -1723,7 +1723,7 @@ export class DatabaseStorage implements IStorage {
   async clockIn(employeeId: string, shiftId?: string): Promise<TimeEntry> {
     const [entry] = await db.insert(timeEntries).values({
       employeeId,
-      shiftId,
+      shiftId: shiftId || null,
       clockInTime: new Date(),
       status: 'clocked-in',
     }).returning();
@@ -1737,6 +1737,7 @@ export class DatabaseStorage implements IStorage {
     if (!entry) throw new Error('Time entry not found');
     
     const clockInTime = entry.clockInTime;
+    if (!clockInTime) throw new Error('Clock in time not found');
     const totalHours = (clockOutTime.getTime() - clockInTime.getTime()) / (1000 * 60 * 60);
     
     const [updated] = await db.update(timeEntries)
