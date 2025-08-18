@@ -97,7 +97,7 @@ export default function HREmployees() {
       departmentId: formData.get('departmentId') === 'none' ? null : formData.get('departmentId'),
       positionId: formData.get('positionId') === 'none' ? null : formData.get('positionId'),
       hourlyRate: formData.get('hourlyRate') ? parseFloat(formData.get('hourlyRate') as string) : null,
-      hireDate: formData.get('hireDate') || new Date().toISOString().split('T')[0],
+      hireDate: formData.get('hireDate') as string || new Date().toISOString().split('T')[0],
       status: formData.get('status') || 'active',
       notes: formData.get('notes'),
     };

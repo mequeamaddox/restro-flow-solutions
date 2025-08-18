@@ -4,6 +4,7 @@ import {
   jsonb,
   pgTable,
   timestamp,
+  date,
   varchar,
   text,
   decimal,
@@ -380,7 +381,6 @@ export const departments = pgTable("departments", {
   description: text("description"),
   managerId: uuid("manager_id"), // Will reference employees table
   locationId: uuid("location_id").references(() => locations.id).notNull(),
-  budget: decimal("budget", { precision: 12, scale: 2 }),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
@@ -391,10 +391,10 @@ export const positions = pgTable("positions", {
   title: varchar("title", { length: 100 }).notNull(),
   description: text("description"),
   departmentId: uuid("department_id").references(() => departments.id).notNull(),
-  minHourlyRate: decimal("min_hourly_rate", { precision: 10, scale: 2 }),
-  maxHourlyRate: decimal("max_hourly_rate", { precision: 10, scale: 2 }),
-  permissions: jsonb("permissions"), // role-based access
+  hourlyRateMin: decimal("hourly_rate_min", { precision: 10, scale: 2 }),
+  hourlyRateMax: decimal("hourly_rate_max", { precision: 10, scale: 2 }),
   requirements: text("requirements"),
+  responsibilities: text("responsibilities"),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
@@ -402,19 +402,17 @@ export const positions = pgTable("positions", {
 // Employee profiles and basic info
 export const employees = pgTable("employees", {
   id: uuid("id").primaryKey().default(sql`gen_random_uuid()`),
-  userId: varchar("user_id").references(() => users.id), // Optional link to system users
-  employeeNumber: varchar("employee_number", { length: 20 }).notNull().unique(),
   firstName: varchar("first_name", { length: 50 }).notNull(),
   lastName: varchar("last_name", { length: 50 }).notNull(),
   email: varchar("email"),
-  phone: varchar("phone", { length: 20 }).notNull(),
-  emergencyContact: jsonb("emergency_contact"), // {name, phone, relationship}
-  address: jsonb("address"), // {street, city, state, zip}
-  dateOfBirth: timestamp("date_of_birth"),
-  hireDate: timestamp("hire_date").notNull(),
-  terminationDate: timestamp("termination_date"),
-  status: employeeStatusEnum("status").default("active"),
-  locationId: uuid("location_id").references(() => locations.id).notNull(),
+  phone: varchar("phone", { length: 20 }),
+  emergencyContactName: varchar("emergency_contact_name"),
+  emergencyContactPhone: varchar("emergency_contact_phone"),
+  address: text("address"),
+  dateOfBirth: date("date_of_birth"),
+  hireDate: date("hire_date").notNull(),
+  terminationDate: date("termination_date"),
+  status: varchar("status").default("active"),
   departmentId: uuid("department_id").references(() => departments.id),
   positionId: uuid("position_id").references(() => positions.id),
   hourlyRate: decimal("hourly_rate", { precision: 10, scale: 2 }),
