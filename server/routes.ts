@@ -1309,6 +1309,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // HR Time Clock
+  app.get('/api/hr/time-entries', isAuthenticated, async (req, res) => {
+    try {
+      const timeEntries = await storage.getTimeEntries();
+      res.json(timeEntries);
+    } catch (error) {
+      console.error('Error fetching time entries:', error);
+      res.status(500).json({ message: 'Failed to fetch time entries' });
+    }
+  });
+
   app.post('/api/hr/time-clock/in/:employeeId', isAuthenticated, async (req, res) => {
     try {
       const { shiftId } = req.body;
