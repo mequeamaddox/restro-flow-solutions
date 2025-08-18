@@ -1287,6 +1287,58 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.put('/api/hr/shifts/:id', isAuthenticated, async (req, res) => {
+    try {
+      const shift = await storage.updateShift(req.params.id, req.body);
+      res.json(shift);
+    } catch (error) {
+      console.error('Error updating shift:', error);
+      res.status(500).json({ message: 'Failed to update shift' });
+    }
+  });
+
+  app.delete('/api/hr/shifts/:id', isAuthenticated, async (req, res) => {
+    try {
+      await storage.deleteShift(req.params.id);
+      res.status(204).send();
+    } catch (error) {
+      console.error('Error deleting shift:', error);
+      res.status(500).json({ message: 'Failed to delete shift' });
+    }
+  });
+
+  // HR Time-off Requests
+  app.get('/api/hr/time-off-requests', isAuthenticated, async (req, res) => {
+    try {
+      const requests = await storage.getTimeOffRequests();
+      res.json(requests);
+    } catch (error) {
+      console.error('Error fetching time-off requests:', error);
+      res.status(500).json({ message: 'Failed to fetch time-off requests' });
+    }
+  });
+
+  app.post('/api/hr/time-off-requests', isAuthenticated, async (req, res) => {
+    try {
+      const request = await storage.createTimeOffRequest(req.body);
+      res.status(201).json(request);
+    } catch (error) {
+      console.error('Error creating time-off request:', error);
+      res.status(500).json({ message: 'Failed to create time-off request' });
+    }
+  });
+
+  app.put('/api/hr/time-off-requests/:id/status', isAuthenticated, async (req, res) => {
+    try {
+      const { status, notes } = req.body;
+      const request = await storage.updateTimeOffRequestStatus(req.params.id, status, notes, (req.user as any)?.claims?.sub);
+      res.json(request);
+    } catch (error) {
+      console.error('Error updating time-off request status:', error);
+      res.status(500).json({ message: 'Failed to update time-off request status' });
+    }
+  });
+
   // HR Tasks
   app.get('/api/hr/tasks', isAuthenticated, async (req, res) => {
     try {

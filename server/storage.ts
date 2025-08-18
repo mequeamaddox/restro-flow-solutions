@@ -1803,6 +1803,38 @@ export class DatabaseStorage implements IStorage {
         .where(eq(messages.id, messageId));
     }
   }
+
+
+
+  // HR Time-off Request operations
+  async getTimeOffRequests(): Promise<TimeOffRequest[]> {
+    return await db.select().from(timeOffRequests).orderBy(desc(timeOffRequests.createdAt));
+  }
+
+  async createTimeOffRequest(request: InsertTimeOffRequest): Promise<TimeOffRequest> {
+    const [created] = await db.insert(timeOffRequests).values(request).returning();
+    return created;
+  }
+
+  async updateTimeOffRequestStatus(id: string, status: string, notes?: string, approvedBy?: string): Promise<TimeOffRequest> {
+    const updateData: any = { 
+      status, 
+      updatedAt: new Date() 
+    };
+    
+    if (notes) updateData.notes = notes;
+    if (approvedBy) {
+      updateData.approvedBy = approvedBy;
+      updateData.approvalDate = new Date();
+    }
+
+    const [updated] = await db
+      .update(timeOffRequests)
+      .set(updateData)
+      .where(eq(timeOffRequests.id, id))
+      .returning();
+    return updated;
+  }
 }
 
 export const storage = new DatabaseStorage();
