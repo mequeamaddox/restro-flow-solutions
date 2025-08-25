@@ -70,9 +70,13 @@ export default function Recipes() {
 
   const createRecipeMutation = useMutation({
     mutationFn: async (data: RecipeFormData) => {
+      const validIngredients = ingredients.filter(ing => ing.inventoryItemId && ing.quantity > 0);
+      if (validIngredients.length === 0) {
+        throw new Error('At least one ingredient is required');
+      }
       await apiRequest('POST', '/api/recipes', {
         ...data,
-        ingredients: ingredients.filter(ing => ing.inventoryItemId && ing.quantity > 0)
+        ingredients: validIngredients
       });
     },
     onSuccess: () => {
@@ -86,7 +90,7 @@ export default function Recipes() {
         description: "Recipe created successfully",
       });
     },
-    onError: (error) => {
+    onError: (error: any) => {
       if (isUnauthorizedError(error)) {
         toast({
           title: "Unauthorized",
@@ -98,9 +102,10 @@ export default function Recipes() {
         }, 500);
         return;
       }
+      console.error('Recipe creation error:', error);
       toast({
         title: "Error",
-        description: "Failed to create recipe",
+        description: error.message || "Failed to create recipe",
         variant: "destructive",
       });
     },
@@ -139,7 +144,24 @@ export default function Recipes() {
   });
 
   const onSubmit = (data: RecipeFormData) => {
-    createRecipeMutation.mutate(data);
+    // Update form with current ingredients state before submission
+    const validIngredients = ingredients.filter(ing => ing.inventoryItemId && ing.quantity > 0);
+    
+    if (validIngredients.length === 0) {
+      toast({
+        title: "Error",
+        description: "Please add at least one ingredient",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    const submissionData = {
+      ...data,
+      ingredients: validIngredients
+    };
+    
+    createRecipeMutation.mutate(submissionData);
   };
 
   const addIngredient = () => {
