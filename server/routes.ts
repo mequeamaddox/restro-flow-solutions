@@ -1496,6 +1496,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.post('/api/hr/payroll/pay-periods/:id/recalculate', isAuthenticated, async (req, res) => {
+    try {
+      const paystubs = await storage.recalculatePayroll(req.params.id);
+      res.json(paystubs);
+    } catch (error) {
+      console.error('Error recalculating payroll:', error);
+      res.status(500).json({ message: 'Failed to recalculate payroll' });
+    }
+  });
+
   app.post('/api/hr/payroll/pay-periods/:id/approve', isAuthenticated, async (req, res) => {
     try {
       const payPeriod = await storage.approvePayroll(req.params.id, (req.user as any)?.claims?.sub);

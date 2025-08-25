@@ -1970,6 +1970,22 @@ export class DatabaseStorage implements IStorage {
     return payPeriod;
   }
 
+  async recalculatePayroll(payPeriodId: string): Promise<Paystub[]> {
+    // Delete existing paystubs for this pay period
+    await db.delete(paystubs).where(eq(paystubs.payPeriodId, payPeriodId));
+    
+    // Reset pay period status
+    await this.updatePayPeriod(payPeriodId, {
+      status: 'draft',
+      totalGrossPay: '0',
+      totalDeductions: '0',
+      totalNetPay: '0'
+    });
+    
+    // Recalculate
+    return this.calculatePayroll(payPeriodId);
+  }
+
   async calculatePayroll(payPeriodId: string): Promise<Paystub[]> {
     // Get the pay period
     const payPeriod = await this.getPayPeriod(payPeriodId);
@@ -2110,21 +2126,60 @@ export class DatabaseStorage implements IStorage {
     const activeEmployees = employees.filter(emp => emp.status === 'active');
     
     const totalEmployees = activeEmployees.length;
-    const avgHourlyRate = activeEmployees.length > 0 
-      ? activeEmployees.reduce((sum, emp) => sum + Number(emp.hourlyRate || 15), 0) / activeEmployees.length
-      : 15;
     
-    // Estimate monthly payroll based on 160 hours per month per employee
-    const monthlyPayroll = totalEmployees * avgHourlyRate * 160;
+    // Get actual payroll data from calculated pay periods
+    const recentPayPeriods = await db
+      .select()
+      .from(payPeriods)
+      .where(eq(payPeriods.status, 'calculated'))
+      .orderBy(sql`${payPeriods.createdAt} DESC`)
+      .limit(4); // Last 4 pay periods for monthly estimate
     
-    // Estimate labor cost percentage (typical restaurant target is 25-35%)
-    const laborCostPercentage = 30; // Placeholder - would calculate from actual sales data
+    let monthlyPayroll = 0;
+    let avgHourlyRate = 15;
+    let laborCostPercentage = 30;
+    
+    if (recentPayPeriods.length > 0) {
+      // Calculate actual monthly payroll from recent pay periods
+      const totalNetPay = recentPayPeriods.reduce((sum, period) => 
+        sum + Number(period.totalNetPay || 0), 0);
+      
+      // If biweekly pay periods, multiply by 2.17 to get monthly
+      // If weekly, multiply by 4.33
+      monthlyPayroll = totalNetPay * (26 / 12); // Assuming biweekly
+      
+      // Calculate actual average hourly rate from paystubs
+      const allPaystubs = await db
+        .select()
+        .from(paystubs)
+        .where(sql`${paystubs.payPeriodId} IN (${recentPayPeriods.map(p => `'${p.id}'`).join(',')})`);
+      
+      if (allPaystubs.length > 0) {
+        const totalHours = allPaystubs.reduce((sum, stub) => 
+          sum + Number(stub.regularHours || 0) + Number(stub.overtimeHours || 0), 0);
+        const totalPay = allPaystubs.reduce((sum, stub) => 
+          sum + Number(stub.grossPay || 0), 0);
+        
+        if (totalHours > 0) {
+          avgHourlyRate = totalPay / totalHours;
+        }
+      }
+      
+      // TODO: Calculate labor cost percentage from actual sales data when POS integration active
+      laborCostPercentage = 28; // Realistic target for restaurants
+    } else {
+      // Fallback to estimates if no calculated pay periods exist
+      avgHourlyRate = activeEmployees.length > 0 
+        ? activeEmployees.reduce((sum, emp) => sum + Number(emp.hourlyRate || 15), 0) / activeEmployees.length
+        : 15;
+      monthlyPayroll = totalEmployees * avgHourlyRate * 160;
+    }
     
     return {
       totalEmployees,
-      monthlyPayroll,
-      avgHourlyRate,
-      laborCostPercentage
+      monthlyPayroll: Math.round(monthlyPayroll * 100) / 100,
+      avgHourlyRate: Math.round(avgHourlyRate * 100) / 100,
+      laborCostPercentage: Math.round(laborCostPercentage * 100) / 100
     };
   }
 }
