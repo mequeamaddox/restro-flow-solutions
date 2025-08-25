@@ -221,12 +221,13 @@ export default function Recipes() {
               Add Recipe
             </Button>
           </DialogTrigger>
-          <DialogContent className="sm:max-w-[600px]">
-            <DialogHeader>
+          <DialogContent className="sm:max-w-[600px] max-h-[90vh] flex flex-col">
+            <DialogHeader className="flex-shrink-0">
               <DialogTitle>Create New Recipe</DialogTitle>
             </DialogHeader>
             <Form {...form}>
-              <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+              <form onSubmit={form.handleSubmit(onSubmit)} className="flex flex-col h-full">
+                <div className="flex-1 overflow-y-auto space-y-4 py-4">
                 <FormField
                   control={form.control}
                   name="name"
@@ -549,8 +550,7 @@ export default function Recipes() {
                     <p className="text-sm text-gray-500">Add ingredients to calculate recipe cost</p>
                   )}
                 </div>
-                
-                <div className="flex justify-end space-x-2 pt-4">
+                <div className="flex justify-end space-x-2 pt-4 border-t flex-shrink-0">
                   <Button
                     type="button"
                     variant="outline"
