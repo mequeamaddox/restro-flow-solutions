@@ -1806,6 +1806,42 @@ export class DatabaseStorage implements IStorage {
     return updated;
   }
 
+  async updateTimeEntry(entryId: string, updateData: {
+    clockInTime?: Date;
+    clockOutTime?: Date;
+    breakStartTime?: Date;
+    breakEndTime?: Date;
+    totalHours?: string;
+    notes?: string;
+  }): Promise<TimeEntry> {
+    // Recalculate total hours if times are being updated
+    if (updateData.clockInTime || updateData.clockOutTime) {
+      const [entry] = await db.select().from(timeEntries).where(eq(timeEntries.id, entryId));
+      if (entry) {
+        const clockIn = updateData.clockInTime || entry.clockInTime;
+        const clockOut = updateData.clockOutTime || entry.clockOutTime;
+        if (clockIn && clockOut) {
+          const totalHours = (clockOut.getTime() - clockIn.getTime()) / (1000 * 60 * 60);
+          updateData.totalHours = totalHours.toFixed(2);
+        }
+      }
+    }
+
+    const [updated] = await db.update(timeEntries)
+      .set({
+        ...updateData,
+        updatedAt: new Date(),
+      })
+      .where(eq(timeEntries.id, entryId))
+      .returning();
+    
+    return updated;
+  }
+
+  async deleteTimeEntry(entryId: string): Promise<void> {
+    await db.delete(timeEntries).where(eq(timeEntries.id, entryId));
+  }
+
   // HR Message operations
   async getMessages(): Promise<Message[]> {
     return await db.select().from(messages).orderBy(desc(messages.createdAt));

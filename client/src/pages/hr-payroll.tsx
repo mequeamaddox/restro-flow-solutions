@@ -44,7 +44,6 @@ export default function HRPayroll() {
       return response.json();
     },
     enabled: !!selectedPayPeriod?.id,
-    enabled: !!selectedPayPeriod?.id,
   });
 
   // Fetch employees

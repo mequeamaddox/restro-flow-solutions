@@ -1546,6 +1546,37 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Update time entry (for managers to edit punches)
+  app.put('/api/hr/time-entries/:id', isAuthenticated, async (req, res) => {
+    try {
+      const { clockInTime, clockOutTime, breakStartTime, breakEndTime, notes } = req.body;
+      const updateData: any = {};
+      
+      if (clockInTime) updateData.clockInTime = new Date(clockInTime);
+      if (clockOutTime) updateData.clockOutTime = new Date(clockOutTime);
+      if (breakStartTime) updateData.breakStartTime = new Date(breakStartTime);
+      if (breakEndTime) updateData.breakEndTime = new Date(breakEndTime);
+      if (notes !== undefined) updateData.notes = notes;
+      
+      const timeEntry = await storage.updateTimeEntry(req.params.id, updateData);
+      res.json(timeEntry);
+    } catch (error) {
+      console.error('Error updating time entry:', error);
+      res.status(500).json({ message: 'Failed to update time entry' });
+    }
+  });
+
+  // Delete time entry
+  app.delete('/api/hr/time-entries/:id', isAuthenticated, async (req, res) => {
+    try {
+      await storage.deleteTimeEntry(req.params.id);
+      res.json({ message: 'Time entry deleted successfully' });
+    } catch (error) {
+      console.error('Error deleting time entry:', error);
+      res.status(500).json({ message: 'Failed to delete time entry' });
+    }
+  });
+
   // HR Messaging
   app.get('/api/hr/messages', isAuthenticated, async (req, res) => {
     try {

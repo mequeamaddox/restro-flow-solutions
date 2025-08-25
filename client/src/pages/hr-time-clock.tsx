@@ -3,7 +3,11 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Clock, Play, Square, Coffee, UserCheck, Timer } from "lucide-react";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { Clock, Play, Square, Coffee, UserCheck, Timer, Edit, Trash2, Save } from "lucide-react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
@@ -26,11 +30,21 @@ interface TimeEntry {
   breakEndTime?: string;
   totalHours?: string;
   status: 'clocked-in' | 'clocked-out' | 'on-break';
+  notes?: string;
   employee?: Employee;
 }
 
 export default function HRTimeClock() {
   const [selectedEmployeeId, setSelectedEmployeeId] = useState<string>("");
+  const [editingEntry, setEditingEntry] = useState<TimeEntry | null>(null);
+  const [showEditDialog, setShowEditDialog] = useState(false);
+  const [editForm, setEditForm] = useState({
+    clockInTime: '',
+    clockOutTime: '',
+    breakStartTime: '',
+    breakEndTime: '',
+    notes: ''
+  });
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
@@ -65,6 +79,34 @@ export default function HRTimeClock() {
     },
     onError: () => {
       toast({ title: "Error", description: "Failed to clock out", variant: "destructive" });
+    },
+  });
+
+  const updateEntryMutation = useMutation({
+    mutationFn: async ({ id, data }: { id: string, data: any }) => {
+      return await apiRequest('PUT', `/api/hr/time-entries/${id}`, data);
+    },
+    onSuccess: () => {
+      toast({ title: "Success", description: "Time entry updated successfully" });
+      queryClient.invalidateQueries({ queryKey: ['/api/hr/time-entries'] });
+      setShowEditDialog(false);
+      setEditingEntry(null);
+    },
+    onError: () => {
+      toast({ title: "Error", description: "Failed to update time entry", variant: "destructive" });
+    },
+  });
+
+  const deleteEntryMutation = useMutation({
+    mutationFn: async (entryId: string) => {
+      return await apiRequest('DELETE', `/api/hr/time-entries/${entryId}`);
+    },
+    onSuccess: () => {
+      toast({ title: "Success", description: "Time entry deleted successfully" });
+      queryClient.invalidateQueries({ queryKey: ['/api/hr/time-entries'] });
+    },
+    onError: () => {
+      toast({ title: "Error", description: "Failed to delete time entry", variant: "destructive" });
     },
   });
 
@@ -107,6 +149,37 @@ export default function HRTimeClock() {
 
   const getInitials = (firstName: string, lastName: string) => {
     return `${firstName.charAt(0)}${lastName.charAt(0)}`.toUpperCase();
+  };
+
+  const handleEditEntry = (entry: TimeEntry) => {
+    setEditingEntry(entry);
+    setEditForm({
+      clockInTime: entry.clockInTime ? new Date(entry.clockInTime).toISOString().slice(0, 16) : '',
+      clockOutTime: entry.clockOutTime ? new Date(entry.clockOutTime).toISOString().slice(0, 16) : '',
+      breakStartTime: entry.breakStartTime ? new Date(entry.breakStartTime).toISOString().slice(0, 16) : '',
+      breakEndTime: entry.breakEndTime ? new Date(entry.breakEndTime).toISOString().slice(0, 16) : '',
+      notes: entry.notes || ''
+    });
+    setShowEditDialog(true);
+  };
+
+  const handleUpdateEntry = () => {
+    if (!editingEntry) return;
+    
+    const updateData: any = {};
+    if (editForm.clockInTime) updateData.clockInTime = editForm.clockInTime;
+    if (editForm.clockOutTime) updateData.clockOutTime = editForm.clockOutTime;
+    if (editForm.breakStartTime) updateData.breakStartTime = editForm.breakStartTime;
+    if (editForm.breakEndTime) updateData.breakEndTime = editForm.breakEndTime;
+    updateData.notes = editForm.notes;
+    
+    updateEntryMutation.mutate({ id: editingEntry.id, data: updateData });
+  };
+
+  const handleDeleteEntry = (entryId: string) => {
+    if (confirm('Are you sure you want to delete this time entry?')) {
+      deleteEntryMutation.mutate(entryId);
+    }
   };
 
   const formatDuration = (startTime: string, endTime?: string) => {
@@ -322,6 +395,34 @@ export default function HRTimeClock() {
                           <span>{entry.totalHours}h</span>
                         </div>
                       )}
+                      {entry.notes && (
+                        <div className="flex justify-between">
+                          <span className="text-gray-500">Notes:</span>
+                          <span className="text-xs">{entry.notes}</span>
+                        </div>
+                      )}
+                    </div>
+                    
+                    {/* Manager Controls */}
+                    <div className="mt-3 flex gap-2">
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => handleEditEntry(entry)}
+                        data-testid={`button-edit-${entry.id}`}
+                      >
+                        <Edit className="h-3 w-3 mr-1" />
+                        Edit
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => handleDeleteEntry(entry.id)}
+                        data-testid={`button-delete-${entry.id}`}
+                      >
+                        <Trash2 className="h-3 w-3 mr-1" />
+                        Delete
+                      </Button>
                     </div>
                   </div>
                 );
@@ -330,6 +431,96 @@ export default function HRTimeClock() {
           </CardContent>
         </Card>
       )}
+
+      {/* Edit Time Entry Dialog */}
+      <Dialog open={showEditDialog} onOpenChange={setShowEditDialog}>
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle>Edit Time Entry</DialogTitle>
+            <DialogDescription>
+              {editingEntry && (
+                <>Edit time punch for {employees.find(emp => emp.id === editingEntry.employeeId)?.firstName} {employees.find(emp => emp.id === editingEntry.employeeId)?.lastName}</>
+              )}
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="grid gap-4 py-4">
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="clockIn" className="text-right">Clock In</Label>
+              <Input
+                id="clockIn"
+                type="datetime-local"
+                className="col-span-3"
+                value={editForm.clockInTime}
+                onChange={(e) => setEditForm({...editForm, clockInTime: e.target.value})}
+                data-testid="input-clock-in-time"
+              />
+            </div>
+            
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="clockOut" className="text-right">Clock Out</Label>
+              <Input
+                id="clockOut"
+                type="datetime-local"
+                className="col-span-3"
+                value={editForm.clockOutTime}
+                onChange={(e) => setEditForm({...editForm, clockOutTime: e.target.value})}
+                data-testid="input-clock-out-time"
+              />
+            </div>
+            
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="breakStart" className="text-right">Break Start</Label>
+              <Input
+                id="breakStart"
+                type="datetime-local"
+                className="col-span-3"
+                value={editForm.breakStartTime}
+                onChange={(e) => setEditForm({...editForm, breakStartTime: e.target.value})}
+                data-testid="input-break-start-time"
+              />
+            </div>
+            
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="breakEnd" className="text-right">Break End</Label>
+              <Input
+                id="breakEnd"
+                type="datetime-local"
+                className="col-span-3"
+                value={editForm.breakEndTime}
+                onChange={(e) => setEditForm({...editForm, breakEndTime: e.target.value})}
+                data-testid="input-break-end-time"
+              />
+            </div>
+            
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="notes" className="text-right">Notes</Label>
+              <Textarea
+                id="notes"
+                className="col-span-3"
+                value={editForm.notes}
+                onChange={(e) => setEditForm({...editForm, notes: e.target.value})}
+                placeholder="Add notes about this time entry..."
+                data-testid="textarea-notes"
+              />
+            </div>
+          </div>
+          
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowEditDialog(false)}>
+              Cancel
+            </Button>
+            <Button 
+              onClick={handleUpdateEntry}
+              disabled={updateEntryMutation.isPending}
+              data-testid="button-save-changes"
+            >
+              <Save className="h-4 w-4 mr-2" />
+              Save Changes
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
