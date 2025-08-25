@@ -729,8 +729,8 @@ export default function Recipes() {
 
       {/* Recipe Details Dialog */}
       <Dialog open={isDetailsDialogOpen} onOpenChange={setIsDetailsDialogOpen}>
-        <DialogContent className="sm:max-w-[700px] max-h-[80vh]">
-          <DialogHeader>
+        <DialogContent className="sm:max-w-[700px] max-h-[90vh] flex flex-col">
+          <DialogHeader className="flex-shrink-0">
             <DialogTitle className="flex items-center gap-2">
               <ChefHat className="h-5 w-5" />
               {selectedRecipe?.name}
@@ -740,7 +740,7 @@ export default function Recipes() {
             </DialogDescription>
           </DialogHeader>
           {selectedRecipe && (
-            <div className="space-y-6 overflow-y-auto max-h-[60vh] pr-2">
+            <div className="flex-1 overflow-y-auto space-y-6 py-4">
               {/* Recipe Info */}
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                 <div className="text-center">
@@ -805,7 +805,7 @@ export default function Recipes() {
           
           {/* Fixed Actions at Bottom */}
           {selectedRecipe && (
-            <div className="flex justify-between pt-4 border-t mt-4">
+            <div className="flex justify-between pt-4 border-t flex-shrink-0">
               <AlertDialog>
                 <AlertDialogTrigger asChild>
                   <Button variant="outline" className="text-red-600 hover:text-red-700">
