@@ -144,10 +144,15 @@ export default function Recipes() {
   });
 
   const onSubmit = (data: RecipeFormData) => {
+    console.log("Form submitted with data:", data);
+    console.log("Form errors:", form.formState.errors);
+    console.log("Current ingredients:", ingredients);
+    
     // Update form with current ingredients state before submission
     const validIngredients = ingredients.filter(ing => ing.inventoryItemId && ing.quantity > 0);
     
     if (validIngredients.length === 0) {
+      console.log("No valid ingredients found");
       toast({
         title: "Error",
         description: "Please add at least one ingredient",
@@ -161,6 +166,7 @@ export default function Recipes() {
       ingredients: validIngredients
     };
     
+    console.log("Submitting recipe data:", submissionData);
     createRecipeMutation.mutate(submissionData);
   };
 
