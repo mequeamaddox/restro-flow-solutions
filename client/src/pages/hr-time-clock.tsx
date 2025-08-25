@@ -7,7 +7,8 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Clock, Play, Square, Coffee, UserCheck, Timer, Edit, Trash2, Save } from "lucide-react";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Clock, Play, Square, Coffee, UserCheck, Timer, Edit, Trash2, Save, Calendar, Filter } from "lucide-react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
@@ -38,6 +39,8 @@ export default function HRTimeClock() {
   const [selectedEmployeeId, setSelectedEmployeeId] = useState<string>("");
   const [editingEntry, setEditingEntry] = useState<TimeEntry | null>(null);
   const [showEditDialog, setShowEditDialog] = useState(false);
+  const [dateRange, setDateRange] = useState('7'); // days to look back
+  const [selectedEmployee, setSelectedEmployee] = useState<string>('all');
   const [editForm, setEditForm] = useState({
     clockInTime: '',
     clockOutTime: '',
@@ -118,12 +121,17 @@ export default function HRTimeClock() {
     entry.status === 'clocked-in' || entry.status === 'on-break'
   );
 
-  // Get recent completed entries (last 7 days)
-  const recentEntries = timeEntries.filter((entry: TimeEntry) => {
+  // Filter completed entries based on selected date range and employee
+  const filteredEntries = timeEntries.filter((entry: TimeEntry) => {
     const entryDate = new Date(entry.clockInTime);
-    const sevenDaysAgo = new Date();
-    sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
-    return entryDate >= sevenDaysAgo && entry.status === 'clocked-out';
+    const daysAgo = new Date();
+    const rangeDays = parseInt(dateRange);
+    daysAgo.setDate(daysAgo.getDate() - rangeDays);
+    
+    const dateMatch = entryDate >= daysAgo && entry.status === 'clocked-out';
+    const employeeMatch = selectedEmployee === 'all' || entry.employeeId === selectedEmployee;
+    
+    return dateMatch && employeeMatch;
   }).sort((a, b) => new Date(b.clockInTime).getTime() - new Date(a.clockInTime).getTime());
 
   const getActiveEntry = (employeeId: string) => {
@@ -349,19 +357,65 @@ export default function HRTimeClock() {
         </Card>
       </div>
 
-      {/* Recent Completed Entries */}
-      {recentEntries.length > 0 && (
-        <Card className="mt-8">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Timer className="h-5 w-5 text-gray-600" />
-              Recent Completed Shifts ({recentEntries.length})
-            </CardTitle>
-            <CardDescription>Recent completed shifts - click Edit to modify time punches</CardDescription>
-          </CardHeader>
-          <CardContent>
+      {/* Time Entry Management */}
+      <Card className="mt-8">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Timer className="h-5 w-5 text-gray-600" />
+            Time Entry Management
+          </CardTitle>
+          <CardDescription>View and edit employee time punches from any date range</CardDescription>
+        </CardHeader>
+        <CardContent>
+          {/* Filter Controls */}
+          <div className="flex flex-wrap gap-4 mb-6 p-4 bg-gray-50 rounded-lg">
+            <div className="flex items-center gap-2">
+              <Calendar className="h-4 w-4 text-gray-600" />
+              <Label htmlFor="dateRange">Date Range:</Label>
+              <Select value={dateRange} onValueChange={setDateRange}>
+                <SelectTrigger className="w-[140px]">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="7">Last 7 days</SelectItem>
+                  <SelectItem value="14">Last 2 weeks</SelectItem>
+                  <SelectItem value="30">Last month</SelectItem>
+                  <SelectItem value="60">Last 2 months</SelectItem>
+                  <SelectItem value="90">Last 3 months</SelectItem>
+                  <SelectItem value="180">Last 6 months</SelectItem>
+                  <SelectItem value="365">Last year</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            
+            <div className="flex items-center gap-2">
+              <Filter className="h-4 w-4 text-gray-600" />
+              <Label htmlFor="employeeFilter">Employee:</Label>
+              <Select value={selectedEmployee} onValueChange={setSelectedEmployee}>
+                <SelectTrigger className="w-[160px]">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Employees</SelectItem>
+                  {employees.map((employee: Employee) => (
+                    <SelectItem key={employee.id} value={employee.id}>
+                      {employee.firstName} {employee.lastName}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            
+            <div className="ml-auto flex items-center gap-2 text-sm text-gray-600">
+              <span className="font-medium">{filteredEntries.length}</span>
+              <span>entries found</span>
+            </div>
+          </div>
+
+          {/* Time Entries */}
+          {filteredEntries.length > 0 ? (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {recentEntries.map((entry: TimeEntry) => {
+              {filteredEntries.map((entry: TimeEntry) => {
                 const employee = employees.find((emp: Employee) => emp.id === entry.employeeId);
                 if (!employee) return null;
 
@@ -433,9 +487,15 @@ export default function HRTimeClock() {
                 );
               })}
             </div>
-          </CardContent>
-        </Card>
-      )}
+          ) : (
+            <div className="text-center py-8 text-gray-500">
+              <Timer className="h-12 w-12 mx-auto mb-2 opacity-50" />
+              <p>No completed time entries found for the selected criteria</p>
+              <p className="text-sm">Try expanding the date range or selecting a different employee</p>
+            </div>
+          )}
+        </CardContent>
+      </Card>
 
       {/* Edit Time Entry Dialog */}
       <Dialog open={showEditDialog} onOpenChange={setShowEditDialog}>
