@@ -729,7 +729,7 @@ export default function Recipes() {
 
       {/* Recipe Details Dialog */}
       <Dialog open={isDetailsDialogOpen} onOpenChange={setIsDetailsDialogOpen}>
-        <DialogContent className="sm:max-w-[700px]">
+        <DialogContent className="sm:max-w-[700px] max-h-[80vh]">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <ChefHat className="h-5 w-5" />
@@ -740,7 +740,7 @@ export default function Recipes() {
             </DialogDescription>
           </DialogHeader>
           {selectedRecipe && (
-            <div className="space-y-6">
+            <div className="space-y-6 overflow-y-auto max-h-[60vh] pr-2">
               {/* Recipe Info */}
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                 <div className="text-center">
@@ -800,37 +800,40 @@ export default function Recipes() {
                 </div>
               </div>
 
-              {/* Actions */}
-              <div className="flex justify-between pt-4 border-t">
-                <AlertDialog>
-                  <AlertDialogTrigger asChild>
-                    <Button variant="outline" className="text-red-600 hover:text-red-700">
-                      <Trash2 className="h-4 w-4 mr-2" />
-                      Delete Recipe
-                    </Button>
-                  </AlertDialogTrigger>
-                  <AlertDialogContent>
-                    <AlertDialogHeader>
-                      <AlertDialogTitle>Delete Recipe</AlertDialogTitle>
-                      <AlertDialogDescription>
-                        Are you sure you want to delete "{selectedRecipe.name}"? This action cannot be undone.
-                      </AlertDialogDescription>
-                    </AlertDialogHeader>
-                    <AlertDialogFooter>
-                      <AlertDialogCancel>Cancel</AlertDialogCancel>
-                      <AlertDialogAction
-                        onClick={() => handleDeleteRecipe(selectedRecipe.id)}
-                        className="bg-red-600 hover:bg-red-700"
-                      >
-                        Delete
-                      </AlertDialogAction>
-                    </AlertDialogFooter>
-                  </AlertDialogContent>
-                </AlertDialog>
-                <Button onClick={() => setIsDetailsDialogOpen(false)}>
-                  Close
-                </Button>
-              </div>
+            </div>
+          )}
+          
+          {/* Fixed Actions at Bottom */}
+          {selectedRecipe && (
+            <div className="flex justify-between pt-4 border-t mt-4">
+              <AlertDialog>
+                <AlertDialogTrigger asChild>
+                  <Button variant="outline" className="text-red-600 hover:text-red-700">
+                    <Trash2 className="h-4 w-4 mr-2" />
+                    Delete Recipe
+                  </Button>
+                </AlertDialogTrigger>
+                <AlertDialogContent>
+                  <AlertDialogHeader>
+                    <AlertDialogTitle>Delete Recipe</AlertDialogTitle>
+                    <AlertDialogDescription>
+                      Are you sure you want to delete "{selectedRecipe.name}"? This action cannot be undone.
+                    </AlertDialogDescription>
+                  </AlertDialogHeader>
+                  <AlertDialogFooter>
+                    <AlertDialogCancel>Cancel</AlertDialogCancel>
+                    <AlertDialogAction
+                      onClick={() => handleDeleteRecipe(selectedRecipe.id)}
+                      className="bg-red-600 hover:bg-red-700"
+                    >
+                      Delete
+                    </AlertDialogAction>
+                  </AlertDialogFooter>
+                </AlertDialogContent>
+              </AlertDialog>
+              <Button onClick={() => setIsDetailsDialogOpen(false)}>
+                Close
+              </Button>
             </div>
           )}
         </DialogContent>
