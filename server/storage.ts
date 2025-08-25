@@ -2062,7 +2062,7 @@ export class DatabaseStorage implements IStorage {
     const totalNetPay = paystubsToCreate.reduce((sum, stub) => sum + Number(stub.netPay), 0);
 
     await this.updatePayPeriod(payPeriodId, {
-      status: 'calculating',
+      status: 'calculated',
       totalGrossPay: totalGrossPay.toString(),
       totalDeductions: totalDeductions.toString(),
       totalNetPay: totalNetPay.toString()
