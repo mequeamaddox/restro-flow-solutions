@@ -6,11 +6,12 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from "@/components/ui/dialog";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Plus, Search, ChefHat, DollarSign, Clock, Users, Trash2 } from "lucide-react";
+import { Plus, Search, ChefHat, DollarSign, Clock, Users, Trash2, Eye, AlertTriangle } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import { isUnauthorizedError } from "@/lib/authUtils";
@@ -24,6 +25,7 @@ const recipeFormSchema = z.object({
   prepTime: z.number().min(1, "Prep time must be at least 1 minute"),
   cookTime: z.number().min(0, "Cook time must be 0 or more minutes"),
   instructions: z.string().min(1, "Instructions are required"),
+  sellingPrice: z.number().min(0, "Selling price must be 0 or more").optional(),
   ingredients: z.array(z.object({
     inventoryItemId: z.string().min(1, "Please select an ingredient"),
     quantity: z.number().min(0.01, "Quantity must be greater than 0"),
@@ -36,6 +38,8 @@ type RecipeFormData = z.infer<typeof recipeFormSchema>;
 export default function Recipes() {
   const [searchTerm, setSearchTerm] = useState("");
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
+  const [selectedRecipe, setSelectedRecipe] = useState<any>(null);
+  const [isDetailsDialogOpen, setIsDetailsDialogOpen] = useState(false);
   const [ingredients, setIngredients] = useState([{ inventoryItemId: '', quantity: 0, unit: '' }]);
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -58,6 +62,7 @@ export default function Recipes() {
       prepTime: 15,
       cookTime: 0,
       instructions: "",
+      sellingPrice: 0,
       ingredients: [{ inventoryItemId: '', quantity: 0, unit: '' }]
     },
   });
@@ -99,6 +104,38 @@ export default function Recipes() {
     },
   });
 
+  const deleteRecipeMutation = useMutation({
+    mutationFn: async (id: string) => {
+      await apiRequest('DELETE', `/api/recipes/${id}`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/recipes'] });
+      setIsDetailsDialogOpen(false);
+      toast({
+        title: "Success",
+        description: "Recipe deleted successfully",
+      });
+    },
+    onError: (error) => {
+      if (isUnauthorizedError(error)) {
+        toast({
+          title: "Unauthorized",
+          description: "You are logged out. Logging in again...",
+          variant: "destructive",
+        });
+        setTimeout(() => {
+          window.location.href = "/api/login";
+        }, 500);
+        return;
+      }
+      toast({
+        title: "Error",
+        description: "Failed to delete recipe",
+        variant: "destructive",
+      });
+    },
+  });
+
   const onSubmit = (data: RecipeFormData) => {
     createRecipeMutation.mutate(data);
   };
@@ -115,6 +152,25 @@ export default function Recipes() {
     const updated = [...ingredients];
     updated[index] = { ...updated[index], [field]: value };
     setIngredients(updated);
+  };
+
+  const handleViewDetails = async (recipe: any) => {
+    try {
+      const response = await apiRequest('GET', `/api/recipes/${recipe.id}`);
+      const data = await response.json();
+      setSelectedRecipe(data);
+      setIsDetailsDialogOpen(true);
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to load recipe details",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleDeleteRecipe = (recipeId: string) => {
+    deleteRecipeMutation.mutate(recipeId);
   };
 
   const filteredRecipes = recipes.filter((recipe: any) =>
@@ -215,13 +271,13 @@ export default function Recipes() {
                     )}
                   />
                 </div>
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-3 gap-4">
                   <FormField
                     control={form.control}
                     name="prepTime"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Prep Time (minutes) *</FormLabel>
+                        <FormLabel>Prep Time (min) *</FormLabel>
                         <FormControl>
                           <Input 
                             type="number" 
@@ -240,7 +296,7 @@ export default function Recipes() {
                     name="cookTime"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Cook Time (minutes)</FormLabel>
+                        <FormLabel>Cook Time (min)</FormLabel>
                         <FormControl>
                           <Input 
                             type="number" 
@@ -248,6 +304,26 @@ export default function Recipes() {
                             placeholder="0"
                             {...field}
                             onChange={(e) => field.onChange(parseInt(e.target.value) || 0)}
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={form.control}
+                    name="sellingPrice"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Selling Price ($)</FormLabel>
+                        <FormControl>
+                          <Input 
+                            type="number" 
+                            step="0.01"
+                            min="0"
+                            placeholder="0.00"
+                            {...field}
+                            onChange={(e) => field.onChange(parseFloat(e.target.value) || 0)}
                           />
                         </FormControl>
                         <FormMessage />
@@ -448,15 +524,60 @@ export default function Recipes() {
                     </div>
                   </div>
                   <div className="flex items-center justify-between">
+                    <span className="text-sm text-gray-500">Selling Price</span>
+                    <div className="flex items-center space-x-1">
+                      <DollarSign className="h-4 w-4 text-blue-600" />
+                      <span className="font-medium">
+                        {recipe.sellingPrice ? `$${recipe.sellingPrice.toFixed(2)}` : 'Not set'}
+                      </span>
+                    </div>
+                  </div>
+                  <div className="flex items-center justify-between">
                     <span className="text-sm text-gray-500">Ingredients</span>
                     <span className="text-sm font-medium">
                       {recipe.ingredientCount || 0} items
                     </span>
                   </div>
-                  <div className="pt-2 border-t">
-                    <Button variant="outline" size="sm" className="w-full">
+                  <div className="pt-2 border-t flex gap-2">
+                    <Button 
+                      variant="outline" 
+                      size="sm" 
+                      className="flex-1"
+                      onClick={() => handleViewDetails(recipe)}
+                      data-testid={`button-view-details-${recipe.id}`}
+                    >
+                      <Eye className="h-4 w-4 mr-1" />
                       View Details
                     </Button>
+                    <AlertDialog>
+                      <AlertDialogTrigger asChild>
+                        <Button 
+                          variant="outline" 
+                          size="sm"
+                          className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                          data-testid={`button-delete-${recipe.id}`}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </AlertDialogTrigger>
+                      <AlertDialogContent>
+                        <AlertDialogHeader>
+                          <AlertDialogTitle>Delete Recipe</AlertDialogTitle>
+                          <AlertDialogDescription>
+                            Are you sure you want to delete "{recipe.name}"? This action cannot be undone.
+                          </AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <AlertDialogFooter>
+                          <AlertDialogCancel>Cancel</AlertDialogCancel>
+                          <AlertDialogAction
+                            onClick={() => handleDeleteRecipe(recipe.id)}
+                            className="bg-red-600 hover:bg-red-700"
+                          >
+                            Delete
+                          </AlertDialogAction>
+                        </AlertDialogFooter>
+                      </AlertDialogContent>
+                    </AlertDialog>
                   </div>
                 </div>
               </CardContent>
@@ -480,6 +601,115 @@ export default function Recipes() {
           </CardContent>
         </Card>
       )}
+
+      {/* Recipe Details Dialog */}
+      <Dialog open={isDetailsDialogOpen} onOpenChange={setIsDetailsDialogOpen}>
+        <DialogContent className="sm:max-w-[700px]">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <ChefHat className="h-5 w-5" />
+              {selectedRecipe?.name}
+            </DialogTitle>
+            <DialogDescription>
+              {selectedRecipe?.description}
+            </DialogDescription>
+          </DialogHeader>
+          {selectedRecipe && (
+            <div className="space-y-6">
+              {/* Recipe Info */}
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <div className="text-center">
+                  <p className="text-sm text-gray-500">Serves</p>
+                  <p className="font-medium">{selectedRecipe.servingSize}</p>
+                </div>
+                <div className="text-center">
+                  <p className="text-sm text-gray-500">Prep Time</p>
+                  <p className="font-medium">{selectedRecipe.prepTime} min</p>
+                </div>
+                <div className="text-center">
+                  <p className="text-sm text-gray-500">Cook Time</p>
+                  <p className="font-medium">{selectedRecipe.cookTime} min</p>
+                </div>
+                <div className="text-center">
+                  <p className="text-sm text-gray-500">Selling Price</p>
+                  <p className="font-medium">
+                    {selectedRecipe.sellingPrice ? `$${selectedRecipe.sellingPrice.toFixed(2)}` : 'Not set'}
+                  </p>
+                </div>
+              </div>
+
+              {/* Ingredients */}
+              <div>
+                <h3 className="font-medium mb-3">Ingredients</h3>
+                {selectedRecipe.ingredients && selectedRecipe.ingredients.length > 0 ? (
+                  <div className="space-y-2">
+                    {selectedRecipe.ingredients.map((ingredient: any, index: number) => (
+                      <div key={index} className="flex justify-between items-center py-2 px-3 bg-gray-50 rounded">
+                        <span className="font-medium">{ingredient.inventoryItem?.name}</span>
+                        <span className="text-sm text-gray-600">
+                          {ingredient.quantity} {ingredient.unit}
+                        </span>
+                      </div>
+                    ))}
+                    <div className="mt-3 pt-3 border-t">
+                      <div className="flex justify-between items-center">
+                        <span className="font-medium">Estimated Cost:</span>
+                        <span className="font-medium text-green-600">
+                          ${selectedRecipe.ingredients.reduce((total: number, ing: any) => 
+                            total + (parseFloat(ing.quantity) * parseFloat(ing.inventoryItem?.costPerUnit || 0)), 0
+                          ).toFixed(2)}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                ) : (
+                  <p className="text-gray-500 italic">No ingredients added yet</p>
+                )}
+              </div>
+
+              {/* Instructions */}
+              <div>
+                <h3 className="font-medium mb-3">Instructions</h3>
+                <div className="bg-gray-50 p-4 rounded whitespace-pre-wrap">
+                  {selectedRecipe.instructions}
+                </div>
+              </div>
+
+              {/* Actions */}
+              <div className="flex justify-between pt-4 border-t">
+                <AlertDialog>
+                  <AlertDialogTrigger asChild>
+                    <Button variant="outline" className="text-red-600 hover:text-red-700">
+                      <Trash2 className="h-4 w-4 mr-2" />
+                      Delete Recipe
+                    </Button>
+                  </AlertDialogTrigger>
+                  <AlertDialogContent>
+                    <AlertDialogHeader>
+                      <AlertDialogTitle>Delete Recipe</AlertDialogTitle>
+                      <AlertDialogDescription>
+                        Are you sure you want to delete "{selectedRecipe.name}"? This action cannot be undone.
+                      </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                      <AlertDialogCancel>Cancel</AlertDialogCancel>
+                      <AlertDialogAction
+                        onClick={() => handleDeleteRecipe(selectedRecipe.id)}
+                        className="bg-red-600 hover:bg-red-700"
+                      >
+                        Delete
+                      </AlertDialogAction>
+                    </AlertDialogFooter>
+                  </AlertDialogContent>
+                </AlertDialog>
+                <Button onClick={() => setIsDetailsDialogOpen(false)}>
+                  Close
+                </Button>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

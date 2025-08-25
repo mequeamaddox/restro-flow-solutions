@@ -115,6 +115,7 @@ export const recipes = pgTable("recipes", {
   prepTime: integer("prep_time").notNull(), // minutes
   cookTime: integer("cook_time").notNull().default(0), // minutes
   instructions: text("instructions").notNull(),
+  sellingPrice: decimal("selling_price", { precision: 10, scale: 2 }),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
