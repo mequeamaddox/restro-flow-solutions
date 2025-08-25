@@ -221,13 +221,13 @@ export default function Recipes() {
               Add Recipe
             </Button>
           </DialogTrigger>
-          <DialogContent className="sm:max-w-[600px] max-h-[90vh] flex flex-col">
-            <DialogHeader className="flex-shrink-0">
+          <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-hidden">
+            <DialogHeader>
               <DialogTitle>Create New Recipe</DialogTitle>
             </DialogHeader>
             <Form {...form}>
-              <form onSubmit={form.handleSubmit(onSubmit)} className="flex flex-col h-full">
-                <div className="flex-1 overflow-y-auto space-y-4 py-4">
+              <form onSubmit={form.handleSubmit(onSubmit)} className="flex flex-col max-h-[75vh]">
+                <div className="flex-1 overflow-y-auto space-y-4 px-1 pr-3" style={{ maxHeight: 'calc(75vh - 80px)' }}>
                 <FormField
                   control={form.control}
                   name="name"
@@ -552,7 +552,7 @@ export default function Recipes() {
                   )}
                 </div>
                 </div>
-                <div className="flex justify-end space-x-2 pt-4 border-t flex-shrink-0">
+                <div className="flex justify-end space-x-2 pt-4 border-t mt-4 bg-white">
                   <Button
                     type="button"
                     variant="outline"
