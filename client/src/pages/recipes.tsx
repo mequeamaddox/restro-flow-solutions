@@ -41,6 +41,7 @@ export default function Recipes() {
   const [selectedRecipe, setSelectedRecipe] = useState<any>(null);
   const [isDetailsDialogOpen, setIsDetailsDialogOpen] = useState(false);
   const [ingredients, setIngredients] = useState([{ inventoryItemId: '', quantity: 0, unit: '' }]);
+  const [targetFoodCost, setTargetFoodCost] = useState(30); // 30% default food cost
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
@@ -79,6 +80,7 @@ export default function Recipes() {
       setIsCreateDialogOpen(false);
       form.reset();
       setIngredients([{ inventoryItemId: '', quantity: 0, unit: '' }]);
+      setTargetFoodCost(30);
       toast({
         title: "Success",
         description: "Recipe created successfully",
@@ -152,6 +154,32 @@ export default function Recipes() {
     const updated = [...ingredients];
     updated[index] = { ...updated[index], [field]: value };
     setIngredients(updated);
+    
+    // Auto-calculate selling price when ingredients change
+    if (field === 'quantity' || field === 'inventoryItemId') {
+      calculatePredictivePrice(updated);
+    }
+  };
+
+  const calculatePredictivePrice = (currentIngredients: any[]) => {
+    let totalCost = 0;
+    
+    currentIngredients.forEach(ingredient => {
+      if (ingredient.inventoryItemId && ingredient.quantity > 0) {
+        const item = inventoryItems.find((inv: any) => inv.id === ingredient.inventoryItemId);
+        if (item) {
+          totalCost += parseFloat(ingredient.quantity) * parseFloat(item.costPerUnit || 0);
+        }
+      }
+    });
+    
+    // Calculate suggested selling price based on target food cost percentage
+    const suggestedPrice = totalCost > 0 ? totalCost / (targetFoodCost / 100) : 0;
+    
+    // Update the form with suggested price
+    if (suggestedPrice > 0) {
+      form.setValue('sellingPrice', Math.round(suggestedPrice * 100) / 100);
+    }
   };
 
   const handleViewDetails = async (recipe: any) => {
@@ -313,22 +341,69 @@ export default function Recipes() {
                   <FormField
                     control={form.control}
                     name="sellingPrice"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Selling Price ($)</FormLabel>
-                        <FormControl>
-                          <Input 
-                            type="number" 
-                            step="0.01"
-                            min="0"
-                            placeholder="0.00"
-                            {...field}
-                            onChange={(e) => field.onChange(parseFloat(e.target.value) || 0)}
-                          />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
+                    render={({ field }) => {
+                      const currentCost = ingredients.reduce((total, ing) => {
+                        if (ing.inventoryItemId && ing.quantity > 0) {
+                          const item = inventoryItems.find((inv: any) => inv.id === ing.inventoryItemId);
+                          return total + (parseFloat(ing.quantity) * parseFloat(item?.costPerUnit || 0));
+                        }
+                        return total;
+                      }, 0);
+                      
+                      const currentFoodCostPercent = field.value > 0 ? (currentCost / field.value * 100) : 0;
+                      const suggestedPrice = currentCost > 0 ? currentCost / (targetFoodCost / 100) : 0;
+                      const profit = field.value > 0 ? field.value - currentCost : 0;
+                      
+                      return (
+                        <FormItem>
+                          <FormLabel>Selling Price ($)</FormLabel>
+                          <FormControl>
+                            <Input 
+                              type="number" 
+                              step="0.01"
+                              min="0"
+                              placeholder="Auto-calculated"
+                              {...field}
+                              onChange={(e) => field.onChange(parseFloat(e.target.value) || 0)}
+                            />
+                          </FormControl>
+                          {currentCost > 0 && (
+                            <div className="text-xs space-y-1 bg-gray-50 p-2 rounded">
+                              <div className="flex justify-between">
+                                <span>Recipe Cost:</span>
+                                <span className="font-medium">${currentCost.toFixed(2)}</span>
+                              </div>
+                              <div className="flex justify-between">
+                                <span>Suggested ({targetFoodCost}%):</span>
+                                <span className="font-medium text-blue-600">${suggestedPrice.toFixed(2)}</span>
+                              </div>
+                              {field.value > 0 && (
+                                <>
+                                  <div className="flex justify-between">
+                                    <span>Food Cost %:</span>
+                                    <span className={`font-medium ${
+                                      currentFoodCostPercent <= 35 ? 'text-green-600' : 
+                                      currentFoodCostPercent <= 45 ? 'text-yellow-600' : 'text-red-600'
+                                    }`}>
+                                      {currentFoodCostPercent.toFixed(1)}%
+                                    </span>
+                                  </div>
+                                  <div className="flex justify-between">
+                                    <span>Profit:</span>
+                                    <span className={`font-medium ${
+                                      profit > 0 ? 'text-green-600' : 'text-red-600'
+                                    }`}>
+                                      ${profit.toFixed(2)}
+                                    </span>
+                                  </div>
+                                </>
+                              )}
+                            </div>
+                          )}
+                          <FormMessage />
+                        </FormItem>
+                      );
+                    }}
                   />
                 </div>
                 <FormField
@@ -349,6 +424,42 @@ export default function Recipes() {
                   )}
                 />
                 
+                {/* Pricing Strategy */}
+                <div className="bg-blue-50 p-4 rounded-lg space-y-3">
+                  <h4 className="text-sm font-medium text-blue-900">Pricing Strategy</h4>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="text-sm font-medium text-blue-800">Target Food Cost %</label>
+                      <select 
+                        value={targetFoodCost}
+                        onChange={(e) => {
+                          const newTarget = parseInt(e.target.value);
+                          setTargetFoodCost(newTarget);
+                          calculatePredictivePrice(ingredients);
+                        }}
+                        className="w-full mt-1 px-3 py-2 border rounded-md text-sm"
+                      >
+                        <option value={25}>25% (Premium)</option>
+                        <option value={30}>30% (Standard)</option>
+                        <option value={35}>35% (Competitive)</option>
+                        <option value={40}>40% (Budget)</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label className="text-sm font-medium text-blue-800">Auto-Calculate Price</label>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => calculatePredictivePrice(ingredients)}
+                        className="w-full mt-1"
+                      >
+                        Update Price
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+
                 {/* Ingredients Section */}
                 <div className="space-y-4">
                   <div className="flex items-center justify-between">
@@ -531,6 +642,20 @@ export default function Recipes() {
                         {recipe.sellingPrice ? `$${recipe.sellingPrice.toFixed(2)}` : 'Not set'}
                       </span>
                     </div>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm text-gray-500">Food Cost %</span>
+                    <span className={`text-sm font-medium ${
+                      recipe.estimatedCost && recipe.sellingPrice ? 
+                        (recipe.estimatedCost / recipe.sellingPrice * 100) <= 35 ? 'text-green-600' : 
+                        (recipe.estimatedCost / recipe.sellingPrice * 100) <= 45 ? 'text-yellow-600' : 'text-red-600'
+                      : 'text-gray-500'
+                    }`}>
+                      {recipe.estimatedCost && recipe.sellingPrice ? 
+                        `${(recipe.estimatedCost / recipe.sellingPrice * 100).toFixed(1)}%` : 
+                        'N/A'
+                      }
+                    </span>
                   </div>
                   <div className="flex items-center justify-between">
                     <span className="text-sm text-gray-500">Ingredients</span>
