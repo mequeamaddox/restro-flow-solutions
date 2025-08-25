@@ -25,12 +25,7 @@ const recipeFormSchema = z.object({
   prepTime: z.number().min(1, "Prep time must be at least 1 minute"),
   cookTime: z.number().min(0, "Cook time must be 0 or more minutes"),
   instructions: z.string().min(1, "Instructions are required"),
-  sellingPrice: z.number().min(0, "Selling price must be 0 or more").optional(),
-  ingredients: z.array(z.object({
-    inventoryItemId: z.string().min(1, "Please select an ingredient"),
-    quantity: z.number().min(0.01, "Quantity must be greater than 0"),
-    unit: z.string().min(1, "Unit is required")
-  })).min(1, "At least one ingredient is required")
+  sellingPrice: z.number().min(0, "Selling price must be 0 or more").optional()
 });
 
 type RecipeFormData = z.infer<typeof recipeFormSchema>;
@@ -63,8 +58,7 @@ export default function Recipes() {
       prepTime: 15,
       cookTime: 0,
       instructions: "",
-      sellingPrice: 0,
-      ingredients: [{ inventoryItemId: '', quantity: 0, unit: '' }]
+      sellingPrice: 0
     },
   });
 
@@ -144,15 +138,14 @@ export default function Recipes() {
   });
 
   const onSubmit = (data: RecipeFormData) => {
-    console.log("Form submitted with data:", data);
-    console.log("Form errors:", form.formState.errors);
-    console.log("Current ingredients:", ingredients);
+    console.log("Form submitted successfully!");
+    console.log("Form data:", data);
+    console.log("Ingredients:", ingredients);
     
-    // Update form with current ingredients state before submission
+    // Check ingredients separately since they're not part of the form schema
     const validIngredients = ingredients.filter(ing => ing.inventoryItemId && ing.quantity > 0);
     
     if (validIngredients.length === 0) {
-      console.log("No valid ingredients found");
       toast({
         title: "Error",
         description: "Please add at least one ingredient",
@@ -166,7 +159,6 @@ export default function Recipes() {
       ingredients: validIngredients
     };
     
-    console.log("Submitting recipe data:", submissionData);
     createRecipeMutation.mutate(submissionData);
   };
 
