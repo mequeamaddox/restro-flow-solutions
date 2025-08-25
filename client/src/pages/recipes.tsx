@@ -143,12 +143,23 @@ export default function Recipes() {
     console.log("Ingredients:", ingredients);
     
     // Check ingredients separately since they're not part of the form schema
-    const validIngredients = ingredients.filter(ing => ing.inventoryItemId && ing.quantity > 0);
+    const validIngredients = ingredients.filter(ing => ing.inventoryItemId && ing.quantity > 0 && ing.unit);
     
     if (validIngredients.length === 0) {
       toast({
         title: "Error",
-        description: "Please add at least one ingredient",
+        description: "Please add at least one ingredient with quantity and unit",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    // Check if any ingredients are missing units
+    const incompleteIngredients = ingredients.filter(ing => ing.inventoryItemId && ing.quantity > 0 && !ing.unit);
+    if (incompleteIngredients.length > 0) {
+      toast({
+        title: "Error",
+        description: "Please select a unit for all ingredients",
         variant: "destructive",
       });
       return;
@@ -156,9 +167,12 @@ export default function Recipes() {
     
     const submissionData = {
       ...data,
+      // Convert sellingPrice to string as backend expects decimal as string
+      sellingPrice: data.sellingPrice ? data.sellingPrice.toString() : undefined,
       ingredients: validIngredients
-    };
+    } as any; // Type assertion to allow string sellingPrice
     
+    console.log("Submitting:", submissionData);
     createRecipeMutation.mutate(submissionData);
   };
 
