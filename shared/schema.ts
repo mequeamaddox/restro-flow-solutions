@@ -576,6 +576,58 @@ export const insertMessageThreadSchema = createInsertSchema(messageThreads).omit
 export const insertPerformanceReviewSchema = createInsertSchema(performanceReviews).omit({ id: true, createdAt: true, updatedAt: true });
 export const insertTimeEntrySchema = createInsertSchema(timeEntries).omit({ id: true, createdAt: true, updatedAt: true });
 
+// Payroll Integration Tables
+export const payrollProviderEnum = pgEnum("payroll_provider", ["gusto", "sevenShifts", "homebase", "adp", "quickbooks", "paychex", "bamboo"]);
+
+export const payrollIntegrations = pgTable("payroll_integrations", {
+  id: uuid("id").primaryKey().default(sql`gen_random_uuid()`),
+  provider: payrollProviderEnum("provider").notNull(),
+  name: varchar("name").notNull(), // User-friendly name
+  credentials: jsonb("credentials").notNull(), // API keys, tokens, etc.
+  settings: jsonb("settings"), // Provider-specific settings
+  environment: varchar("environment").default("sandbox"),
+  isActive: boolean("is_active").default(true),
+  lastSyncAt: timestamp("last_sync_at"),
+  syncFrequency: varchar("sync_frequency").default("weekly"), // daily, weekly, biweekly, monthly
+  autoSync: boolean("auto_sync").default(false),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const payrollSyncLogs = pgTable("payroll_sync_logs", {
+  id: uuid("id").primaryKey().default(sql`gen_random_uuid()`),
+  payrollIntegrationId: uuid("payroll_integration_id").references(() => payrollIntegrations.id).notNull(),
+  syncType: varchar("sync_type").notNull(), // 'employees', 'time_entries', 'schedules'
+  status: varchar("status").default("pending"), // pending, processing, completed, failed
+  recordsProcessed: integer("records_processed").default(0),
+  recordsTotal: integer("records_total").default(0),
+  errorMessage: text("error_message"),
+  metadata: jsonb("metadata"), // Additional sync details
+  syncStartedAt: timestamp("sync_started_at").defaultNow(),
+  syncCompletedAt: timestamp("sync_completed_at"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const payrollExports = pgTable("payroll_exports", {
+  id: uuid("id").primaryKey().default(sql`gen_random_uuid()`),
+  payrollIntegrationId: uuid("payroll_integration_id").references(() => payrollIntegrations.id),
+  exportType: varchar("export_type").notNull(), // 'time_entries', 'employees', 'full_payroll'
+  dateFrom: date("date_from").notNull(),
+  dateTo: date("date_to").notNull(),
+  fileName: varchar("file_name").notNull(),
+  fileUrl: varchar("file_url"), // If stored externally
+  fileData: jsonb("file_data"), // Exported data as JSON
+  status: varchar("status").default("generated"), // generated, downloaded, expired
+  createdBy: varchar("created_by").notNull(), // User ID
+  expiresAt: timestamp("expires_at"), // Auto-expire exports after 30 days
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+// Payroll insert schemas
+export const insertPayrollIntegrationSchema = createInsertSchema(payrollIntegrations).omit({ id: true, createdAt: true, updatedAt: true });
+export const insertPayrollSyncLogSchema = createInsertSchema(payrollSyncLogs).omit({ id: true, createdAt: true });
+export const insertPayrollExportSchema = createInsertSchema(payrollExports).omit({ id: true, createdAt: true });
+
 // HR Types
 export type Department = typeof departments.$inferSelect;
 export type InsertDepartment = z.infer<typeof insertDepartmentSchema>;
@@ -601,6 +653,14 @@ export type PerformanceReview = typeof performanceReviews.$inferSelect;
 export type InsertPerformanceReview = z.infer<typeof insertPerformanceReviewSchema>;
 export type TimeEntry = typeof timeEntries.$inferSelect;
 export type InsertTimeEntry = z.infer<typeof insertTimeEntrySchema>;
+
+// Payroll Types
+export type PayrollIntegration = typeof payrollIntegrations.$inferSelect;
+export type InsertPayrollIntegration = z.infer<typeof insertPayrollIntegrationSchema>;
+export type PayrollSyncLog = typeof payrollSyncLogs.$inferSelect;
+export type InsertPayrollSyncLog = z.infer<typeof insertPayrollSyncLogSchema>;
+export type PayrollExport = typeof payrollExports.$inferSelect;
+export type InsertPayrollExport = z.infer<typeof insertPayrollExportSchema>;
 
 // Universal POS Integration Tables
 export const posProviderEnum = pgEnum("pos_provider", ["clover", "spoton", "square", "toast", "revel"]);
