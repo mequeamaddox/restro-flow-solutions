@@ -5,265 +5,155 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Switch } from '@/components/ui/switch';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useToast } from '@/hooks/use-toast';
-import { Settings, Plus, Download, Sync, AlertCircle, CheckCircle, Clock, ExternalLink, Trash2, Calendar } from 'lucide-react';
-import { format } from 'date-fns';
-
-interface PayrollIntegration {
-  id: string;
-  provider: string;
-  name: string;
-  isActive: boolean;
-  lastSyncAt?: string;
-  syncFrequency: string;
-  autoSync: boolean;
-  createdAt: string;
-}
-
-interface PayrollSyncLog {
-  id: string;
-  syncType: string;
-  status: string;
-  recordsProcessed: number;
-  recordsTotal: number;
-  errorMessage?: string;
-  syncStartedAt: string;
-  syncCompletedAt?: string;
-}
-
-interface PayrollExport {
-  id: string;
-  exportType: string;
-  dateFrom: string;
-  dateTo: string;
-  fileName: string;
-  status: string;
-  createdAt: string;
-  expiresAt?: string;
-}
-
-const PAYROLL_PROVIDERS = [
-  {
-    id: 'gusto',
-    name: 'Gusto',
-    description: 'Full-service payroll, benefits, and HR platform',
-    logo: '💰',
-    features: ['Automated payroll', 'Tax filing', 'Benefits management', 'Time tracking sync']
-  },
-  {
-    id: 'sevenShifts',
-    name: '7shifts',
-    description: 'Restaurant scheduling and labor management',
-    logo: '📅',
-    features: ['Employee scheduling', 'Labor cost tracking', 'Time clock integration', 'Shift planning']
-  },
-  {
-    id: 'homebase',
-    name: 'Homebase',
-    description: 'Team scheduling and time tracking',
-    logo: '🏠',
-    features: ['Scheduling', 'Time tracking', 'Team messaging', 'Payroll preparation']
-  },
-  {
-    id: 'adp',
-    name: 'ADP',
-    description: 'Enterprise payroll and HR solutions',
-    logo: '🏢',
-    features: ['Payroll processing', 'HR management', 'Compliance', 'Reporting']
-  },
-  {
-    id: 'quickbooks',
-    name: 'QuickBooks Payroll',
-    description: 'Accounting-integrated payroll solution',
-    logo: '📊',
-    features: ['Payroll processing', 'Tax preparation', 'Accounting sync', 'Reporting']
-  }
-];
+import { Calendar, Plus, Download, DollarSign, Users, Clock, TrendingUp, FileText, Eye, Check, Calculator } from 'lucide-react';
+import { format, startOfWeek, endOfWeek, addDays } from 'date-fns';
+import type { PayPeriod, Paystub, PayrollDeduction, Employee } from '@shared/schema';
 
 export default function HRPayroll() {
-  const [selectedProvider, setSelectedProvider] = useState<any>(null);
-  const [showConnectDialog, setShowConnectDialog] = useState(false);
-  const [showExportDialog, setShowExportDialog] = useState(false);
-  const [exportForm, setExportForm] = useState({
-    type: 'time_entries',
-    dateFrom: format(new Date(Date.now() - 7 * 24 * 60 * 60 * 1000), 'yyyy-MM-dd'),
-    dateTo: format(new Date(), 'yyyy-MM-dd')
+  const [selectedPayPeriod, setSelectedPayPeriod] = useState<PayPeriod | null>(null);
+  const [showCreatePeriodDialog, setShowCreatePeriodDialog] = useState(false);
+  const [showPaystubDialog, setShowPaystubDialog] = useState(false);
+  const [selectedPaystub, setSelectedPaystub] = useState<Paystub | null>(null);
+  const [payPeriodForm, setPayPeriodForm] = useState({
+    name: '',
+    startDate: format(startOfWeek(new Date(), { weekStartsOn: 1 }), 'yyyy-MM-dd'),
+    endDate: format(endOfWeek(new Date(), { weekStartsOn: 1 }), 'yyyy-MM-dd'),
+    payDate: format(addDays(endOfWeek(new Date(), { weekStartsOn: 1 }), 3), 'yyyy-MM-dd')
   });
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
-  // Fetch payroll integrations
-  const { data: integrations = [], isLoading: integrationsLoading } = useQuery({
-    queryKey: ['/api/hr/payroll/integrations'],
+  // Fetch pay periods
+  const { data: payPeriods = [], isLoading: periodsLoading } = useQuery({
+    queryKey: ['/api/hr/payroll/pay-periods'],
   });
 
-  // Fetch sync logs
-  const { data: syncLogs = [], isLoading: logsLoading } = useQuery({
-    queryKey: ['/api/hr/payroll/sync-logs'],
+  // Fetch paystubs for selected period
+  const { data: paystubs = [], isLoading: paystubsLoading } = useQuery({
+    queryKey: ['/api/hr/payroll/paystubs', selectedPayPeriod?.id],
+    enabled: !!selectedPayPeriod?.id,
   });
 
-  // Fetch exports
-  const { data: exports = [], isLoading: exportsLoading } = useQuery({
-    queryKey: ['/api/hr/payroll/exports'],
+  // Fetch employees
+  const { data: employees = [], isLoading: employeesLoading } = useQuery({
+    queryKey: ['/api/hr/employees'],
   });
 
-  // Connect integration mutation
-  const connectMutation = useMutation({
+  // Fetch deductions
+  const { data: deductions = [], isLoading: deductionsLoading } = useQuery({
+    queryKey: ['/api/hr/payroll/deductions'],
+  });
+
+  // Fetch payroll summary
+  const { data: payrollSummary } = useQuery({
+    queryKey: ['/api/hr/payroll/summary'],
+  });
+
+  // Create pay period mutation
+  const createPeriodMutation = useMutation({
     mutationFn: async (data: any) => {
-      const response = await apiRequest('POST', '/api/hr/payroll/integrations', data);
+      const response = await apiRequest('POST', '/api/hr/payroll/pay-periods', data);
       return response.json();
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/hr/payroll/integrations'] });
-      setShowConnectDialog(false);
-      setSelectedProvider(null);
+      queryClient.invalidateQueries({ queryKey: ['/api/hr/payroll/pay-periods'] });
+      setShowCreatePeriodDialog(false);
       toast({
-        title: "Integration Connected",
-        description: "Payroll provider has been successfully connected.",
+        title: "Pay Period Created",
+        description: "New pay period has been created successfully.",
       });
     },
     onError: (error: any) => {
       toast({
-        title: "Connection Failed",
-        description: error.message || "Failed to connect payroll provider",
+        title: "Creation Failed",
+        description: error.message || "Failed to create pay period",
         variant: "destructive",
       });
     },
   });
 
-  // Sync mutation
-  const syncMutation = useMutation({
-    mutationFn: async (integrationId: string) => {
-      const response = await apiRequest('POST', `/api/hr/payroll/integrations/${integrationId}/sync`);
+  // Calculate payroll mutation
+  const calculatePayrollMutation = useMutation({
+    mutationFn: async (payPeriodId: string) => {
+      const response = await apiRequest('POST', `/api/hr/payroll/pay-periods/${payPeriodId}/calculate`);
       return response.json();
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/hr/payroll/sync-logs'] });
-      queryClient.invalidateQueries({ queryKey: ['/api/hr/payroll/integrations'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/hr/payroll/paystubs', selectedPayPeriod?.id] });
+      queryClient.invalidateQueries({ queryKey: ['/api/hr/payroll/pay-periods'] });
       toast({
-        title: "Sync Started",
-        description: "Payroll data sync has been initiated.",
+        title: "Payroll Calculated",
+        description: "Payroll has been calculated for all employees.",
       });
     },
     onError: (error: any) => {
       toast({
-        title: "Sync Failed",
-        description: error.message || "Failed to start payroll sync",
+        title: "Calculation Failed",
+        description: error.message || "Failed to calculate payroll",
         variant: "destructive",
       });
     },
   });
 
-  // Export mutation
-  const exportMutation = useMutation({
-    mutationFn: async (data: any) => {
-      const response = await apiRequest('POST', '/api/hr/payroll/exports', data);
+  // Approve payroll mutation
+  const approvePayrollMutation = useMutation({
+    mutationFn: async (payPeriodId: string) => {
+      const response = await apiRequest('POST', `/api/hr/payroll/pay-periods/${payPeriodId}/approve`);
       return response.json();
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/hr/payroll/exports'] });
-      setShowExportDialog(false);
+      queryClient.invalidateQueries({ queryKey: ['/api/hr/payroll/pay-periods'] });
       toast({
-        title: "Export Generated",
-        description: "Payroll data export has been generated successfully.",
+        title: "Payroll Approved",
+        description: "Payroll has been approved and is ready for payment.",
       });
     },
     onError: (error: any) => {
       toast({
-        title: "Export Failed",
-        description: error.message || "Failed to generate export",
+        title: "Approval Failed",
+        description: error.message || "Failed to approve payroll",
         variant: "destructive",
       });
     },
   });
 
-  // Delete integration mutation
-  const deleteMutation = useMutation({
-    mutationFn: async (integrationId: string) => {
-      await apiRequest('DELETE', `/api/hr/payroll/integrations/${integrationId}`);
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/hr/payroll/integrations'] });
-      toast({
-        title: "Integration Removed",
-        description: "Payroll integration has been disconnected.",
-      });
-    },
-    onError: (error: any) => {
-      toast({
-        title: "Removal Failed",
-        description: error.message || "Failed to remove integration",
-        variant: "destructive",
-      });
-    },
-  });
-
-  const handleConnect = (provider: any) => {
-    setSelectedProvider(provider);
-    setShowConnectDialog(true);
-  };
-
-  const handleSubmitConnection = (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
-    const formData = new FormData(e.currentTarget);
-    
-    const credentials: any = {};
-    const settings: any = {};
-    
-    // Extract form data based on provider
-    switch (selectedProvider.id) {
-      case 'gusto':
-        credentials.apiToken = formData.get('apiToken');
-        credentials.companyId = formData.get('companyId');
-        settings.syncEmployees = formData.get('syncEmployees') === 'on';
-        settings.syncTimeEntries = formData.get('syncTimeEntries') === 'on';
-        break;
-      case 'sevenShifts':
-        credentials.apiKey = formData.get('apiKey');
-        credentials.companyId = formData.get('companyId');
-        settings.syncSchedules = formData.get('syncSchedules') === 'on';
-        break;
-      case 'homebase':
-        credentials.apiToken = formData.get('apiToken');
-        credentials.companyId = formData.get('companyId');
-        break;
-      default:
-        credentials.apiKey = formData.get('apiKey');
-        credentials.apiSecret = formData.get('apiSecret');
-    }
-
-    connectMutation.mutate({
-      provider: selectedProvider.id,
-      name: formData.get('name'),
-      credentials,
-      settings,
-      environment: formData.get('environment'),
-      syncFrequency: formData.get('syncFrequency'),
-      autoSync: formData.get('autoSync') === 'on'
-    });
+  const handleCreatePeriod = () => {
+    const data = {
+      ...payPeriodForm,
+      name: payPeriodForm.name || `Week of ${format(new Date(payPeriodForm.startDate), 'MMM dd')} - ${format(new Date(payPeriodForm.endDate), 'MMM dd, yyyy')}`
+    };
+    createPeriodMutation.mutate(data);
   };
 
   const getStatusColor = (status: string) => {
     switch (status) {
-      case 'completed': return 'bg-green-500';
-      case 'failed': return 'bg-red-500';
-      case 'processing': return 'bg-blue-500';
-      default: return 'bg-yellow-500';
+      case 'paid': return 'bg-green-500';
+      case 'approved': return 'bg-blue-500';
+      case 'calculating': return 'bg-yellow-500';
+      default: return 'bg-gray-500';
     }
   };
 
-  const getProviderInfo = (provider: string) => {
-    return PAYROLL_PROVIDERS.find(p => p.id === provider) || { name: provider, logo: '⚙️' };
+  const getEmployeeName = (employeeId: string) => {
+    const employee = employees.find((emp: Employee) => emp.id === employeeId);
+    return employee ? `${employee.firstName} ${employee.lastName}` : 'Unknown Employee';
   };
 
-  if (integrationsLoading) {
+  const formatCurrency = (amount: string | number) => {
+    return new Intl.NumberFormat('en-US', {
+      style: 'currency',
+      currency: 'USD'
+    }).format(Number(amount));
+  };
+
+  if (periodsLoading || employeesLoading) {
     return (
       <div className="h-screen flex items-center justify-center">
         <div className="animate-spin w-8 h-8 border-4 border-primary border-t-transparent rounded-full" />
@@ -275,204 +165,299 @@ export default function HRPayroll() {
     <div className="p-6 space-y-6" data-testid="hr-payroll-page">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold" data-testid="page-title">Payroll Integrations</h1>
-          <p className="text-muted-foreground">Connect and sync with payroll providers</p>
+          <h1 className="text-3xl font-bold" data-testid="page-title">Payroll Management</h1>
+          <p className="text-muted-foreground">Manage employee payroll and paystubs</p>
         </div>
-        <div className="flex gap-2">
-          <Button onClick={() => setShowExportDialog(true)} variant="outline" data-testid="button-export">
-            <Download className="h-4 w-4 mr-2" />
-            Export Data
-          </Button>
-        </div>
+        <Button onClick={() => setShowCreatePeriodDialog(true)} data-testid="button-create-period">
+          <Plus className="h-4 w-4 mr-2" />
+          New Pay Period
+        </Button>
       </div>
 
-      <Tabs defaultValue="integrations" className="space-y-6">
+      {/* Payroll Summary Cards */}
+      {payrollSummary && (
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+          <Card data-testid="card-total-employees">
+            <CardContent className="p-6">
+              <div className="flex items-center">
+                <Users className="h-8 w-8 text-blue-600" />
+                <div className="ml-4">
+                  <p className="text-sm font-medium text-gray-600">Total Employees</p>
+                  <p className="text-2xl font-bold">{payrollSummary.totalEmployees || 0}</p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card data-testid="card-monthly-payroll">
+            <CardContent className="p-6">
+              <div className="flex items-center">
+                <DollarSign className="h-8 w-8 text-green-600" />
+                <div className="ml-4">
+                  <p className="text-sm font-medium text-gray-600">Monthly Payroll</p>
+                  <p className="text-2xl font-bold">{formatCurrency(payrollSummary.monthlyPayroll || 0)}</p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card data-testid="card-avg-hourly-rate">
+            <CardContent className="p-6">
+              <div className="flex items-center">
+                <Clock className="h-8 w-8 text-purple-600" />
+                <div className="ml-4">
+                  <p className="text-sm font-medium text-gray-600">Avg Hourly Rate</p>
+                  <p className="text-2xl font-bold">{formatCurrency(payrollSummary.avgHourlyRate || 0)}</p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card data-testid="card-labor-cost-percentage">
+            <CardContent className="p-6">
+              <div className="flex items-center">
+                <TrendingUp className="h-8 w-8 text-orange-600" />
+                <div className="ml-4">
+                  <p className="text-sm font-medium text-gray-600">Labor Cost %</p>
+                  <p className="text-2xl font-bold">{(payrollSummary.laborCostPercentage || 0).toFixed(1)}%</p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      )}
+
+      <Tabs defaultValue="pay-periods" className="space-y-6">
         <TabsList>
-          <TabsTrigger value="integrations" data-testid="tab-integrations">Integrations</TabsTrigger>
-          <TabsTrigger value="sync-logs" data-testid="tab-sync-logs">Sync Logs</TabsTrigger>
-          <TabsTrigger value="exports" data-testid="tab-exports">Exports</TabsTrigger>
+          <TabsTrigger value="pay-periods" data-testid="tab-pay-periods">Pay Periods</TabsTrigger>
+          <TabsTrigger value="paystubs" data-testid="tab-paystubs">Paystubs</TabsTrigger>
+          <TabsTrigger value="deductions" data-testid="tab-deductions">Deductions</TabsTrigger>
         </TabsList>
 
-        <TabsContent value="integrations" className="space-y-6">
-          {/* Connected Integrations */}
-          {integrations.length > 0 && (
-            <div className="space-y-4">
-              <h2 className="text-xl font-semibold">Connected Integrations</h2>
-              <div className="grid gap-4">
-                {integrations.map((integration: PayrollIntegration) => {
-                  const providerInfo = getProviderInfo(integration.provider);
-                  return (
-                    <Card key={integration.id} data-testid={`integration-card-${integration.id}`}>
-                      <CardContent className="p-6">
-                        <div className="flex items-center justify-between">
-                          <div className="flex items-center space-x-4">
-                            <div className="text-2xl">{providerInfo.logo}</div>
-                            <div>
-                              <h3 className="font-semibold">{integration.name}</h3>
-                              <p className="text-sm text-muted-foreground">{providerInfo.name}</p>
-                              <div className="flex items-center gap-2 mt-1">
-                                <Badge variant={integration.isActive ? "default" : "secondary"}>
-                                  {integration.isActive ? "Active" : "Inactive"}
-                                </Badge>
-                                {integration.autoSync && (
-                                  <Badge variant="outline">Auto Sync</Badge>
-                                )}
-                              </div>
-                            </div>
-                          </div>
-                          <div className="flex items-center gap-2">
-                            {integration.lastSyncAt && (
-                              <div className="text-sm text-muted-foreground text-right">
-                                Last sync:<br />
-                                {format(new Date(integration.lastSyncAt), 'MMM dd, HH:mm')}
-                              </div>
-                            )}
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => syncMutation.mutate(integration.id)}
-                              disabled={syncMutation.isPending}
-                              data-testid={`button-sync-${integration.id}`}
-                            >
-                              <Sync className="h-4 w-4" />
-                            </Button>
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => deleteMutation.mutate(integration.id)}
-                              data-testid={`button-delete-${integration.id}`}
-                            >
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
-                          </div>
-                        </div>
-                      </CardContent>
-                    </Card>
-                  );
-                })}
-              </div>
-            </div>
-          )}
+        <TabsContent value="pay-periods" className="space-y-4">
+          <div className="flex items-center justify-between">
+            <h2 className="text-xl font-semibold">Pay Periods</h2>
+          </div>
 
-          {/* Available Providers */}
-          <div className="space-y-4">
-            <h2 className="text-xl font-semibold">Available Providers</h2>
-            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {PAYROLL_PROVIDERS.map((provider) => {
-                const isConnected = integrations.some((i: PayrollIntegration) => i.provider === provider.id);
-                return (
-                  <Card key={provider.id} className={isConnected ? "opacity-50" : ""} data-testid={`provider-card-${provider.id}`}>
-                    <CardHeader>
-                      <div className="flex items-center gap-3">
-                        <div className="text-2xl">{provider.logo}</div>
-                        <div>
-                          <CardTitle className="text-lg">{provider.name}</CardTitle>
-                          <CardDescription>{provider.description}</CardDescription>
-                        </div>
+          <div className="grid gap-4">
+            {payPeriods.length === 0 ? (
+              <Card>
+                <CardContent className="p-8 text-center">
+                  <Calendar className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+                  <h3 className="text-lg font-medium mb-2">No Pay Periods</h3>
+                  <p className="text-muted-foreground mb-4">Create your first pay period to start processing payroll.</p>
+                  <Button onClick={() => setShowCreatePeriodDialog(true)} data-testid="button-create-first-period">
+                    Create Pay Period
+                  </Button>
+                </CardContent>
+              </Card>
+            ) : (
+              payPeriods.map((period: PayPeriod) => (
+                <Card 
+                  key={period.id} 
+                  className={`cursor-pointer transition-all hover:shadow-md ${selectedPayPeriod?.id === period.id ? 'ring-2 ring-blue-500' : ''}`}
+                  onClick={() => setSelectedPayPeriod(period)}
+                  data-testid={`pay-period-card-${period.id}`}
+                >
+                  <CardContent className="p-6">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <h3 className="font-semibold text-lg">{period.name}</h3>
+                        <p className="text-muted-foreground">
+                          {format(new Date(period.startDate), 'MMM dd')} - {format(new Date(period.endDate), 'MMM dd, yyyy')}
+                        </p>
+                        <p className="text-sm text-muted-foreground">
+                          Pay Date: {format(new Date(period.payDate), 'MMM dd, yyyy')}
+                        </p>
                       </div>
-                    </CardHeader>
-                    <CardContent>
-                      <div className="space-y-3">
-                        <div className="flex flex-wrap gap-1">
-                          {provider.features.map((feature) => (
-                            <Badge key={feature} variant="outline" className="text-xs">
-                              {feature}
-                            </Badge>
-                          ))}
+                      
+                      <div className="text-right">
+                        <div className="flex items-center gap-2 mb-2">
+                          <div className={`w-3 h-3 rounded-full ${getStatusColor(period.status)}`} />
+                          <Badge variant={period.status === 'paid' ? 'default' : 'secondary'}>
+                            {period.status.charAt(0).toUpperCase() + period.status.slice(1)}
+                          </Badge>
                         </div>
+                        <div className="text-2xl font-bold">{formatCurrency(period.totalNetPay || 0)}</div>
+                        <div className="text-sm text-muted-foreground">Net Pay</div>
+                      </div>
+                    </div>
+
+                    {period.status === 'draft' && (
+                      <div className="mt-4 flex gap-2">
                         <Button 
-                          onClick={() => handleConnect(provider)} 
-                          disabled={isConnected}
-                          className="w-full"
-                          data-testid={`button-connect-${provider.id}`}
+                          size="sm"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            calculatePayrollMutation.mutate(period.id);
+                          }}
+                          disabled={calculatePayrollMutation.isPending}
+                          data-testid={`button-calculate-${period.id}`}
                         >
-                          {isConnected ? "Connected" : "Connect"}
+                          <Calculator className="h-4 w-4 mr-2" />
+                          Calculate Payroll
                         </Button>
                       </div>
-                    </CardContent>
-                  </Card>
-                );
-              })}
-            </div>
+                    )}
+
+                    {period.status === 'calculating' && (
+                      <div className="mt-4 flex gap-2">
+                        <Button 
+                          size="sm"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            approvePayrollMutation.mutate(period.id);
+                          }}
+                          disabled={approvePayrollMutation.isPending}
+                          data-testid={`button-approve-${period.id}`}
+                        >
+                          <Check className="h-4 w-4 mr-2" />
+                          Approve Payroll
+                        </Button>
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+              ))
+            )}
           </div>
         </TabsContent>
 
-        <TabsContent value="sync-logs" className="space-y-4">
-          <h2 className="text-xl font-semibold">Sync History</h2>
-          {logsLoading ? (
-            <div className="flex justify-center py-8">
-              <div className="animate-spin w-6 h-6 border-4 border-primary border-t-transparent rounded-full" />
-            </div>
-          ) : (
-            <div className="space-y-2">
-              {syncLogs.length === 0 ? (
-                <div className="text-center py-8 text-muted-foreground">
-                  No sync logs available
+        <TabsContent value="paystubs" className="space-y-4">
+          {selectedPayPeriod ? (
+            <>
+              <div className="flex items-center justify-between">
+                <h2 className="text-xl font-semibold">Paystubs - {selectedPayPeriod.name}</h2>
+                <Button variant="outline" data-testid="button-download-paystubs">
+                  <Download className="h-4 w-4 mr-2" />
+                  Download All
+                </Button>
+              </div>
+
+              {paystubsLoading ? (
+                <div className="flex justify-center py-8">
+                  <div className="animate-spin w-6 h-6 border-4 border-primary border-t-transparent rounded-full" />
                 </div>
               ) : (
-                syncLogs.map((log: PayrollSyncLog) => (
-                  <Card key={log.id} data-testid={`sync-log-${log.id}`}>
-                    <CardContent className="p-4">
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-3">
-                          <div className={`w-3 h-3 rounded-full ${getStatusColor(log.status)}`} />
-                          <div>
-                            <div className="font-medium">{log.syncType.replace('_', ' ').toUpperCase()}</div>
-                            <div className="text-sm text-muted-foreground">
-                              {format(new Date(log.syncStartedAt), 'MMM dd, yyyy HH:mm')}
+                <div className="grid gap-4">
+                  {paystubs.length === 0 ? (
+                    <Card>
+                      <CardContent className="p-8 text-center">
+                        <FileText className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+                        <h3 className="text-lg font-medium mb-2">No Paystubs Generated</h3>
+                        <p className="text-muted-foreground">Calculate payroll first to generate paystubs for employees.</p>
+                      </CardContent>
+                    </Card>
+                  ) : (
+                    paystubs.map((paystub: Paystub) => (
+                      <Card key={paystub.id} data-testid={`paystub-card-${paystub.id}`}>
+                        <CardContent className="p-6">
+                          <div className="flex items-center justify-between">
+                            <div>
+                              <h3 className="font-semibold">{getEmployeeName(paystub.employeeId)}</h3>
+                              <div className="grid grid-cols-4 gap-4 mt-2 text-sm">
+                                <div>
+                                  <span className="text-muted-foreground">Regular Hours:</span>
+                                  <div className="font-medium">{Number(paystub.regularHours).toFixed(2)}</div>
+                                </div>
+                                <div>
+                                  <span className="text-muted-foreground">Overtime Hours:</span>
+                                  <div className="font-medium">{Number(paystub.overtimeHours).toFixed(2)}</div>
+                                </div>
+                                <div>
+                                  <span className="text-muted-foreground">Gross Pay:</span>
+                                  <div className="font-medium">{formatCurrency(paystub.grossPay)}</div>
+                                </div>
+                                <div>
+                                  <span className="text-muted-foreground">Net Pay:</span>
+                                  <div className="font-bold text-green-600">{formatCurrency(paystub.netPay)}</div>
+                                </div>
+                              </div>
+                            </div>
+                            
+                            <div className="flex items-center gap-2">
+                              <Badge variant={paystub.status === 'paid' ? 'default' : 'secondary'}>
+                                {paystub.status.charAt(0).toUpperCase() + paystub.status.slice(1)}
+                              </Badge>
+                              <Button 
+                                variant="outline" 
+                                size="sm"
+                                onClick={() => {
+                                  setSelectedPaystub(paystub);
+                                  setShowPaystubDialog(true);
+                                }}
+                                data-testid={`button-view-paystub-${paystub.id}`}
+                              >
+                                <Eye className="h-4 w-4" />
+                              </Button>
                             </div>
                           </div>
-                        </div>
-                        <div className="text-right">
-                          <div className="font-medium">
-                            {log.recordsProcessed}/{log.recordsTotal} records
-                          </div>
-                          {log.status === 'failed' && log.errorMessage && (
-                            <div className="text-sm text-red-500">{log.errorMessage}</div>
-                          )}
-                        </div>
-                      </div>
-                    </CardContent>
-                  </Card>
-                ))
+                        </CardContent>
+                      </Card>
+                    ))
+                  )}
+                </div>
               )}
-            </div>
+            </>
+          ) : (
+            <Card>
+              <CardContent className="p-8 text-center">
+                <Calendar className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+                <h3 className="text-lg font-medium mb-2">Select a Pay Period</h3>
+                <p className="text-muted-foreground">Choose a pay period from the Pay Periods tab to view paystubs.</p>
+              </CardContent>
+            </Card>
           )}
         </TabsContent>
 
-        <TabsContent value="exports" className="space-y-4">
-          <h2 className="text-xl font-semibold">Data Exports</h2>
-          {exportsLoading ? (
+        <TabsContent value="deductions" className="space-y-4">
+          <div className="flex items-center justify-between">
+            <h2 className="text-xl font-semibold">Payroll Deductions</h2>
+            <Button variant="outline" data-testid="button-add-deduction">
+              <Plus className="h-4 w-4 mr-2" />
+              Add Deduction
+            </Button>
+          </div>
+
+          {deductionsLoading ? (
             <div className="flex justify-center py-8">
               <div className="animate-spin w-6 h-6 border-4 border-primary border-t-transparent rounded-full" />
             </div>
           ) : (
-            <div className="space-y-2">
-              {exports.length === 0 ? (
-                <div className="text-center py-8 text-muted-foreground">
-                  No exports available
-                </div>
+            <div className="grid gap-4">
+              {deductions.length === 0 ? (
+                <Card>
+                  <CardContent className="p-8 text-center">
+                    <DollarSign className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+                    <h3 className="text-lg font-medium mb-2">No Deductions Configured</h3>
+                    <p className="text-muted-foreground">Set up payroll deductions like taxes, benefits, and other withholdings.</p>
+                  </CardContent>
+                </Card>
               ) : (
-                exports.map((exportItem: PayrollExport) => (
-                  <Card key={exportItem.id} data-testid={`export-item-${exportItem.id}`}>
-                    <CardContent className="p-4">
+                deductions.map((deduction: PayrollDeduction) => (
+                  <Card key={deduction.id} data-testid={`deduction-card-${deduction.id}`}>
+                    <CardContent className="p-6">
                       <div className="flex items-center justify-between">
                         <div>
-                          <div className="font-medium">{exportItem.fileName}</div>
-                          <div className="text-sm text-muted-foreground">
-                            {exportItem.exportType.replace('_', ' ').toUpperCase()} • {exportItem.dateFrom} to {exportItem.dateTo}
-                          </div>
-                          <div className="text-sm text-muted-foreground">
-                            Created {format(new Date(exportItem.createdAt), 'MMM dd, yyyy HH:mm')}
+                          <h3 className="font-semibold">{deduction.name}</h3>
+                          <p className="text-muted-foreground">{deduction.description}</p>
+                          <div className="flex items-center gap-4 mt-2">
+                            <Badge variant="outline">{deduction.type}</Badge>
+                            <Badge variant="outline">{deduction.calculationType}</Badge>
+                            {deduction.isPreTax && <Badge variant="secondary">Pre-tax</Badge>}
+                            {deduction.isEmployerPaid && <Badge variant="secondary">Employer Paid</Badge>}
                           </div>
                         </div>
-                        <div className="flex items-center gap-2">
-                          <Badge variant={exportItem.status === 'generated' ? 'default' : 'secondary'}>
-                            {exportItem.status}
+                        <div className="text-right">
+                          <div className="text-lg font-bold">
+                            {deduction.calculationType === 'percentage' 
+                              ? `${Number(deduction.amount).toFixed(2)}%`
+                              : formatCurrency(deduction.amount || 0)
+                            }
+                          </div>
+                          <Badge variant={deduction.isActive ? 'default' : 'secondary'}>
+                            {deduction.isActive ? 'Active' : 'Inactive'}
                           </Badge>
-                          <Button variant="outline" size="sm" data-testid={`button-download-${exportItem.id}`}>
-                            <Download className="h-4 w-4" />
-                          </Button>
                         </div>
                       </div>
                     </CardContent>
@@ -484,217 +469,179 @@ export default function HRPayroll() {
         </TabsContent>
       </Tabs>
 
-      {/* Connect Provider Dialog */}
-      <Dialog open={showConnectDialog} onOpenChange={setShowConnectDialog}>
-        <DialogContent className="max-w-md" data-testid="dialog-connect-provider">
+      {/* Create Pay Period Dialog */}
+      <Dialog open={showCreatePeriodDialog} onOpenChange={setShowCreatePeriodDialog}>
+        <DialogContent className="max-w-md" data-testid="dialog-create-pay-period">
           <DialogHeader>
-            <DialogTitle>Connect {selectedProvider?.name}</DialogTitle>
+            <DialogTitle>Create Pay Period</DialogTitle>
             <DialogDescription>
-              Enter your {selectedProvider?.name} credentials to connect your payroll system.
-            </DialogDescription>
-          </DialogHeader>
-          
-          <form onSubmit={handleSubmitConnection} className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="name">Integration Name</Label>
-              <Input
-                id="name"
-                name="name"
-                placeholder={`${selectedProvider?.name} Integration`}
-                defaultValue={`${selectedProvider?.name} Integration`}
-                required
-                data-testid="input-integration-name"
-              />
-            </div>
-
-            {/* Provider-specific credential fields */}
-            {selectedProvider?.id === 'gusto' && (
-              <>
-                <div className="space-y-2">
-                  <Label htmlFor="apiToken">API Token</Label>
-                  <Input
-                    id="apiToken"
-                    name="apiToken"
-                    type="password"
-                    placeholder="Enter your Gusto API token"
-                    required
-                    data-testid="input-api-token"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="companyId">Company ID</Label>
-                  <Input
-                    id="companyId"
-                    name="companyId"
-                    placeholder="Enter your Gusto company ID"
-                    required
-                    data-testid="input-company-id"
-                  />
-                </div>
-              </>
-            )}
-
-            {selectedProvider?.id === 'sevenShifts' && (
-              <>
-                <div className="space-y-2">
-                  <Label htmlFor="apiKey">API Key</Label>
-                  <Input
-                    id="apiKey"
-                    name="apiKey"
-                    type="password"
-                    placeholder="Enter your 7shifts API key"
-                    required
-                    data-testid="input-api-key"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="companyId">Company ID</Label>
-                  <Input
-                    id="companyId"
-                    name="companyId"
-                    placeholder="Enter your 7shifts company ID"
-                    required
-                    data-testid="input-company-id"
-                  />
-                </div>
-              </>
-            )}
-
-            {selectedProvider?.id === 'homebase' && (
-              <>
-                <div className="space-y-2">
-                  <Label htmlFor="apiToken">API Token</Label>
-                  <Input
-                    id="apiToken"
-                    name="apiToken"
-                    type="password"
-                    placeholder="Enter your Homebase API token"
-                    required
-                    data-testid="input-api-token"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="companyId">Company ID</Label>
-                  <Input
-                    id="companyId"
-                    name="companyId"
-                    placeholder="Enter your Homebase company ID"
-                    required
-                    data-testid="input-company-id"
-                  />
-                </div>
-              </>
-            )}
-
-            <div className="space-y-2">
-              <Label htmlFor="environment">Environment</Label>
-              <Select name="environment" defaultValue="sandbox">
-                <SelectTrigger data-testid="select-environment">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="sandbox">Sandbox (Testing)</SelectItem>
-                  <SelectItem value="production">Production</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="syncFrequency">Sync Frequency</Label>
-              <Select name="syncFrequency" defaultValue="weekly">
-                <SelectTrigger data-testid="select-sync-frequency">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="daily">Daily</SelectItem>
-                  <SelectItem value="weekly">Weekly</SelectItem>
-                  <SelectItem value="biweekly">Bi-weekly</SelectItem>
-                  <SelectItem value="monthly">Monthly</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="flex items-center space-x-2">
-              <Switch id="autoSync" name="autoSync" data-testid="switch-auto-sync" />
-              <Label htmlFor="autoSync">Enable automatic sync</Label>
-            </div>
-
-            <DialogFooter>
-              <Button type="button" variant="outline" onClick={() => setShowConnectDialog(false)}>
-                Cancel
-              </Button>
-              <Button type="submit" disabled={connectMutation.isPending} data-testid="button-submit-connection">
-                {connectMutation.isPending ? "Connecting..." : "Connect"}
-              </Button>
-            </DialogFooter>
-          </form>
-        </DialogContent>
-      </Dialog>
-
-      {/* Export Data Dialog */}
-      <Dialog open={showExportDialog} onOpenChange={setShowExportDialog}>
-        <DialogContent className="max-w-md" data-testid="dialog-export-data">
-          <DialogHeader>
-            <DialogTitle>Export Payroll Data</DialogTitle>
-            <DialogDescription>
-              Generate an export of your payroll data for external processing.
+              Set up a new pay period for payroll processing.
             </DialogDescription>
           </DialogHeader>
 
           <div className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="exportType">Export Type</Label>
-              <Select
-                value={exportForm.type}
-                onValueChange={(value) => setExportForm({ ...exportForm, type: value })}
-              >
-                <SelectTrigger data-testid="select-export-type">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="time_entries">Time Entries</SelectItem>
-                  <SelectItem value="employees">Employee Data</SelectItem>
-                  <SelectItem value="full_payroll">Full Payroll Report</SelectItem>
-                </SelectContent>
-              </Select>
+              <Label htmlFor="periodName">Period Name (Optional)</Label>
+              <Input
+                id="periodName"
+                value={payPeriodForm.name}
+                onChange={(e) => setPayPeriodForm({ ...payPeriodForm, name: e.target.value })}
+                placeholder="Will auto-generate from dates"
+                data-testid="input-period-name"
+              />
             </div>
 
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="dateFrom">From Date</Label>
+                <Label htmlFor="startDate">Start Date</Label>
                 <Input
-                  id="dateFrom"
+                  id="startDate"
                   type="date"
-                  value={exportForm.dateFrom}
-                  onChange={(e) => setExportForm({ ...exportForm, dateFrom: e.target.value })}
-                  data-testid="input-date-from"
+                  value={payPeriodForm.startDate}
+                  onChange={(e) => setPayPeriodForm({ ...payPeriodForm, startDate: e.target.value })}
+                  data-testid="input-start-date"
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="dateTo">To Date</Label>
+                <Label htmlFor="endDate">End Date</Label>
                 <Input
-                  id="dateTo"
+                  id="endDate"
                   type="date"
-                  value={exportForm.dateTo}
-                  onChange={(e) => setExportForm({ ...exportForm, dateTo: e.target.value })}
-                  data-testid="input-date-to"
+                  value={payPeriodForm.endDate}
+                  onChange={(e) => setPayPeriodForm({ ...payPeriodForm, endDate: e.target.value })}
+                  data-testid="input-end-date"
                 />
               </div>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="payDate">Pay Date</Label>
+              <Input
+                id="payDate"
+                type="date"
+                value={payPeriodForm.payDate}
+                onChange={(e) => setPayPeriodForm({ ...payPeriodForm, payDate: e.target.value })}
+                data-testid="input-pay-date"
+              />
             </div>
           </div>
 
           <DialogFooter>
-            <Button type="button" variant="outline" onClick={() => setShowExportDialog(false)}>
+            <Button type="button" variant="outline" onClick={() => setShowCreatePeriodDialog(false)}>
               Cancel
             </Button>
-            <Button
-              onClick={() => exportMutation.mutate(exportForm)}
-              disabled={exportMutation.isPending}
-              data-testid="button-generate-export"
+            <Button 
+              onClick={handleCreatePeriod} 
+              disabled={createPeriodMutation.isPending}
+              data-testid="button-submit-period"
             >
-              {exportMutation.isPending ? "Generating..." : "Generate Export"}
+              {createPeriodMutation.isPending ? "Creating..." : "Create Period"}
             </Button>
           </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Paystub Detail Dialog */}
+      <Dialog open={showPaystubDialog} onOpenChange={setShowPaystubDialog}>
+        <DialogContent className="max-w-2xl" data-testid="dialog-paystub-detail">
+          {selectedPaystub && (
+            <>
+              <DialogHeader>
+                <DialogTitle>Paystub Details</DialogTitle>
+                <DialogDescription>
+                  {getEmployeeName(selectedPaystub.employeeId)} - {selectedPayPeriod?.name}
+                </DialogDescription>
+              </DialogHeader>
+
+              <div className="space-y-6">
+                {/* Earnings Section */}
+                <div>
+                  <h3 className="font-semibold mb-3">Earnings</h3>
+                  <div className="grid grid-cols-2 gap-4 text-sm">
+                    <div className="flex justify-between">
+                      <span>Regular Hours ({Number(selectedPaystub.regularHours).toFixed(2)}h @ {formatCurrency(selectedPaystub.regularRate)}):</span>
+                      <span className="font-medium">{formatCurrency(selectedPaystub.regularPay)}</span>
+                    </div>
+                    {Number(selectedPaystub.overtimeHours) > 0 && (
+                      <div className="flex justify-between">
+                        <span>Overtime Hours ({Number(selectedPaystub.overtimeHours).toFixed(2)}h @ {formatCurrency(selectedPaystub.overtimeRate || 0)}):</span>
+                        <span className="font-medium">{formatCurrency(selectedPaystub.overtimePay)}</span>
+                      </div>
+                    )}
+                    {Number(selectedPaystub.bonuses) > 0 && (
+                      <div className="flex justify-between">
+                        <span>Bonuses:</span>
+                        <span className="font-medium">{formatCurrency(selectedPaystub.bonuses)}</span>
+                      </div>
+                    )}
+                    {Number(selectedPaystub.tips) > 0 && (
+                      <div className="flex justify-between">
+                        <span>Tips:</span>
+                        <span className="font-medium">{formatCurrency(selectedPaystub.tips)}</span>
+                      </div>
+                    )}
+                  </div>
+                  <Separator className="my-2" />
+                  <div className="flex justify-between font-semibold">
+                    <span>Gross Pay:</span>
+                    <span>{formatCurrency(selectedPaystub.grossPay)}</span>
+                  </div>
+                </div>
+
+                {/* Deductions Section */}
+                <div>
+                  <h3 className="font-semibold mb-3">Deductions</h3>
+                  <div className="space-y-2 text-sm">
+                    <div className="flex justify-between">
+                      <span>Federal Tax:</span>
+                      <span>-{formatCurrency(selectedPaystub.federalTax)}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span>State Tax:</span>
+                      <span>-{formatCurrency(selectedPaystub.stateTax)}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span>Social Security:</span>
+                      <span>-{formatCurrency(selectedPaystub.socialSecurity)}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span>Medicare:</span>
+                      <span>-{formatCurrency(selectedPaystub.medicare)}</span>
+                    </div>
+                    {Number(selectedPaystub.otherDeductions) > 0 && (
+                      <div className="flex justify-between">
+                        <span>Other Deductions:</span>
+                        <span>-{formatCurrency(selectedPaystub.otherDeductions)}</span>
+                      </div>
+                    )}
+                  </div>
+                  <Separator className="my-2" />
+                  <div className="flex justify-between font-semibold">
+                    <span>Total Deductions:</span>
+                    <span>-{formatCurrency(selectedPaystub.totalDeductions)}</span>
+                  </div>
+                </div>
+
+                {/* Net Pay */}
+                <div className="bg-green-50 p-4 rounded-lg">
+                  <div className="flex justify-between items-center">
+                    <span className="text-lg font-semibold">Net Pay:</span>
+                    <span className="text-2xl font-bold text-green-600">{formatCurrency(selectedPaystub.netPay)}</span>
+                  </div>
+                </div>
+              </div>
+
+              <DialogFooter>
+                <Button variant="outline" onClick={() => setShowPaystubDialog(false)}>
+                  Close
+                </Button>
+                <Button data-testid="button-download-paystub">
+                  <Download className="h-4 w-4 mr-2" />
+                  Download PDF
+                </Button>
+              </DialogFooter>
+            </>
+          )}
         </DialogContent>
       </Dialog>
     </div>

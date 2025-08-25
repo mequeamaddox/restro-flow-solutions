@@ -576,57 +576,80 @@ export const insertMessageThreadSchema = createInsertSchema(messageThreads).omit
 export const insertPerformanceReviewSchema = createInsertSchema(performanceReviews).omit({ id: true, createdAt: true, updatedAt: true });
 export const insertTimeEntrySchema = createInsertSchema(timeEntries).omit({ id: true, createdAt: true, updatedAt: true });
 
-// Payroll Integration Tables
-export const payrollProviderEnum = pgEnum("payroll_provider", ["gusto", "sevenShifts", "homebase", "adp", "quickbooks", "paychex", "bamboo"]);
-
-export const payrollIntegrations = pgTable("payroll_integrations", {
+// Internal Payroll System Tables
+export const payPeriods = pgTable("pay_periods", {
   id: uuid("id").primaryKey().default(sql`gen_random_uuid()`),
-  provider: payrollProviderEnum("provider").notNull(),
-  name: varchar("name").notNull(), // User-friendly name
-  credentials: jsonb("credentials").notNull(), // API keys, tokens, etc.
-  settings: jsonb("settings"), // Provider-specific settings
-  environment: varchar("environment").default("sandbox"),
-  isActive: boolean("is_active").default(true),
-  lastSyncAt: timestamp("last_sync_at"),
-  syncFrequency: varchar("sync_frequency").default("weekly"), // daily, weekly, biweekly, monthly
-  autoSync: boolean("auto_sync").default(false),
+  name: varchar("name").notNull(), // "Week of Jan 1-7, 2025"
+  startDate: date("start_date").notNull(),
+  endDate: date("end_date").notNull(),
+  payDate: date("pay_date").notNull(),
+  status: varchar("status").default("draft"), // draft, calculating, approved, paid
+  totalGrossPay: decimal("total_gross_pay", { precision: 12, scale: 2 }).default("0"),
+  totalDeductions: decimal("total_deductions", { precision: 12, scale: 2 }).default("0"),
+  totalNetPay: decimal("total_net_pay", { precision: 12, scale: 2 }).default("0"),
+  approvedBy: varchar("approved_by"), // User ID
+  approvedAt: timestamp("approved_at"),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
 
-export const payrollSyncLogs = pgTable("payroll_sync_logs", {
+export const paystubs = pgTable("paystubs", {
   id: uuid("id").primaryKey().default(sql`gen_random_uuid()`),
-  payrollIntegrationId: uuid("payroll_integration_id").references(() => payrollIntegrations.id).notNull(),
-  syncType: varchar("sync_type").notNull(), // 'employees', 'time_entries', 'schedules'
-  status: varchar("status").default("pending"), // pending, processing, completed, failed
-  recordsProcessed: integer("records_processed").default(0),
-  recordsTotal: integer("records_total").default(0),
-  errorMessage: text("error_message"),
-  metadata: jsonb("metadata"), // Additional sync details
-  syncStartedAt: timestamp("sync_started_at").defaultNow(),
-  syncCompletedAt: timestamp("sync_completed_at"),
+  payPeriodId: uuid("pay_period_id").references(() => payPeriods.id).notNull(),
+  employeeId: uuid("employee_id").references(() => employees.id).notNull(),
+  regularHours: decimal("regular_hours", { precision: 8, scale: 2 }).default("0"),
+  overtimeHours: decimal("overtime_hours", { precision: 8, scale: 2 }).default("0"),
+  regularRate: decimal("regular_rate", { precision: 10, scale: 2 }).notNull(),
+  overtimeRate: decimal("overtime_rate", { precision: 10, scale: 2 }),
+  regularPay: decimal("regular_pay", { precision: 12, scale: 2 }).default("0"),
+  overtimePay: decimal("overtime_pay", { precision: 12, scale: 2 }).default("0"),
+  bonuses: decimal("bonuses", { precision: 12, scale: 2 }).default("0"),
+  tips: decimal("tips", { precision: 12, scale: 2 }).default("0"),
+  grossPay: decimal("gross_pay", { precision: 12, scale: 2 }).default("0"),
+  federalTax: decimal("federal_tax", { precision: 12, scale: 2 }).default("0"),
+  stateTax: decimal("state_tax", { precision: 12, scale: 2 }).default("0"),
+  socialSecurity: decimal("social_security", { precision: 12, scale: 2 }).default("0"),
+  medicare: decimal("medicare", { precision: 12, scale: 2 }).default("0"),
+  otherDeductions: decimal("other_deductions", { precision: 12, scale: 2 }).default("0"),
+  totalDeductions: decimal("total_deductions", { precision: 12, scale: 2 }).default("0"),
+  netPay: decimal("net_pay", { precision: 12, scale: 2 }).default("0"),
+  status: varchar("status").default("calculated"), // calculated, approved, paid
+  notes: text("notes"),
   createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
 });
 
-export const payrollExports = pgTable("payroll_exports", {
+export const payrollDeductions = pgTable("payroll_deductions", {
   id: uuid("id").primaryKey().default(sql`gen_random_uuid()`),
-  payrollIntegrationId: uuid("payroll_integration_id").references(() => payrollIntegrations.id),
-  exportType: varchar("export_type").notNull(), // 'time_entries', 'employees', 'full_payroll'
-  dateFrom: date("date_from").notNull(),
-  dateTo: date("date_to").notNull(),
-  fileName: varchar("file_name").notNull(),
-  fileUrl: varchar("file_url"), // If stored externally
-  fileData: jsonb("file_data"), // Exported data as JSON
-  status: varchar("status").default("generated"), // generated, downloaded, expired
-  createdBy: varchar("created_by").notNull(), // User ID
-  expiresAt: timestamp("expires_at"), // Auto-expire exports after 30 days
+  name: varchar("name").notNull(), // "Health Insurance", "401k", etc.
+  type: varchar("type").notNull(), // "tax", "benefit", "garnishment", "other"
+  calculationType: varchar("calculation_type").notNull(), // "fixed", "percentage", "tiered"
+  amount: decimal("amount", { precision: 10, scale: 4 }), // Fixed amount or percentage
+  isPreTax: boolean("is_pre_tax").default(false),
+  isEmployerPaid: boolean("is_employer_paid").default(false),
+  isActive: boolean("is_active").default(true),
+  description: text("description"),
   createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const employeeDeductions = pgTable("employee_deductions", {
+  id: uuid("id").primaryKey().default(sql`gen_random_uuid()`),
+  employeeId: uuid("employee_id").references(() => employees.id).notNull(),
+  payrollDeductionId: uuid("payroll_deduction_id").references(() => payrollDeductions.id).notNull(),
+  customAmount: decimal("custom_amount", { precision: 10, scale: 4 }), // Override default amount
+  isActive: boolean("is_active").default(true),
+  startDate: date("start_date"),
+  endDate: date("end_date"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
 });
 
 // Payroll insert schemas
-export const insertPayrollIntegrationSchema = createInsertSchema(payrollIntegrations).omit({ id: true, createdAt: true, updatedAt: true });
-export const insertPayrollSyncLogSchema = createInsertSchema(payrollSyncLogs).omit({ id: true, createdAt: true });
-export const insertPayrollExportSchema = createInsertSchema(payrollExports).omit({ id: true, createdAt: true });
+export const insertPayPeriodSchema = createInsertSchema(payPeriods).omit({ id: true, createdAt: true, updatedAt: true });
+export const insertPaystubSchema = createInsertSchema(paystubs).omit({ id: true, createdAt: true, updatedAt: true });
+export const insertPayrollDeductionSchema = createInsertSchema(payrollDeductions).omit({ id: true, createdAt: true, updatedAt: true });
+export const insertEmployeeDeductionSchema = createInsertSchema(employeeDeductions).omit({ id: true, createdAt: true, updatedAt: true });
 
 // HR Types
 export type Department = typeof departments.$inferSelect;
@@ -655,12 +678,14 @@ export type TimeEntry = typeof timeEntries.$inferSelect;
 export type InsertTimeEntry = z.infer<typeof insertTimeEntrySchema>;
 
 // Payroll Types
-export type PayrollIntegration = typeof payrollIntegrations.$inferSelect;
-export type InsertPayrollIntegration = z.infer<typeof insertPayrollIntegrationSchema>;
-export type PayrollSyncLog = typeof payrollSyncLogs.$inferSelect;
-export type InsertPayrollSyncLog = z.infer<typeof insertPayrollSyncLogSchema>;
-export type PayrollExport = typeof payrollExports.$inferSelect;
-export type InsertPayrollExport = z.infer<typeof insertPayrollExportSchema>;
+export type PayPeriod = typeof payPeriods.$inferSelect;
+export type InsertPayPeriod = z.infer<typeof insertPayPeriodSchema>;
+export type Paystub = typeof paystubs.$inferSelect;
+export type InsertPaystub = z.infer<typeof insertPaystubSchema>;
+export type PayrollDeduction = typeof payrollDeductions.$inferSelect;
+export type InsertPayrollDeduction = z.infer<typeof insertPayrollDeductionSchema>;
+export type EmployeeDeduction = typeof employeeDeductions.$inferSelect;
+export type InsertEmployeeDeduction = z.infer<typeof insertEmployeeDeductionSchema>;
 
 // Universal POS Integration Tables
 export const posProviderEnum = pgEnum("pos_provider", ["clover", "spoton", "square", "toast", "revel"]);

@@ -91,6 +91,19 @@ import {
   type InsertPerformanceReview,
   type TimeEntry,
   type InsertTimeEntry,
+  // Payroll imports
+  payPeriods,
+  paystubs,
+  payrollDeductions,
+  employeeDeductions,
+  type PayPeriod,
+  type InsertPayPeriod,
+  type Paystub,
+  type InsertPaystub,
+  type PayrollDeduction,
+  type InsertPayrollDeduction,
+  type EmployeeDeduction,
+  type InsertEmployeeDeduction,
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, sql, desc, and, gte, lte, ilike, sum, isNull, asc } from "drizzle-orm";
@@ -285,6 +298,17 @@ export interface IStorage {
   
   // HR Analytics
   getHRAnalytics(): Promise<any>;
+
+  // HR Payroll operations
+  getPayPeriods(): Promise<PayPeriod[]>;
+  getPayPeriod(id: string): Promise<PayPeriod | undefined>;
+  createPayPeriod(payPeriod: InsertPayPeriod): Promise<PayPeriod>;
+  updatePayPeriod(id: string, payPeriod: Partial<InsertPayPeriod>): Promise<PayPeriod>;
+  calculatePayroll(payPeriodId: string): Promise<Paystub[]>;
+  approvePayroll(payPeriodId: string, approvedBy: string): Promise<PayPeriod>;
+  getPaystubsByPeriod(payPeriodId: string): Promise<(Paystub & { employee?: Employee })[]>;
+  getPayrollDeductions(): Promise<PayrollDeduction[]>;
+  getPayrollSummary(): Promise<{ totalEmployees: number; monthlyPayroll: number; avgHourlyRate: number; laborCostPercentage: number }>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -1917,6 +1941,191 @@ export class DatabaseStorage implements IStorage {
       console.error('Error calculating HR analytics:', error);
       throw error;
     }
+  }
+
+  // HR Payroll operations
+  async getPayPeriods(): Promise<PayPeriod[]> {
+    return await db.select().from(payPeriods).orderBy(desc(payPeriods.startDate));
+  }
+
+  async getPayPeriod(id: string): Promise<PayPeriod | undefined> {
+    const [payPeriod] = await db.select().from(payPeriods).where(eq(payPeriods.id, id));
+    return payPeriod;
+  }
+
+  async createPayPeriod(payPeriodData: InsertPayPeriod): Promise<PayPeriod> {
+    const [payPeriod] = await db
+      .insert(payPeriods)
+      .values(payPeriodData)
+      .returning();
+    return payPeriod;
+  }
+
+  async updatePayPeriod(id: string, payPeriodData: Partial<InsertPayPeriod>): Promise<PayPeriod> {
+    const [payPeriod] = await db
+      .update(payPeriods)
+      .set({ ...payPeriodData, updatedAt: new Date() })
+      .where(eq(payPeriods.id, id))
+      .returning();
+    return payPeriod;
+  }
+
+  async calculatePayroll(payPeriodId: string): Promise<Paystub[]> {
+    // Get the pay period
+    const payPeriod = await this.getPayPeriod(payPeriodId);
+    if (!payPeriod) throw new Error('Pay period not found');
+
+    // Get all active employees
+    const employees = await this.getEmployees();
+    const activeEmployees = employees.filter(emp => emp.status === 'active');
+
+    // Get time entries for the pay period
+    const timeEntries = await db
+      .select()
+      .from(timeEntries)
+      .where(
+        and(
+          gte(timeEntries.clockInTime, sql`${payPeriod.startDate}::timestamp`),
+          lte(timeEntries.clockInTime, sql`${payPeriod.endDate}::timestamp + interval '1 day'`)
+        )
+      );
+
+    const paystubsToCreate: InsertPaystub[] = [];
+
+    for (const employee of activeEmployees) {
+      // Calculate hours worked for this employee
+      const employeeTimeEntries = timeEntries.filter(entry => entry.employeeId === employee.id);
+      
+      let regularHours = 0;
+      let overtimeHours = 0;
+      
+      for (const entry of employeeTimeEntries) {
+        if (entry.clockOutTime && entry.totalHours) {
+          const hours = Number(entry.totalHours);
+          if (regularHours + hours <= 40) {
+            regularHours += hours;
+          } else if (regularHours < 40) {
+            const regularToAdd = 40 - regularHours;
+            regularHours = 40;
+            overtimeHours += hours - regularToAdd;
+          } else {
+            overtimeHours += hours;
+          }
+        }
+      }
+
+      const hourlyRate = Number(employee.hourlyRate || 15);
+      const overtimeRate = hourlyRate * 1.5;
+      
+      const regularPay = regularHours * hourlyRate;
+      const overtimePay = overtimeHours * overtimeRate;
+      const grossPay = regularPay + overtimePay;
+      
+      // Calculate basic tax deductions (simplified)
+      const federalTax = grossPay * 0.12; // 12% federal
+      const stateTax = grossPay * 0.05; // 5% state
+      const socialSecurity = grossPay * 0.062; // 6.2%
+      const medicare = grossPay * 0.0145; // 1.45%
+      
+      const totalDeductions = federalTax + stateTax + socialSecurity + medicare;
+      const netPay = grossPay - totalDeductions;
+
+      paystubsToCreate.push({
+        payPeriodId,
+        employeeId: employee.id,
+        regularHours: regularHours.toString(),
+        overtimeHours: overtimeHours.toString(),
+        regularRate: hourlyRate.toString(),
+        overtimeRate: overtimeRate.toString(),
+        regularPay: regularPay.toString(),
+        overtimePay: overtimePay.toString(),
+        grossPay: grossPay.toString(),
+        federalTax: federalTax.toString(),
+        stateTax: stateTax.toString(),
+        socialSecurity: socialSecurity.toString(),
+        medicare: medicare.toString(),
+        totalDeductions: totalDeductions.toString(),
+        netPay: netPay.toString(),
+        status: 'calculated'
+      });
+    }
+
+    // Insert all paystubs
+    const createdPaystubs = await db
+      .insert(paystubs)
+      .values(paystubsToCreate)
+      .returning();
+
+    // Update pay period totals
+    const totalGrossPay = paystubsToCreate.reduce((sum, stub) => sum + Number(stub.grossPay), 0);
+    const totalDeductions = paystubsToCreate.reduce((sum, stub) => sum + Number(stub.totalDeductions), 0);
+    const totalNetPay = paystubsToCreate.reduce((sum, stub) => sum + Number(stub.netPay), 0);
+
+    await this.updatePayPeriod(payPeriodId, {
+      status: 'calculating',
+      totalGrossPay: totalGrossPay.toString(),
+      totalDeductions: totalDeductions.toString(),
+      totalNetPay: totalNetPay.toString()
+    });
+
+    return createdPaystubs;
+  }
+
+  async approvePayroll(payPeriodId: string, approvedBy: string): Promise<PayPeriod> {
+    const [payPeriod] = await db
+      .update(payPeriods)
+      .set({
+        status: 'approved',
+        approvedBy,
+        approvedAt: new Date(),
+        updatedAt: new Date()
+      })
+      .where(eq(payPeriods.id, payPeriodId))
+      .returning();
+    return payPeriod;
+  }
+
+  async getPaystubsByPeriod(payPeriodId: string): Promise<(Paystub & { employee?: Employee })[]> {
+    const paystubResults = await db
+      .select({
+        paystub: paystubs,
+        employee: employees
+      })
+      .from(paystubs)
+      .leftJoin(employees, eq(paystubs.employeeId, employees.id))
+      .where(eq(paystubs.payPeriodId, payPeriodId));
+
+    return paystubResults.map(result => ({
+      ...result.paystub,
+      employee: result.employee || undefined
+    }));
+  }
+
+  async getPayrollDeductions(): Promise<PayrollDeduction[]> {
+    return await db.select().from(payrollDeductions).where(eq(payrollDeductions.isActive, true));
+  }
+
+  async getPayrollSummary(): Promise<{ totalEmployees: number; monthlyPayroll: number; avgHourlyRate: number; laborCostPercentage: number }> {
+    const employees = await this.getEmployees();
+    const activeEmployees = employees.filter(emp => emp.status === 'active');
+    
+    const totalEmployees = activeEmployees.length;
+    const avgHourlyRate = activeEmployees.length > 0 
+      ? activeEmployees.reduce((sum, emp) => sum + Number(emp.hourlyRate || 15), 0) / activeEmployees.length
+      : 15;
+    
+    // Estimate monthly payroll based on 160 hours per month per employee
+    const monthlyPayroll = totalEmployees * avgHourlyRate * 160;
+    
+    // Estimate labor cost percentage (typical restaurant target is 25-35%)
+    const laborCostPercentage = 30; // Placeholder - would calculate from actual sales data
+    
+    return {
+      totalEmployees,
+      monthlyPayroll,
+      avgHourlyRate,
+      laborCostPercentage
+    };
   }
 }
 

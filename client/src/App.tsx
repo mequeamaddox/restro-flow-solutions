@@ -33,6 +33,7 @@ import HRTasks from "@/pages/hr-tasks";
 import HRMessaging from "@/pages/hr-messaging";
 import HRScheduling from "@/pages/hr-scheduling";
 import HRTimeOff from "@/pages/hr-time-off";
+import HRPayroll from "@/pages/hr-payroll";
 import Sidebar from "@/components/layout/sidebar";
 import Header from "@/components/layout/header";
 
@@ -96,6 +97,7 @@ function Router() {
                 <Route path="/hr/messaging" component={HRMessaging} />
                 <Route path="/hr/scheduling" component={HRScheduling} />
                 <Route path="/hr/time-off" component={HRTimeOff} />
+                <Route path="/hr/payroll" component={HRPayroll} />
                 <Route component={NotFound} />
               </Switch>
             </main>

@@ -1403,6 +1403,77 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // HR Payroll
+  app.get('/api/hr/payroll/pay-periods', isAuthenticated, async (req, res) => {
+    try {
+      const payPeriods = await storage.getPayPeriods();
+      res.json(payPeriods);
+    } catch (error) {
+      console.error('Error fetching pay periods:', error);
+      res.status(500).json({ message: 'Failed to fetch pay periods' });
+    }
+  });
+
+  app.post('/api/hr/payroll/pay-periods', isAuthenticated, async (req, res) => {
+    try {
+      const payPeriod = await storage.createPayPeriod(req.body);
+      res.status(201).json(payPeriod);
+    } catch (error) {
+      console.error('Error creating pay period:', error);
+      res.status(500).json({ message: 'Failed to create pay period' });
+    }
+  });
+
+  app.post('/api/hr/payroll/pay-periods/:id/calculate', isAuthenticated, async (req, res) => {
+    try {
+      const paystubs = await storage.calculatePayroll(req.params.id);
+      res.json(paystubs);
+    } catch (error) {
+      console.error('Error calculating payroll:', error);
+      res.status(500).json({ message: 'Failed to calculate payroll' });
+    }
+  });
+
+  app.post('/api/hr/payroll/pay-periods/:id/approve', isAuthenticated, async (req, res) => {
+    try {
+      const payPeriod = await storage.approvePayroll(req.params.id, (req.user as any)?.claims?.sub);
+      res.json(payPeriod);
+    } catch (error) {
+      console.error('Error approving payroll:', error);
+      res.status(500).json({ message: 'Failed to approve payroll' });
+    }
+  });
+
+  app.get('/api/hr/payroll/paystubs/:payPeriodId', isAuthenticated, async (req, res) => {
+    try {
+      const paystubs = await storage.getPaystubsByPeriod(req.params.payPeriodId);
+      res.json(paystubs);
+    } catch (error) {
+      console.error('Error fetching paystubs:', error);
+      res.status(500).json({ message: 'Failed to fetch paystubs' });
+    }
+  });
+
+  app.get('/api/hr/payroll/deductions', isAuthenticated, async (req, res) => {
+    try {
+      const deductions = await storage.getPayrollDeductions();
+      res.json(deductions);
+    } catch (error) {
+      console.error('Error fetching deductions:', error);
+      res.status(500).json({ message: 'Failed to fetch deductions' });
+    }
+  });
+
+  app.get('/api/hr/payroll/summary', isAuthenticated, async (req, res) => {
+    try {
+      const summary = await storage.getPayrollSummary();
+      res.json(summary);
+    } catch (error) {
+      console.error('Error fetching payroll summary:', error);
+      res.status(500).json({ message: 'Failed to fetch payroll summary' });
+    }
+  });
+
   // HR Messaging
   app.get('/api/hr/messages', isAuthenticated, async (req, res) => {
     try {
