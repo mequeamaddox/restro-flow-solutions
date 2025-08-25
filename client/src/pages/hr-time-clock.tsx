@@ -118,12 +118,13 @@ export default function HRTimeClock() {
     entry.status === 'clocked-in' || entry.status === 'on-break'
   );
 
-  // Get today's completed entries
-  const todayEntries = timeEntries.filter((entry: TimeEntry) => {
-    const entryDate = new Date(entry.clockInTime).toDateString();
-    const today = new Date().toDateString();
-    return entryDate === today && entry.status === 'clocked-out';
-  });
+  // Get recent completed entries (last 7 days)
+  const recentEntries = timeEntries.filter((entry: TimeEntry) => {
+    const entryDate = new Date(entry.clockInTime);
+    const sevenDaysAgo = new Date();
+    sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+    return entryDate >= sevenDaysAgo && entry.status === 'clocked-out';
+  }).sort((a, b) => new Date(b.clockInTime).getTime() - new Date(a.clockInTime).getTime());
 
   const getActiveEntry = (employeeId: string) => {
     return activeEntries.find((entry: TimeEntry) => entry.employeeId === employeeId);
@@ -348,19 +349,19 @@ export default function HRTimeClock() {
         </Card>
       </div>
 
-      {/* Today's Completed Entries */}
-      {todayEntries.length > 0 && (
+      {/* Recent Completed Entries */}
+      {recentEntries.length > 0 && (
         <Card className="mt-8">
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Timer className="h-5 w-5 text-gray-600" />
-              Today's Completed Shifts ({todayEntries.length})
+              Recent Completed Shifts ({recentEntries.length})
             </CardTitle>
-            <CardDescription>Employees who have clocked out today</CardDescription>
+            <CardDescription>Recent completed shifts - click Edit to modify time punches</CardDescription>
           </CardHeader>
           <CardContent>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {todayEntries.map((entry: TimeEntry) => {
+              {recentEntries.map((entry: TimeEntry) => {
                 const employee = employees.find((emp: Employee) => emp.id === entry.employeeId);
                 if (!employee) return null;
 
@@ -379,6 +380,10 @@ export default function HRTimeClock() {
                       </div>
                     </div>
                     <div className="space-y-1 text-sm">
+                      <div className="flex justify-between">
+                        <span className="text-gray-500">Date:</span>
+                        <span className="text-xs">{new Date(entry.clockInTime).toLocaleDateString()}</span>
+                      </div>
                       <div className="flex justify-between">
                         <span className="text-gray-500">Clock In:</span>
                         <span>{new Date(entry.clockInTime).toLocaleTimeString()}</span>
