@@ -45,11 +45,11 @@ export default function Recipes() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
-  const { data: recipes = [], isLoading } = useQuery({
+  const { data: recipes = [], isLoading } = useQuery<any[]>({
     queryKey: ['/api/recipes'],
   });
 
-  const { data: inventoryItems = [] } = useQuery({
+  const { data: inventoryItems = [] } = useQuery<any[]>({
     queryKey: ['/api/inventory'],
   });
 
@@ -346,14 +346,15 @@ export default function Recipes() {
                       const currentCost = ingredients.reduce((total, ing) => {
                         if (ing.inventoryItemId && ing.quantity > 0) {
                           const item = inventoryItems.find((inv: any) => inv.id === ing.inventoryItemId);
-                          return total + (parseFloat(ing.quantity) * parseFloat(item?.costPerUnit || 0));
+                          return total + (parseFloat(String(ing.quantity)) * parseFloat(item?.costPerUnit || 0));
                         }
                         return total;
                       }, 0);
                       
-                      const currentFoodCostPercent = field.value > 0 ? (currentCost / field.value * 100) : 0;
+                      const fieldValue = field.value || 0;
+                      const currentFoodCostPercent = fieldValue > 0 ? (currentCost / fieldValue * 100) : 0;
                       const suggestedPrice = currentCost > 0 ? currentCost / (targetFoodCost / 100) : 0;
-                      const profit = field.value > 0 ? field.value - currentCost : 0;
+                      const profit = fieldValue > 0 ? fieldValue - currentCost : 0;
                       
                       return (
                         <FormItem>
@@ -378,7 +379,7 @@ export default function Recipes() {
                                 <span>Suggested ({targetFoodCost}%):</span>
                                 <span className="font-medium text-blue-600">${suggestedPrice.toFixed(2)}</span>
                               </div>
-                              {field.value > 0 && (
+                              {fieldValue > 0 && (
                                 <>
                                   <div className="flex justify-between">
                                     <span>Food Cost %:</span>
@@ -489,7 +490,7 @@ export default function Recipes() {
                             <SelectValue placeholder="Select ingredient" />
                           </SelectTrigger>
                           <SelectContent>
-                            {inventoryItems?.map((item: any) => (
+                            {(inventoryItems as any[])?.map((item: any) => (
                               <SelectItem key={item.id} value={item.id}>
                                 {item.name}
                               </SelectItem>
@@ -549,6 +550,7 @@ export default function Recipes() {
                   {ingredients.filter(ing => ing.inventoryItemId && ing.quantity > 0).length === 0 && (
                     <p className="text-sm text-gray-500">Add ingredients to calculate recipe cost</p>
                   )}
+                </div>
                 </div>
                 <div className="flex justify-end space-x-2 pt-4 border-t flex-shrink-0">
                   <Button
