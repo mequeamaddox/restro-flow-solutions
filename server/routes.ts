@@ -714,9 +714,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post('/api/recipes', isAuthenticated, async (req, res) => {
     try {
-      const recipeData = insertRecipeSchema.parse(req.body);
-      const recipe = await storage.createRecipe(recipeData);
-      res.status(201).json(recipe);
+      const { ingredients, ...recipeData } = req.body;
+      const parsedRecipeData = insertRecipeSchema.parse(recipeData);
+      
+      if (ingredients && ingredients.length > 0) {
+        // Create recipe with ingredients
+        const recipe = await storage.createRecipeWithIngredients({
+          ...parsedRecipeData,
+          ingredients: ingredients.map((ing: any) => ({
+            inventoryItemId: ing.inventoryItemId,
+            quantity: ing.quantity,
+            unit: ing.unit
+          }))
+        });
+        res.status(201).json(recipe);
+      } else {
+        // Create recipe without ingredients
+        const recipe = await storage.createRecipe(parsedRecipeData);
+        res.status(201).json(recipe);
+      }
     } catch (error) {
       console.error("Error creating recipe:", error);
       res.status(400).json({ message: "Failed to create recipe" });

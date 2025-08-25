@@ -740,8 +740,30 @@ export class DatabaseStorage implements IStorage {
   }
 
   // Recipe operations
-  async getRecipes(): Promise<Recipe[]> {
-    return await db.select().from(recipes).orderBy(recipes.name);
+  async getRecipes(): Promise<(Recipe & { ingredientCount: number; estimatedCost: number })[]> {
+    const allRecipes = await db.select().from(recipes).orderBy(recipes.name);
+    
+    const recipesWithStats = await Promise.all(allRecipes.map(async (recipe) => {
+      // Get ingredient count and cost
+      const ingredients = await db
+        .select({
+          count: sql<number>`COUNT(*)`,
+          totalCost: sql<number>`COALESCE(SUM(${recipeIngredients.quantity} * ${inventoryItems.costPerUnit}), 0)`
+        })
+        .from(recipeIngredients)
+        .leftJoin(inventoryItems, eq(recipeIngredients.inventoryItemId, inventoryItems.id))
+        .where(eq(recipeIngredients.recipeId, recipe.id));
+      
+      const stats = ingredients[0] || { count: 0, totalCost: 0 };
+      
+      return {
+        ...recipe,
+        ingredientCount: Number(stats.count),
+        estimatedCost: Number(stats.totalCost)
+      };
+    }));
+    
+    return recipesWithStats;
   }
 
   async getRecipe(id: string): Promise<(Recipe & { ingredients: (RecipeIngredient & { inventoryItem: InventoryItem })[] }) | undefined> {
@@ -764,6 +786,25 @@ export class DatabaseStorage implements IStorage {
   async createRecipe(recipe: InsertRecipe): Promise<Recipe> {
     const [result] = await db.insert(recipes).values(recipe).returning();
     return result;
+  }
+
+  async createRecipeWithIngredients(recipeData: InsertRecipe & { ingredients?: InsertRecipeIngredient[] }): Promise<Recipe> {
+    const { ingredients, ...recipe } = recipeData;
+    
+    // Create recipe first
+    const [createdRecipe] = await db.insert(recipes).values(recipe).returning();
+    
+    // Add ingredients if provided
+    if (ingredients && ingredients.length > 0) {
+      const ingredientsWithRecipeId = ingredients.map(ing => ({
+        ...ing,
+        recipeId: createdRecipe.id
+      }));
+      
+      await db.insert(recipeIngredients).values(ingredientsWithRecipeId);
+    }
+    
+    return createdRecipe;
   }
 
   async updateRecipe(id: string, recipe: Partial<InsertRecipe>): Promise<Recipe> {

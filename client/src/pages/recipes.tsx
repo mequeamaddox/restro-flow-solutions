@@ -10,7 +10,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Plus, Search, ChefHat, DollarSign, Clock, Users } from "lucide-react";
+import { Plus, Search, ChefHat, DollarSign, Clock, Users, Trash2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import { isUnauthorizedError } from "@/lib/authUtils";
@@ -24,6 +24,11 @@ const recipeFormSchema = z.object({
   prepTime: z.number().min(1, "Prep time must be at least 1 minute"),
   cookTime: z.number().min(0, "Cook time must be 0 or more minutes"),
   instructions: z.string().min(1, "Instructions are required"),
+  ingredients: z.array(z.object({
+    inventoryItemId: z.string().min(1, "Please select an ingredient"),
+    quantity: z.number().min(0.01, "Quantity must be greater than 0"),
+    unit: z.string().min(1, "Unit is required")
+  })).min(1, "At least one ingredient is required")
 });
 
 type RecipeFormData = z.infer<typeof recipeFormSchema>;
@@ -31,11 +36,16 @@ type RecipeFormData = z.infer<typeof recipeFormSchema>;
 export default function Recipes() {
   const [searchTerm, setSearchTerm] = useState("");
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
+  const [ingredients, setIngredients] = useState([{ inventoryItemId: '', quantity: 0, unit: '' }]);
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
-  const { data: recipes, isLoading } = useQuery({
+  const { data: recipes = [], isLoading } = useQuery({
     queryKey: ['/api/recipes'],
+  });
+
+  const { data: inventoryItems = [] } = useQuery({
+    queryKey: ['/api/inventory'],
   });
 
   const form = useForm<RecipeFormData>({
@@ -48,17 +58,22 @@ export default function Recipes() {
       prepTime: 15,
       cookTime: 0,
       instructions: "",
+      ingredients: [{ inventoryItemId: '', quantity: 0, unit: '' }]
     },
   });
 
   const createRecipeMutation = useMutation({
     mutationFn: async (data: RecipeFormData) => {
-      await apiRequest('POST', '/api/recipes', data);
+      await apiRequest('POST', '/api/recipes', {
+        ...data,
+        ingredients: ingredients.filter(ing => ing.inventoryItemId && ing.quantity > 0)
+      });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/recipes'] });
       setIsCreateDialogOpen(false);
       form.reset();
+      setIngredients([{ inventoryItemId: '', quantity: 0, unit: '' }]);
       toast({
         title: "Success",
         description: "Recipe created successfully",
@@ -88,7 +103,21 @@ export default function Recipes() {
     createRecipeMutation.mutate(data);
   };
 
-  const filteredRecipes = recipes?.filter(recipe =>
+  const addIngredient = () => {
+    setIngredients([...ingredients, { inventoryItemId: '', quantity: 0, unit: '' }]);
+  };
+
+  const removeIngredient = (index: number) => {
+    setIngredients(ingredients.filter((_, i) => i !== index));
+  };
+
+  const updateIngredient = (index: number, field: string, value: any) => {
+    const updated = [...ingredients];
+    updated[index] = { ...updated[index], [field]: value };
+    setIngredients(updated);
+  };
+
+  const filteredRecipes = recipes.filter((recipe: any) =>
     recipe.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
     recipe.description?.toLowerCase().includes(searchTerm.toLowerCase())
   );
@@ -243,6 +272,97 @@ export default function Recipes() {
                     </FormItem>
                   )}
                 />
+                
+                {/* Ingredients Section */}
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between">
+                    <h4 className="text-sm font-medium">Recipe Ingredients</h4>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={addIngredient}
+                      data-testid="button-add-ingredient"
+                    >
+                      <Plus className="h-4 w-4 mr-1" />
+                      Add Ingredient
+                    </Button>
+                  </div>
+                  
+                  {ingredients.map((ingredient, index) => (
+                    <div key={index} className="flex gap-2 items-end">
+                      <div className="flex-1">
+                        <label className="text-sm font-medium">Ingredient</label>
+                        <Select
+                          value={ingredient.inventoryItemId}
+                          onValueChange={(value) => updateIngredient(index, 'inventoryItemId', value)}
+                        >
+                          <SelectTrigger data-testid={`select-ingredient-${index}`}>
+                            <SelectValue placeholder="Select ingredient" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {inventoryItems?.map((item: any) => (
+                              <SelectItem key={item.id} value={item.id}>
+                                {item.name}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      
+                      <div className="w-24">
+                        <label className="text-sm font-medium">Quantity</label>
+                        <Input
+                          type="number"
+                          step="0.01"
+                          min="0"
+                          value={ingredient.quantity || ''}
+                          onChange={(e) => updateIngredient(index, 'quantity', parseFloat(e.target.value) || 0)}
+                          placeholder="0"
+                          data-testid={`input-quantity-${index}`}
+                        />
+                      </div>
+                      
+                      <div className="w-20">
+                        <label className="text-sm font-medium">Unit</label>
+                        <Select
+                          value={ingredient.unit}
+                          onValueChange={(value) => updateIngredient(index, 'unit', value)}
+                        >
+                          <SelectTrigger data-testid={`select-unit-${index}`}>
+                            <SelectValue placeholder="Unit" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="oz">oz</SelectItem>
+                            <SelectItem value="lb">lb</SelectItem>
+                            <SelectItem value="g">g</SelectItem>
+                            <SelectItem value="kg">kg</SelectItem>
+                            <SelectItem value="cup">cup</SelectItem>
+                            <SelectItem value="tbsp">tbsp</SelectItem>
+                            <SelectItem value="tsp">tsp</SelectItem>
+                            <SelectItem value="piece">piece</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => removeIngredient(index)}
+                        disabled={ingredients.length === 1}
+                        data-testid={`button-remove-ingredient-${index}`}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  ))}
+                  
+                  {ingredients.filter(ing => ing.inventoryItemId && ing.quantity > 0).length === 0 && (
+                    <p className="text-sm text-gray-500">Add ingredients to calculate recipe cost</p>
+                  )}
+                </div>
+                
                 <div className="flex justify-end space-x-2 pt-4">
                   <Button
                     type="button"
@@ -300,7 +420,7 @@ export default function Recipes() {
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {filteredRecipes?.map((recipe) => (
+          {filteredRecipes.map((recipe: any) => (
             <Card key={recipe.id} className="hover:shadow-lg transition-shadow cursor-pointer">
               <CardHeader>
                 <div className="flex items-center justify-between">
@@ -322,12 +442,16 @@ export default function Recipes() {
                     <span className="text-sm text-gray-500">Estimated Cost</span>
                     <div className="flex items-center space-x-1">
                       <DollarSign className="h-4 w-4 text-green-600" />
-                      <span className="font-medium">TBD</span>
+                      <span className="font-medium">
+                        {recipe.estimatedCost ? `$${recipe.estimatedCost.toFixed(2)}` : '$0.00'}
+                      </span>
                     </div>
                   </div>
                   <div className="flex items-center justify-between">
                     <span className="text-sm text-gray-500">Ingredients</span>
-                    <span className="text-sm font-medium">TBD</span>
+                    <span className="text-sm font-medium">
+                      {recipe.ingredientCount || 0} items
+                    </span>
                   </div>
                   <div className="pt-2 border-t">
                     <Button variant="outline" size="sm" className="w-full">
@@ -341,7 +465,7 @@ export default function Recipes() {
         </div>
       )}
 
-      {!isLoading && (!filteredRecipes || filteredRecipes.length === 0) && (
+      {!isLoading && filteredRecipes.length === 0 && (
         <Card>
           <CardContent className="py-12 text-center">
             <ChefHat className="h-12 w-12 text-gray-400 mx-auto mb-4" />
