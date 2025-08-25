@@ -41,7 +41,7 @@ export class PosService {
       const credentials = integration.credentials as PosCredentials;
       const baseUrl = this.getBaseUrl(integration.provider, integration.environment);
       
-      if (!baseUrl) return false;
+      if (!baseUrl || !integration.merchantId) return false;
 
       // Provider-specific connection test
       switch (integration.provider) {
@@ -95,6 +95,10 @@ export class PosService {
 
       const credentials = integration.credentials as PosCredentials;
       const baseUrl = this.getBaseUrl(integration.provider, integration.environment);
+      
+      if (!integration.merchantId) {
+        throw new Error("Merchant ID is required for menu sync");
+      }
 
       // Provider-specific menu sync
       switch (integration.provider) {
@@ -195,6 +199,8 @@ export class PosService {
 
   async processOrderWebhook(payload: any): Promise<void> {
     try {
+      console.log('Processing webhook payload:', JSON.stringify(payload, null, 2));
+      
       // Determine provider from webhook payload structure
       let provider = "unknown";
       let merchantId = "";
@@ -211,17 +217,19 @@ export class PosService {
       }
 
       const integrations = await storage.getPosIntegrations();
-      const integration = integrations.find(i => i.merchantId === merchantId);
+      const integration = integrations.find(i => i.merchantId === merchantId && i.isActive);
       
       if (!integration) {
-        console.log(`No integration found for merchant ${merchantId}`);
+        console.log(`No active integration found for merchant ${merchantId}`);
         return;
       }
+
+      console.log(`Processing ${provider} webhook for integration ${integration.id}`);
 
       // Process based on provider
       switch (provider) {
         case "clover":
-          await this.processCloverOrder(payload, integration);
+          await this.processCloverWebhook(payload, integration);
           break;
         case "spoton":
           await this.processSpotOnOrder(payload, integration);
@@ -232,20 +240,54 @@ export class PosService {
         default:
           console.log(`Unknown provider for webhook payload`);
       }
+      
+      // Update last sync time
+      await storage.updatePosIntegration(integration.id, {
+        lastSyncAt: new Date(),
+      });
     } catch (error) {
       console.error("Webhook processing failed:", error);
       throw error;
     }
   }
 
+  private async processCloverWebhook(payload: any, integration: any): Promise<void> {
+    const eventType = payload.eventType;
+    
+    switch (eventType) {
+      case 'ORDER_CREATED':
+      case 'ORDER_UPDATED':
+        await this.processCloverOrder(payload, integration);
+        break;
+      case 'PAYMENT_CREATED':
+        await this.processCloverPayment(payload, integration);
+        break;
+      case 'INVENTORY_UPDATED':
+        await this.processCloverInventoryUpdate(payload, integration);
+        break;
+      default:
+        console.log(`Unhandled Clover event type: ${eventType}`);
+    }
+  }
+
   private async processCloverOrder(payload: any, integration: any): Promise<void> {
-    const order = payload.data;
+    const order = payload.data || payload;
+    
+    // Check if order already exists
+    const existingSales = await storage.getPosSales(integration.locationId);
+    const existingSale = existingSales.find(sale => sale.posOrderId === order.id);
+    
+    if (existingSale) {
+      console.log(`Order ${order.id} already processed`);
+      return;
+    }
+    
     const posSale = await storage.createPosSale({
       posOrderId: order.id,
       posIntegrationId: integration.id,
       locationId: integration.locationId,
       total: (order.total / 100).toString(),
-      orderDate: new Date(order.createdTime),
+      orderDate: new Date(order.createdTime || Date.now()),
       inventoryProcessed: false,
     });
 
@@ -262,6 +304,24 @@ export class PosService {
     }
 
     await this.processInventoryDeductions(posSale.id);
+    
+    console.log(`Successfully processed Clover order ${order.id}`);
+  }
+
+  private async processCloverPayment(payload: any, integration: any): Promise<void> {
+    console.log('Processing Clover payment webhook:', payload.data?.id);
+    // Payment webhooks can be used for accounting/reporting
+    // For now, just log the payment
+  }
+
+  private async processCloverInventoryUpdate(payload: any, integration: any): Promise<void> {
+    console.log('Processing Clover inventory update:', payload.data?.id);
+    // Re-sync menu items when inventory changes in Clover
+    try {
+      await this.syncMenuItems(integration.id);
+    } catch (error) {
+      console.error('Failed to sync menu items after inventory update:', error);
+    }
   }
 
   private async processSpotOnOrder(payload: any, integration: any): Promise<void> {

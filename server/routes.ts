@@ -1062,12 +1062,74 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Universal POS webhook endpoint (not protected by auth)
   app.post("/api/pos/webhook", async (req, res) => {
     try {
-      console.log('Received POS webhook:', req.body);
+      console.log('Received POS webhook:', {
+        headers: req.headers,
+        body: req.body,
+        timestamp: new Date().toISOString()
+      });
+      
       await posService.processOrderWebhook(req.body);
-      res.status(200).json({ message: "Webhook processed successfully" });
+      
+      res.status(200).json({ 
+        message: "Webhook processed successfully",
+        timestamp: new Date().toISOString()
+      });
     } catch (error) {
       console.error("Error processing POS webhook:", error);
-      res.status(500).json({ message: "Failed to process webhook" });
+      res.status(500).json({ 
+        message: "Failed to process webhook",
+        error: error instanceof Error ? error.message : 'Unknown error'
+      });
+    }
+  });
+
+  // Clover-specific webhook endpoint with enhanced logging
+  app.post("/api/webhooks/clover", async (req, res) => {
+    try {
+      const signature = req.headers['x-clover-signature'] as string;
+      console.log('Received Clover webhook:', {
+        signature,
+        eventType: req.body.eventType,
+        merchantId: req.body.merchantId,
+        objectId: req.body.objectId,
+        timestamp: new Date().toISOString()
+      });
+      
+      // Process the webhook
+      await posService.processOrderWebhook(req.body);
+      
+      res.status(200).json({ 
+        message: "Clover webhook processed successfully",
+        eventType: req.body.eventType,
+        timestamp: new Date().toISOString()
+      });
+    } catch (error) {
+      console.error("Error processing Clover webhook:", error);
+      res.status(500).json({ 
+        message: "Failed to process Clover webhook",
+        error: error instanceof Error ? error.message : 'Unknown error'
+      });
+    }
+  });
+
+  // Webhook status endpoint
+  app.get("/api/pos/webhook-status", isAuthenticated, async (req, res) => {
+    try {
+      const integrations = await storage.getPosIntegrations();
+      const webhookStatus = integrations.map(integration => ({
+        id: integration.id,
+        provider: integration.provider,
+        name: integration.name,
+        isActive: integration.isActive,
+        lastSyncAt: integration.lastSyncAt,
+        webhookUrl: `${req.protocol}://${req.get('host')}/api/webhooks/${integration.provider}`,
+        status: integration.isActive ? 'active' : 'inactive'
+      }));
+      
+      res.json(webhookStatus);
+    } catch (error) {
+      console.error("Error fetching webhook status:", error);
+      res.status(500).json({ message: "Failed to fetch webhook status" });
     }
   });
 

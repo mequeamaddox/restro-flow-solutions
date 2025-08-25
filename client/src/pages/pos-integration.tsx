@@ -78,6 +78,11 @@ export default function PosIntegration() {
     enabled: !!selectedLocation?.id,
   });
 
+  // Fetch webhook status
+  const { data: webhookStatus = [], isLoading: webhookStatusLoading } = useQuery({
+    queryKey: ["/api/pos/webhook-status"],
+  });
+
   // Create integration mutation
   const createIntegrationMutation = useMutation({
     mutationFn: async (data: typeof newIntegration) => {
@@ -209,6 +214,7 @@ export default function PosIntegration() {
       <Tabs defaultValue="integrations" className="w-full">
         <TabsList>
           <TabsTrigger value="integrations">Integrations</TabsTrigger>
+          <TabsTrigger value="webhooks">Webhooks</TabsTrigger>
           <TabsTrigger value="sales">Recent Sales</TabsTrigger>
           <TabsTrigger value="setup">Setup Guide</TabsTrigger>
         </TabsList>
@@ -414,6 +420,101 @@ export default function PosIntegration() {
               ))
             )}
           </div>
+        </TabsContent>
+
+        <TabsContent value="webhooks" className="space-y-6">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Link2 className="h-5 w-5" />
+                Webhook Configuration
+              </CardTitle>
+              <CardDescription>
+                Configure webhook URLs in your POS system to enable real-time inventory sync
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              {webhookStatusLoading ? (
+                <div className="flex items-center justify-center p-6">
+                  <RefreshCw className="h-6 w-6 animate-spin" />
+                  <span className="ml-2">Loading webhook status...</span>
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  {webhookStatus.map((webhook: any) => (
+                    <div key={webhook.id} className="border rounded-lg p-4 space-y-3">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <h3 className="font-semibold">{webhook.name}</h3>
+                          <p className="text-sm text-muted-foreground capitalize">
+                            {webhook.provider} Integration
+                          </p>
+                        </div>
+                        <Badge variant={webhook.isActive ? "default" : "secondary"}>
+                          {webhook.status}
+                        </Badge>
+                      </div>
+                      
+                      <div className="space-y-2">
+                        <div>
+                          <Label className="text-sm font-medium">Webhook URL</Label>
+                          <div className="flex items-center gap-2 mt-1">
+                            <Input 
+                              value={webhook.webhookUrl} 
+                              readOnly 
+                              className="bg-muted text-sm"
+                            />
+                            <Button 
+                              variant="outline" 
+                              size="sm"
+                              onClick={() => {
+                                navigator.clipboard.writeText(webhook.webhookUrl);
+                                toast({
+                                  title: "Copied!",
+                                  description: "Webhook URL copied to clipboard",
+                                });
+                              }}
+                            >
+                              Copy
+                            </Button>
+                          </div>
+                        </div>
+                        
+                        {webhook.lastSyncAt && (
+                          <div>
+                            <Label className="text-sm font-medium">Last Webhook Received</Label>
+                            <p className="text-sm text-muted-foreground mt-1">
+                              {new Date(webhook.lastSyncAt).toLocaleString()}
+                            </p>
+                          </div>
+                        )}
+                      </div>
+                      
+                      {webhook.provider === 'clover' && (
+                        <Alert>
+                          <AlertTriangle className="h-4 w-4" />
+                          <AlertDescription>
+                            <strong>Clover Setup:</strong> In your Clover dashboard, configure webhooks for these events:
+                            ORDER_CREATED, ORDER_UPDATED, PAYMENT_CREATED, INVENTORY_UPDATED
+                          </AlertDescription>
+                        </Alert>
+                      )}
+                    </div>
+                  ))}
+                  
+                  {webhookStatus.length === 0 && (
+                    <div className="text-center p-6">
+                      <Link2 className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
+                      <h3 className="text-lg font-semibold mb-2">No Webhook Integrations</h3>
+                      <p className="text-muted-foreground">
+                        Create a POS integration first to configure webhooks for real-time sync.
+                      </p>
+                    </div>
+                  )}
+                </div>
+              )}
+            </CardContent>
+          </Card>
         </TabsContent>
 
         <TabsContent value="sales" className="space-y-6">
