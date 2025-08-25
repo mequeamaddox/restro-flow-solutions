@@ -2037,11 +2037,11 @@ export class DatabaseStorage implements IStorage {
       const overtimePay = overtimeHours * overtimeRate;
       const grossPay = regularPay + overtimePay;
       
-      // Calculate basic tax deductions (simplified)
-      const federalTax = grossPay * 0.12; // 12% federal
-      const stateTax = grossPay * 0.05; // 5% state
-      const socialSecurity = grossPay * 0.062; // 6.2%
-      const medicare = grossPay * 0.0145; // 1.45%
+      // Calculate realistic tax deductions
+      const federalTax = grossPay * 0.08; // 8% federal (more realistic for restaurant workers)
+      const stateTax = grossPay * 0.02; // 2% state (varies by state)
+      const socialSecurity = grossPay * 0.062; // 6.2% (mandatory)
+      const medicare = grossPay * 0.0145; // 1.45% (mandatory)
       
       const totalDeductions = federalTax + stateTax + socialSecurity + medicare;
       const netPay = grossPay - totalDeductions;
@@ -2149,10 +2149,12 @@ export class DatabaseStorage implements IStorage {
       monthlyPayroll = totalNetPay * (26 / 12); // Assuming biweekly
       
       // Calculate actual average hourly rate from paystubs
-      const allPaystubs = await db
+      const payPeriodIds = recentPayPeriods.map(p => p.id);
+      const allPaystubs = payPeriodIds.length > 0 ? await db
         .select()
         .from(paystubs)
-        .where(sql`${paystubs.payPeriodId} IN (${recentPayPeriods.map(p => `'${p.id}'`).join(',')})`);
+        .where(sql`${paystubs.payPeriodId} = ANY(${payPeriodIds})`)
+        : [];
       
       if (allPaystubs.length > 0) {
         const totalHours = allPaystubs.reduce((sum, stub) => 

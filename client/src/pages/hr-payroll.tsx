@@ -38,6 +38,12 @@ export default function HRPayroll() {
   // Fetch paystubs for selected period
   const { data: paystubs = [], isLoading: paystubsLoading } = useQuery({
     queryKey: ['/api/hr/payroll/paystubs', selectedPayPeriod?.id],
+    queryFn: async () => {
+      if (!selectedPayPeriod?.id) return [];
+      const response = await apiRequest('GET', `/api/hr/payroll/paystubs/${selectedPayPeriod.id}`);
+      return response.json();
+    },
+    enabled: !!selectedPayPeriod?.id,
     enabled: !!selectedPayPeriod?.id,
   });
 
@@ -110,6 +116,7 @@ export default function HRPayroll() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/hr/payroll/pay-periods'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/hr/payroll/summary'] });
       toast({
         title: "Payroll Approved",
         description: "Payroll has been approved and is ready for payment.",
@@ -119,6 +126,30 @@ export default function HRPayroll() {
       toast({
         title: "Approval Failed",
         description: error.message || "Failed to approve payroll",
+        variant: "destructive",
+      });
+    },
+  });
+
+  // Recalculate payroll mutation
+  const recalculatePayrollMutation = useMutation({
+    mutationFn: async (payPeriodId: string) => {
+      const response = await apiRequest('POST', `/api/hr/payroll/pay-periods/${payPeriodId}/recalculate`);
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/hr/payroll/paystubs', selectedPayPeriod?.id] });
+      queryClient.invalidateQueries({ queryKey: ['/api/hr/payroll/pay-periods'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/hr/payroll/summary'] });
+      toast({
+        title: "Payroll Recalculated",
+        description: "Payroll has been recalculated with correct numbers.",
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Recalculation Failed",
+        description: error.message || "Failed to recalculate payroll",
         variant: "destructive",
       });
     },
@@ -136,7 +167,8 @@ export default function HRPayroll() {
     switch (status) {
       case 'paid': return 'bg-green-500';
       case 'approved': return 'bg-blue-500';
-      case 'calculating': return 'bg-yellow-500';
+      case 'calculated': return 'bg-yellow-500';
+      case 'calculating': return 'bg-orange-500';
       default: return 'bg-gray-500';
     }
   };
@@ -300,10 +332,11 @@ export default function HRPayroll() {
                       </div>
                     )}
 
-                    {period.status === 'calculating' && (
+                    {period.status === 'calculated' && (
                       <div className="mt-4 flex gap-2">
                         <Button 
                           size="sm"
+                          variant="default"
                           onClick={(e) => {
                             e.stopPropagation();
                             approvePayrollMutation.mutate(period.id);
@@ -313,6 +346,19 @@ export default function HRPayroll() {
                         >
                           <Check className="h-4 w-4 mr-2" />
                           Approve Payroll
+                        </Button>
+                        <Button 
+                          size="sm"
+                          variant="outline"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            recalculatePayrollMutation.mutate(period.id);
+                          }}
+                          disabled={recalculatePayrollMutation.isPending}
+                          data-testid={`button-recalculate-${period.id}`}
+                        >
+                          <Calculator className="h-4 w-4 mr-2" />
+                          Recalculate
                         </Button>
                       </div>
                     )}
