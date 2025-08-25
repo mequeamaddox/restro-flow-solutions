@@ -1980,7 +1980,7 @@ export class DatabaseStorage implements IStorage {
     const activeEmployees = employees.filter(emp => emp.status === 'active');
 
     // Get time entries for the pay period
-    const timeEntries = await db
+    const employeeTimeEntries = await db
       .select()
       .from(timeEntries)
       .where(
@@ -1994,12 +1994,12 @@ export class DatabaseStorage implements IStorage {
 
     for (const employee of activeEmployees) {
       // Calculate hours worked for this employee
-      const employeeTimeEntries = timeEntries.filter(entry => entry.employeeId === employee.id);
+      const empTimeEntries = employeeTimeEntries.filter(entry => entry.employeeId === employee.id);
       
       let regularHours = 0;
       let overtimeHours = 0;
       
-      for (const entry of employeeTimeEntries) {
+      for (const entry of empTimeEntries) {
         if (entry.clockOutTime && entry.totalHours) {
           const hours = Number(entry.totalHours);
           if (regularHours + hours <= 40) {
