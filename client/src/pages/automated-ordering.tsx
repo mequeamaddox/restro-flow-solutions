@@ -179,21 +179,23 @@ export default function AutomatedOrdering() {
                       {rule.enabled ? "Active" : "Disabled"}
                     </Badge>
                   </div>
-                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm text-slate-400">
+                  <div className="grid grid-cols-2 gap-4 text-sm text-slate-400">
                     <div>
                       <span className="font-medium">Item:</span> {rule.itemName || rule.item}
                     </div>
                     <div>
                       <span className="font-medium">Vendor:</span> {rule.vendorName || rule.vendor}
                     </div>
+                  </div>
+                  <div className="grid grid-cols-2 gap-4 text-sm text-slate-400 mt-2">
                     <div>
-                      <span className="font-medium">Trigger:</span> {rule.triggerType || rule.trigger}
+                      <span className="font-medium">Trigger:</span> {rule.triggerType === 'low_stock' ? `Stock below ${rule.reorderPoint}` : rule.triggerType === 'scheduled' ? rule.frequency : rule.triggerType || rule.trigger}
                     </div>
                     <div>
                       <span className="font-medium">Quantity:</span> {rule.orderQuantity}
                     </div>
                   </div>
-                  <div className="flex items-center gap-6 text-xs text-slate-500">
+                  <div className="flex items-center gap-6 text-xs text-slate-500 mt-2">
                     <span>Last triggered: {rule.lastTriggered || "Never"}</span>
                     <span className="text-green-400">Saves: ${rule.estimatedSavings}/month</span>
                   </div>
