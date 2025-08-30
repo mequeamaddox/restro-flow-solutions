@@ -1618,6 +1618,131 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Auto-ordering endpoints
+  app.get('/api/auto-ordering/rules', isAuthenticated, async (req: any, res) => {
+    try {
+      // Mock auto-ordering rules data for now
+      const mockRules = [
+        {
+          id: 'rule-001',
+          itemId: '656278e7-f9a2-4e67-ae69-8d0ac53af00a',
+          itemName: 'Ground Beef (80/20)',
+          vendorId: 'a904b7ad-06a7-4988-aad8-20326cda0af8',
+          vendorName: 'Prime Food Distributors',
+          reorderPoint: 50,
+          orderQuantity: 200,
+          enabled: true,
+          lastTriggered: '2025-08-28T10:30:00Z',
+          estimatedSavings: 1200,
+          frequency: 'weekly'
+        },
+        {
+          id: 'rule-002',
+          itemId: 'b1234567-f9a2-4e67-ae69-8d0ac53af00b',
+          itemName: 'Chicken Breast',
+          vendorId: 'a904b7ad-06a7-4988-aad8-20326cda0af8',
+          vendorName: 'Prime Food Distributors',
+          reorderPoint: 30,
+          orderQuantity: 100,
+          enabled: true,
+          lastTriggered: '2025-08-29T14:15:00Z',
+          estimatedSavings: 800,
+          frequency: 'bi-weekly'
+        }
+      ];
+      
+      res.json(mockRules);
+    } catch (error) {
+      console.error("Error fetching auto-ordering rules:", error);
+      res.status(500).json({ message: "Failed to fetch auto-ordering rules" });
+    }
+  });
+
+  app.post('/api/auto-ordering/rules', isAuthenticated, async (req: any, res) => {
+    try {
+      const ruleData = req.body;
+      // In a real implementation, this would save to database
+      const newRule = {
+        id: `rule-${Date.now()}`,
+        ...ruleData,
+        enabled: true,
+        lastTriggered: null,
+        estimatedSavings: Math.floor(Math.random() * 2000) + 500
+      };
+      
+      res.status(201).json(newRule);
+    } catch (error) {
+      console.error("Error creating auto-ordering rule:", error);
+      res.status(500).json({ message: "Failed to create auto-ordering rule" });
+    }
+  });
+
+  app.patch('/api/auto-ordering/rules/:id', isAuthenticated, async (req: any, res) => {
+    try {
+      const { id } = req.params;
+      const updateData = req.body;
+      
+      // In a real implementation, this would update the database
+      res.json({ id, ...updateData, updatedAt: new Date().toISOString() });
+    } catch (error) {
+      console.error("Error updating auto-ordering rule:", error);
+      res.status(500).json({ message: "Failed to update auto-ordering rule" });
+    }
+  });
+
+  // Forecasting endpoints
+  app.get('/api/forecasting/demand', isAuthenticated, async (req: any, res) => {
+    try {
+      const mockDemandData = [
+        {
+          itemId: '656278e7-f9a2-4e67-ae69-8d0ac53af00a',
+          itemName: 'Ground Beef (80/20)',
+          currentStock: 75,
+          predictedDemand: 120,
+          recommendedOrder: 180,
+          confidence: 91,
+          factors: ['seasonal_trend', 'weather', 'events'],
+          nextOrderDate: '2025-09-02'
+        },
+        {
+          itemId: 'b1234567-f9a2-4e67-ae69-8d0ac53af00b',
+          itemName: 'Chicken Breast',
+          currentStock: 45,
+          predictedDemand: 85,
+          recommendedOrder: 120,
+          confidence: 87,
+          factors: ['historical_sales', 'menu_popularity'],
+          nextOrderDate: '2025-09-01'
+        }
+      ];
+      
+      res.json(mockDemandData);
+    } catch (error) {
+      console.error("Error fetching demand forecast:", error);
+      res.status(500).json({ message: "Failed to fetch demand forecast" });
+    }
+  });
+
+  app.get('/api/forecasting/trends', isAuthenticated, async (req: any, res) => {
+    try {
+      const mockTrends = {
+        salesTrend: 'increasing',
+        demandVariability: 'moderate',
+        seasonalFactors: ['summer_peak', 'weekend_boost'],
+        accuracyMetrics: {
+          last30Days: 89,
+          last7Days: 93,
+          overall: 91
+        }
+      };
+      
+      res.json(mockTrends);
+    } catch (error) {
+      console.error("Error fetching trends:", error);
+      res.status(500).json({ message: "Failed to fetch trends" });
+    }
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }
