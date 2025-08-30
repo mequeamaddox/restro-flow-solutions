@@ -244,15 +244,20 @@ The OCR system works best with image files rather than scanned PDFs.`,
       const lowerLine = line.toLowerCase();
       
       // Extract vendor name (usually first few lines, company name patterns)
-      if (i < 5 && line.length > 3 && !lowerLine.includes('invoice') && !lowerLine.includes('date') && 
-          !line.match(/^\d/) && !lowerLine.includes('phone') && !lowerLine.includes('email')) {
-        // Look for company patterns
+      if (i < 8 && line.length > 3 && !lowerLine.includes('invoice') && !lowerLine.includes('date') && 
+          !line.match(/^\d/) && !lowerLine.includes('phone') && !lowerLine.includes('email') &&
+          !lowerLine.includes('address') && !lowerLine.includes('city') && !lowerLine.includes('zip')) {
+        // Look for company patterns (high priority)
         if (line.includes('Inc.') || line.includes('LLC') || line.includes('Corp') || 
             line.includes('Company') || line.includes('Co.') || line.includes('Service') ||
             line.includes('Food') || line.includes('Supply') || line.includes('Restaurant') ||
-            line.includes('Kitchen') || line.includes('Equipment') || line.includes('Repair')) {
+            line.includes('Kitchen') || line.includes('Equipment') || line.includes('Repair') ||
+            line.includes('Seafood') || line.includes('Market') || line.includes('Wholesale') ||
+            line.includes('&') && line.length < 30) { // "&" suggests company name like "C& C Seafood"
           vendorName = line;
-        } else if (vendorName === 'Unknown Vendor' && line.length > 5 && line.match(/^[A-Za-z]/)) {
+        } else if (vendorName === 'Unknown Vendor' && line.length > 5 && line.length < 50 && 
+                   line.match(/^[A-Za-z&]/) && !lowerLine.includes('department') && 
+                   !lowerLine.includes('customer') && !lowerLine.includes('order')) {
           vendorName = line; // Fallback to first meaningful text line
         }
       }
@@ -261,9 +266,16 @@ The OCR system works best with image files rather than scanned PDFs.`,
       const invoicePatterns = [
         /invoice\s*#?\s*:?\s*(\w+)/i,
         /inv\s*#?\s*:?\s*(\w+)/i,
-        /^(\d{4,8})$/,  // Standalone number 4-8 digits
+        /^(\d{4,8})$/,  // Standalone number 4-8 digits (like 177132)
         /#\s*(\d+)/,    // Number with # prefix
+        /order\s*no\.?\s*(\d+)/i,  // Order number
+        /customer['']?s?\s*order\s*no\.?\s*(\d+)/i, // Customer's order no
       ];
+      
+      // Special check for standalone numbers at start of line (common invoice format)
+      if (line.match(/^\d{5,8}$/) && i < 10) { // First 10 lines, 5-8 digits
+        invoiceNumber = line;
+      }
       
       for (const pattern of invoicePatterns) {
         const match = line.match(pattern);
@@ -282,6 +294,9 @@ The OCR system works best with image files rather than scanned PDFs.`,
         /amount[\s:$]*(\d+(?:,\d{3})*(?:\.\d{2})?)/i,
         /balance[\s:$]*(\d+(?:,\d{3})*(?:\.\d{2})?)/i,
         /\$\s*(\d+(?:,\d{3})*(?:\.\d{2})?)\s*$/, // Dollar amount at end of line
+        /(\d+\.\d{2})\s*$/, // Decimal amount at end of line (like "150.75")
+        /grand\s*total[\s:$]*(\d+(?:,\d{3})*(?:\.\d{2})?)/i,
+        /net\s*amount[\s:$]*(\d+(?:,\d{3})*(?:\.\d{2})?)/i,
       ];
       
       for (const pattern of totalPatterns) {
