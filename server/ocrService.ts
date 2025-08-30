@@ -278,7 +278,7 @@ The OCR system works best with image files rather than scanned PDFs.`,
       ];
       
       // Special check for standalone numbers at start of line (common invoice format)
-      if (line.match(/^\d{5,8}$/) && i < 15) { // First 15 lines, 5-8 digits like "177132"
+      if (line.match(/^\d{5,8}$/) && i < 15 && invoiceNumber === 'N/A') { // First 15 lines, 5-8 digits like "177132"
         invoiceNumber = line;
         console.log(`Found standalone invoice number: ${line} at line ${i}`);
       }
@@ -294,7 +294,7 @@ The OCR system works best with image files rather than scanned PDFs.`,
         }
       }
       
-      // Look for total amounts - multiple patterns
+      // Look for total amounts - multiple patterns (enhanced for various invoice formats)
       const totalPatterns = [
         /total[\s:$]*(\d+(?:,\d{3})*(?:\.\d{2})?)/i,
         /amount[\s:$]*(\d+(?:,\d{3})*(?:\.\d{2})?)/i,
@@ -303,14 +303,24 @@ The OCR system works best with image files rather than scanned PDFs.`,
         /(\d+\.\d{2})\s*$/, // Decimal amount at end of line (like "150.75")
         /grand\s*total[\s:$]*(\d+(?:,\d{3})*(?:\.\d{2})?)/i,
         /net\s*amount[\s:$]*(\d+(?:,\d{3})*(?:\.\d{2})?)/i,
+        /invoice\s*total[\s:$]*(\d+(?:,\d{3})*(?:\.\d{2})?)/i,
+        /payment[\s:$]*(\d+(?:,\d{3})*(?:\.\d{2})?)/i,
+        /due[\s:$]*(\d+(?:,\d{3})*(?:\.\d{2})?)/i,
+        /\$(\d+(?:,\d{3})*(?:\.\d{2})?)/g, // Any dollar amount in the document
       ];
       
-      for (const pattern of totalPatterns) {
-        const match = line.match(pattern);
-        if (match && match[1]) {
-          const amount = parseFloat(match[1].replace(/,/g, ''));
-          if (amount > 0 && amount < 100000) { // Reasonable range
-            total = amount;
+      // Look for amounts in various positions (bottom half of document usually has totals)
+      if (i > lines.length / 2) { // Focus on bottom half for financial totals
+        for (const pattern of totalPatterns) {
+          const match = line.match(pattern);
+          if (match && match[1]) {
+            const amount = parseFloat(match[1].replace(/,/g, ''));
+            if (amount > 0 && amount < 100000) { // Reasonable range
+              if (total === 0 || amount > total) { // Take the largest reasonable amount
+                total = amount;
+                console.log(`Found potential total amount: $${amount} in line: "${line}"`);
+              }
+            }
           }
         }
       }
