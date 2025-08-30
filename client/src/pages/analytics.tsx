@@ -411,13 +411,13 @@ export default function Analytics() {
       </Card>
 
       <Tabs defaultValue="real-time" className="w-full">
-        <TabsList className="grid w-full grid-cols-6">
-          <TabsTrigger value="real-time">Real-Time</TabsTrigger>
-          <TabsTrigger value="overview">Overview</TabsTrigger>
-          <TabsTrigger value="profit-loss">P&L Report</TabsTrigger>
-          <TabsTrigger value="cost-analysis">Cost Analysis</TabsTrigger>
-          <TabsTrigger value="business-intelligence">Business Intelligence</TabsTrigger>
-          <TabsTrigger value="trends">Trends</TabsTrigger>
+        <TabsList className="grid w-full grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-1 p-1">
+          <TabsTrigger value="real-time" className="text-xs md:text-sm px-2 md:px-4">Real-Time</TabsTrigger>
+          <TabsTrigger value="overview" className="text-xs md:text-sm px-2 md:px-4">Overview</TabsTrigger>
+          <TabsTrigger value="profit-loss" className="text-xs md:text-sm px-2 md:px-4">P&L Report</TabsTrigger>
+          <TabsTrigger value="cost-analysis" className="text-xs md:text-sm px-2 md:px-4">Cost Analysis</TabsTrigger>
+          <TabsTrigger value="business-intelligence" className="text-xs md:text-sm px-2 md:px-4">Business Intel</TabsTrigger>
+          <TabsTrigger value="trends" className="text-xs md:text-sm px-2 md:px-4">Trends</TabsTrigger>
         </TabsList>
 
         {/* Real-Time Analytics Tab */}
