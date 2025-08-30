@@ -230,7 +230,7 @@ The OCR system works best with image files rather than scanned PDFs.`,
     total: number;
     subtotal: number;
   } {
-    const lines = text.toLowerCase().split('\n');
+    const lines = text.split('\n');
     
     let vendorName = 'Unknown Vendor';
     let invoiceNumber = 'N/A';
@@ -238,37 +238,94 @@ The OCR system works best with image files rather than scanned PDFs.`,
     let total = 0;
     let subtotal = 0;
     
-    // Simple parsing logic
-    for (const line of lines) {
-      // Look for vendor names (common food suppliers)
-      if (line.includes('sysco') || line.includes('us foods') || line.includes('performance food')) {
-        vendorName = line.trim();
+    // Enhanced parsing logic for better field extraction
+    for (let i = 0; i < lines.length; i++) {
+      const line = lines[i].trim();
+      const lowerLine = line.toLowerCase();
+      
+      // Extract vendor name (usually first few lines, company name patterns)
+      if (i < 5 && line.length > 3 && !lowerLine.includes('invoice') && !lowerLine.includes('date') && 
+          !line.match(/^\d/) && !lowerLine.includes('phone') && !lowerLine.includes('email')) {
+        // Look for company patterns
+        if (line.includes('Inc.') || line.includes('LLC') || line.includes('Corp') || 
+            line.includes('Company') || line.includes('Co.') || line.includes('Service') ||
+            line.includes('Food') || line.includes('Supply') || line.includes('Restaurant') ||
+            line.includes('Kitchen') || line.includes('Equipment') || line.includes('Repair')) {
+          vendorName = line;
+        } else if (vendorName === 'Unknown Vendor' && line.length > 5 && line.match(/^[A-Za-z]/)) {
+          vendorName = line; // Fallback to first meaningful text line
+        }
       }
       
-      // Look for invoice numbers
-      const invoiceMatch = line.match(/(?:invoice|inv)[\s#]*(\w+)/i);
-      if (invoiceMatch) {
-        invoiceNumber = invoiceMatch[1];
+      // Look for invoice numbers - multiple patterns
+      const invoicePatterns = [
+        /invoice\s*#?\s*:?\s*(\w+)/i,
+        /inv\s*#?\s*:?\s*(\w+)/i,
+        /^(\d{4,8})$/,  // Standalone number 4-8 digits
+        /#\s*(\d+)/,    // Number with # prefix
+      ];
+      
+      for (const pattern of invoicePatterns) {
+        const match = line.match(pattern);
+        if (match && match[1]) {
+          const candidate = match[1].trim();
+          if (candidate.length >= 3 && candidate.length <= 12) {
+            invoiceNumber = candidate;
+            break;
+          }
+        }
       }
       
-      // Look for total amounts
-      const totalMatch = line.match(/total[\s:$]*(\d+(?:\.\d{2})?)/i);
-      if (totalMatch) {
-        total = parseFloat(totalMatch[1]);
+      // Look for total amounts - multiple patterns
+      const totalPatterns = [
+        /total[\s:$]*(\d+(?:,\d{3})*(?:\.\d{2})?)/i,
+        /amount[\s:$]*(\d+(?:,\d{3})*(?:\.\d{2})?)/i,
+        /balance[\s:$]*(\d+(?:,\d{3})*(?:\.\d{2})?)/i,
+        /\$\s*(\d+(?:,\d{3})*(?:\.\d{2})?)\s*$/, // Dollar amount at end of line
+      ];
+      
+      for (const pattern of totalPatterns) {
+        const match = line.match(pattern);
+        if (match && match[1]) {
+          const amount = parseFloat(match[1].replace(/,/g, ''));
+          if (amount > 0 && amount < 100000) { // Reasonable range
+            total = amount;
+          }
+        }
       }
       
       // Look for subtotal amounts
-      const subtotalMatch = line.match(/subtotal[\s:$]*(\d+(?:\.\d{2})?)/i);
-      if (subtotalMatch) {
-        subtotal = parseFloat(subtotalMatch[1]);
+      const subtotalPatterns = [
+        /subtotal[\s:$]*(\d+(?:,\d{3})*(?:\.\d{2})?)/i,
+        /sub[\s-]*total[\s:$]*(\d+(?:,\d{3})*(?:\.\d{2})?)/i,
+      ];
+      
+      for (const pattern of subtotalPatterns) {
+        const match = line.match(pattern);
+        if (match && match[1]) {
+          const amount = parseFloat(match[1].replace(/,/g, ''));
+          if (amount > 0 && amount < 100000) {
+            subtotal = amount;
+          }
+        }
       }
       
-      // Look for dates
-      const dateMatch = line.match(/(\d{1,2}\/\d{1,2}\/\d{4}|\d{4}-\d{2}-\d{2})/);
-      if (dateMatch) {
-        const parsedDate = new Date(dateMatch[1]);
-        if (!isNaN(parsedDate.getTime())) {
-          invoiceDate = parsedDate.toISOString().split('T')[0];
+      // Look for dates - multiple formats
+      const datePatterns = [
+        /(\d{1,2}\/\d{1,2}\/\d{4})/,     // MM/DD/YYYY
+        /(\d{4}-\d{2}-\d{2})/,           // YYYY-MM-DD  
+        /(\d{1,2}-\d{1,2}-\d{4})/,       // MM-DD-YYYY
+        /(\d{1,2}\/\d{1,2}\/\d{2})/,     // MM/DD/YY
+      ];
+      
+      for (const pattern of datePatterns) {
+        const match = line.match(pattern);
+        if (match && match[1]) {
+          const parsedDate = new Date(match[1]);
+          if (!isNaN(parsedDate.getTime()) && parsedDate.getFullYear() >= 2020) {
+            invoiceDate = parsedDate.toISOString().split('T')[0];
+            break;
+          }
         }
       }
     }
