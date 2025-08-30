@@ -28,6 +28,9 @@ export default function AutomatedOrdering() {
   const [selectedItem, setSelectedItem] = useState('');
   const [triggerType, setTriggerType] = useState('');
   const [ruleName, setRuleName] = useState('');
+  const [reorderPoint, setReorderPoint] = useState(50);
+  const [orderQuantity, setOrderQuantity] = useState(100);
+  const [frequency, setFrequency] = useState('weekly');
   const [editingRule, setEditingRule] = useState<any>(null);
   const [editRuleName, setEditRuleName] = useState('');
   const [editReorderPoint, setEditReorderPoint] = useState(50);
@@ -107,6 +110,9 @@ export default function AutomatedOrdering() {
     setSelectedItem('');
     setSelectedVendor('');
     setTriggerType('');
+    setReorderPoint(50);
+    setOrderQuantity(100);
+    setFrequency('weekly');
   };
 
   return (
@@ -349,6 +355,40 @@ export default function AutomatedOrdering() {
                   <SelectItem value="scheduled">Scheduled (daily/weekly)</SelectItem>
                   <SelectItem value="consumption">Based on consumption rate</SelectItem>
                   <SelectItem value="forecast">AI demand forecast</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label className="text-slate-300">Reorder Point</Label>
+              <Input 
+                type="number"
+                placeholder="50"
+                className="bg-slate-700 border-slate-600 text-white"
+                value={reorderPoint}
+                onChange={(e) => setReorderPoint(Number(e.target.value))}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label className="text-slate-300">Order Quantity</Label>
+              <Input 
+                type="number"
+                placeholder="100"
+                className="bg-slate-700 border-slate-600 text-white"
+                value={orderQuantity}
+                onChange={(e) => setOrderQuantity(Number(e.target.value))}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label className="text-slate-300">Frequency</Label>
+              <Select value={frequency} onValueChange={setFrequency}>
+                <SelectTrigger className="bg-slate-700 border-slate-600 text-white">
+                  <SelectValue placeholder="Select frequency" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="daily">Daily</SelectItem>
+                  <SelectItem value="weekly">Weekly</SelectItem>
+                  <SelectItem value="bi-weekly">Bi-weekly</SelectItem>
+                  <SelectItem value="monthly">Monthly</SelectItem>
                 </SelectContent>
               </Select>
             </div>
