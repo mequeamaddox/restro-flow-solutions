@@ -392,15 +392,15 @@ The OCR system works best with image files rather than scanned PDFs.`,
       // Check if this line looks like a product description
       const productMatch = line.match(/^([A-Z][A-Z\s&\/\-0-9]{3,50})\s*$/);
       if (productMatch && i + 1 < lines.length) {
-        // Check next line for price
+        // Check next line for price - Food Lion format: "10.99 A *"
         const nextLine = lines[i + 1].trim();
-        const priceMatch = nextLine.match(/^(\d+\.?\d*)\s*[A-Z*\s]*\$?(\d+\.\d{2})\s*$/);
+        const priceMatch = nextLine.match(/^(\d+\.\d{2})\s*[A-Z*\s]*$/);
         
         if (priceMatch) {
           const description = productMatch[1].trim();
-          const quantity = parseFloat(priceMatch[1]) || 1;
-          const totalPrice = parseFloat(priceMatch[2]);
-          const unitPrice = totalPrice / quantity;
+          const quantity = 1; // Food Lion doesn't show quantity in this format
+          const totalPrice = parseFloat(priceMatch[1]);
+          const unitPrice = totalPrice;
           
           lineItems.push({
             description,
@@ -410,6 +410,7 @@ The OCR system works best with image files rather than scanned PDFs.`,
           });
           
           console.log(`Found line item: ${description} - Qty: ${quantity} @ $${unitPrice.toFixed(2)} = $${totalPrice.toFixed(2)}`);
+          i++; // Skip the price line since we just processed it
         }
       }
       
