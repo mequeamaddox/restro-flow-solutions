@@ -255,17 +255,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
         if (existingVendor) {
           vendorId = existingVendor.id;
           console.log(`Found existing vendor: ${existingVendor.name} (${existingVendor.id})`);
+          
+          // Update vendor with additional info if we have it and it's missing
+          if ((parsedData.vendorPhone && !existingVendor.phone) || 
+              (parsedData.vendorAddress && !existingVendor.address)) {
+            await storage.updateVendor(existingVendor.id, {
+              phone: parsedData.vendorPhone || existingVendor.phone,
+              address: parsedData.vendorAddress || existingVendor.address
+            });
+            console.log(`Updated vendor with phone: ${parsedData.vendorPhone}, address: ${parsedData.vendorAddress}`);
+          }
         } else {
-          // Create new vendor
+          // Create new vendor with all extracted information
           const newVendor = await storage.createVendor({
             name: parsedData.vendorName,
             contactPerson: null,
             email: null,
-            phone: null,
-            address: null
+            phone: parsedData.vendorPhone || null,
+            address: parsedData.vendorAddress || null
           });
           vendorId = newVendor.id;
-          console.log(`Created new vendor: ${newVendor.name} (${newVendor.id})`);
+          console.log(`Created new vendor: ${newVendor.name} with phone: ${parsedData.vendorPhone}, address: ${parsedData.vendorAddress} (${newVendor.id})`);
         }
       }
       

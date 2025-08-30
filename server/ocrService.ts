@@ -223,6 +223,8 @@ The OCR system works best with image files rather than scanned PDFs.`,
   // Parse invoice data from extracted text
   static parseInvoiceFromText(text: string): {
     vendorName: string;
+    vendorPhone: string;
+    vendorAddress: string;
     invoiceNumber: string;
     invoiceDate: string;
     total: number;
@@ -237,6 +239,8 @@ The OCR system works best with image files rather than scanned PDFs.`,
     const lines = text.split('\n');
     
     let vendorName = 'Unknown Vendor';
+    let vendorPhone = '';
+    let vendorAddress = '';
     let invoiceNumber = 'N/A';
     let invoiceDate = new Date().toISOString().split('T')[0];
     let total = 0;
@@ -277,6 +281,27 @@ The OCR system works best with image files rather than scanned PDFs.`,
                  !lowerLine.includes('department') && !lowerLine.includes('customer') && !lowerLine.includes('order')) {
           vendorName = line;
         }
+      }
+      
+      // Phone number detection (look for patterns like (843) 237-4464 or 843-237-4464)
+      const phoneMatch = line.match(/\(?\d{3}\)?\s*[-.\s]?\d{3}[-.\s]?\d{4}/);
+      if (phoneMatch && !vendorPhone) {
+        vendorPhone = phoneMatch[0];
+        console.log(`Found vendor phone: ${vendorPhone}`);
+      }
+      
+      // Address detection (look for street addresses - numbers + street name)
+      const addressMatch = line.match(/^\d+\s+[A-Za-z\s]+(Ave|Avenue|St|Street|Rd|Road|Blvd|Boulevard|Dr|Drive|Ln|Lane|Way|Hwy|Highway|Pkwy|Parkway|Ct|Court|Pl|Place)/i);
+      if (addressMatch && !vendorAddress) {
+        vendorAddress = line;
+        // Check if next line has city, state, zip
+        if (i + 1 < lines.length) {
+          const nextLine = lines[i + 1].trim();
+          if (nextLine.match(/^[A-Za-z\s]+,?\s+[A-Z]{2}\s*\d{5}/)) {
+            vendorAddress += ', ' + nextLine;
+          }
+        }
+        console.log(`Found vendor address: ${vendorAddress}`);
       }
       
       // Look for invoice numbers - multiple patterns
@@ -475,6 +500,8 @@ The OCR system works best with image files rather than scanned PDFs.`,
     
     return {
       vendorName,
+      vendorPhone,
+      vendorAddress,
       invoiceNumber,
       invoiceDate,
       total,
