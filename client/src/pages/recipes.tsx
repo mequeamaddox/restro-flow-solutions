@@ -675,7 +675,7 @@ export default function Recipes() {
                     <div className="flex items-center space-x-1">
                       <DollarSign className="h-4 w-4 text-blue-600" />
                       <span className="font-medium">
-                        {recipe.sellingPrice ? `$${recipe.sellingPrice.toFixed(2)}` : 'Not set'}
+                        {recipe.sellingPrice ? `$${parseFloat(recipe.sellingPrice).toFixed(2)}` : 'Not set'}
                       </span>
                     </div>
                   </div>
@@ -794,7 +794,7 @@ export default function Recipes() {
                 <div className="text-center">
                   <p className="text-sm text-gray-500">Selling Price</p>
                   <p className="font-medium">
-                    {selectedRecipe.sellingPrice ? `$${selectedRecipe.sellingPrice.toFixed(2)}` : 'Not set'}
+                    {selectedRecipe.sellingPrice ? `$${parseFloat(selectedRecipe.sellingPrice).toFixed(2)}` : 'Not set'}
                   </p>
                 </div>
               </div>
