@@ -331,6 +331,52 @@ The OCR system works best with image files rather than scanned PDFs.`,
         }
       }
       
+      // Look for subtotal amounts
+      const subtotalPatterns = [
+        /subtotal[\s:$]*(\d+(?:,\d{3})*(?:\.\d{2})?)/i,
+        /sub[\s-]?total[\s:$]*(\d+(?:,\d{3})*(?:\.\d{2})?)/i,
+        /net[\s:$]*(\d+(?:,\d{3})*(?:\.\d{2})?)/i,
+      ];
+      
+      for (const pattern of subtotalPatterns) {
+        const match = line.match(pattern);
+        if (match && subtotal === 0) {
+          const amount = parseFloat(match[1].replace(/,/g, ''));
+          if (amount > 0 && amount < 10000) {
+            subtotal = amount;
+            console.log(`Found subtotal: $${amount} in line: "${line}"`);
+            break;
+          }
+        }
+      }
+      
+      // Look for tax amounts
+      const taxPatterns = [
+        /tax[\s:$]*(\d+(?:,\d{3})*(?:\.\d{2})?)/i,
+        /(\d+\.?\d*)\s*%?\s*tax/i,
+        /sales\s*tax[\s:$]*(\d+(?:,\d{3})*(?:\.\d{2})?)/i,
+      ];
+      
+      // Special handling for Food Lion format: "0 00% Tax 1" followed by amount
+      if (line.match(/\d+\s+\d+%\s+tax/i) && i + 1 < lines.length) {
+        const nextLine = lines[i + 1].trim();
+        const taxAmount = parseFloat(nextLine);
+        if (!isNaN(taxAmount) && taxAmount >= 0) {
+          // Don't set tax here, we'll calculate it from total - subtotal
+          console.log(`Found tax amount: $${taxAmount} in line: "${nextLine}"`);
+        }
+      }
+      
+      // Food Lion specific subtotal detection: look for amount before "0 00% Tax"
+      if (line.match(/\d+\s+\d+%\s+tax/i) && i > 0) {
+        const prevLine = lines[i - 1].trim();
+        const subtotalAmount = parseFloat(prevLine);
+        if (!isNaN(subtotalAmount) && subtotalAmount > 0 && subtotal === 0) {
+          subtotal = subtotalAmount;
+          console.log(`Found Food Lion subtotal: $${subtotalAmount} in line: "${prevLine}"`);
+        }
+      }
+      
       // Look for total amounts - multiple patterns (enhanced for various invoice formats)
       const totalPatterns = [
         /total[\s:$]*(\d+(?:,\d{3})*(?:\.\d{2})?)/i,
@@ -493,9 +539,25 @@ The OCR system works best with image files rather than scanned PDFs.`,
     // Calculate total from line items if we found any
     if (lineItems.length > 0) {
       const calculatedTotal = lineItems.reduce((sum, item) => sum + item.totalPrice, 0);
-      // Always prefer calculated total from line items over extracted total
-      total = calculatedTotal;
-      console.log(`Calculated total from line items: $${calculatedTotal.toFixed(2)} (was: $${total})`);
+      // Use calculated total from line items as subtotal (before tax)
+      if (subtotal === 0) {
+        subtotal = calculatedTotal;
+        console.log(`Set subtotal from line items: $${calculatedTotal.toFixed(2)}`);
+      }
+      // If we have a different total extracted, the difference might be tax
+      if (total > 0 && total !== calculatedTotal) {
+        const taxAmount = total - calculatedTotal;
+        if (taxAmount >= 0 && taxAmount < calculatedTotal) { // Reasonable tax amount
+          console.log(`Calculated tax: $${taxAmount.toFixed(2)} (Total: $${total.toFixed(2)} - Subtotal: $${calculatedTotal.toFixed(2)})`);
+        } else {
+          // If tax calculation doesn't make sense, use calculated total
+          total = calculatedTotal;
+          console.log(`Used calculated total from line items: $${calculatedTotal.toFixed(2)}`);
+        }
+      } else {
+        total = calculatedTotal;
+        console.log(`Set total from line items: $${calculatedTotal.toFixed(2)}`);
+      }
     }
     
     return {

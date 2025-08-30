@@ -294,6 +294,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         .substring(0, 2000) // Limit text length
         .trim();
       
+      // Calculate tax from total - subtotal
+      const taxAmount = parsedData.total - parsedData.subtotal;
+      const calculatedTax = taxAmount >= 0 ? taxAmount : 0;
+      
       // Create invoice with OCR data
       const invoiceData = {
         invoiceNumber: parsedData.invoiceNumber,
@@ -301,7 +305,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         invoiceDate: parsedData.invoiceDate,
         subtotal: parsedData.subtotal.toString(),
         total: parsedData.total.toString(),
-        tax: "0",
+        tax: calculatedTax.toString(),
         ocrConfidence: Math.round(ocrResult.confidence),
         uploadMethod: req.body.uploadMethod || 'upload',
         status: 'pending',
