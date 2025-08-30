@@ -411,14 +411,16 @@ export default function Analytics() {
       </Card>
 
       <Tabs defaultValue="real-time" className="w-full">
-        <TabsList className="grid w-full grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-1 p-1">
-          <TabsTrigger value="real-time" className="text-xs md:text-sm px-2 md:px-4">Real-Time</TabsTrigger>
-          <TabsTrigger value="overview" className="text-xs md:text-sm px-2 md:px-4">Overview</TabsTrigger>
-          <TabsTrigger value="profit-loss" className="text-xs md:text-sm px-2 md:px-4">P&L Report</TabsTrigger>
-          <TabsTrigger value="cost-analysis" className="text-xs md:text-sm px-2 md:px-4">Cost Analysis</TabsTrigger>
-          <TabsTrigger value="business-intelligence" className="text-xs md:text-sm px-2 md:px-4">Business Intel</TabsTrigger>
-          <TabsTrigger value="trends" className="text-xs md:text-sm px-2 md:px-4">Trends</TabsTrigger>
-        </TabsList>
+        <div className="w-full overflow-x-auto">
+          <TabsList className="inline-flex h-12 items-center justify-start rounded-md bg-muted p-1 text-muted-foreground min-w-max">
+            <TabsTrigger value="real-time" className="whitespace-nowrap px-4 py-2 text-sm">Real-Time</TabsTrigger>
+            <TabsTrigger value="overview" className="whitespace-nowrap px-4 py-2 text-sm">Overview</TabsTrigger>
+            <TabsTrigger value="profit-loss" className="whitespace-nowrap px-4 py-2 text-sm">P&L Report</TabsTrigger>
+            <TabsTrigger value="cost-analysis" className="whitespace-nowrap px-4 py-2 text-sm">Cost Analysis</TabsTrigger>
+            <TabsTrigger value="business-intelligence" className="whitespace-nowrap px-4 py-2 text-sm">Business Intelligence</TabsTrigger>
+            <TabsTrigger value="trends" className="whitespace-nowrap px-4 py-2 text-sm">Trends</TabsTrigger>
+          </TabsList>
+        </div>
 
         {/* Real-Time Analytics Tab */}
         <TabsContent value="real-time" className="space-y-6">
