@@ -13,9 +13,9 @@ export class OCRService {
       const worker = await createWorker('eng');
       
       // Enhanced Tesseract configuration for better invoice scanning
+      // Note: Some parameters can only be set during initialization
       await worker.setParameters({
         tessedit_char_whitelist: '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz.,/$:-# \n\r\t',
-        tessedit_ocr_engine_mode: 1, // Neural nets LSTM engine only
         tessedit_pageseg_mode: '1', // Automatic page segmentation
       });
       
@@ -77,12 +77,13 @@ Please try:
       
       // Convert PDF to images with high DPI for better OCR
       const convert = pdf2pic.fromBuffer(buffer, {
-        density: 300, // Higher DPI for better quality
+        density: 200, // Good quality without being too large
         saveFilename: "invoice",
-        savePath: "/tmp",
-        format: "png",
-        width: 3000, // Higher resolution
-        height: 3000
+        savePath: "/tmp", 
+        format: "jpeg", // JPEG is more compatible with Tesseract
+        quality: 95,
+        width: 2000,
+        height: 2000
       });
 
       console.log('Attempting PDF to image conversion...');
@@ -95,11 +96,13 @@ Please try:
       if (!result || !result.buffer) {
         console.log('PDF conversion failed, trying with different settings...');
         
-        // Try with more basic settings
+        // Try with more basic settings  
         const basicConvert = pdf2pic.fromBuffer(buffer, {
           density: 150,
           format: "jpeg",
-          quality: 100
+          quality: 90,
+          width: 1200,
+          height: 1200
         });
         
         const basicResult = await basicConvert(1, { responseType: "buffer" });
