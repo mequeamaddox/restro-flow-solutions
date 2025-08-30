@@ -1618,8 +1618,32 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // In-memory storage for this session
-  let sessionRules: any[] = [];
+  // File-based storage for rules persistence
+  const fs = require('fs');
+  const path = require('path');
+  const rulesFilePath = path.join(process.cwd(), 'user-rules.json');
+  
+  function loadUserRules(): any[] {
+    try {
+      if (fs.existsSync(rulesFilePath)) {
+        const data = fs.readFileSync(rulesFilePath, 'utf8');
+        return JSON.parse(data);
+      }
+    } catch (error) {
+      console.error('Error loading user rules:', error);
+    }
+    return [];
+  }
+  
+  function saveUserRules(rules: any[]): void {
+    try {
+      fs.writeFileSync(rulesFilePath, JSON.stringify(rules, null, 2));
+    } catch (error) {
+      console.error('Error saving user rules:', error);
+    }
+  }
+  
+  let sessionRules: any[] = loadUserRules();
 
   // Auto-ordering endpoints
   app.get('/api/auto-ordering/rules', isAuthenticated, async (req: any, res) => {
@@ -1696,8 +1720,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       console.log("Created rule:", newRule);
       
-      // Add to session storage
+      // Add to session storage and save to file
       sessionRules.push(newRule);
+      saveUserRules(sessionRules);
       
       res.status(201).json(newRule);
     } catch (error) {
@@ -1711,10 +1736,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const { id } = req.params;
       const updateData = req.body;
       
-      // Update in session storage
+      // Update in session storage and save to file
       const ruleIndex = sessionRules.findIndex(rule => rule.id === id);
       if (ruleIndex !== -1) {
         sessionRules[ruleIndex] = { ...sessionRules[ruleIndex], ...updateData, updatedAt: new Date().toISOString() };
+        saveUserRules(sessionRules);
         res.json(sessionRules[ruleIndex]);
       } else {
         // Rule not found in session storage, return mock response for demo rules

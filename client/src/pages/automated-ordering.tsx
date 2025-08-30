@@ -19,7 +19,7 @@ import {
   Target,
   Zap
 } from 'lucide-react';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { apiRequest } from '@/lib/queryClient';
 import { useToast } from '@/hooks/use-toast';
 
@@ -218,6 +218,9 @@ export default function AutomatedOrdering() {
                     <DialogContent className="bg-slate-800 border-slate-700">
                       <DialogHeader>
                         <DialogTitle className="text-white">Edit Rule Settings</DialogTitle>
+                        <DialogDescription className="text-slate-400">
+                          Modify the parameters for your automated ordering rule
+                        </DialogDescription>
                       </DialogHeader>
                       <div className="space-y-4">
                         <div className="space-y-2">
