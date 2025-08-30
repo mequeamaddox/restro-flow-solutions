@@ -347,6 +347,7 @@ The OCR system works best with image files rather than scanned PDFs.`,
         /(\d{4}-\d{2}-\d{2})/,           // YYYY-MM-DD  
         /(\d{1,2}-\d{1,2}-\d{4})/,       // MM-DD-YYYY
         /(\d{1,2}\/\d{1,2}\/\d{2})/,     // MM/DD/YY
+        /(\d{1,2}-\d{1,2}-\d{2})/,       // MM-DD-YY (like 4-15-25)
       ];
       
       for (const pattern of datePatterns) {

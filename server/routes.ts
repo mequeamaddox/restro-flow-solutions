@@ -236,9 +236,36 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const parsedData = OCRService.parseInvoiceFromText(ocrResult.text);
       
       // Use vendor hint from filename if no vendor was detected
-      if (!parsedData.vendorName || parsedData.vendorName === 'Unidentified Vendor') {
+      if (!parsedData.vendorName || parsedData.vendorName === 'Unknown Vendor') {
         if (vendorHint) {
           parsedData.vendorName = vendorHint;
+        }
+      }
+      
+      // Find or create vendor based on the extracted name
+      let vendorId = null;
+      if (parsedData.vendorName && parsedData.vendorName !== 'Unknown Vendor') {
+        // Try to find existing vendor with similar name
+        const vendors = await storage.getVendors();
+        const existingVendor = vendors.find(v => 
+          v.name.toLowerCase().includes(parsedData.vendorName.toLowerCase()) ||
+          parsedData.vendorName.toLowerCase().includes(v.name.toLowerCase())
+        );
+        
+        if (existingVendor) {
+          vendorId = existingVendor.id;
+          console.log(`Found existing vendor: ${existingVendor.name} (${existingVendor.id})`);
+        } else {
+          // Create new vendor
+          const newVendor = await storage.createVendor({
+            name: parsedData.vendorName,
+            contactPerson: null,
+            email: null,
+            phone: null,
+            address: null
+          });
+          vendorId = newVendor.id;
+          console.log(`Created new vendor: ${newVendor.name} (${newVendor.id})`);
         }
       }
       
@@ -259,7 +286,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Create invoice with OCR data
       const invoiceData = {
-        ...parsedData,
+        invoiceNumber: parsedData.invoiceNumber,
+        vendorId: vendorId, // Use the resolved vendor ID
+        invoiceDate: parsedData.invoiceDate,
+        subtotal: parsedData.subtotal.toString(),
+        total: parsedData.total.toString(),
+        tax: "0",
         ocrConfidence: Math.round(ocrResult.confidence),
         uploadMethod: req.body.uploadMethod || 'upload',
         status: 'pending',
