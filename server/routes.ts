@@ -1618,40 +1618,47 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // In-memory storage for auto-ordering rules
+  let autoOrderRules: any[] = [];
+
   // Auto-ordering endpoints
   app.get('/api/auto-ordering/rules', isAuthenticated, async (req: any, res) => {
     try {
-      // Mock auto-ordering rules data for now
-      const mockRules = [
-        {
-          id: 'rule-001',
-          itemId: '656278e7-f9a2-4e67-ae69-8d0ac53af00a',
-          itemName: 'Ground Beef (80/20)',
-          vendorId: 'a904b7ad-06a7-4988-aad8-20326cda0af8',
-          vendorName: 'Prime Food Distributors',
-          reorderPoint: 50,
-          orderQuantity: 200,
-          enabled: true,
-          lastTriggered: '2025-08-28T10:30:00Z',
-          estimatedSavings: 1200,
-          frequency: 'weekly'
-        },
-        {
-          id: 'rule-002',
-          itemId: 'b1234567-f9a2-4e67-ae69-8d0ac53af00b',
-          itemName: 'Chicken Breast',
-          vendorId: 'a904b7ad-06a7-4988-aad8-20326cda0af8',
-          vendorName: 'Prime Food Distributors',
-          reorderPoint: 30,
-          orderQuantity: 100,
-          enabled: true,
-          lastTriggered: '2025-08-29T14:15:00Z',
-          estimatedSavings: 800,
-          frequency: 'bi-weekly'
-        }
-      ];
-      
-      res.json(mockRules);
+      // If no user-created rules, return mock data
+      if (autoOrderRules.length === 0) {
+        const mockRules = [
+          {
+            id: 'rule-001',
+            itemId: '656278e7-f9a2-4e67-ae69-8d0ac53af00a',
+            itemName: 'Ground Beef (80/20)',
+            vendorId: 'a904b7ad-06a7-4988-aad8-20326cda0af8',
+            vendorName: 'Prime Food Distributors',
+            reorderPoint: 50,
+            orderQuantity: 200,
+            enabled: true,
+            lastTriggered: '2025-08-28T10:30:00Z',
+            estimatedSavings: 1200,
+            frequency: 'weekly'
+          },
+          {
+            id: 'rule-002',
+            itemId: 'b1234567-f9a2-4e67-ae69-8d0ac53af00b',
+            itemName: 'Chicken Breast',
+            vendorId: 'a904b7ad-06a7-4988-aad8-20326cda0af8',
+            vendorName: 'Prime Food Distributors',
+            reorderPoint: 30,
+            orderQuantity: 100,
+            enabled: true,
+            lastTriggered: '2025-08-29T14:15:00Z',
+            estimatedSavings: 800,
+            frequency: 'bi-weekly'
+          }
+        ];
+        res.json(mockRules);
+      } else {
+        // Return user-created rules
+        res.json(autoOrderRules);
+      }
     } catch (error) {
       console.error("Error fetching auto-ordering rules:", error);
       res.status(500).json({ message: "Failed to fetch auto-ordering rules" });
@@ -1661,14 +1668,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post('/api/auto-ordering/rules', isAuthenticated, async (req: any, res) => {
     try {
       const ruleData = req.body;
-      // In a real implementation, this would save to database
+      
+      // Get item and vendor names from the existing data
+      const inventory = await storage.getInventoryItems();
+      const vendors = await storage.getVendors();
+      
+      const item = inventory.find((i: any) => i.id === ruleData.itemId);
+      const vendor = vendors.find((v: any) => v.id === ruleData.vendorId);
+      
       const newRule = {
         id: `rule-${Date.now()}`,
         ...ruleData,
+        itemName: item?.name || 'Unknown Item',
+        vendorName: vendor?.name || 'Unknown Vendor',
         enabled: true,
         lastTriggered: null,
         estimatedSavings: Math.floor(Math.random() * 2000) + 500
       };
+      
+      // Add to in-memory storage
+      autoOrderRules.push(newRule);
       
       res.status(201).json(newRule);
     } catch (error) {
@@ -1682,8 +1701,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const { id } = req.params;
       const updateData = req.body;
       
-      // In a real implementation, this would update the database
-      res.json({ id, ...updateData, updatedAt: new Date().toISOString() });
+      // Update in in-memory storage
+      const ruleIndex = autoOrderRules.findIndex(rule => rule.id === id);
+      if (ruleIndex !== -1) {
+        autoOrderRules[ruleIndex] = { ...autoOrderRules[ruleIndex], ...updateData, updatedAt: new Date().toISOString() };
+        res.json(autoOrderRules[ruleIndex]);
+      } else {
+        // Rule not found in user-created rules, return mock response
+        res.json({ id, ...updateData, updatedAt: new Date().toISOString() });
+      }
     } catch (error) {
       console.error("Error updating auto-ordering rule:", error);
       res.status(500).json({ message: "Failed to update auto-ordering rule" });
