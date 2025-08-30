@@ -1622,7 +1622,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get('/api/auto-ordering/rules', isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user.id;
+      console.log("Fetching rules for user:", userId);
       const userRules = await storage.getAutoOrderRules(userId);
+      console.log("User rules found:", userRules.length);
       
       // If no user-created rules, return mock data
       if (userRules.length === 0) {
@@ -1669,6 +1671,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const ruleData = req.body;
       const userId = req.user.id;
+      console.log("Creating rule for user:", userId, "with data:", ruleData);
       
       // Get item and vendor names from the existing data
       const inventory = await storage.getInventoryItems();
@@ -1682,8 +1685,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         userId: userId,
         estimatedSavings: Math.floor(Math.random() * 2000) + 500
       };
+      console.log("Rule data to save:", newRuleData);
       
       const newRule = await storage.createAutoOrderRule(newRuleData);
+      console.log("Created rule:", newRule);
       
       // Add item and vendor names for response
       const responseRule = {
