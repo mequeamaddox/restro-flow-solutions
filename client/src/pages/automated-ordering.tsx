@@ -181,7 +181,16 @@ export default function AutomatedOrdering() {
                       toggleRuleMutation.mutate({ ruleId: rule.id, enabled })
                     }
                   />
-                  <Button variant="ghost" size="sm">
+                  <Button 
+                    variant="ghost" 
+                    size="sm"
+                    onClick={() => {
+                      toast({ 
+                        title: "Rule Settings", 
+                        description: `Configure settings for ${rule.ruleName || rule.name}` 
+                      });
+                    }}
+                  >
                     <Settings className="h-4 w-4" />
                   </Button>
                 </div>
