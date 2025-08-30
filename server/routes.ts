@@ -295,6 +295,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         ocrConfidence: Math.round(ocrResult.confidence),
         uploadMethod: req.body.uploadMethod || 'upload',
         status: 'pending',
+        lineItems: parsedData.lineItems, // Include extracted line items
         originalText: sanitizedText,
         processedAt: new Date(),
       };

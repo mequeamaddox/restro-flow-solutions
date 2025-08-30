@@ -227,6 +227,12 @@ The OCR system works best with image files rather than scanned PDFs.`,
     invoiceDate: string;
     total: number;
     subtotal: number;
+    lineItems: Array<{
+      description: string;
+      quantity: number;
+      unitPrice: number;
+      totalPrice: number;
+    }>;
   } {
     const lines = text.split('\n');
     
@@ -235,6 +241,12 @@ The OCR system works best with image files rather than scanned PDFs.`,
     let invoiceDate = new Date().toISOString().split('T')[0];
     let total = 0;
     let subtotal = 0;
+    let lineItems: Array<{
+      description: string;
+      quantity: number;
+      unitPrice: number;
+      totalPrice: number;
+    }> = [];
     
     // Enhanced parsing logic for better field extraction
     for (let i = 0; i < lines.length; i++) {
@@ -362,12 +374,93 @@ The OCR system works best with image files rather than scanned PDFs.`,
       }
     }
     
+    // Extract line items (products with prices)
+    for (let i = 0; i < lines.length; i++) {
+      const line = lines[i].trim();
+      
+      // Look for line items with product descriptions and prices
+      // Pattern: "PRODUCT NAME quantity price" or "PRODUCT NAME price"
+      const lineItemPatterns = [
+        // Food Lion pattern: "FL FINE GRD BF 80/20" followed by "10.99 A *"
+        /^([A-Z][A-Z\s&\/\-0-9]{3,50})\s*$/,  // Product line
+        // Generic pattern: "ITEM NAME 1.23 A" or "ITEM NAME $1.23"
+        /^(.+?)\s+(\d+\.?\d*)\s*[A-Z*]*\s*\$?(\d+\.\d{2})\s*$/,
+        // Alternative: "DESCRIPTION QTY @ PRICE = TOTAL"
+        /^(.+?)\s+(\d+)\s*@\s*\$?(\d+\.\d{2})\s*=?\s*\$?(\d+\.\d{2})\s*$/
+      ];
+      
+      // Check if this line looks like a product description
+      const productMatch = line.match(/^([A-Z][A-Z\s&\/\-0-9]{3,50})\s*$/);
+      if (productMatch && i + 1 < lines.length) {
+        // Check next line for price
+        const nextLine = lines[i + 1].trim();
+        const priceMatch = nextLine.match(/^(\d+\.?\d*)\s*[A-Z*\s]*\$?(\d+\.\d{2})\s*$/);
+        
+        if (priceMatch) {
+          const description = productMatch[1].trim();
+          const quantity = parseFloat(priceMatch[1]) || 1;
+          const totalPrice = parseFloat(priceMatch[2]);
+          const unitPrice = totalPrice / quantity;
+          
+          lineItems.push({
+            description,
+            quantity,
+            unitPrice: Math.round(unitPrice * 100) / 100,
+            totalPrice
+          });
+          
+          console.log(`Found line item: ${description} - Qty: ${quantity} @ $${unitPrice.toFixed(2)} = $${totalPrice.toFixed(2)}`);
+        }
+      }
+      
+      // Also check for single-line items
+      for (const pattern of lineItemPatterns.slice(1)) { // Skip the product-only pattern
+        const match = line.match(pattern);
+        if (match) {
+          let description, quantity, unitPrice, totalPrice;
+          
+          if (match.length === 4) { // Pattern with quantity
+            description = match[1].trim();
+            quantity = parseFloat(match[2]) || 1;
+            totalPrice = parseFloat(match[3]);
+            unitPrice = totalPrice / quantity;
+          } else if (match.length === 5) { // Full pattern with separate total
+            description = match[1].trim();
+            quantity = parseFloat(match[2]) || 1;
+            unitPrice = parseFloat(match[3]);
+            totalPrice = parseFloat(match[4]);
+          }
+          
+          if (description && description.length > 2 && totalPrice > 0) {
+            lineItems.push({
+              description: description.substring(0, 100), // Limit length
+              quantity,
+              unitPrice: Math.round(unitPrice * 100) / 100,
+              totalPrice
+            });
+            
+            console.log(`Found line item: ${description} - Qty: ${quantity} @ $${unitPrice.toFixed(2)} = $${totalPrice.toFixed(2)}`);
+          }
+        }
+      }
+    }
+    
+    // Calculate total from line items if we found any
+    if (lineItems.length > 0) {
+      const calculatedTotal = lineItems.reduce((sum, item) => sum + item.totalPrice, 0);
+      if (total === 0 || Math.abs(calculatedTotal - total) < 5) { // Use calculated if close or if no total found
+        total = calculatedTotal;
+        console.log(`Calculated total from line items: $${calculatedTotal.toFixed(2)}`);
+      }
+    }
+    
     return {
       vendorName,
       invoiceNumber,
       invoiceDate,
       total,
-      subtotal
+      subtotal,
+      lineItems
     };
   }
 }

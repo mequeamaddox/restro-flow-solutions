@@ -29,7 +29,8 @@ import {
   Camera,
   FileImage,
   Scan,
-  Trash2
+  Trash2,
+  Package
 } from "lucide-react";
 import { format } from "date-fns";
 import { SubscriptionBanner } from "@/components/subscription/subscription-banner";
@@ -506,6 +507,70 @@ export default function InvoiceProcessing() {
                                         Processed: {format(new Date(invoice.processedAt), 'MMM dd, yyyy HH:mm')}
                                       </div>
                                     )}
+                                  </div>
+                                </div>
+                              )}
+
+                              {/* Line Items (if available) */}
+                              {invoice.lineItems && invoice.lineItems.length > 0 && (
+                                <div className="md:col-span-2 space-y-4">
+                                  <h3 className="text-lg font-semibold text-white border-b border-slate-700 pb-2 flex items-center gap-2">
+                                    Line Items
+                                    <span className="text-sm text-slate-400 font-normal">
+                                      ({invoice.lineItems.length} items)
+                                    </span>
+                                  </h3>
+                                  <div className="bg-slate-800 rounded-lg overflow-hidden">
+                                    <Table>
+                                      <TableHeader>
+                                        <TableRow className="border-slate-700">
+                                          <TableHead className="text-slate-300">Description</TableHead>
+                                          <TableHead className="text-slate-300 text-right">Qty</TableHead>
+                                          <TableHead className="text-slate-300 text-right">Unit Price</TableHead>
+                                          <TableHead className="text-slate-300 text-right">Total</TableHead>
+                                        </TableRow>
+                                      </TableHeader>
+                                      <TableBody>
+                                        {invoice.lineItems.map((item: any, index: number) => (
+                                          <TableRow key={index} className="border-slate-700">
+                                            <TableCell className="text-slate-300 font-medium">
+                                              {item.description || 'Unknown Item'}
+                                            </TableCell>
+                                            <TableCell className="text-slate-300 text-right">
+                                              {item.quantity || 1}
+                                            </TableCell>
+                                            <TableCell className="text-slate-300 text-right">
+                                              ${(item.unitPrice || 0).toFixed(2)}
+                                            </TableCell>
+                                            <TableCell className="text-green-400 text-right font-medium">
+                                              ${(item.totalPrice || 0).toFixed(2)}
+                                            </TableCell>
+                                          </TableRow>
+                                        ))}
+                                        <TableRow className="border-slate-600 bg-slate-700/50">
+                                          <TableCell colSpan={3} className="text-slate-300 font-semibold">
+                                            Total from Line Items:
+                                          </TableCell>
+                                          <TableCell className="text-green-400 text-right font-bold">
+                                            ${invoice.lineItems.reduce((sum: number, item: any) => sum + (item.totalPrice || 0), 0).toFixed(2)}
+                                          </TableCell>
+                                        </TableRow>
+                                      </TableBody>
+                                    </Table>
+                                  </div>
+                                  <div className="flex justify-end">
+                                    <Button
+                                      variant="outline"
+                                      size="sm"
+                                      className="border-slate-600 text-slate-300 hover:bg-slate-700"
+                                      onClick={() => {
+                                        // TODO: Add function to import line items to inventory
+                                        console.log('Import to inventory:', invoice.lineItems);
+                                      }}
+                                    >
+                                      <Package className="h-4 w-4 mr-2" />
+                                      Import to Inventory
+                                    </Button>
                                   </div>
                                 </div>
                               )}
