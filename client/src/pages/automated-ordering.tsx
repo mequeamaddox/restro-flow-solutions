@@ -24,6 +24,9 @@ import { useToast } from '@/hooks/use-toast';
 
 export default function AutomatedOrdering() {
   const [selectedVendor, setSelectedVendor] = useState('');
+  const [selectedItem, setSelectedItem] = useState('');
+  const [triggerType, setTriggerType] = useState('');
+  const [ruleName, setRuleName] = useState('');
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
@@ -59,6 +62,34 @@ export default function AutomatedOrdering() {
       queryClient.invalidateQueries({ queryKey: ['/api/auto-ordering/rules'] });
     }
   });
+
+  const handleCreateRule = () => {
+    if (!ruleName || !selectedItem || !selectedVendor || !triggerType) {
+      toast({ 
+        title: "Please fill in all fields", 
+        variant: "destructive" 
+      });
+      return;
+    }
+
+    const ruleData = {
+      ruleName,
+      itemId: selectedItem,
+      vendorId: selectedVendor,
+      triggerType,
+      reorderPoint: 50, // Default values
+      orderQuantity: 100,
+      frequency: 'weekly'
+    };
+
+    createRuleMutation.mutate(ruleData);
+    
+    // Reset form
+    setRuleName('');
+    setSelectedItem('');
+    setSelectedVendor('');
+    setTriggerType('');
+  };
 
   return (
     <div className="space-y-6">
@@ -207,11 +238,13 @@ export default function AutomatedOrdering() {
               <Input 
                 placeholder="e.g., Chicken Breast Auto-Order"
                 className="bg-slate-700 border-slate-600 text-white"
+                value={ruleName}
+                onChange={(e) => setRuleName(e.target.value)}
               />
             </div>
             <div className="space-y-2">
               <Label className="text-slate-300">Inventory Item</Label>
-              <Select>
+              <Select value={selectedItem} onValueChange={setSelectedItem}>
                 <SelectTrigger className="bg-slate-700 border-slate-600 text-white">
                   <SelectValue placeholder="Select inventory item" />
                 </SelectTrigger>
@@ -241,7 +274,7 @@ export default function AutomatedOrdering() {
             </div>
             <div className="space-y-2">
               <Label className="text-slate-300">Trigger Type</Label>
-              <Select>
+              <Select value={triggerType} onValueChange={setTriggerType}>
                 <SelectTrigger className="bg-slate-700 border-slate-600 text-white">
                   <SelectValue placeholder="When to order" />
                 </SelectTrigger>
@@ -259,8 +292,12 @@ export default function AutomatedOrdering() {
             <Button variant="outline" className="border-slate-600 text-slate-300">
               Preview Rule
             </Button>
-            <Button className="bg-blue-600 hover:bg-blue-700">
-              Create Rule
+            <Button 
+              className="bg-blue-600 hover:bg-blue-700"
+              onClick={handleCreateRule}
+              disabled={createRuleMutation.isPending}
+            >
+              {createRuleMutation.isPending ? 'Creating...' : 'Create Rule'}
             </Button>
           </div>
         </CardContent>
