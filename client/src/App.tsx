@@ -14,18 +14,14 @@ import Inventory from "@/pages/inventory";
 import Recipes from "@/pages/recipes";
 import Vendors from "@/pages/vendors";
 import PurchaseOrders from "@/pages/purchase-orders";
-import Reports from "@/pages/reports";
 import WasteTracking from "@/pages/waste-tracking";
 import PosIntegration from "@/pages/pos-integration";
 import Analytics from "@/pages/analytics";
 import BarcodeTest from "@/pages/barcode-test";
 import Settings from "@/pages/settings";
 import InvoiceProcessing from "@/pages/invoice-processing";
-import CostMonitoring from "@/pages/cost-monitoring";
-import BusinessIntelligence from "@/pages/business-intelligence";
 import AutomatedOrdering from "@/pages/automated-ordering";
 import Forecasting from "@/pages/forecasting";
-import RealTimeAnalytics from "@/pages/real-time-analytics";
 import HRDashboard from "@/pages/hr-dashboard";
 import HREmployees from "@/pages/hr-employees";
 import HRTimeClock from "@/pages/hr-time-clock";
@@ -79,17 +75,12 @@ function Router() {
                 <Route path="/waste-tracking" component={WasteTracking} />
                 <Route path="/pos-integration" component={PosIntegration} />
                 <Route path="/analytics" component={Analytics} />
-                <Route path="/reports" component={Analytics} />
                 <Route path="/invoice-processing" component={InvoiceProcessing} />
-                <Route path="/cost-monitoring" component={CostMonitoring} />
-                <Route path="/business-intelligence" component={BusinessIntelligence} />
                 <Route path="/automated-ordering" component={AutomatedOrdering} />
                 <Route path="/forecasting" component={Forecasting} />
-                <Route path="/real-time-analytics" component={RealTimeAnalytics} />
                 <Route path="/barcode-test" component={BarcodeTest} />
                 <Route path="/settings" component={Settings} />
                 {/* HR Employee Management Add-on Routes */}
-                <Route path="/hr" component={HRDashboard} />
                 <Route path="/hr/dashboard" component={HRDashboard} />
                 <Route path="/hr/employees" component={HREmployees} />
                 <Route path="/hr/time-clock" component={HRTimeClock} />

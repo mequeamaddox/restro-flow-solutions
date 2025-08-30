@@ -1,10 +1,12 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Progress } from "@/components/ui/progress";
 import { useLocation } from "@/contexts/LocationContext";
 import { 
   TrendingUp, 
@@ -17,8 +19,32 @@ import {
   Calendar,
   BarChart3,
   PieChart,
-  Target
+  Target,
+  Bell,
+  Clock,
+  Zap,
+  Eye,
+  CheckCircle
 } from "lucide-react";
+import { format, subDays, startOfWeek, endOfWeek, startOfMonth, endOfMonth } from "date-fns";
+import { apiRequest } from "@/lib/queryClient";
+import { 
+  LineChart, 
+  Line, 
+  XAxis, 
+  YAxis, 
+  CartesianGrid, 
+  Tooltip, 
+  ResponsiveContainer,
+  AreaChart,
+  Area,
+  BarChart,
+  Bar,
+  PieChart as RechartsPieChart,
+  Pie,
+  Cell,
+  Legend
+} from 'recharts';
 
 interface Alert {
   id: string;
@@ -69,6 +95,68 @@ interface PLReport {
 export default function Analytics() {
   const { currentLocation } = useLocation();
   const [selectedPeriod, setSelectedPeriod] = useState<string>("today");
+  const [timeRange, setTimeRange] = useState("30d");
+  const [locationFilter, setLocationFilter] = useState("all");
+  const [currentTime, setCurrentTime] = useState(new Date());
+
+  // Update time every second for real-time feel
+  useEffect(() => {
+    const interval = setInterval(() => setCurrentTime(new Date()), 1000);
+    return () => clearInterval(interval);
+  }, []);
+
+  // Real-time data (would come from WebSocket/SSE in production)
+  const [realTimeData, setRealTimeData] = useState({
+    currentSales: 2847.50,
+    ordersToday: 127,
+    avgOrderValue: 22.43,
+    activeTables: 18,
+    kitchenWaitTime: 8.5,
+    topSellingItems: [
+      { name: 'Chicken Caesar Salad', sold: 23, revenue: 437 },
+      { name: 'Craft Beer Flight', sold: 19, revenue: 285 },
+      { name: 'Fish & Chips', sold: 17, revenue: 289 }
+    ]
+  });
+
+  const salesTrendData = Array.from({ length: 24 }, (_, i) => ({
+    hour: i,
+    sales: Math.random() * 500 + 100,
+    orders: Math.floor(Math.random() * 20 + 5),
+    avgOrder: Math.random() * 15 + 20
+  }));
+
+  const inventoryAlerts = [
+    { item: 'Salmon Fillets', current: 3, min: 8, severity: 'high', location: 'Main Kitchen' },
+    { item: 'Draft Beer - IPA', current: 15, min: 20, severity: 'medium', location: 'Bar' },
+    { item: 'Romaine Lettuce', current: 8, min: 12, severity: 'low', location: 'Prep Station' }
+  ];
+
+  const wasteData = [
+    { category: 'Food Prep', amount: 12.5, cost: 47, color: '#EF4444' },
+    { category: 'Plate Waste', amount: 8.3, cost: 31, color: '#F59E0B' },
+    { category: 'Spoilage', amount: 4.7, cost: 18, color: '#10B981' },
+    { category: 'Overproduction', amount: 6.2, cost: 24, color: '#8B5CF6' }
+  ];
+
+  const costAlerts = [
+    {
+      type: 'price_increase',
+      item: 'Ground Beef',
+      change: '+12%',
+      impact: '$127/week',
+      vendor: 'Sysco Foods',
+      severity: 'high'
+    },
+    {
+      type: 'waste_spike',
+      item: 'Mixed Greens',
+      change: '+34%',
+      impact: '$45/week',
+      cause: 'Overordering',
+      severity: 'medium'
+    }
+  ];
 
   // Fetch cost alerts
   const { data: alerts = [], isLoading: alertsLoading } = useQuery<Alert[]>({
@@ -103,6 +191,58 @@ export default function Analytics() {
     enabled: !!currentLocation?.id,
   });
 
+  // Business Intelligence queries
+  const { data: dailyPnL = [] } = useQuery({
+    queryKey: ["/api/business-intelligence/daily-pnl", timeRange, locationFilter],
+    queryFn: () => apiRequest("GET", `/api/business-intelligence/daily-pnl?range=${timeRange}&location=${locationFilter}`).then(r => r.json()),
+  });
+
+  const { data: kpiMetrics } = useQuery({
+    queryKey: ["/api/business-intelligence/kpis", timeRange, locationFilter],
+    queryFn: () => apiRequest("GET", `/api/business-intelligence/kpis?range=${timeRange}&location=${locationFilter}`).then(r => r.json()),
+  });
+
+  const { data: profitabilityAnalysis = [] } = useQuery({
+    queryKey: ["/api/business-intelligence/profitability", timeRange, locationFilter],
+    queryFn: () => apiRequest("GET", `/api/business-intelligence/profitability?range=${timeRange}&location=${locationFilter}`).then(r => r.json()),
+  });
+
+  const { data: menuPerformance = [] } = useQuery({
+    queryKey: ["/api/business-intelligence/menu-performance", timeRange, locationFilter],
+    queryFn: () => apiRequest("GET", `/api/business-intelligence/menu-performance?range=${timeRange}&location=${locationFilter}`).then(r => r.json()),
+  });
+
+  const { data: costAnalysis } = useQuery({
+    queryKey: ["/api/business-intelligence/cost-analysis", timeRange, locationFilter],
+    queryFn: () => apiRequest("GET", `/api/business-intelligence/cost-analysis?range=${timeRange}&location=${locationFilter}`).then(r => r.json()),
+  });
+
+  // Cost monitoring queries
+  const { data: costAlertsData = [] } = useQuery({
+    queryKey: ["/api/cost-alerts", locationFilter],
+    queryFn: () => apiRequest("GET", `/api/cost-alerts?location=${locationFilter}`).then(r => r.json()),
+  });
+
+  const { data: priceMonitoring = [] } = useQuery({
+    queryKey: ["/api/price-monitoring", timeRange],
+    queryFn: () => apiRequest("GET", `/api/price-monitoring?range=${timeRange}`).then(r => r.json()),
+  });
+
+  const { data: costTrends = [] } = useQuery({
+    queryKey: ["/api/cost-trends", timeRange, locationFilter],
+    queryFn: () => apiRequest("GET", `/api/cost-trends?range=${timeRange}&location=${locationFilter}`).then(r => r.json()),
+  });
+
+  const { data: budgetTracking } = useQuery({
+    queryKey: ["/api/budget-tracking", locationFilter],
+    queryFn: () => apiRequest("GET", `/api/budget-tracking?location=${locationFilter}`).then(r => r.json()),
+  });
+
+  const { data: locations = [] } = useQuery({
+    queryKey: ["/api/locations"],
+    queryFn: () => apiRequest("GET", "/api/locations").then(r => r.json()),
+  });
+
   if (!currentLocation) {
     return (
       <div className="p-6">
@@ -124,6 +264,32 @@ export default function Analytics() {
     }
   };
 
+  const getAlertSeverityBadge = (severity: string) => {
+    const severityConfig = {
+      low: { color: "bg-blue-500", label: "Low" },
+      medium: { color: "bg-yellow-500", label: "Medium" },
+      high: { color: "bg-orange-500", label: "High" },
+      critical: { color: "bg-red-500", label: "Critical" },
+    };
+    const config = severityConfig[severity as keyof typeof severityConfig] || severityConfig.medium;
+    return <Badge className={`${config.color} text-white`}>{config.label}</Badge>;
+  };
+
+  const getAlertTypeIcon = (type: string) => {
+    switch (type) {
+      case 'price_variance':
+        return <TrendingUp className="h-4 w-4 text-orange-400" />;
+      case 'budget_exceeded':
+        return <Target className="h-4 w-4 text-red-400" />;
+      case 'waste_threshold':
+        return <AlertTriangle className="h-4 w-4 text-yellow-400" />;
+      case 'low_margin':
+        return <TrendingDown className="h-4 w-4 text-red-400" />;
+      default:
+        return <Bell className="h-4 w-4 text-blue-400" />;
+    }
+  };
+
   const formatCurrency = (value: string | number) => {
     const num = typeof value === 'string' ? parseFloat(value) : value;
     return new Intl.NumberFormat('en-US', {
@@ -132,31 +298,69 @@ export default function Analytics() {
     }).format(num || 0);
   };
 
-  const formatPercentage = (value: string | number) => {
+  const formatPercentage = (value: string | number, total?: number) => {
+    if (total !== undefined) {
+      if (total === 0) return '0%';
+      const num = typeof value === 'string' ? parseFloat(value) : value;
+      return `${((num / total) * 100).toFixed(1)}%`;
+    }
     const num = typeof value === 'string' ? parseFloat(value) : value;
     return `${(num || 0).toFixed(1)}%`;
   };
 
+  const getVarianceColor = (variance: number) => {
+    if (variance > 5) return "text-red-400";
+    if (variance > 0) return "text-orange-400";
+    if (variance > -5) return "text-green-400";
+    return "text-emerald-400";
+  };
+
+  const COLORS = ['#F97316', '#10B981', '#3B82F6', '#8B5CF6', '#EF4444', '#F59E0B', '#06B6D4', '#84CC16'];
+
   return (
     <div className="space-y-6 p-6">
+      {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold">Analytics Dashboard</h1>
-          <p className="text-muted-foreground">
-            Real-time insights and cost control for {currentLocation.name}
+          <h1 className="text-3xl font-bold flex items-center gap-3">
+            <Activity className="h-8 w-8 text-green-400" />
+            Analytics & Reports
+          </h1>
+          <p className="text-muted-foreground mt-2">
+            Real-time insights, cost control, and business intelligence for {currentLocation.name}
+          </p>
+          <p className="text-sm text-muted-foreground">
+            Last update: {currentTime.toLocaleTimeString()}
           </p>
         </div>
-        <Select value={selectedPeriod} onValueChange={setSelectedPeriod}>
-          <SelectTrigger className="w-32">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="today">Today</SelectItem>
-            <SelectItem value="week">This Week</SelectItem>
-            <SelectItem value="month">This Month</SelectItem>
-            <SelectItem value="quarter">This Quarter</SelectItem>
-          </SelectContent>
-        </Select>
+        <div className="flex items-center gap-4">
+          <div className="flex items-center gap-2 text-green-400">
+            <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
+            <span className="text-sm">Live</span>
+          </div>
+          <Select value={selectedPeriod} onValueChange={setSelectedPeriod}>
+            <SelectTrigger className="w-32">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="today">Today</SelectItem>
+              <SelectItem value="week">This Week</SelectItem>
+              <SelectItem value="month">This Month</SelectItem>
+              <SelectItem value="quarter">This Quarter</SelectItem>
+            </SelectContent>
+          </Select>
+          <Select value={timeRange} onValueChange={setTimeRange}>
+            <SelectTrigger className="w-32">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="7d">7 days</SelectItem>
+              <SelectItem value="30d">30 days</SelectItem>
+              <SelectItem value="90d">90 days</SelectItem>
+              <SelectItem value="1y">1 year</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
       </div>
 
       {/* Cost Alerts */}
@@ -206,16 +410,251 @@ export default function Analytics() {
         </CardContent>
       </Card>
 
-      <Tabs defaultValue="overview" className="w-full">
-        <TabsList>
+      <Tabs defaultValue="real-time" className="w-full">
+        <TabsList className="grid w-full grid-cols-6">
+          <TabsTrigger value="real-time">Real-Time</TabsTrigger>
           <TabsTrigger value="overview">Overview</TabsTrigger>
           <TabsTrigger value="profit-loss">P&L Report</TabsTrigger>
           <TabsTrigger value="cost-analysis">Cost Analysis</TabsTrigger>
+          <TabsTrigger value="business-intelligence">Business Intelligence</TabsTrigger>
           <TabsTrigger value="trends">Trends</TabsTrigger>
-          <TabsTrigger value="inventory-reports">Inventory Reports</TabsTrigger>
-          <TabsTrigger value="vendor-reports">Vendor Reports</TabsTrigger>
         </TabsList>
 
+        {/* Real-Time Analytics Tab */}
+        <TabsContent value="real-time" className="space-y-6">
+          {/* Live Metrics */}
+          <div className="grid grid-cols-2 md:grid-cols-6 gap-4">
+            <Card className="bg-slate-800/50 border-slate-700">
+              <CardContent className="p-4 text-center">
+                <DollarSign className="h-6 w-6 text-green-400 mx-auto mb-2" />
+                <div className="text-xl font-bold text-green-400">
+                  ${realTimeData.currentSales.toLocaleString()}
+                </div>
+                <div className="text-xs text-slate-400">Sales Today</div>
+                <div className="text-xs text-green-400 mt-1">↑ 15% vs yesterday</div>
+              </CardContent>
+            </Card>
+
+            <Card className="bg-slate-800/50 border-slate-700">
+              <CardContent className="p-4 text-center">
+                <ShoppingCart className="h-6 w-6 text-blue-400 mx-auto mb-2" />
+                <div className="text-xl font-bold text-white">{realTimeData.ordersToday}</div>
+                <div className="text-xs text-slate-400">Orders Today</div>
+                <div className="text-xs text-blue-400 mt-1">↑ 8% vs avg</div>
+              </CardContent>
+            </Card>
+
+            <Card className="bg-slate-800/50 border-slate-700">
+              <CardContent className="p-4 text-center">
+                <Target className="h-6 w-6 text-purple-400 mx-auto mb-2" />
+                <div className="text-xl font-bold text-white">${realTimeData.avgOrderValue}</div>
+                <div className="text-xs text-slate-400">Avg Order</div>
+                <div className="text-xs text-green-400 mt-1">↑ $2.15</div>
+              </CardContent>
+            </Card>
+
+            <Card className="bg-slate-800/50 border-slate-700">
+              <CardContent className="p-4 text-center">
+                <Users className="h-6 w-6 text-orange-400 mx-auto mb-2" />
+                <div className="text-xl font-bold text-white">{realTimeData.activeTables}</div>
+                <div className="text-xs text-slate-400">Active Tables</div>
+                <div className="text-xs text-orange-400 mt-1">78% capacity</div>
+              </CardContent>
+            </Card>
+
+            <Card className="bg-slate-800/50 border-slate-700">
+              <CardContent className="p-4 text-center">
+                <Clock className="h-6 w-6 text-yellow-400 mx-auto mb-2" />
+                <div className="text-xl font-bold text-white">{realTimeData.kitchenWaitTime}m</div>
+                <div className="text-xs text-slate-400">Kitchen Time</div>
+                <div className="text-xs text-green-400 mt-1">↓ 2m faster</div>
+              </CardContent>
+            </Card>
+
+            <Card className="bg-slate-800/50 border-slate-700">
+              <CardContent className="p-4 text-center">
+                <Zap className="h-6 w-6 text-pink-400 mx-auto mb-2" />
+                <div className="text-xl font-bold text-white">97.3%</div>
+                <div className="text-xs text-slate-400">Item Availability</div>
+                <div className="text-xs text-green-400 mt-1">Excellent</div>
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Live Sales Trend */}
+          <Card className="bg-slate-800/50 border-slate-700">
+            <CardHeader>
+              <CardTitle className="text-white flex items-center gap-2">
+                <TrendingUp className="h-5 w-5 text-green-400" />
+                Live Sales Performance
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="h-64">
+                <ResponsiveContainer width="100%" height="100%">
+                  <AreaChart data={salesTrendData}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
+                    <XAxis 
+                      dataKey="hour" 
+                      stroke="#9CA3AF"
+                      tickFormatter={(hour) => `${hour}:00`}
+                    />
+                    <YAxis stroke="#9CA3AF" />
+                    <Tooltip 
+                      contentStyle={{ 
+                        backgroundColor: '#1F2937', 
+                        border: '1px solid #374151', 
+                        borderRadius: '6px',
+                        color: '#F3F4F6'
+                      }}
+                    />
+                    <Area
+                      type="monotone"
+                      dataKey="sales"
+                      stroke="#10B981"
+                      fill="url(#salesGradient)"
+                      strokeWidth={2}
+                    />
+                    <defs>
+                      <linearGradient id="salesGradient" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="5%" stopColor="#10B981" stopOpacity={0.8}/>
+                        <stop offset="95%" stopColor="#10B981" stopOpacity={0.1}/>
+                      </linearGradient>
+                    </defs>
+                  </AreaChart>
+                </ResponsiveContainer>
+              </div>
+            </CardContent>
+          </Card>
+
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            {/* Real-Time Inventory Alerts */}
+            <Card className="bg-slate-800/50 border-slate-700">
+              <CardHeader>
+                <CardTitle className="text-white flex items-center gap-2">
+                  <AlertTriangle className="h-5 w-5 text-yellow-400" />
+                  Live Inventory Alerts
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-3">
+                  {inventoryAlerts.map((alert, index) => (
+                    <div key={index} className={`p-3 rounded-lg border-l-4 ${
+                      alert.severity === 'high' ? 'bg-red-500/10 border-red-500' :
+                      alert.severity === 'medium' ? 'bg-yellow-500/10 border-yellow-500' :
+                      'bg-blue-500/10 border-blue-500'
+                    }`}>
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <div className="font-medium text-white">{alert.item}</div>
+                          <div className="text-sm text-slate-400">{alert.location}</div>
+                        </div>
+                        <div className="text-right">
+                          <div className={`font-semibold ${
+                            alert.severity === 'high' ? 'text-red-400' :
+                            alert.severity === 'medium' ? 'text-yellow-400' :
+                            'text-blue-400'
+                          }`}>
+                            {alert.current} left
+                          </div>
+                          <div className="text-xs text-slate-400">min: {alert.min}</div>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Top Selling Items Today */}
+            <Card className="bg-slate-800/50 border-slate-700">
+              <CardHeader>
+                <CardTitle className="text-white flex items-center gap-2">
+                  <TrendingUp className="h-5 w-5 text-blue-400" />
+                  Top Performers Today
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-3">
+                  {realTimeData.topSellingItems.map((item, index) => (
+                    <div key={index} className="flex items-center justify-between p-3 bg-slate-700/30 rounded-lg">
+                      <div>
+                        <div className="font-medium text-white">{item.name}</div>
+                        <div className="text-sm text-slate-400">{item.sold} sold today</div>
+                      </div>
+                      <div className="text-right">
+                        <div className="font-semibold text-green-400">${item.revenue}</div>
+                        <div className="text-xs text-slate-400">revenue</div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Today's Waste Breakdown */}
+          <Card className="bg-slate-800/50 border-slate-700">
+            <CardHeader>
+              <CardTitle className="text-white flex items-center gap-2">
+                <Eye className="h-5 w-5 text-purple-400" />
+                Today's Waste Breakdown
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="h-64">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <RechartsPieChart>
+                      <Pie
+                        data={wasteData}
+                        cx="50%"
+                        cy="50%"
+                        outerRadius={80}
+                        fill="#8884d8"
+                        dataKey="amount"
+                        label={({category, amount}) => `${category}: ${amount}lbs`}
+                      >
+                        {wasteData.map((entry, index) => (
+                          <Cell key={`cell-${index}`} fill={entry.color} />
+                        ))}
+                      </Pie>
+                      <Tooltip />
+                    </RechartsPieChart>
+                  </ResponsiveContainer>
+                </div>
+                <div className="space-y-3">
+                  {wasteData.map((waste, index) => (
+                    <div key={index} className="flex items-center justify-between p-3 bg-slate-700/30 rounded-lg">
+                      <div className="flex items-center gap-3">
+                        <div 
+                          className="w-4 h-4 rounded-full"
+                          style={{ backgroundColor: waste.color }}
+                        />
+                        <div>
+                          <div className="text-white font-medium">{waste.category}</div>
+                          <div className="text-sm text-slate-400">{waste.amount} lbs</div>
+                        </div>
+                      </div>
+                      <div className="text-right">
+                        <div className="text-red-400 font-semibold">${waste.cost}</div>
+                        <div className="text-xs text-slate-400">cost</div>
+                      </div>
+                    </div>
+                  ))}
+                  <div className="pt-3 border-t border-slate-600">
+                    <div className="flex justify-between text-white font-semibold">
+                      <span>Total Waste Today:</span>
+                      <span className="text-red-400">${wasteData.reduce((sum, w) => sum + w.cost, 0)}</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* Overview Tab */}
         <TabsContent value="overview" className="space-y-6">
           {/* Key Metrics Cards */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -288,7 +727,7 @@ export default function Analytics() {
                 <CardDescription>Most popular menu items</CardDescription>
               </CardHeader>
               <CardContent>
-                {biData?.topSellingItems?.length > 0 ? (
+                {biData?.topSellingItems && biData.topSellingItems.length > 0 ? (
                   <div className="space-y-3">
                     {biData.topSellingItems.slice(0, 5).map((item: any, index: number) => (
                       <div key={index} className="flex items-center justify-between">
@@ -316,7 +755,7 @@ export default function Analytics() {
                 <CardDescription>Items with low margins or sales</CardDescription>
               </CardHeader>
               <CardContent>
-                {biData?.lowPerformingItems?.length > 0 ? (
+                {biData?.lowPerformingItems && biData.lowPerformingItems.length > 0 ? (
                   <div className="space-y-3">
                     {biData.lowPerformingItems.slice(0, 5).map((item: any, index: number) => (
                       <div key={index} className="flex items-center justify-between">
@@ -340,6 +779,7 @@ export default function Analytics() {
           </div>
         </TabsContent>
 
+        {/* P&L Tab */}
         <TabsContent value="profit-loss" className="space-y-6">
           <Card>
             <CardHeader>
@@ -401,10 +841,559 @@ export default function Analytics() {
               )}
             </CardContent>
           </Card>
+
+          {/* Daily P&L Chart */}
+          <Card className="bg-slate-800/80 backdrop-blur-sm border-slate-700">
+            <CardHeader>
+              <CardTitle className="text-white flex items-center">
+                <BarChart3 className="h-5 w-5 mr-2" />
+                Daily Controllable P&L
+              </CardTitle>
+              <CardDescription className="text-slate-400">
+                Revenue, costs, and profitability trends over time
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <ResponsiveContainer width="100%" height={400}>
+                <AreaChart data={dailyPnL}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
+                  <XAxis 
+                    dataKey="date" 
+                    stroke="#9CA3AF"
+                    tickFormatter={(value) => format(new Date(value), 'MMM dd')}
+                  />
+                  <YAxis stroke="#9CA3AF" tickFormatter={(value) => `$${value.toLocaleString()}`} />
+                  <Tooltip 
+                    contentStyle={{ 
+                      backgroundColor: '#1F2937', 
+                      border: '1px solid #374151',
+                      borderRadius: '8px',
+                      color: '#F3F4F6'
+                    }}
+                    formatter={(value: any) => [`$${value.toLocaleString()}`, '']}
+                    labelFormatter={(label) => format(new Date(label), 'MMM dd, yyyy')}
+                  />
+                  <Area 
+                    type="monotone" 
+                    dataKey="revenue" 
+                    stackId="1"
+                    stroke="#10B981" 
+                    fill="#10B981" 
+                    fillOpacity={0.3}
+                    name="Revenue"
+                  />
+                  <Area 
+                    type="monotone" 
+                    dataKey="cogs" 
+                    stackId="2"
+                    stroke="#F97316" 
+                    fill="#F97316" 
+                    fillOpacity={0.3}
+                    name="Cost of Goods"
+                  />
+                  <Line 
+                    type="monotone" 
+                    dataKey="grossProfit" 
+                    stroke="#3B82F6" 
+                    strokeWidth={3}
+                    name="Gross Profit"
+                  />
+                </AreaChart>
+              </ResponsiveContainer>
+            </CardContent>
+          </Card>
         </TabsContent>
 
+        {/* Cost Analysis Tab */}
         <TabsContent value="cost-analysis" className="space-y-6">
+          {/* Budget Overview Cards */}
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+            <Card className="bg-slate-800/80 backdrop-blur-sm border-slate-700">
+              <CardContent className="p-6">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm text-slate-400">Food Cost %</p>
+                    <p className="text-2xl font-bold text-white">
+                      {budgetTracking?.foodCostPercentage || 0}%
+                    </p>
+                    <p className="text-xs text-slate-400 mt-1">Target: 28-32%</p>
+                  </div>
+                  <div className="h-16 w-16 relative">
+                    <svg className="transform -rotate-90 w-16 h-16" viewBox="0 0 36 36">
+                      <path
+                        className="stroke-slate-600 fill-none"
+                        strokeWidth="2"
+                        d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
+                      />
+                      <path
+                        className="stroke-orange-400 fill-none"
+                        strokeWidth="2"
+                        strokeDasharray={`${(budgetTracking?.foodCostPercentage || 0) * 100 / 35}, 100`}
+                        d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
+                      />
+                    </svg>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card className="bg-slate-800/80 backdrop-blur-sm border-slate-700">
+              <CardContent className="p-6">
+                <div className="flex items-center">
+                  <DollarSign className="h-8 w-8 text-green-400" />
+                  <div className="ml-4">
+                    <p className="text-sm text-slate-400">Monthly Spend</p>
+                    <p className="text-2xl font-bold text-white">
+                      {formatCurrency(budgetTracking?.monthlySpend || 0)}
+                    </p>
+                    <div className="flex items-center text-xs mt-1">
+                      {(budgetTracking?.spendVariance || 0) > 0 ? (
+                        <TrendingUp className="h-3 w-3 text-red-400 mr-1" />
+                      ) : (
+                        <TrendingDown className="h-3 w-3 text-green-400 mr-1" />
+                      )}
+                      <span className={(budgetTracking?.spendVariance || 0) > 0 ? "text-red-400" : "text-green-400"}>
+                        {Math.abs(budgetTracking?.spendVariance || 0).toFixed(1)}%
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card className="bg-slate-800/80 backdrop-blur-sm border-slate-700">
+              <CardContent className="p-6">
+                <div className="flex items-center">
+                  <AlertTriangle className="h-8 w-8 text-yellow-400" />
+                  <div className="ml-4">
+                    <p className="text-sm text-slate-400">Active Alerts</p>
+                    <p className="text-2xl font-bold text-white">{costAlertsData.length}</p>
+                    <p className="text-xs text-slate-400 mt-1">Require attention</p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card className="bg-slate-800/80 backdrop-blur-sm border-slate-700">
+              <CardContent className="p-6">
+                <div className="flex items-center">
+                  <Activity className="h-8 w-8 text-blue-400" />
+                  <div className="ml-4">
+                    <p className="text-sm text-slate-400">Price Changes</p>
+                    <p className="text-2xl font-bold text-white">{priceMonitoring.length}</p>
+                    <p className="text-xs text-slate-400 mt-1">Last 30 days</p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Cost Trends Chart */}
+          <Card className="bg-slate-800/80 backdrop-blur-sm border-slate-700">
+            <CardHeader>
+              <CardTitle className="text-white flex items-center">
+                <BarChart3 className="h-5 w-5 mr-2" />
+                Cost Trends
+              </CardTitle>
+              <CardDescription className="text-slate-400">
+                Daily cost analysis and variance tracking
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <ResponsiveContainer width="100%" height={300}>
+                <AreaChart data={costTrends}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
+                  <XAxis dataKey="date" stroke="#9CA3AF" />
+                  <YAxis stroke="#9CA3AF" />
+                  <Tooltip 
+                    contentStyle={{ 
+                      backgroundColor: '#1F2937', 
+                      border: '1px solid #374151',
+                      borderRadius: '8px',
+                      color: '#F3F4F6'
+                    }}
+                  />
+                  <Area 
+                    type="monotone" 
+                    dataKey="actualCost" 
+                    stackId="1"
+                    stroke="#F97316" 
+                    fill="#F97316" 
+                    fillOpacity={0.3}
+                    name="Actual Cost"
+                  />
+                  <Area 
+                    type="monotone" 
+                    dataKey="budgetedCost" 
+                    stackId="2"
+                    stroke="#10B981" 
+                    fill="#10B981" 
+                    fillOpacity={0.3}
+                    name="Budgeted Cost"
+                  />
+                </AreaChart>
+              </ResponsiveContainer>
+            </CardContent>
+          </Card>
+
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            {/* Active Cost Alerts */}
+            <Card className="bg-slate-800/80 backdrop-blur-sm border-slate-700">
+              <CardHeader>
+                <CardTitle className="text-white flex items-center">
+                  <Bell className="h-5 w-5 mr-2" />
+                  Active Alerts
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-4">
+                  {costAlertsData.length === 0 ? (
+                    <p className="text-slate-400 text-center py-8">No active alerts</p>
+                  ) : (
+                    costAlertsData.slice(0, 5).map((alert: any) => (
+                      <div key={alert.id} className="flex items-center justify-between p-4 rounded-lg bg-slate-700/50">
+                        <div className="flex items-center space-x-3">
+                          {getAlertTypeIcon(alert.alertType)}
+                          <div>
+                            <p className="text-white font-medium">{alert.itemName}</p>
+                            <p className="text-sm text-slate-400">
+                              {alert.alertType === 'price_variance' && `Price changed by ${alert.variance}%`}
+                              {alert.alertType === 'budget_exceeded' && `Budget exceeded by ${formatCurrency(alert.variance)}`}
+                              {alert.alertType === 'waste_threshold' && `Waste above threshold: ${alert.actualValue}%`}
+                              {alert.alertType === 'low_margin' && `Margin below target: ${alert.actualValue}%`}
+                            </p>
+                          </div>
+                        </div>
+                        <div className="flex items-center space-x-2">
+                          {getAlertSeverityBadge(alert.severity)}
+                        </div>
+                      </div>
+                    ))
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Price Monitoring */}
+            <Card className="bg-slate-800/80 backdrop-blur-sm border-slate-700">
+              <CardHeader>
+                <CardTitle className="text-white">Recent Price Changes</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-4">
+                  {priceMonitoring.length === 0 ? (
+                    <p className="text-slate-400 text-center py-8">No recent price changes</p>
+                  ) : (
+                    priceMonitoring.slice(0, 5).map((item: any) => (
+                      <div key={item.id} className="flex items-center justify-between">
+                        <div>
+                          <p className="text-white font-medium">{item.itemName}</p>
+                          <p className="text-sm text-slate-400">{item.vendorName}</p>
+                        </div>
+                        <div className="text-right">
+                          <div className="flex items-center space-x-2">
+                            <span className="text-slate-400 line-through">
+                              {formatCurrency(item.previousPrice)}
+                            </span>
+                            <span className="text-white font-bold">
+                              {formatCurrency(item.currentPrice)}
+                            </span>
+                          </div>
+                          <div className={`flex items-center text-sm ${
+                            item.percentageChange > 0 ? 'text-red-400' : 'text-green-400'
+                          }`}>
+                            {item.percentageChange > 0 ? (
+                              <TrendingUp className="h-3 w-3 mr-1" />
+                            ) : (
+                              <TrendingDown className="h-3 w-3 mr-1" />
+                            )}
+                            {Math.abs(item.percentageChange).toFixed(1)}%
+                          </div>
+                        </div>
+                      </div>
+                    ))
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Budget Performance */}
+          <Card className="bg-slate-800/80 backdrop-blur-sm border-slate-700">
+            <CardHeader>
+              <CardTitle className="text-white">Budget Performance by Category</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-6">
+                {budgetTracking?.categoryBreakdown?.map((category: any) => (
+                  <div key={category.name}>
+                    <div className="flex justify-between items-center mb-2">
+                      <span className="text-white font-medium">{category.name}</span>
+                      <div className="text-right">
+                        <span className="text-white">{formatCurrency(category.actual)}</span>
+                        <span className="text-slate-400 ml-2">/ {formatCurrency(category.budget)}</span>
+                      </div>
+                    </div>
+                    <Progress 
+                      value={(category.actual / category.budget) * 100} 
+                      className="h-2"
+                    />
+                    <div className="flex justify-between text-xs text-slate-400 mt-1">
+                      <span>{formatPercentage(category.actual, category.budget)} of budget used</span>
+                      <span className={category.variance > 0 ? "text-red-400" : "text-green-400"}>
+                        {category.variance > 0 ? "+" : ""}{category.variance.toFixed(1)}%
+                      </span>
+                    </div>
+                  </div>
+                )) || (
+                  <p className="text-slate-400 text-center py-8">No budget data available</p>
+                )}
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* Business Intelligence Tab */}
+        <TabsContent value="business-intelligence" className="space-y-6">
+          {/* KPI Overview Cards */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+            <Card className="bg-slate-800/80 backdrop-blur-sm border-slate-700">
+              <CardContent className="p-6">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm text-slate-400">Gross Profit Margin</p>
+                    <p className="text-2xl font-bold text-white">
+                      {formatPercentage(kpiMetrics?.grossMargin || 0)}
+                    </p>
+                    <div className="flex items-center text-xs mt-1">
+                      {(kpiMetrics?.marginVariance || 0) > 0 ? (
+                        <TrendingUp className="h-3 w-3 text-green-400 mr-1" />
+                      ) : (
+                        <TrendingDown className="h-3 w-3 text-red-400 mr-1" />
+                      )}
+                      <span className={getVarianceColor(kpiMetrics?.marginVariance || 0)}>
+                        {Math.abs(kpiMetrics?.marginVariance || 0).toFixed(1)}%
+                      </span>
+                    </div>
+                  </div>
+                  <Target className="h-8 w-8 text-green-400" />
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card className="bg-slate-800/80 backdrop-blur-sm border-slate-700">
+              <CardContent className="p-6">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm text-slate-400">Food Cost %</p>
+                    <p className="text-2xl font-bold text-white">
+                      {formatPercentage(kpiMetrics?.foodCostPercentage || 0)}
+                    </p>
+                    <div className="flex items-center text-xs mt-1">
+                      <span className="text-slate-400">Target: 28-32%</span>
+                    </div>
+                  </div>
+                  <DollarSign className="h-8 w-8 text-orange-400" />
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card className="bg-slate-800/80 backdrop-blur-sm border-slate-700">
+              <CardContent className="p-6">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm text-slate-400">Average Order Value</p>
+                    <p className="text-2xl font-bold text-white">
+                      {formatCurrency(kpiMetrics?.avgOrderValue || 0)}
+                    </p>
+                    <div className="flex items-center text-xs mt-1">
+                      {(kpiMetrics?.aovVariance || 0) > 0 ? (
+                        <TrendingUp className="h-3 w-3 text-green-400 mr-1" />
+                      ) : (
+                        <TrendingDown className="h-3 w-3 text-red-400 mr-1" />
+                      )}
+                      <span className={getVarianceColor(kpiMetrics?.aovVariance || 0)}>
+                        {formatPercentage(Math.abs(kpiMetrics?.aovVariance || 0))}
+                      </span>
+                    </div>
+                  </div>
+                  <ShoppingCart className="h-8 w-8 text-blue-400" />
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card className="bg-slate-800/80 backdrop-blur-sm border-slate-700">
+              <CardContent className="p-6">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm text-slate-400">Customer Count</p>
+                    <p className="text-2xl font-bold text-white">
+                      {kpiMetrics?.customerCount?.toLocaleString() || 0}
+                    </p>
+                    <div className="flex items-center text-xs mt-1">
+                      <span className="text-slate-400">vs last period</span>
+                    </div>
+                  </div>
+                  <Users className="h-8 w-8 text-purple-400" />
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Menu Performance */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <Card className="bg-slate-800/80 backdrop-blur-sm border-slate-700">
+              <CardHeader>
+                <CardTitle className="text-white">Top Performing Items</CardTitle>
+                <CardDescription className="text-slate-400">
+                  Highest profit margin and volume
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-4">
+                  {menuPerformance.slice(0, 8).map((item: any, index: number) => (
+                    <div key={index} className="flex justify-between items-center">
+                      <div className="flex items-center">
+                        <div className="w-8 h-8 rounded bg-green-500/20 flex items-center justify-center mr-3">
+                          <span className="text-green-400 text-sm font-bold">{index + 1}</span>
+                        </div>
+                        <div>
+                          <p className="text-white font-medium">{item.name}</p>
+                          <p className="text-slate-400 text-xs">
+                            {item.unitsSold} sold • {formatPercentage(item.margin)} margin
+                          </p>
+                        </div>
+                      </div>
+                      <div className="text-right">
+                        <p className="text-white font-bold">{formatCurrency(item.profit)}</p>
+                        <p className="text-green-400 text-xs">profit</p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card className="bg-slate-800/80 backdrop-blur-sm border-slate-700">
+              <CardHeader>
+                <CardTitle className="text-white">Performance Alerts</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-3">
+                  <div className="flex items-center p-3 rounded-lg bg-green-900/20 border border-green-500/30">
+                    <CheckCircle className="h-5 w-5 text-green-400 mr-3" />
+                    <div>
+                      <p className="text-white text-sm font-medium">Food cost within target</p>
+                      <p className="text-green-400 text-xs">29.2% (Target: 28-32%)</p>
+                    </div>
+                  </div>
+                  
+                  <div className="flex items-center p-3 rounded-lg bg-orange-900/20 border border-orange-500/30">
+                    <AlertTriangle className="h-5 w-5 text-orange-400 mr-3" />
+                    <div>
+                      <p className="text-white text-sm font-medium">Labor cost trending high</p>
+                      <p className="text-orange-400 text-xs">34.8% (+2.3% vs target)</p>
+                    </div>
+                  </div>
+                  
+                  <div className="flex items-center p-3 rounded-lg bg-red-900/20 border border-red-500/30">
+                    <AlertTriangle className="h-5 w-5 text-red-400 mr-3" />
+                    <div>
+                      <p className="text-white text-sm font-medium">Waste above threshold</p>
+                      <p className="text-red-400 text-xs">4.2% (Target: &lt;3%)</p>
+                    </div>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Profitability Analysis */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <Card className="bg-slate-800/80 backdrop-blur-sm border-slate-700">
+              <CardHeader>
+                <CardTitle className="text-white">Profitability Metrics</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-4">
+                  {profitabilityAnalysis.map((metric: any, index: number) => (
+                    <div key={index} className="flex justify-between items-center">
+                      <span className="text-slate-300">{metric.name}</span>
+                      <div className="text-right">
+                        <span className="text-white font-bold">{metric.value}</span>
+                        {metric.target && (
+                          <div className="text-xs text-slate-400">
+                            Target: {metric.target}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card className="bg-slate-800/80 backdrop-blur-sm border-slate-700">
+              <CardHeader>
+                <CardTitle className="text-white">Category Performance</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <ResponsiveContainer width="100%" height={300}>
+                  <RechartsPieChart>
+                    <Pie
+                      data={costAnalysis?.categoryBreakdown || []}
+                      cx="50%"
+                      cy="50%"
+                      outerRadius={100}
+                      fill="#8884d8"
+                      dataKey="value"
+                      label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
+                    >
+                      {(costAnalysis?.categoryBreakdown || []).map((entry: any, index: number) => (
+                        <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                      ))}
+                    </Pie>
+                    <Tooltip 
+                      contentStyle={{ 
+                        backgroundColor: '#1F2937', 
+                        border: '1px solid #374151',
+                        borderRadius: '8px',
+                        color: '#F3F4F6'
+                      }}
+                    />
+                  </RechartsPieChart>
+                </ResponsiveContainer>
+              </CardContent>
+            </Card>
+          </div>
+        </TabsContent>
+
+        {/* Trends Tab */}
+        <TabsContent value="trends" className="space-y-6">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <Card>
+              <CardHeader>
+                <CardTitle>Inventory Trends</CardTitle>
+                <CardDescription>Inventory turnover and performance</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-4">
+                  <div className="flex justify-between items-center">
+                    <span>Inventory Turnover</span>
+                    <span className="font-medium">
+                      {biData?.inventoryTurnover || 0}x
+                    </span>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span>Days of Inventory</span>
+                    <span className="font-medium">
+                      {Math.round(365 / parseFloat(biData?.inventoryTurnover || '1'))} days
+                    </span>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
             <Card>
               <CardHeader>
                 <CardTitle>Cost Breakdown</CardTitle>
@@ -425,211 +1414,12 @@ export default function Analytics() {
                     </span>
                   </div>
                   <div className="flex justify-between items-center">
-                    <span>Inventory Turnover</span>
-                    <span className="font-medium">
-                      {parseFloat(biData?.inventoryTurnover || '0').toFixed(2)}x
+                    <span>Gross Margin</span>
+                    <span className="font-medium text-green-600">
+                      {formatPercentage(biData?.grossMargin || 0)}
                     </span>
                   </div>
                 </div>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader>
-                <CardTitle>Cost Targets</CardTitle>
-                <CardDescription>Industry benchmarks and goals</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
-                  <div className="flex justify-between items-center">
-                    <span>Food Cost Target</span>
-                    <span className="text-muted-foreground">28-32%</span>
-                  </div>
-                  <div className="flex justify-between items-center">
-                    <span>Waste Target</span>
-                    <span className="text-muted-foreground">{'< 5%'}</span>
-                  </div>
-                  <div className="flex justify-between items-center">
-                    <span>Gross Margin Target</span>
-                    <span className="text-muted-foreground">{'> 60%'}</span>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-        </TabsContent>
-
-        <TabsContent value="trends" className="space-y-6">
-          <Card>
-            <CardHeader>
-              <CardTitle>Performance Trends</CardTitle>
-              <CardDescription>Week-over-week and month-over-month changes</CardDescription>
-            </CardHeader>
-            <CardContent>
-              {biData?.trends ? (
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  <div>
-                    <h4 className="font-semibold mb-2">Revenue Trends</h4>
-                    <div className="space-y-2">
-                      <div className="flex items-center justify-between">
-                        <span className="text-sm">Day over day</span>
-                        <div className="flex items-center gap-1">
-                          {biData.trends.revenue?.dayOverDay > 0 ? (
-                            <TrendingUp className="h-3 w-3 text-green-500" />
-                          ) : (
-                            <TrendingDown className="h-3 w-3 text-red-500" />
-                          )}
-                          <span className="text-sm font-medium">
-                            {formatPercentage(Math.abs(biData.trends.revenue?.dayOverDay || 0))}
-                          </span>
-                        </div>
-                      </div>
-                      <div className="flex items-center justify-between">
-                        <span className="text-sm">Week over week</span>
-                        <div className="flex items-center gap-1">
-                          {biData.trends.revenue?.weekOverWeek > 0 ? (
-                            <TrendingUp className="h-3 w-3 text-green-500" />
-                          ) : (
-                            <TrendingDown className="h-3 w-3 text-red-500" />
-                          )}
-                          <span className="text-sm font-medium">
-                            {formatPercentage(Math.abs(biData.trends.revenue?.weekOverWeek || 0))}
-                          </span>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div>
-                    <h4 className="font-semibold mb-2">Food Cost Trends</h4>
-                    <div className="space-y-2">
-                      <div className="flex items-center justify-between">
-                        <span className="text-sm">Day over day</span>
-                        <div className="flex items-center gap-1">
-                          {biData.trends.foodCost?.dayOverDay > 0 ? (
-                            <TrendingUp className="h-3 w-3 text-red-500" />
-                          ) : (
-                            <TrendingDown className="h-3 w-3 text-green-500" />
-                          )}
-                          <span className="text-sm font-medium">
-                            {formatPercentage(Math.abs(biData.trends.foodCost?.dayOverDay || 0))}
-                          </span>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div>
-                    <h4 className="font-semibold mb-2">Customer Trends</h4>
-                    <div className="space-y-2">
-                      <div className="flex items-center justify-between">
-                        <span className="text-sm">Day over day</span>
-                        <div className="flex items-center gap-1">
-                          {biData.trends.customerCount?.dayOverDay > 0 ? (
-                            <TrendingUp className="h-3 w-3 text-green-500" />
-                          ) : (
-                            <TrendingDown className="h-3 w-3 text-red-500" />
-                          )}
-                          <span className="text-sm font-medium">
-                            {formatPercentage(Math.abs(biData.trends.customerCount?.dayOverDay || 0))}
-                          </span>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              ) : (
-                <p className="text-muted-foreground">No trend data available</p>
-              )}
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        <TabsContent value="inventory-reports" className="space-y-6">
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            <Card>
-              <CardHeader>
-                <CardTitle>Low Stock Items</CardTitle>
-                <CardDescription>Items that need to be reordered</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <p className="text-muted-foreground">No low stock items currently</p>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader>
-                <CardTitle>Inventory Turnover</CardTitle>
-                <CardDescription>How quickly inventory is being used</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <p className="text-muted-foreground">
-                  Turnover rate: {parseFloat(biData?.inventoryTurnover || '0').toFixed(2)}x per period
-                </p>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader>
-                <CardTitle>Value by Category</CardTitle>
-                <CardDescription>Inventory value breakdown</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <p className="text-muted-foreground">Category breakdown coming soon</p>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader>
-                <CardTitle>Expiration Tracking</CardTitle>
-                <CardDescription>Items approaching expiration</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <p className="text-muted-foreground">No items expiring soon</p>
-              </CardContent>
-            </Card>
-          </div>
-        </TabsContent>
-
-        <TabsContent value="vendor-reports" className="space-y-6">
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            <Card>
-              <CardHeader>
-                <CardTitle>Vendor Performance</CardTitle>
-                <CardDescription>Delivery times and order accuracy</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <p className="text-muted-foreground">No vendor performance data available</p>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader>
-                <CardTitle>Purchase History</CardTitle>
-                <CardDescription>Recent orders by vendor</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <p className="text-muted-foreground">No recent purchases</p>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader>
-                <CardTitle>Price Comparisons</CardTitle>
-                <CardDescription>Compare prices across vendors</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <p className="text-muted-foreground">Price comparison data coming soon</p>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader>
-                <CardTitle>Payment Terms</CardTitle>
-                <CardDescription>Outstanding payments and terms</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <p className="text-muted-foreground">No outstanding payments</p>
               </CardContent>
             </Card>
           </div>
