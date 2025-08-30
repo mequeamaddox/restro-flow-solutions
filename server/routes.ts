@@ -1618,14 +1618,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // In-memory storage for auto-ordering rules
-  let autoOrderRules: any[] = [];
-
   // Auto-ordering endpoints
   app.get('/api/auto-ordering/rules', isAuthenticated, async (req: any, res) => {
     try {
+      const userId = req.user.id;
+      const userRules = await storage.getAutoOrderRules(userId);
+      
       // If no user-created rules, return mock data
-      if (autoOrderRules.length === 0) {
+      if (userRules.length === 0) {
         const mockRules = [
           {
             id: 'rule-001',
@@ -1657,7 +1657,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         res.json(mockRules);
       } else {
         // Return user-created rules
-        res.json(autoOrderRules);
+        res.json(userRules);
       }
     } catch (error) {
       console.error("Error fetching auto-ordering rules:", error);
@@ -1668,6 +1668,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post('/api/auto-ordering/rules', isAuthenticated, async (req: any, res) => {
     try {
       const ruleData = req.body;
+      const userId = req.user.id;
       
       // Get item and vendor names from the existing data
       const inventory = await storage.getInventoryItems();
@@ -1676,20 +1677,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const item = inventory.find((i: any) => i.id === ruleData.itemId);
       const vendor = vendors.find((v: any) => v.id === ruleData.vendorId);
       
-      const newRule = {
-        id: `rule-${Date.now()}`,
+      const newRuleData = {
         ...ruleData,
-        itemName: item?.name || 'Unknown Item',
-        vendorName: vendor?.name || 'Unknown Vendor',
-        enabled: true,
-        lastTriggered: null,
+        userId: userId,
         estimatedSavings: Math.floor(Math.random() * 2000) + 500
       };
       
-      // Add to in-memory storage
-      autoOrderRules.push(newRule);
+      const newRule = await storage.createAutoOrderRule(newRuleData);
       
-      res.status(201).json(newRule);
+      // Add item and vendor names for response
+      const responseRule = {
+        ...newRule,
+        itemName: item?.name || 'Unknown Item',
+        vendorName: vendor?.name || 'Unknown Vendor',
+      };
+      
+      res.status(201).json(responseRule);
     } catch (error) {
       console.error("Error creating auto-ordering rule:", error);
       res.status(500).json({ message: "Failed to create auto-ordering rule" });
@@ -1701,13 +1704,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const { id } = req.params;
       const updateData = req.body;
       
-      // Update in in-memory storage
-      const ruleIndex = autoOrderRules.findIndex(rule => rule.id === id);
-      if (ruleIndex !== -1) {
-        autoOrderRules[ruleIndex] = { ...autoOrderRules[ruleIndex], ...updateData, updatedAt: new Date().toISOString() };
-        res.json(autoOrderRules[ruleIndex]);
-      } else {
-        // Rule not found in user-created rules, return mock response
+      // Try to update in database first
+      try {
+        const updatedRule = await storage.updateAutoOrderRule(id, updateData);
+        res.json(updatedRule);
+      } catch (dbError) {
+        // Rule not found in database, return mock response for demo rules
         res.json({ id, ...updateData, updatedAt: new Date().toISOString() });
       }
     } catch (error) {

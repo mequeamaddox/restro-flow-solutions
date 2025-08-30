@@ -952,6 +952,25 @@ export const budgets = pgTable("budgets", {
   updatedAt: timestamp("updated_at").defaultNow(),
 });
 
+// Auto-ordering rules table
+export const autoOrderRules = pgTable("auto_order_rules", {
+  id: uuid("id").primaryKey().default(sql`gen_random_uuid()`),
+  ruleName: varchar("rule_name", { length: 200 }).notNull(),
+  itemId: uuid("item_id").notNull().references(() => inventoryItems.id),
+  vendorId: uuid("vendor_id").notNull().references(() => vendors.id),
+  triggerType: varchar("trigger_type", { length: 50 }).notNull(), // low_stock, scheduled, consumption, forecast
+  reorderPoint: integer("reorder_point").default(50),
+  orderQuantity: integer("order_quantity").default(100),
+  frequency: varchar("frequency", { length: 20 }).default("weekly"), // daily, weekly, bi-weekly, monthly
+  enabled: boolean("enabled").default(true),
+  lastTriggered: timestamp("last_triggered"),
+  estimatedSavings: decimal("estimated_savings", { precision: 10, scale: 2 }).default("0"),
+  userId: varchar("user_id").notNull().references(() => users.id),
+  locationId: uuid("location_id").references(() => locations.id),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
 export type SecurityLog = typeof securityLogs.$inferSelect;
 export type AuditLog = typeof auditLogs.$inferSelect;
 export type CostAlert = typeof costAlerts.$inferSelect;
@@ -1004,4 +1023,8 @@ export type InsertWasteEntry = z.infer<typeof insertWasteEntrySchema>;
 export type InventoryTransaction = typeof inventoryTransactions.$inferSelect;
 export type InsertInventoryTransaction = z.infer<typeof insertInventoryTransactionSchema>;
 
+export type AutoOrderRule = typeof autoOrderRules.$inferSelect;
+export type InsertAutoOrderRule = typeof autoOrderRules.$inferInsert;
+
+export const insertAutoOrderRuleSchema = createInsertSchema(autoOrderRules);
 

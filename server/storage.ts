@@ -13,6 +13,7 @@ import {
   wasteEntries,
   inventoryTransactions,
   invoiceProcessing,
+  autoOrderRules,
   type User,
   type UpsertUser,
   type Location,
@@ -142,6 +143,11 @@ export interface IStorage {
   createVendor(vendor: InsertVendor): Promise<Vendor>;
   updateVendor(id: string, vendor: Partial<InsertVendor>): Promise<Vendor>;
   deleteVendor(id: string): Promise<void>;
+
+  // Auto-ordering rules
+  getAutoOrderRules(userId: string): Promise<any[]>;
+  createAutoOrderRule(ruleData: any): Promise<any>;
+  updateAutoOrderRule(id: string, updateData: any): Promise<any>;
 
   // Inventory operations
   getInventoryItems(): Promise<(InventoryItem & { category?: Category; vendor?: Vendor })[]>;
@@ -461,6 +467,64 @@ export class DatabaseStorage implements IStorage {
 
   async deleteVendor(id: string): Promise<void> {
     await db.delete(vendors).where(eq(vendors.id, id));
+  }
+
+  // Auto-ordering rules
+  async getAutoOrderRules(userId: string): Promise<any[]> {
+    const rules = await db
+      .select({
+        id: autoOrderRules.id,
+        ruleName: autoOrderRules.ruleName,
+        itemId: autoOrderRules.itemId,
+        vendorId: autoOrderRules.vendorId,
+        triggerType: autoOrderRules.triggerType,
+        reorderPoint: autoOrderRules.reorderPoint,
+        orderQuantity: autoOrderRules.orderQuantity,
+        frequency: autoOrderRules.frequency,
+        enabled: autoOrderRules.enabled,
+        lastTriggered: autoOrderRules.lastTriggered,
+        estimatedSavings: autoOrderRules.estimatedSavings,
+        createdAt: autoOrderRules.createdAt,
+        updatedAt: autoOrderRules.updatedAt,
+        itemName: inventoryItems.name,
+        vendorName: vendors.name,
+      })
+      .from(autoOrderRules)
+      .leftJoin(inventoryItems, eq(autoOrderRules.itemId, inventoryItems.id))
+      .leftJoin(vendors, eq(autoOrderRules.vendorId, vendors.id))
+      .where(eq(autoOrderRules.userId, userId));
+    
+    return rules;
+  }
+
+  async createAutoOrderRule(ruleData: any): Promise<any> {
+    const [newRule] = await db
+      .insert(autoOrderRules)
+      .values({
+        ruleName: ruleData.ruleName,
+        itemId: ruleData.itemId,
+        vendorId: ruleData.vendorId,
+        triggerType: ruleData.triggerType,
+        reorderPoint: ruleData.reorderPoint,
+        orderQuantity: ruleData.orderQuantity,
+        frequency: ruleData.frequency,
+        estimatedSavings: ruleData.estimatedSavings,
+        userId: ruleData.userId,
+        locationId: ruleData.locationId,
+      })
+      .returning();
+    
+    return newRule;
+  }
+
+  async updateAutoOrderRule(id: string, updateData: any): Promise<any> {
+    const [updatedRule] = await db
+      .update(autoOrderRules)
+      .set({ ...updateData, updatedAt: new Date() })
+      .where(eq(autoOrderRules.id, id))
+      .returning();
+    
+    return updatedRule;
   }
 
   // Universal POS Integration Methods
