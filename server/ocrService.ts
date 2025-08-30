@@ -408,22 +408,6 @@ The OCR system works best with image files rather than scanned PDFs.`,
         }
       }
       
-      // Look for subtotal amounts
-      const subtotalPatterns = [
-        /subtotal[\s:$]*(\d+(?:,\d{3})*(?:\.\d{2})?)/i,
-        /sub[\s-]*total[\s:$]*(\d+(?:,\d{3})*(?:\.\d{2})?)/i,
-      ];
-      
-      for (const pattern of subtotalPatterns) {
-        const match = line.match(pattern);
-        if (match && match[1]) {
-          const amount = parseFloat(match[1].replace(/,/g, ''));
-          if (amount > 0 && amount < 100000) {
-            subtotal = amount;
-          }
-        }
-      }
-      
       // Look for dates - multiple formats
       const datePatterns = [
         /(\d{1,2}\/\d{1,2}\/\d{4})/,     // MM/DD/YYYY

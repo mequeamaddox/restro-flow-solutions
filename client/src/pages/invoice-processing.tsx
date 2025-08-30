@@ -53,6 +53,7 @@ export default function InvoiceProcessing() {
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [uploadProgress, setUploadProgress] = useState<number>(0);
   const [isUploading, setIsUploading] = useState(false);
+  const [selectedLineItems, setSelectedLineItems] = useState<{ [invoiceId: string]: boolean[] }>({});
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Queries
@@ -176,6 +177,42 @@ export default function InvoiceProcessing() {
       tax: 0,
     },
   });
+
+  // Helper functions for checkbox state management
+  const initializeSelectedItems = (invoiceId: string, itemCount: number) => {
+    if (!selectedLineItems[invoiceId]) {
+      setSelectedLineItems(prev => ({
+        ...prev,
+        [invoiceId]: new Array(itemCount).fill(true)
+      }));
+    }
+  };
+
+  const toggleSelectAllItems = (invoiceId: string, itemCount: number) => {
+    const currentSelections = selectedLineItems[invoiceId] || new Array(itemCount).fill(true);
+    const allSelected = currentSelections.every(selected => selected);
+    setSelectedLineItems(prev => ({
+      ...prev,
+      [invoiceId]: new Array(itemCount).fill(!allSelected)
+    }));
+  };
+
+  const toggleSingleItem = (invoiceId: string, itemIndex: number) => {
+    setSelectedLineItems(prev => {
+      const currentSelections = prev[invoiceId] || [];
+      const newSelections = [...currentSelections];
+      newSelections[itemIndex] = !newSelections[itemIndex];
+      return {
+        ...prev,
+        [invoiceId]: newSelections
+      };
+    });
+  };
+
+  const getSelectedItemsCount = (invoiceId: string) => {
+    const selections = selectedLineItems[invoiceId];
+    return selections ? selections.filter(Boolean).length : 0;
+  };
 
   const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -531,12 +568,23 @@ export default function InvoiceProcessing() {
                                         </TableRow>
                                       </TableHeader>
                                       <TableBody>
-                                        {invoice.lineItems.map((item: any, index: number) => (
+                                        {invoice.lineItems.map((item: any, index: number) => {
+                                          // Initialize selected items for this invoice if not already done
+                                          if (!selectedLineItems[invoice.id]) {
+                                            setSelectedLineItems(prev => ({
+                                              ...prev,
+                                              [invoice.id]: new Array(invoice.lineItems.length).fill(true)
+                                            }));
+                                          }
+                                          const isSelected = selectedLineItems[invoice.id]?.[index] ?? true;
+                                          
+                                          return (
                                           <TableRow key={index} className="border-slate-700">
                                             <TableCell className="text-slate-300 font-medium flex items-center gap-3">
                                               <input
                                                 type="checkbox"
-                                                defaultChecked={true}
+                                                checked={isSelected}
+                                                onChange={() => toggleSingleItem(invoice.id, index)}
                                                 className="rounded border-slate-600 bg-slate-700 text-blue-500 focus:ring-blue-500"
                                                 data-testid={`checkbox-lineitem-${index}`}
                                               />
@@ -552,7 +600,8 @@ export default function InvoiceProcessing() {
                                               ${(item.totalPrice || 0).toFixed(2)}
                                             </TableCell>
                                           </TableRow>
-                                        ))}
+                                          );
+                                        })}
                                         <TableRow className="border-slate-600 bg-slate-700/50">
                                           <TableCell colSpan={3} className="text-slate-300 font-semibold">
                                             Total from Line Items:
@@ -573,29 +622,28 @@ export default function InvoiceProcessing() {
                                         variant="ghost"
                                         size="sm"
                                         className="text-slate-400 hover:bg-slate-700"
-                                        onClick={() => {
-                                          // Toggle all checkboxes
-                                          const checkboxes = document.querySelectorAll('[data-testid^="checkbox-lineitem-"]') as NodeListOf<HTMLInputElement>;
-                                          const allChecked = Array.from(checkboxes).every(cb => cb.checked);
-                                          checkboxes.forEach(cb => cb.checked = !allChecked);
-                                        }}
+                                        onClick={() => toggleSelectAllItems(invoice.id, invoice.lineItems.length)}
                                       >
-                                        {invoice.lineItems.every(() => true) ? 'Unselect All' : 'Select All'}
+                                        {(() => {
+                                          const selections = selectedLineItems[invoice.id] || new Array(invoice.lineItems.length).fill(true);
+                                          const allSelected = selections.every(selected => selected);
+                                          return allSelected ? 'Unselect All' : 'Select All';
+                                        })()}
                                       </Button>
                                       <Button
                                         variant="outline"
                                         size="sm"
                                         className="border-slate-600 text-slate-300 hover:bg-slate-700"
                                         onClick={() => {
-                                          // Get selected items
-                                          const checkboxes = document.querySelectorAll('[data-testid^="checkbox-lineitem-"]') as NodeListOf<HTMLInputElement>;
-                                          const selectedItems = invoice.lineItems.filter((_: any, index: number) => checkboxes[index]?.checked);
+                                          // Get selected items using React state
+                                          const selections = selectedLineItems[invoice.id] || new Array(invoice.lineItems.length).fill(true);
+                                          const selectedItems = invoice.lineItems.filter((_: any, index: number) => selections[index]);
                                           console.log('Import selected items to inventory:', selectedItems);
                                           // TODO: Add actual import functionality
                                         }}
                                       >
                                         <Package className="h-4 w-4 mr-2" />
-                                        Import Selected ({invoice.lineItems.length})
+                                        Import Selected ({getSelectedItemsCount(invoice.id)})
                                       </Button>
                                     </div>
                                   </div>
