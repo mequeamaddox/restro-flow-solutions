@@ -35,7 +35,7 @@ export default function Inventory() {
   });
 
   // Filter items based on search and category
-  const filteredItems = inventoryItems?.filter(item => {
+  const filteredItems = (inventoryItems as any[])?.filter((item: any) => {
     const matchesSearch = item.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          item.description?.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesCategory = !categoryFilter || categoryFilter === 'all' || item.categoryId === categoryFilter;
@@ -98,7 +98,7 @@ export default function Inventory() {
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="all">All Categories</SelectItem>
-                    {categories?.map((category) => (
+                    {(categories as any[])?.map((category: any) => (
                       <SelectItem key={category.id} value={category.id}>
                         {category.name}
                       </SelectItem>
@@ -134,8 +134,8 @@ export default function Inventory() {
         isOpen={isAddDialogOpen}
         onClose={() => setIsAddDialogOpen(false)}
         onSuccess={handleAddSuccess}
-        categories={categories || []}
-        vendors={vendors || []}
+        categories={(categories as any[]) || []}
+        vendors={(vendors as any[]) || []}
       />
     </div>
   );
