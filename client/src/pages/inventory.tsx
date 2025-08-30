@@ -80,7 +80,7 @@ export default function Inventory() {
         {/* Main Content */}
         <div className="lg:col-span-3 space-y-6">
           {/* Filters */}
-          <Card>
+          <Card className="bg-slate-800/50 border-slate-700">
             <CardContent className="pt-6">
               <div className="flex flex-col md:flex-row gap-4">
                 <div className="relative flex-1">
@@ -89,11 +89,11 @@ export default function Inventory() {
                     placeholder="Search inventory items..."
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
-                    className="pl-10"
+                    className="pl-10 bg-slate-700 border-slate-600 text-white"
                   />
                 </div>
                 <Select value={categoryFilter} onValueChange={setCategoryFilter}>
-                  <SelectTrigger className="w-full md:w-48">
+                  <SelectTrigger className="w-full md:w-48 bg-slate-700 border-slate-600 text-white">
                     <SelectValue placeholder="All Categories" />
                   </SelectTrigger>
                   <SelectContent>
@@ -110,7 +110,7 @@ export default function Inventory() {
           </Card>
 
           {/* Inventory Table */}
-          <Card>
+          <Card className="bg-slate-800/50 border-slate-700">
             <CardContent>
               <InventoryTable 
                 items={filteredItems} 

@@ -37,9 +37,9 @@ export default function InventoryTable({ items, isLoading, showPagination = fals
   if (!items || items.length === 0) {
     return (
       <div className="text-center py-12">
-        <Package2 className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-        <h3 className="text-lg font-medium text-gray-900 mb-2">No inventory items found</h3>
-        <p className="text-gray-600">Start by adding your first inventory item.</p>
+        <Package2 className="h-12 w-12 text-slate-400 mx-auto mb-4" />
+        <h3 className="text-lg font-medium text-white mb-2">No inventory items found</h3>
+        <p className="text-slate-400">Start by adding your first inventory item.</p>
       </div>
     );
   }
@@ -108,13 +108,13 @@ export default function InventoryTable({ items, isLoading, showPagination = fals
                   <TableRow key={item.id}>
                     <TableCell>
                       <div className="flex items-center space-x-3">
-                        <div className="w-10 h-10 bg-primary-100 rounded-lg flex items-center justify-center text-lg">
+                        <div className="w-10 h-10 bg-slate-700 rounded-lg flex items-center justify-center text-lg">
                           {getCategoryIcon(item.category?.name)}
                         </div>
                         <div>
                           <div className="font-medium">{item.name}</div>
                           {item.description && (
-                            <div className="text-sm text-gray-500">{item.description}</div>
+                            <div className="text-sm text-slate-400">{item.description}</div>
                           )}
                         </div>
                       </div>
@@ -158,15 +158,15 @@ export default function InventoryTable({ items, isLoading, showPagination = fals
           const totalValue = parseFloat(item.quantity) * parseFloat(item.costPerUnit);
           
           return (
-            <div key={item.id} className="bg-white border rounded-lg p-4 space-y-3">
+            <div key={item.id} className="bg-slate-800/50 border-slate-700 rounded-lg p-4 space-y-3">
               <div className="flex items-center justify-between">
                 <div className="flex items-center space-x-3">
-                  <div className="w-10 h-10 bg-primary-100 rounded-lg flex items-center justify-center text-lg">
+                  <div className="w-10 h-10 bg-slate-700 rounded-lg flex items-center justify-center text-lg">
                     {getCategoryIcon(item.category?.name)}
                   </div>
                   <div>
                     <div className="font-medium">{item.name}</div>
-                    <div className="text-sm text-gray-500">{item.category?.name || 'Uncategorized'}</div>
+                    <div className="text-sm text-slate-400">{item.category?.name || 'Uncategorized'}</div>
                   </div>
                 </div>
                 {getStatusBadge(item)}
@@ -174,24 +174,24 @@ export default function InventoryTable({ items, isLoading, showPagination = fals
               
               <div className="grid grid-cols-2 gap-4 text-sm">
                 <div>
-                  <span className="text-gray-500">Quantity:</span>
+                  <span className="text-slate-400">Quantity:</span>
                   <div className="font-medium">{item.quantity} {item.unit}</div>
                 </div>
                 <div>
-                  <span className="text-gray-500">Unit Cost:</span>
+                  <span className="text-slate-400">Unit Cost:</span>
                   <div className="font-medium">${parseFloat(item.costPerUnit).toFixed(2)}</div>
                 </div>
                 <div>
-                  <span className="text-gray-500">Total Value:</span>
+                  <span className="text-slate-400">Total Value:</span>
                   <div className="font-medium">${totalValue.toFixed(2)}</div>
                 </div>
                 <div>
-                  <span className="text-gray-500">Vendor:</span>
+                  <span className="text-slate-400">Vendor:</span>
                   <div className="font-medium">{item.vendor?.name || 'N/A'}</div>
                 </div>
               </div>
               
-              <div className="flex justify-end space-x-2 pt-2 border-t">
+              <div className="flex justify-end space-x-2 pt-2 border-t border-slate-600">
                 <Button variant="outline" size="sm">
                   <Edit className="h-4 w-4 mr-1" />
                   Edit
@@ -208,8 +208,8 @@ export default function InventoryTable({ items, isLoading, showPagination = fals
 
       {/* Pagination */}
       {showPagination && totalPages > 1 && (
-        <div className="flex items-center justify-between pt-4 border-t">
-          <div className="text-sm text-gray-700">
+        <div className="flex items-center justify-between pt-4 border-t border-slate-600">
+          <div className="text-sm text-slate-300">
             Showing <span className="font-medium">{(currentPage - 1) * itemsPerPage + 1}</span> to{' '}
             <span className="font-medium">{Math.min(currentPage * itemsPerPage, items.length)}</span> of{' '}
             <span className="font-medium">{items.length}</span> items
