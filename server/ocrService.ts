@@ -375,47 +375,66 @@ The OCR system works best with image files rather than scanned PDFs.`,
     }
     
     // Extract line items (products with prices)
+    console.log('Starting line item extraction...');
+    console.log('Total lines to process:', lines.length);
+    
     for (let i = 0; i < lines.length; i++) {
       const line = lines[i].trim();
       
-      // Look for line items with product descriptions and prices
-      // Pattern: "PRODUCT NAME quantity price" or "PRODUCT NAME price"
-      const lineItemPatterns = [
-        // Food Lion pattern: "FL FINE GRD BF 80/20" followed by "10.99 A *"
-        /^([A-Z][A-Z\s&\/\-0-9]{3,50})\s*$/,  // Product line
+      // Debug: Log each line being processed
+      if (line.length > 2) {
+        console.log(`Line ${i}: "${line}"`);
+      }
+      
+      // Food Lion specific pattern matching
+      // Look for product lines that are ALL CAPS with specific patterns
+      const foodLionProductMatch = line.match(/^([A-Z][A-Z\s&\/\-0-9]{2,})\s*$/);
+      
+      if (foodLionProductMatch && i + 1 < lines.length) {
+        const description = foodLionProductMatch[1].trim();
+        const nextLine = lines[i + 1].trim();
+        
+        console.log(`Checking potential product: "${description}"`);
+        console.log(`Next line: "${nextLine}"`);
+        
+        // Look for price pattern: "10.99 A *" or just "10.99"
+        const priceMatch = nextLine.match(/^(\d+\.\d{2})\s*[A-Z*\s]*$/);
+        
+        if (priceMatch) {
+          const totalPrice = parseFloat(priceMatch[1]);
+          
+          // Filter out obvious non-products
+          if (!description.match(/^(MEAT|DAIRY|PRODUCE|SUBTOTAL|TOTAL|TAX|SAVINGS?)$/i) && 
+              description.length >= 5 && 
+              totalPrice > 0 && 
+              totalPrice < 1000) { // Reasonable price range
+            
+            lineItems.push({
+              description,
+              quantity: 1,
+              unitPrice: totalPrice,
+              totalPrice
+            });
+            
+            console.log(`✅ Found line item: ${description} - $${totalPrice.toFixed(2)}`);
+            i++; // Skip the price line since we just processed it
+          } else {
+            console.log(`❌ Skipped "${description}" - appears to be section header or invalid`);
+          }
+        } else {
+          console.log(`❌ No price match for "${nextLine}"`);
+        }
+      }
+      
+      // Also check for single-line items with embedded prices
+      const singleLinePatterns = [
         // Generic pattern: "ITEM NAME 1.23 A" or "ITEM NAME $1.23"
         /^(.+?)\s+(\d+\.?\d*)\s*[A-Z*]*\s*\$?(\d+\.\d{2})\s*$/,
         // Alternative: "DESCRIPTION QTY @ PRICE = TOTAL"
         /^(.+?)\s+(\d+)\s*@\s*\$?(\d+\.\d{2})\s*=?\s*\$?(\d+\.\d{2})\s*$/
       ];
       
-      // Check if this line looks like a product description
-      const productMatch = line.match(/^([A-Z][A-Z\s&\/\-0-9]{3,50})\s*$/);
-      if (productMatch && i + 1 < lines.length) {
-        // Check next line for price - Food Lion format: "10.99 A *"
-        const nextLine = lines[i + 1].trim();
-        const priceMatch = nextLine.match(/^(\d+\.\d{2})\s*[A-Z*\s]*$/);
-        
-        if (priceMatch) {
-          const description = productMatch[1].trim();
-          const quantity = 1; // Food Lion doesn't show quantity in this format
-          const totalPrice = parseFloat(priceMatch[1]);
-          const unitPrice = totalPrice;
-          
-          lineItems.push({
-            description,
-            quantity,
-            unitPrice: Math.round(unitPrice * 100) / 100,
-            totalPrice
-          });
-          
-          console.log(`Found line item: ${description} - Qty: ${quantity} @ $${unitPrice.toFixed(2)} = $${totalPrice.toFixed(2)}`);
-          i++; // Skip the price line since we just processed it
-        }
-      }
-      
-      // Also check for single-line items
-      for (const pattern of lineItemPatterns.slice(1)) { // Skip the product-only pattern
+      for (const pattern of singleLinePatterns) {
         const match = line.match(pattern);
         if (match) {
           let description, quantity, unitPrice, totalPrice;
