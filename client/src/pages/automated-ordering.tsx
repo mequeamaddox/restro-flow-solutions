@@ -8,23 +8,12 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { 
-  Bot, 
-  TrendingUp, 
-  Clock, 
-  DollarSign, 
-  AlertTriangle,
-  CheckCircle,
-  Settings,
-  Calendar,
-  Target,
-  Zap
-} from 'lucide-react';
+import { Bot, Settings, Zap } from 'lucide-react';
 import { apiRequest } from '@/lib/queryClient';
 import { useToast } from '@/hooks/use-toast';
 
 export default function AutomatedOrdering() {
-  // Form state
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [ruleName, setRuleName] = useState('');
   const [selectedItem, setSelectedItem] = useState('');
   const [selectedVendor, setSelectedVendor] = useState('');
@@ -43,7 +32,7 @@ export default function AutomatedOrdering() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
-  // Data queries
+  // Fetch data
   const { data: autoOrderRules = [], isLoading } = useQuery({
     queryKey: ['/api/auto-ordering/rules'],
   });
@@ -56,7 +45,7 @@ export default function AutomatedOrdering() {
     queryKey: ['/api/inventory'],
   });
 
-  // Mutations
+  // Create rule mutation
   const createRuleMutation = useMutation({
     mutationFn: async (ruleData: any) => {
       const response = await apiRequest("POST", "/api/auto-ordering/rules", ruleData);
@@ -65,6 +54,7 @@ export default function AutomatedOrdering() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/auto-ordering/rules'] });
       toast({ title: "Auto-ordering rule created successfully" });
+      setIsDialogOpen(false);
       // Reset form
       setRuleName('');
       setSelectedItem('');
@@ -76,16 +66,24 @@ export default function AutomatedOrdering() {
     }
   });
 
+  // Toggle rule mutation
   const toggleRuleMutation = useMutation({
     mutationFn: async ({ ruleId, enabled }: { ruleId: string; enabled: boolean }) => {
+      console.log("Toggling rule:", ruleId, "to enabled:", enabled);
       const response = await apiRequest("PATCH", `/api/auto-ordering/rules/${ruleId}`, { enabled });
       return response.json();
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/auto-ordering/rules'] });
+      toast({ title: "Rule updated successfully" });
+    },
+    onError: (error) => {
+      console.error("Toggle error:", error);
+      toast({ title: "Failed to update rule", variant: "destructive" });
     }
   });
 
+  // Update rule mutation
   const updateRuleMutation = useMutation({
     mutationFn: async (updateData: any) => {
       const response = await apiRequest("PATCH", `/api/auto-ordering/rules/${updateData.id}`, updateData);
@@ -98,6 +96,14 @@ export default function AutomatedOrdering() {
     }
   });
 
+  const openEditDialog = (rule: any) => {
+    setEditingRule(rule);
+    setEditRuleName(rule.ruleName);
+    setEditReorderPoint(rule.reorderPoint || 50);
+    setEditOrderQuantity(rule.orderQuantity || 100);
+    setEditFrequency(rule.frequency || 'weekly');
+  };
+
   const handleCreateRule = () => {
     if (!ruleName || !selectedItem || !selectedVendor || !triggerType) {
       toast({ 
@@ -107,7 +113,7 @@ export default function AutomatedOrdering() {
       return;
     }
 
-    const ruleData = {
+    createRuleMutation.mutate({
       ruleName,
       itemId: selectedItem,
       vendorId: selectedVendor,
@@ -115,17 +121,7 @@ export default function AutomatedOrdering() {
       reorderPoint,
       orderQuantity,
       frequency
-    };
-
-    createRuleMutation.mutate(ruleData);
-  };
-
-  const openEditDialog = (rule: any) => {
-    setEditingRule(rule);
-    setEditRuleName(rule.ruleName || rule.name);
-    setEditReorderPoint(rule.reorderPoint || 50);
-    setEditOrderQuantity(rule.orderQuantity || 100);
-    setEditFrequency(rule.frequency || 'weekly');
+    });
   };
 
   return (
@@ -139,9 +135,135 @@ export default function AutomatedOrdering() {
             <Badge className="bg-gradient-to-r from-blue-500 to-purple-500 text-white">AUTO</Badge>
           </h1>
           <p className="text-slate-400 mt-2">
-            AI-powered automatic purchase orders based on consumption patterns and reorder points
+            AI-powered automatic purchase orders based on consumption patterns
           </p>
         </div>
+        <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+          <DialogTrigger asChild>
+            <Button className="bg-orange-600 hover:bg-orange-700" data-testid="button-create-new-rule">
+              Create New Rule
+            </Button>
+          </DialogTrigger>
+          <DialogContent className="bg-slate-800 border-slate-700">
+            <DialogHeader>
+              <DialogTitle className="text-white">Create Auto-Order Rule</DialogTitle>
+              <DialogDescription className="text-slate-400">
+                Set up automated ordering based on inventory levels or schedules
+              </DialogDescription>
+            </DialogHeader>
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <Label className="text-slate-300">Rule Name</Label>
+                <Input 
+                  placeholder="e.g., Chicken Breast Auto-Order"
+                  className="bg-slate-700 border-slate-600 text-white"
+                  value={ruleName}
+                  onChange={(e) => setRuleName(e.target.value)}
+                  data-testid="input-rule-name"
+                />
+              </div>
+              
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label className="text-slate-300">Inventory Item</Label>
+                  <Select value={selectedItem} onValueChange={setSelectedItem}>
+                    <SelectTrigger className="bg-slate-700 border-slate-600 text-white" data-testid="select-inventory-item">
+                      <SelectValue placeholder="Select item" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {(inventory as any[]).map((item: any) => (
+                        <SelectItem key={item.id} value={item.id}>
+                          {item.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                
+                <div className="space-y-2">
+                  <Label className="text-slate-300">Vendor</Label>
+                  <Select value={selectedVendor} onValueChange={setSelectedVendor}>
+                    <SelectTrigger className="bg-slate-700 border-slate-600 text-white" data-testid="select-vendor">
+                      <SelectValue placeholder="Select vendor" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {(vendors as any[]).map((vendor: any) => (
+                        <SelectItem key={vendor.id} value={vendor.id}>
+                          {vendor.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+              
+              <div className="space-y-2">
+                <Label className="text-slate-300">Trigger Type</Label>
+                <Select value={triggerType} onValueChange={setTriggerType}>
+                  <SelectTrigger className="bg-slate-700 border-slate-600 text-white" data-testid="select-trigger-type">
+                    <SelectValue placeholder="When to order" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="low_stock">Stock falls below threshold</SelectItem>
+                    <SelectItem value="scheduled">Scheduled (daily/weekly)</SelectItem>
+                    <SelectItem value="consumption">Based on consumption rate</SelectItem>
+                    <SelectItem value="forecast">AI demand forecast</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              
+              <div className="grid grid-cols-3 gap-4">
+                <div className="space-y-2">
+                  <Label className="text-slate-300">Reorder Point</Label>
+                  <Input 
+                    type="number"
+                    placeholder="50"
+                    className="bg-slate-700 border-slate-600 text-white"
+                    value={reorderPoint}
+                    onChange={(e) => setReorderPoint(Number(e.target.value))}
+                    data-testid="input-reorder-point"
+                  />
+                </div>
+                
+                <div className="space-y-2">
+                  <Label className="text-slate-300">Order Quantity</Label>
+                  <Input 
+                    type="number"
+                    placeholder="100"
+                    className="bg-slate-700 border-slate-600 text-white"
+                    value={orderQuantity}
+                    onChange={(e) => setOrderQuantity(Number(e.target.value))}
+                    data-testid="input-order-quantity"
+                  />
+                </div>
+                
+                <div className="space-y-2">
+                  <Label className="text-slate-300">Frequency</Label>
+                  <Select value={frequency} onValueChange={setFrequency}>
+                    <SelectTrigger className="bg-slate-700 border-slate-600 text-white" data-testid="select-frequency">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="daily">Daily</SelectItem>
+                      <SelectItem value="weekly">Weekly</SelectItem>
+                      <SelectItem value="bi-weekly">Bi-weekly</SelectItem>
+                      <SelectItem value="monthly">Monthly</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+              
+              <Button 
+                onClick={handleCreateRule}
+                className="w-full bg-orange-600 hover:bg-orange-700"
+                disabled={createRuleMutation.isPending}
+                data-testid="button-create-rule"
+              >
+                {createRuleMutation.isPending ? 'Creating...' : 'Create Rule'}
+              </Button>
+            </div>
+          </DialogContent>
+        </Dialog>
       </div>
 
       {/* Stats Overview */}
@@ -174,7 +296,7 @@ export default function AutomatedOrdering() {
         </CardContent>
       </Card>
 
-      {/* Active Auto-Order Rules */}
+      {/* Active Rules */}
       <Card className="bg-slate-800/50 border-slate-700">
         <CardHeader>
           <CardTitle className="text-white">Active Auto-Order Rules</CardTitle>
@@ -186,23 +308,26 @@ export default function AutomatedOrdering() {
             <div className="text-center py-8">
               <Bot className="h-12 w-12 text-slate-600 mx-auto mb-4" />
               <p className="text-slate-400">No auto-order rules created yet</p>
-              <p className="text-slate-500 text-sm">Create your first rule below to get started</p>
+              <p className="text-slate-500 text-sm">Click "Create New Rule" to get started</p>
             </div>
           ) : (
             <div className="space-y-4">
               {autoOrderRules.map((rule: any) => (
-                <div key={rule.id} className="p-4 bg-slate-700/30 rounded-lg">
+                <div key={rule.id} className="p-4 bg-slate-700/30 rounded-lg" data-testid={`rule-card-${rule.id}`}>
                   <div className="flex items-center justify-between mb-3">
-                    <h3 className="font-semibold text-white">{rule.ruleName || rule.name}</h3>
+                    <h3 className="font-semibold text-white">{rule.ruleName}</h3>
                     <div className="flex items-center gap-2">
-                      <Badge variant={rule.enabled ? "default" : "secondary"}>
+                      <Badge variant={rule.enabled ? "default" : "secondary"} data-testid={`badge-status-${rule.id}`}>
                         {rule.enabled ? "Active" : "Disabled"}
                       </Badge>
                       <Switch 
                         checked={rule.enabled}
-                        onCheckedChange={(enabled) => 
-                          toggleRuleMutation.mutate({ ruleId: rule.id, enabled })
-                        }
+                        onCheckedChange={(enabled) => {
+                          console.log("Toggle clicked for rule:", rule.id, "new state:", enabled);
+                          toggleRuleMutation.mutate({ ruleId: rule.id, enabled });
+                        }}
+                        data-testid={`toggle-rule-${rule.id}`}
+                        disabled={toggleRuleMutation.isPending}
                       />
                       <Dialog>
                         <DialogTrigger asChild>
@@ -210,6 +335,7 @@ export default function AutomatedOrdering() {
                             variant="ghost" 
                             size="sm"
                             onClick={() => openEditDialog(rule)}
+                            data-testid={`settings-button-${rule.id}`}
                           >
                             <Settings className="h-4 w-4" />
                           </Button>
@@ -228,6 +354,7 @@ export default function AutomatedOrdering() {
                                 value={editRuleName}
                                 onChange={(e) => setEditRuleName(e.target.value)}
                                 className="bg-slate-700 border-slate-600 text-white"
+                                data-testid="input-edit-rule-name"
                               />
                             </div>
                             <div className="grid grid-cols-2 gap-4">
@@ -238,6 +365,7 @@ export default function AutomatedOrdering() {
                                   value={editReorderPoint}
                                   onChange={(e) => setEditReorderPoint(Number(e.target.value))}
                                   className="bg-slate-700 border-slate-600 text-white"
+                                  data-testid="input-edit-reorder-point"
                                 />
                               </div>
                               <div className="space-y-2">
@@ -247,13 +375,14 @@ export default function AutomatedOrdering() {
                                   value={editOrderQuantity}
                                   onChange={(e) => setEditOrderQuantity(Number(e.target.value))}
                                   className="bg-slate-700 border-slate-600 text-white"
+                                  data-testid="input-edit-order-quantity"
                                 />
                               </div>
                             </div>
                             <div className="space-y-2">
                               <Label className="text-slate-300">Frequency</Label>
                               <Select value={editFrequency} onValueChange={setEditFrequency}>
-                                <SelectTrigger className="bg-slate-700 border-slate-600 text-white">
+                                <SelectTrigger className="bg-slate-700 border-slate-600 text-white" data-testid="select-edit-frequency">
                                   <SelectValue />
                                 </SelectTrigger>
                                 <SelectContent>
@@ -276,8 +405,9 @@ export default function AutomatedOrdering() {
                                   });
                                 }
                               }}
-                              className="w-full"
+                              className="w-full bg-orange-600 hover:bg-orange-700"
                               disabled={updateRuleMutation.isPending}
+                              data-testid="button-update-rule"
                             >
                               {updateRuleMutation.isPending ? 'Updating...' : 'Update Rule'}
                             </Button>
@@ -289,10 +419,10 @@ export default function AutomatedOrdering() {
                   
                   <div className="grid grid-cols-2 gap-4 text-sm text-slate-400 mb-2">
                     <div>
-                      <span className="font-medium">Item:</span> {rule.itemName || rule.item}
+                      <span className="font-medium">Item:</span> {rule.itemName}
                     </div>
                     <div>
-                      <span className="font-medium">Vendor:</span> {rule.vendorName || rule.vendor}
+                      <span className="font-medium">Vendor:</span> {rule.vendorName}
                     </div>
                   </div>
                   
@@ -301,7 +431,7 @@ export default function AutomatedOrdering() {
                       <span className="font-medium">Trigger:</span> {
                         rule.triggerType === 'low_stock' ? `Stock below ${rule.reorderPoint}` : 
                         rule.triggerType === 'scheduled' ? rule.frequency : 
-                        rule.triggerType || rule.trigger
+                        rule.triggerType
                       }
                     </div>
                     <div>
@@ -317,177 +447,6 @@ export default function AutomatedOrdering() {
               ))}
             </div>
           )}
-        </CardContent>
-      </Card>
-
-      {/* Create New Rule */}
-      <Card className="bg-slate-800/50 border-slate-700">
-        <CardHeader>
-          <CardTitle className="text-white">Create Auto-Order Rule</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label className="text-slate-300">Rule Name</Label>
-              <Input 
-                placeholder="e.g., Chicken Breast Auto-Order"
-                className="bg-slate-700 border-slate-600 text-white"
-                value={ruleName}
-                onChange={(e) => setRuleName(e.target.value)}
-                data-testid="input-rule-name"
-              />
-            </div>
-            
-            <div className="space-y-2">
-              <Label className="text-slate-300">Inventory Item</Label>
-              <Select value={selectedItem} onValueChange={setSelectedItem}>
-                <SelectTrigger className="bg-slate-700 border-slate-600 text-white" data-testid="select-inventory-item">
-                  <SelectValue placeholder="Select inventory item" />
-                </SelectTrigger>
-                <SelectContent>
-                  {(inventory as any[]).map((item: any) => (
-                    <SelectItem key={item.id} value={item.id}>
-                      {item.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            
-            <div className="space-y-2">
-              <Label className="text-slate-300">Vendor</Label>
-              <Select value={selectedVendor} onValueChange={setSelectedVendor}>
-                <SelectTrigger className="bg-slate-700 border-slate-600 text-white" data-testid="select-vendor">
-                  <SelectValue placeholder="Select vendor" />
-                </SelectTrigger>
-                <SelectContent>
-                  {(vendors as any[]).map((vendor: any) => (
-                    <SelectItem key={vendor.id} value={vendor.id}>
-                      {vendor.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            
-            <div className="space-y-2">
-              <Label className="text-slate-300">Trigger Type</Label>
-              <Select value={triggerType} onValueChange={setTriggerType}>
-                <SelectTrigger className="bg-slate-700 border-slate-600 text-white" data-testid="select-trigger-type">
-                  <SelectValue placeholder="When to order" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="low_stock">Stock falls below threshold</SelectItem>
-                  <SelectItem value="scheduled">Scheduled (daily/weekly)</SelectItem>
-                  <SelectItem value="consumption">Based on consumption rate</SelectItem>
-                  <SelectItem value="forecast">AI demand forecast</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            
-            <div className="space-y-2">
-              <Label className="text-slate-300">Reorder Point</Label>
-              <Input 
-                type="number"
-                placeholder="50"
-                className="bg-slate-700 border-slate-600 text-white"
-                value={reorderPoint}
-                onChange={(e) => setReorderPoint(Number(e.target.value))}
-                data-testid="input-reorder-point"
-              />
-            </div>
-            
-            <div className="space-y-2">
-              <Label className="text-slate-300">Order Quantity</Label>
-              <Input 
-                type="number"
-                placeholder="100"
-                className="bg-slate-700 border-slate-600 text-white"
-                value={orderQuantity}
-                onChange={(e) => setOrderQuantity(Number(e.target.value))}
-                data-testid="input-order-quantity"
-              />
-            </div>
-            
-            <div className="space-y-2">
-              <Label className="text-slate-300">Frequency</Label>
-              <Select value={frequency} onValueChange={setFrequency}>
-                <SelectTrigger className="bg-slate-700 border-slate-600 text-white" data-testid="select-frequency">
-                  <SelectValue placeholder="Select frequency" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="daily">Daily</SelectItem>
-                  <SelectItem value="weekly">Weekly</SelectItem>
-                  <SelectItem value="bi-weekly">Bi-weekly</SelectItem>
-                  <SelectItem value="monthly">Monthly</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-          
-          <div className="flex justify-end gap-2 mt-6">
-            <Button variant="outline" className="border-slate-600 text-slate-300">
-              Preview Rule
-            </Button>
-            <Button 
-              className="bg-orange-600 hover:bg-orange-700"
-              onClick={handleCreateRule}
-              disabled={createRuleMutation.isPending}
-              data-testid="button-create-rule"
-            >
-              {createRuleMutation.isPending ? 'Creating...' : 'Create Rule'}
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* AI Insights */}
-      <Card className="bg-gradient-to-br from-purple-500/10 to-blue-500/10 border-purple-500/30">
-        <CardHeader>
-          <CardTitle className="text-white flex items-center gap-2">
-            <TrendingUp className="h-5 w-5 text-purple-400" />
-            AI Ordering Insights
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-4">
-            <div className="p-4 bg-slate-800/50 rounded-lg">
-              <div className="flex items-start gap-3">
-                <Target className="h-5 w-5 text-green-400 mt-1" />
-                <div>
-                  <div className="font-semibold text-green-400">Optimization Opportunity</div>
-                  <div className="text-sm text-slate-300 mt-1">
-                    Your Ground Beef orders could be optimized by switching to 50lb orders every 3 days 
-                    instead of 100lb weekly orders. This would reduce waste by 12% and save $67/month.
-                  </div>
-                </div>
-              </div>
-            </div>
-            <div className="p-4 bg-slate-800/50 rounded-lg">
-              <div className="flex items-start gap-3">
-                <AlertTriangle className="h-5 w-5 text-yellow-400 mt-1" />
-                <div>
-                  <div className="font-semibold text-yellow-400">Demand Spike Detected</div>
-                  <div className="text-sm text-slate-300 mt-1">
-                    Weekend consumption for Chicken Wings increased 35% vs last month. 
-                    Consider increasing Friday orders by 20lbs to avoid stockouts.
-                  </div>
-                </div>
-              </div>
-            </div>
-            <div className="p-4 bg-slate-800/50 rounded-lg">
-              <div className="flex items-start gap-3">
-                <DollarSign className="h-5 w-5 text-blue-400 mt-1" />
-                <div>
-                  <div className="font-semibold text-blue-400">Cost Savings Alert</div>
-                  <div className="text-sm text-slate-300 mt-1">
-                    Sysco is offering 8% bulk discount on produce orders over $500. 
-                    Combine your daily orders into bi-weekly orders to qualify.
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
         </CardContent>
       </Card>
     </div>

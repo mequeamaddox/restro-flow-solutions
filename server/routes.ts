@@ -1620,73 +1620,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // File-based storage for rules persistence
-  const rulesFilePath = path.join(process.cwd(), 'user-rules.json');
-  
-  function loadUserRules(): any[] {
-    try {
-      if (fs.existsSync(rulesFilePath)) {
-        const data = fs.readFileSync(rulesFilePath, 'utf8');
-        return JSON.parse(data);
-      }
-    } catch (error) {
-      console.error('Error loading user rules:', error);
-    }
-    return [];
-  }
-  
-  function saveUserRules(rules: any[]): void {
-    try {
-      fs.writeFileSync(rulesFilePath, JSON.stringify(rules, null, 2));
-    } catch (error) {
-      console.error('Error saving user rules:', error);
-    }
-  }
-  
-  let sessionRules: any[] = loadUserRules();
+  // Simple in-memory storage for auto-ordering rules
+  let autoOrderingRules: any[] = [];
 
   // Auto-ordering endpoints
   app.get('/api/auto-ordering/rules', isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user?.claims?.sub || req.user?.id;
-      console.log("Fetching rules for user:", userId, "Session rules:", sessionRules.length);
-      
-      // If user has created rules this session, return them
-      if (sessionRules.length > 0) {
-        res.json(sessionRules);
-        return;
-      }
-      
-      // Otherwise, show mock data
-      const mockRules = [
-        {
-          id: 'rule-001',
-          itemId: '656278e7-f9a2-4e67-ae69-8d0ac53af00a',
-          itemName: 'Ground Beef (80/20)',
-          vendorId: 'a904b7ad-06a7-4988-aad8-20326cda0af8',
-          vendorName: 'Prime Food Distributors',
-          reorderPoint: 50,
-          orderQuantity: 200,
-          enabled: true,
-          lastTriggered: '2025-08-28T10:30:00Z',
-          estimatedSavings: 1200,
-          frequency: 'weekly'
-        },
-        {
-          id: 'rule-002',
-          itemId: 'b1234567-f9a2-4e67-ae69-8d0ac53af00b',
-          itemName: 'Chicken Breast',
-          vendorId: 'a904b7ad-06a7-4988-aad8-20326cda0af8',
-          vendorName: 'Prime Food Distributors',
-          reorderPoint: 30,
-          orderQuantity: 100,
-          enabled: true,
-          lastTriggered: '2025-08-29T14:15:00Z',
-          estimatedSavings: 800,
-          frequency: 'bi-weekly'
-        }
-      ];
-      res.json(mockRules);
+      console.log("Fetching rules for user:", userId, "Rules count:", autoOrderingRules.length);
+      res.json(autoOrderingRules);
     } catch (error) {
       console.error("Error fetching auto-ordering rules:", error);
       res.status(500).json({ message: "Failed to fetch auto-ordering rules" });
@@ -1719,10 +1661,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       };
       
       console.log("Created rule:", newRule);
-      
-      // Add to session storage and save to file
-      sessionRules.push(newRule);
-      saveUserRules(sessionRules);
+      autoOrderingRules.push(newRule);
       
       res.status(201).json(newRule);
     } catch (error) {
@@ -1735,13 +1674,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const { id } = req.params;
       const updateData = req.body;
+      console.log("Updating rule:", id, "with data:", updateData);
       
-      // Update in session storage and save to file
-      const ruleIndex = sessionRules.findIndex(rule => rule.id === id);
+      // Update in memory storage
+      const ruleIndex = autoOrderingRules.findIndex(rule => rule.id === id);
       if (ruleIndex !== -1) {
-        sessionRules[ruleIndex] = { ...sessionRules[ruleIndex], ...updateData, updatedAt: new Date().toISOString() };
-        saveUserRules(sessionRules);
-        res.json(sessionRules[ruleIndex]);
+        autoOrderingRules[ruleIndex] = { ...autoOrderingRules[ruleIndex], ...updateData, updatedAt: new Date().toISOString() };
+        console.log("Updated rule:", autoOrderingRules[ruleIndex]);
+        res.json(autoOrderingRules[ruleIndex]);
       } else {
         // Rule not found in session storage, return mock response for demo rules
         res.json({ id, ...updateData, updatedAt: new Date().toISOString() });
