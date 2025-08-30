@@ -19,6 +19,7 @@ import {
   Target,
   Zap
 } from 'lucide-react';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { apiRequest } from '@/lib/queryClient';
 import { useToast } from '@/hooks/use-toast';
 
@@ -27,6 +28,11 @@ export default function AutomatedOrdering() {
   const [selectedItem, setSelectedItem] = useState('');
   const [triggerType, setTriggerType] = useState('');
   const [ruleName, setRuleName] = useState('');
+  const [editingRule, setEditingRule] = useState<any>(null);
+  const [editRuleName, setEditRuleName] = useState('');
+  const [editReorderPoint, setEditReorderPoint] = useState(50);
+  const [editOrderQuantity, setEditOrderQuantity] = useState(100);
+  const [editFrequency, setEditFrequency] = useState('weekly');
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
@@ -60,6 +66,18 @@ export default function AutomatedOrdering() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/auto-ordering/rules'] });
+    }
+  });
+
+  const updateRuleMutation = useMutation({
+    mutationFn: async (updateData: any) => {
+      const response = await apiRequest("PATCH", `/api/auto-ordering/rules/${updateData.id}`, updateData);
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/auto-ordering/rules'] });
+      setEditingRule(null);
+      toast({ title: "Rule updated successfully" });
     }
   });
 
@@ -181,18 +199,89 @@ export default function AutomatedOrdering() {
                       toggleRuleMutation.mutate({ ruleId: rule.id, enabled })
                     }
                   />
-                  <Button 
-                    variant="ghost" 
-                    size="sm"
-                    onClick={() => {
-                      toast({ 
-                        title: "Rule Settings", 
-                        description: `Configure settings for ${rule.ruleName || rule.name}` 
-                      });
-                    }}
-                  >
-                    <Settings className="h-4 w-4" />
-                  </Button>
+                  <Dialog>
+                    <DialogTrigger asChild>
+                      <Button 
+                        variant="ghost" 
+                        size="sm"
+                        onClick={() => {
+                          setEditingRule(rule);
+                          setEditRuleName(rule.ruleName || rule.name);
+                          setEditReorderPoint(rule.reorderPoint || 50);
+                          setEditOrderQuantity(rule.orderQuantity || 100);
+                          setEditFrequency(rule.frequency || 'weekly');
+                        }}
+                      >
+                        <Settings className="h-4 w-4" />
+                      </Button>
+                    </DialogTrigger>
+                    <DialogContent className="bg-slate-800 border-slate-700">
+                      <DialogHeader>
+                        <DialogTitle className="text-white">Edit Rule Settings</DialogTitle>
+                      </DialogHeader>
+                      <div className="space-y-4">
+                        <div className="space-y-2">
+                          <Label className="text-slate-300">Rule Name</Label>
+                          <Input 
+                            value={editRuleName}
+                            onChange={(e) => setEditRuleName(e.target.value)}
+                            className="bg-slate-700 border-slate-600 text-white"
+                          />
+                        </div>
+                        <div className="grid grid-cols-2 gap-4">
+                          <div className="space-y-2">
+                            <Label className="text-slate-300">Reorder Point</Label>
+                            <Input 
+                              type="number"
+                              value={editReorderPoint}
+                              onChange={(e) => setEditReorderPoint(Number(e.target.value))}
+                              className="bg-slate-700 border-slate-600 text-white"
+                            />
+                          </div>
+                          <div className="space-y-2">
+                            <Label className="text-slate-300">Order Quantity</Label>
+                            <Input 
+                              type="number"
+                              value={editOrderQuantity}
+                              onChange={(e) => setEditOrderQuantity(Number(e.target.value))}
+                              className="bg-slate-700 border-slate-600 text-white"
+                            />
+                          </div>
+                        </div>
+                        <div className="space-y-2">
+                          <Label className="text-slate-300">Frequency</Label>
+                          <Select value={editFrequency} onValueChange={setEditFrequency}>
+                            <SelectTrigger className="bg-slate-700 border-slate-600 text-white">
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="daily">Daily</SelectItem>
+                              <SelectItem value="weekly">Weekly</SelectItem>
+                              <SelectItem value="bi-weekly">Bi-weekly</SelectItem>
+                              <SelectItem value="monthly">Monthly</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+                        <Button 
+                          onClick={() => {
+                            if (editingRule) {
+                              updateRuleMutation.mutate({
+                                id: editingRule.id,
+                                ruleName: editRuleName,
+                                reorderPoint: editReorderPoint,
+                                orderQuantity: editOrderQuantity,
+                                frequency: editFrequency
+                              });
+                            }
+                          }}
+                          className="w-full"
+                          disabled={updateRuleMutation.isPending}
+                        >
+                          {updateRuleMutation.isPending ? 'Updating...' : 'Update Rule'}
+                        </Button>
+                      </div>
+                    </DialogContent>
+                  </Dialog>
                 </div>
               </div>
             ))}
