@@ -146,67 +146,32 @@ export default function AutomatedOrdering() {
         </CardHeader>
         <CardContent>
           <div className="space-y-4">
-            {/* Mock rules for demonstration */}
-            {[
-              {
-                id: '1',
-                name: 'Ground Beef Auto-Order',
-                item: 'Ground Beef 80/20',
-                vendor: 'Sysco Foods',
-                trigger: 'Stock below 15 lbs',
-                orderQuantity: '100 lbs',
-                enabled: true,
-                lastTriggered: '2 days ago',
-                estimatedSavings: '$45/month'
-              },
-              {
-                id: '2',
-                name: 'Produce Daily Orders',
-                item: 'Mixed Vegetables',
-                vendor: 'Fresh Direct',
-                trigger: 'Daily at 6 AM',
-                orderQuantity: 'Based on forecast',
-                enabled: true,
-                lastTriggered: 'Yesterday',
-                estimatedSavings: '$120/month'
-              },
-              {
-                id: '3',
-                name: 'Beer Keg Replenishment',
-                item: 'Draft Beer Kegs',
-                vendor: 'Premium Beverage',
-                trigger: 'Weekly + consumption surge',
-                orderQuantity: '6 kegs',
-                enabled: false,
-                lastTriggered: 'Never',
-                estimatedSavings: '$80/month'
-              }
-            ].map((rule) => (
+            {autoOrderRules.map((rule: any) => (
               <div key={rule.id} className="flex items-center justify-between p-4 bg-slate-700/30 rounded-lg">
                 <div className="flex-1 space-y-2">
                   <div className="flex items-center gap-3">
-                    <h3 className="font-semibold text-white">{rule.name}</h3>
+                    <h3 className="font-semibold text-white">{rule.ruleName || rule.name}</h3>
                     <Badge variant={rule.enabled ? "default" : "secondary"}>
                       {rule.enabled ? "Active" : "Disabled"}
                     </Badge>
                   </div>
                   <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm text-slate-400">
                     <div>
-                      <span className="font-medium">Item:</span> {rule.item}
+                      <span className="font-medium">Item:</span> {rule.itemName || rule.item}
                     </div>
                     <div>
-                      <span className="font-medium">Vendor:</span> {rule.vendor}
+                      <span className="font-medium">Vendor:</span> {rule.vendorName || rule.vendor}
                     </div>
                     <div>
-                      <span className="font-medium">Trigger:</span> {rule.trigger}
+                      <span className="font-medium">Trigger:</span> {rule.triggerType || rule.trigger}
                     </div>
                     <div>
                       <span className="font-medium">Quantity:</span> {rule.orderQuantity}
                     </div>
                   </div>
                   <div className="flex items-center gap-6 text-xs text-slate-500">
-                    <span>Last triggered: {rule.lastTriggered}</span>
-                    <span className="text-green-400">Saves: {rule.estimatedSavings}</span>
+                    <span>Last triggered: {rule.lastTriggered || "Never"}</span>
+                    <span className="text-green-400">Saves: ${rule.estimatedSavings}/month</span>
                   </div>
                 </div>
                 <div className="flex items-center gap-2">
