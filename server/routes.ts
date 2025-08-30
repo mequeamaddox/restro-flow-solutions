@@ -1220,11 +1220,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Get purchase data
       const purchaseResult = await db.execute(sql`
-        SELECT COALESCE(SUM(CAST(total AS DECIMAL)), 0) as total_purchases
+        SELECT COALESCE(SUM(CAST(total_amount AS DECIMAL)), 0) as total_purchases
         FROM purchase_orders 
         WHERE location_id = ${locationId}::uuid 
         AND order_date BETWEEN ${startDate.toISOString()}::timestamp AND ${endDate.toISOString()}::timestamp
-        AND status = 'completed'
+        AND status = 'delivered'
       `);
 
       const sales = salesResult.rows[0];

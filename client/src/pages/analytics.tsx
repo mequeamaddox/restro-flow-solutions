@@ -391,7 +391,7 @@ export default function Analytics() {
                     </Badge>
                     <div>
                       <p className="font-medium">
-                        {alert.alertType.replace('_', ' ').toUpperCase()}
+                        {alert.alertType?.replace('_', ' ').toUpperCase() || 'ALERT'}
                       </p>
                       <p className="text-sm text-muted-foreground">
                         {alert.item?.name && `${alert.item.name} - `}
