@@ -1692,6 +1692,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.delete('/api/auto-ordering/rules/:id', isAuthenticated, async (req: any, res) => {
+    try {
+      const { id } = req.params;
+      console.log("Deleting rule:", id);
+      
+      // Remove from memory storage
+      const ruleIndex = autoOrderingRules.findIndex(rule => rule.id === id);
+      if (ruleIndex !== -1) {
+        autoOrderingRules.splice(ruleIndex, 1);
+        console.log("Deleted rule, remaining rules:", autoOrderingRules.length);
+        res.json({ message: "Rule deleted successfully" });
+      } else {
+        res.status(404).json({ message: "Rule not found" });
+      }
+    } catch (error) {
+      console.error("Error deleting auto-ordering rule:", error);
+      res.status(500).json({ message: "Failed to delete auto-ordering rule" });
+    }
+  });
+
   // Forecasting endpoints
   app.get('/api/forecasting/demand', isAuthenticated, async (req: any, res) => {
     try {

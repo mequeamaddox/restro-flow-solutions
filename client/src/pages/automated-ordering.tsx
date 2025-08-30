@@ -8,7 +8,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { Bot, Settings, Zap } from 'lucide-react';
+import { Bot, Settings, Zap, Trash2 } from 'lucide-react';
 import { apiRequest } from '@/lib/queryClient';
 import { useToast } from '@/hooks/use-toast';
 
@@ -93,6 +93,23 @@ export default function AutomatedOrdering() {
       queryClient.invalidateQueries({ queryKey: ['/api/auto-ordering/rules'] });
       setEditingRule(null);
       toast({ title: "Rule updated successfully" });
+    }
+  });
+
+  // Delete rule mutation
+  const deleteRuleMutation = useMutation({
+    mutationFn: async (ruleId: string) => {
+      console.log("Deleting rule:", ruleId);
+      const response = await apiRequest("DELETE", `/api/auto-ordering/rules/${ruleId}`, {});
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/auto-ordering/rules'] });
+      toast({ title: "Rule deleted successfully" });
+    },
+    onError: (error) => {
+      console.error("Delete error:", error);
+      toast({ title: "Failed to delete rule", variant: "destructive" });
     }
   });
 
@@ -393,27 +410,50 @@ export default function AutomatedOrdering() {
                                 </SelectContent>
                               </Select>
                             </div>
-                            <Button 
-                              onClick={() => {
-                                if (editingRule) {
-                                  updateRuleMutation.mutate({
-                                    id: editingRule.id,
-                                    ruleName: editRuleName,
-                                    reorderPoint: editReorderPoint,
-                                    orderQuantity: editOrderQuantity,
-                                    frequency: editFrequency
-                                  });
-                                }
-                              }}
-                              className="w-full bg-orange-600 hover:bg-orange-700"
-                              disabled={updateRuleMutation.isPending}
-                              data-testid="button-update-rule"
-                            >
-                              {updateRuleMutation.isPending ? 'Updating...' : 'Update Rule'}
-                            </Button>
+                            <div className="flex gap-2">
+                              <Button 
+                                onClick={() => {
+                                  if (editingRule) {
+                                    updateRuleMutation.mutate({
+                                      id: editingRule.id,
+                                      ruleName: editRuleName,
+                                      reorderPoint: editReorderPoint,
+                                      orderQuantity: editOrderQuantity,
+                                      frequency: editFrequency
+                                    });
+                                  }
+                                }}
+                                className="flex-1 bg-orange-600 hover:bg-orange-700"
+                                disabled={updateRuleMutation.isPending}
+                                data-testid="button-update-rule"
+                              >
+                                {updateRuleMutation.isPending ? 'Updating...' : 'Update Rule'}
+                              </Button>
+                              <Button 
+                                onClick={() => {
+                                  if (editingRule) {
+                                    deleteRuleMutation.mutate(editingRule.id);
+                                  }
+                                }}
+                                variant="destructive"
+                                disabled={deleteRuleMutation.isPending}
+                                data-testid="button-delete-rule-settings"
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            </div>
                           </div>
                         </DialogContent>
                       </Dialog>
+                      <Button 
+                        variant="ghost" 
+                        size="sm"
+                        onClick={() => deleteRuleMutation.mutate(rule.id)}
+                        disabled={deleteRuleMutation.isPending}
+                        data-testid={`delete-button-${rule.id}`}
+                      >
+                        <Trash2 className="h-4 w-4 text-red-400" />
+                      </Button>
                     </div>
                   </div>
                   
