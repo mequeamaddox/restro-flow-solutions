@@ -60,13 +60,16 @@ export class OCRService {
       
       // Try AWS Textract first (commercial-grade OCR)
       try {
+        console.log('Attempting AWS Textract processing...');
         const textractResult = await this.extractTextWithTextract(buffer);
         if (textractResult.confidence > 80) {
           console.log('AWS Textract processing successful');
           return textractResult;
         }
+        console.log(`AWS Textract returned low confidence (${textractResult.confidence}%), falling back...`);
       } catch (error) {
-        console.log('AWS Textract not available, falling back to enhanced Tesseract...');
+        console.error('AWS Textract error:', error instanceof Error ? error.message : 'Unknown error');
+        console.log('Falling back to enhanced Tesseract...');
       }
       
       // Fallback to enhanced Tesseract OCR
