@@ -17,7 +17,6 @@ export class OCRService {
       // Note: Some parameters can only be set during initialization
       await worker.setParameters({
         tessedit_char_whitelist: '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz.,/$:-# \n\r\t',
-        tessedit_pageseg_mode: '1', // Automatic page segmentation
       });
       
       const { data: { text, confidence } } = await worker.recognize(buffer);
@@ -168,7 +167,6 @@ Please try:
         
         await worker.setParameters({
           tessedit_char_whitelist: '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz.,/$:-# \n\r\t',
-          tessedit_pageseg_mode: '6', // Uniform block of text
         });
         
         const { data: { text, confidence } } = await worker.recognize(buffer);
