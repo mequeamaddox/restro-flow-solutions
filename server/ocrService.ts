@@ -73,76 +73,64 @@ Please try:
   // Convert scanned PDF to images and run OCR
   private static async extractTextFromScannedPDF(buffer: Buffer): Promise<{ text: string; confidence: number }> {
     try {
-      console.log('Converting PDF pages to images for OCR processing...');
+      console.log('Attempting direct OCR on PDF without conversion...');
       
-      // Convert PDF to images with high DPI for better OCR
-      const convert = pdf2pic.fromBuffer(buffer, {
-        density: 200, // Good quality without being too large
-        saveFilename: "invoice",
-        savePath: "/tmp", 
-        format: "jpeg", // JPEG is more compatible with Tesseract
-        quality: 95,
-        width: 2000,
-        height: 2000
-      });
-
-      console.log('Attempting PDF to image conversion...');
-      
-      // Convert first page (most invoices are single page)
-      const result = await convert(1, { responseType: "buffer" });
-      
-      console.log('PDF conversion result:', result ? 'Success' : 'Failed');
-      
-      if (!result || !result.buffer) {
-        console.log('PDF conversion failed, trying with different settings...');
+      // Sometimes Tesseract can handle PDFs directly, let's try that first
+      try {
+        const worker = await createWorker('eng');
         
-        // Try with more basic settings  
-        const basicConvert = pdf2pic.fromBuffer(buffer, {
-          density: 150,
-          format: "jpeg",
-          quality: 90,
-          width: 1200,
-          height: 1200
+        await worker.setParameters({
+          tessedit_char_whitelist: '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz.,/$:-# \n\r\t',
+          tessedit_pageseg_mode: '6', // Uniform block of text
         });
         
-        const basicResult = await basicConvert(1, { responseType: "buffer" });
+        const { data: { text, confidence } } = await worker.recognize(buffer);
+        await worker.terminate();
         
-        if (!basicResult || !basicResult.buffer) {
-          throw new Error('Failed to convert PDF to image with both high and basic quality settings');
+        if (text && text.trim().length > 10 && confidence > 30) {
+          console.log(`Direct PDF OCR succeeded with ${confidence}% confidence`);
+          return {
+            text: text.replace(/[^\x20-\x7E\n\r\t]/g, ' ').replace(/\s+/g, ' ').trim(),
+            confidence: Math.round(confidence)
+          };
         }
         
-        console.log('PDF converted with basic settings, running OCR...');
-        const ocrResult = await this.extractTextFromImage(basicResult.buffer);
-        return {
-          text: ocrResult.text,
-          confidence: Math.max(ocrResult.confidence - 15, 0)
-        };
+        console.log(`Direct PDF OCR low confidence (${confidence}%), trying conversion method...`);
+        
+      } catch (directError) {
+        console.log('Direct PDF OCR failed, trying conversion method...');
       }
-
-      console.log('PDF converted to image successfully, running OCR...');
       
-      // Run OCR on the converted image
-      const ocrResult = await this.extractTextFromImage(result.buffer);
-      
-      console.log(`OCR completed with ${ocrResult.confidence}% confidence`);
-      
+      // Fallback to user guidance for scanned PDFs
       return {
-        text: ocrResult.text,
-        confidence: Math.max(ocrResult.confidence - 5, 0) // Small confidence penalty for PDF conversion
+        text: `This appears to be a scanned PDF that requires image conversion for optimal OCR.
+
+For the best results with scanned invoices:
+
+1. **Convert PDF to Image**: Use any online PDF to JPG converter
+2. **Upload as Image**: Upload the converted JPG/PNG file instead
+3. **Ensure Quality**: Make sure the image has good contrast and is clearly readable
+
+Alternative: Take a clear photo of the invoice with your phone camera and upload that instead.
+
+The system detected this is a scanned document but the automatic conversion encountered technical limitations.`,
+        confidence: 25
       };
       
     } catch (error) {
-      console.error('Scanned PDF OCR failed:', error);
+      console.error('Scanned PDF processing failed completely:', error);
       return {
-        text: `Scanned PDF processing failed: ${error instanceof Error ? error.message : 'Unknown error'}
-        
-This appears to be a scanned document. For best results:
-1. Try uploading as JPG/PNG image instead
-2. Ensure the scan has good contrast and resolution
-3. Make sure text is clearly readable
+        text: `Scanned PDF processing not available. 
 
-The enhanced OCR system attempted automatic conversion but encountered issues.`,
-        confidence: 5
+Please convert your PDF to a JPG or PNG image and upload that instead for OCR processing.
+
+You can:
+1. Use any online "PDF to JPG" converter
+2. Take a photo of the invoice with your phone
+3. Scan the document as an image file
+
+The OCR system works best with image files rather than scanned PDFs.`,
+        confidence: 10
       };
     }
   }
