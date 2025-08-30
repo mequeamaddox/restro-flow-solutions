@@ -243,22 +243,29 @@ The OCR system works best with image files rather than scanned PDFs.`,
       const line = lines[i].trim();
       const lowerLine = line.toLowerCase();
       
-      // Extract vendor name (usually first few lines, company name patterns)
-      if (i < 8 && line.length > 3 && !lowerLine.includes('invoice') && !lowerLine.includes('date') && 
-          !line.match(/^\d/) && !lowerLine.includes('phone') && !lowerLine.includes('email') &&
-          !lowerLine.includes('address') && !lowerLine.includes('city') && !lowerLine.includes('zip')) {
-        // Look for company patterns (high priority)
-        if (line.includes('Inc.') || line.includes('LLC') || line.includes('Corp') || 
+      // Extract vendor name (look for company patterns anywhere in first 15 lines)
+      if (i < 15 && line.length > 3) {
+        // High priority company patterns
+        if ((line.includes('Inc.') || line.includes('LLC') || line.includes('Corp') || 
             line.includes('Company') || line.includes('Co.') || line.includes('Service') ||
             line.includes('Food') || line.includes('Supply') || line.includes('Restaurant') ||
             line.includes('Kitchen') || line.includes('Equipment') || line.includes('Repair') ||
-            line.includes('Seafood') || line.includes('Market') || line.includes('Wholesale') ||
-            line.includes('&') && line.length < 30) { // "&" suggests company name like "C& C Seafood"
+            line.includes('Seafood') || line.includes('Market') || line.includes('Wholesale')) && 
+            !lowerLine.includes('customer') && !lowerLine.includes('order') && !lowerLine.includes('department')) {
           vendorName = line;
-        } else if (vendorName === 'Unknown Vendor' && line.length > 5 && line.length < 50 && 
-                   line.match(/^[A-Za-z&]/) && !lowerLine.includes('department') && 
-                   !lowerLine.includes('customer') && !lowerLine.includes('order')) {
-          vendorName = line; // Fallback to first meaningful text line
+        }
+        // Special pattern for "C& C Seafood" type names
+        else if (line.match(/^[A-Z]&?\s*[A-Z]/i) && line.includes('&') && line.length < 30 && 
+                 !lowerLine.includes('customer') && !lowerLine.includes('order')) {
+          vendorName = line;
+        }
+        // Generic company name pattern (fallback)
+        else if (vendorName === 'Unknown Vendor' && line.length > 5 && line.length < 50 && 
+                 line.match(/^[A-Za-z]/) && !lowerLine.includes('invoice') && !lowerLine.includes('date') && 
+                 !line.match(/^\d/) && !lowerLine.includes('phone') && !lowerLine.includes('email') &&
+                 !lowerLine.includes('address') && !lowerLine.includes('city') && !lowerLine.includes('zip') &&
+                 !lowerLine.includes('department') && !lowerLine.includes('customer') && !lowerLine.includes('order')) {
+          vendorName = line;
         }
       }
       
@@ -273,8 +280,9 @@ The OCR system works best with image files rather than scanned PDFs.`,
       ];
       
       // Special check for standalone numbers at start of line (common invoice format)
-      if (line.match(/^\d{5,8}$/) && i < 10) { // First 10 lines, 5-8 digits
+      if (line.match(/^\d{5,8}$/) && i < 15) { // First 15 lines, 5-8 digits like "177132"
         invoiceNumber = line;
+        console.log(`Found standalone invoice number: ${line} at line ${i}`);
       }
       
       for (const pattern of invoicePatterns) {
