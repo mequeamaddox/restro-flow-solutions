@@ -1621,7 +1621,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Auto-ordering endpoints
   app.get('/api/auto-ordering/rules', isAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.user.id;
+      const userId = req.user?.claims?.sub || req.user?.id;
       console.log("Fetching rules for user:", userId);
       const userRules = await storage.getAutoOrderRules(userId);
       console.log("User rules found:", userRules.length);
@@ -1670,7 +1670,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post('/api/auto-ordering/rules', isAuthenticated, async (req: any, res) => {
     try {
       const ruleData = req.body;
-      const userId = req.user.id;
+      const userId = req.user?.claims?.sub || req.user?.id;
       console.log("Creating rule for user:", userId, "with data:", ruleData);
       
       // Get item and vendor names from the existing data
