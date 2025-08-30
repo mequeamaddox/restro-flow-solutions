@@ -7,6 +7,8 @@ import { db } from "./db";
 import { sql } from "drizzle-orm";
 import { posService } from "./posService";
 import { OCRService } from "./ocrService";
+import fs from 'fs';
+import path from 'path';
 import {
   insertLocationSchema,
   insertCategorySchema,
@@ -1619,8 +1621,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // File-based storage for rules persistence
-  const fs = require('fs');
-  const path = require('path');
   const rulesFilePath = path.join(process.cwd(), 'user-rules.json');
   
   function loadUserRules(): any[] {
