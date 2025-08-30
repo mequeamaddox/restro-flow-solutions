@@ -1,6 +1,7 @@
 import { createWorker } from 'tesseract.js';
 import pdfParse from 'pdf-parse';
 import pdf2pic from 'pdf2pic';
+import { TextractClient, AnalyzeDocumentCommand } from '@aws-sdk/client-textract';
 
 // Simple OCR service for invoice processing
 export class OCRService {
@@ -39,27 +40,42 @@ export class OCRService {
     }
   }
   
-  // Process PDF files with text extraction and OCR fallback
+  // Main OCR processing method with commercial-grade support
   static async extractTextFromPDF(buffer: Buffer): Promise<{ text: string; confidence: number }> {
     try {
-      console.log('Starting PDF text extraction...');
+      console.log('Starting professional OCR processing...');
       
-      // First try direct text extraction
-      const data = await pdfParse(buffer);
+      // First try direct text extraction for text-based PDFs
+      const directText = await this.extractDirectPDFText(buffer);
       
-      if (data.text && data.text.trim().length > 50) {
-        console.log('PDF text extracted successfully');
-        return { text: data.text.trim(), confidence: 85 };
+      if (directText.success && directText.text && directText.text.trim().length > 50) {
+        console.log('Direct PDF text extraction successful');
+        return {
+          text: directText.text,
+          confidence: 95 // High confidence for direct text extraction
+        };
       }
       
-      // If minimal text found, convert to images and run OCR
-      console.log('PDF appears to be scanned - converting to images for OCR...');
+      console.log('PDF appears to be scanned - using enterprise OCR...');
+      
+      // Try AWS Textract first (commercial-grade OCR)
+      try {
+        const textractResult = await this.extractTextWithTextract(buffer);
+        if (textractResult.confidence > 80) {
+          console.log('AWS Textract processing successful');
+          return textractResult;
+        }
+      } catch (error) {
+        console.log('AWS Textract not available, falling back to enhanced Tesseract...');
+      }
+      
+      // Fallback to enhanced Tesseract OCR
       return await this.extractTextFromScannedPDF(buffer);
       
     } catch (error) {
       console.error('PDF processing failed:', error);
       return {
-        text: `PDF processing failed. Error: ${error instanceof Error ? error.message : 'Unknown error'}
+        text: `Professional OCR processing failed. Error: ${error instanceof Error ? error.message : 'Unknown error'}
         
 Please try:
 1. Uploading a clear, high-resolution image instead
@@ -68,6 +84,74 @@ Please try:
         confidence: 10
       };
     }
+  }
+
+  // Extract text directly from PDF (for text-based PDFs)
+  private static async extractDirectPDFText(buffer: Buffer): Promise<{ success: boolean; text: string }> {
+    try {
+      const data = await pdfParse(buffer);
+      return {
+        success: true,
+        text: data.text.trim()
+      };
+    } catch (error) {
+      return {
+        success: false,
+        text: ''
+      };
+    }
+  }
+
+  // AWS Textract - Commercial-grade OCR (same technology used by QuickBooks)
+  private static async extractTextWithTextract(buffer: Buffer): Promise<{ text: string; confidence: number }> {
+    if (!process.env.AWS_ACCESS_KEY_ID || !process.env.AWS_SECRET_ACCESS_KEY) {
+      throw new Error('AWS credentials not configured');
+    }
+
+    const textract = new TextractClient({
+      region: process.env.AWS_REGION || 'us-east-1',
+      credentials: {
+        accessKeyId: process.env.AWS_ACCESS_KEY_ID,
+        secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
+      },
+    });
+
+    const command = new AnalyzeDocumentCommand({
+      Document: {
+        Bytes: buffer,
+      },
+      FeatureTypes: ['FORMS', 'TABLES'], // Extract forms and tables for invoices
+    });
+
+    const response = await textract.send(command);
+    
+    if (!response.Blocks) {
+      throw new Error('No text found in document');
+    }
+
+    // Extract text from Textract blocks
+    let extractedText = '';
+    let totalConfidence = 0;
+    let confidenceCount = 0;
+
+    for (const block of response.Blocks) {
+      if (block.BlockType === 'LINE' && block.Text) {
+        extractedText += block.Text + '\n';
+        if (block.Confidence) {
+          totalConfidence += block.Confidence;
+          confidenceCount++;
+        }
+      }
+    }
+
+    const averageConfidence = confidenceCount > 0 ? totalConfidence / confidenceCount : 0;
+    
+    console.log(`AWS Textract completed with ${averageConfidence.toFixed(1)}% confidence`);
+    
+    return {
+      text: extractedText.trim(),
+      confidence: Math.round(averageConfidence)
+    };
   }
 
   // Convert scanned PDF to images and run OCR
