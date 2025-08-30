@@ -533,7 +533,13 @@ export default function InvoiceProcessing() {
                                       <TableBody>
                                         {invoice.lineItems.map((item: any, index: number) => (
                                           <TableRow key={index} className="border-slate-700">
-                                            <TableCell className="text-slate-300 font-medium">
+                                            <TableCell className="text-slate-300 font-medium flex items-center gap-3">
+                                              <input
+                                                type="checkbox"
+                                                defaultChecked={true}
+                                                className="rounded border-slate-600 bg-slate-700 text-blue-500 focus:ring-blue-500"
+                                                data-testid={`checkbox-lineitem-${index}`}
+                                              />
                                               {item.description || 'Unknown Item'}
                                             </TableCell>
                                             <TableCell className="text-slate-300 text-right">
@@ -558,19 +564,40 @@ export default function InvoiceProcessing() {
                                       </TableBody>
                                     </Table>
                                   </div>
-                                  <div className="flex justify-end">
-                                    <Button
-                                      variant="outline"
-                                      size="sm"
-                                      className="border-slate-600 text-slate-300 hover:bg-slate-700"
-                                      onClick={() => {
-                                        // TODO: Add function to import line items to inventory
-                                        console.log('Import to inventory:', invoice.lineItems);
-                                      }}
-                                    >
-                                      <Package className="h-4 w-4 mr-2" />
-                                      Import to Inventory
-                                    </Button>
+                                  <div className="flex justify-between items-center">
+                                    <div className="text-sm text-slate-400">
+                                      Select items to import to inventory
+                                    </div>
+                                    <div className="flex gap-2">
+                                      <Button
+                                        variant="ghost"
+                                        size="sm"
+                                        className="text-slate-400 hover:bg-slate-700"
+                                        onClick={() => {
+                                          // Toggle all checkboxes
+                                          const checkboxes = document.querySelectorAll('[data-testid^="checkbox-lineitem-"]') as NodeListOf<HTMLInputElement>;
+                                          const allChecked = Array.from(checkboxes).every(cb => cb.checked);
+                                          checkboxes.forEach(cb => cb.checked = !allChecked);
+                                        }}
+                                      >
+                                        {invoice.lineItems.every(() => true) ? 'Unselect All' : 'Select All'}
+                                      </Button>
+                                      <Button
+                                        variant="outline"
+                                        size="sm"
+                                        className="border-slate-600 text-slate-300 hover:bg-slate-700"
+                                        onClick={() => {
+                                          // Get selected items
+                                          const checkboxes = document.querySelectorAll('[data-testid^="checkbox-lineitem-"]') as NodeListOf<HTMLInputElement>;
+                                          const selectedItems = invoice.lineItems.filter((_: any, index: number) => checkboxes[index]?.checked);
+                                          console.log('Import selected items to inventory:', selectedItems);
+                                          // TODO: Add actual import functionality
+                                        }}
+                                      >
+                                        <Package className="h-4 w-4 mr-2" />
+                                        Import Selected ({invoice.lineItems.length})
+                                      </Button>
+                                    </div>
                                   </div>
                                 </div>
                               )}

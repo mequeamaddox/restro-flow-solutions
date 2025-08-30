@@ -404,7 +404,7 @@ The OCR system works best with image files rather than scanned PDFs.`,
           const totalPrice = parseFloat(priceMatch[1]);
           
           // Filter out obvious non-products
-          if (!description.match(/^(MEAT|DAIRY|PRODUCE|SUBTOTAL|TOTAL|TAX|SAVINGS?)$/i) && 
+          if (!description.match(/^(MEAT|DAIRY|PRODUCE|SUBTOTAL|TOTAL|TAX|SAVINGS?|CHANGE|CASH|BALANCE|TICKET|STORE|REGISTER|CASHIER|CUSTOMER|SERVICE)$/i) && 
               description.length >= 5 && 
               totalPrice > 0 && 
               totalPrice < 1000) { // Reasonable price range
@@ -468,10 +468,9 @@ The OCR system works best with image files rather than scanned PDFs.`,
     // Calculate total from line items if we found any
     if (lineItems.length > 0) {
       const calculatedTotal = lineItems.reduce((sum, item) => sum + item.totalPrice, 0);
-      if (total === 0 || Math.abs(calculatedTotal - total) < 5) { // Use calculated if close or if no total found
-        total = calculatedTotal;
-        console.log(`Calculated total from line items: $${calculatedTotal.toFixed(2)}`);
-      }
+      // Always prefer calculated total from line items over extracted total
+      total = calculatedTotal;
+      console.log(`Calculated total from line items: $${calculatedTotal.toFixed(2)} (was: $${total})`);
     }
     
     return {
