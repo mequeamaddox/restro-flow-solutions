@@ -187,9 +187,10 @@ export default function InvoiceProcessing() {
       queryClient.invalidateQueries({ queryKey: ["/api/inventory"] });
     },
     onError: (error) => {
+      console.error('Import error:', error);
       toast({
         title: "Import failed",
-        description: error.message,
+        description: error.message || "Failed to import items to inventory",
         variant: "destructive",
       });
     },
@@ -256,14 +257,15 @@ export default function InvoiceProcessing() {
     const inventoryItems = selectedItems.map((item: any) => ({
       name: item.description,
       category: 'Food', // Default category
-      quantity: item.quantity || 1,
+      quantity: parseFloat(item.quantity) || 1,
       unit: item.unitType || 'each',
-      costPerUnit: item.unitPrice || 0,
-      reorderLevel: Math.ceil((item.quantity || 1) * 0.2), // 20% of current quantity
-      reorderQuantity: item.quantity || 1,
+      costPerUnit: parseFloat(item.unitPrice) || 0,
+      reorderLevel: Math.ceil((parseFloat(item.quantity) || 1) * 0.2), // 20% of current quantity
+      reorderQuantity: parseFloat(item.quantity) || 1,
       supplier: 'Imported from Invoice'
     }));
 
+    console.log('Importing items:', inventoryItems);
     importToInventoryMutation.mutate(inventoryItems);
   };
 
