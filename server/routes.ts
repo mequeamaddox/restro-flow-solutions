@@ -1652,7 +1652,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // HR Employees
   app.get('/api/hr/employees', isAuthenticated, requireAnyPermission([Permission.VIEW_ALL_EMPLOYEES, Permission.VIEW_EMPLOYEE_DETAILS]), async (req, res) => {
     try {
-      const employees = await storage.getEmployees();
+      const locationId = req.query.locationId as string;
+      const employees = await storage.getEmployees(locationId);
       res.json(employees);
     } catch (error) {
       console.error('Error fetching employees:', error);
@@ -1865,6 +1866,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error('Error approving payroll:', error);
       res.status(500).json({ message: 'Failed to approve payroll' });
+    }
+  });
+
+  app.delete('/api/hr/payroll/pay-periods/:id', isAuthenticated, requirePermission(Permission.MANAGE_PAYROLL), async (req, res) => {
+    try {
+      await storage.deletePayPeriod(req.params.id);
+      res.status(204).send();
+    } catch (error) {
+      console.error('Error deleting pay period:', error);
+      res.status(500).json({ message: 'Failed to delete pay period' });
     }
   });
 

@@ -270,7 +270,7 @@ export interface IStorage {
   deletePosition(id: string): Promise<void>;
 
   // HR Employee operations
-  getEmployees(): Promise<(Employee & { department?: Department; position?: Position })[]>;
+  getEmployees(locationId?: string): Promise<(Employee & { department?: Department; position?: Position })[]>;
   getEmployee(id: string): Promise<(Employee & { department?: Department; position?: Position }) | undefined>;
   createEmployee(employee: InsertEmployee): Promise<Employee>;
   updateEmployee(id: string, employee: Partial<InsertEmployee>): Promise<Employee>;
