@@ -1280,6 +1280,7 @@ export class DatabaseStorage implements IStorage {
         totalAmount: parseFloat(row.invoice_processing.total || '0'),
         subtotal: parseFloat(row.invoice_processing.subtotal || '0'),
         tax: parseFloat(row.invoice_processing.tax || '0'),
+        lineItems: row.invoice_processing.lineItems ? JSON.parse(row.invoice_processing.lineItems) : [],
         fees: row.invoice_processing.fees ? JSON.parse(row.invoice_processing.fees) : [],
       }));
     } catch (error) {
@@ -1307,8 +1308,8 @@ export class DatabaseStorage implements IStorage {
         status: invoice.status || 'pending',
         uploadMethod: invoice.uploadMethod || 'upload',
         ocrConfidence: invoice.ocrConfidence ? parseFloat(invoice.ocrConfidence).toString() : null,
-        lineItems: invoice.lineItems || null,
-        fees: invoice.fees || null, // IRS-compliant separate tracking of delivery, shipping, and other charges
+        lineItems: invoice.lineItems ? JSON.stringify(invoice.lineItems) : null,
+        fees: invoice.fees ? JSON.stringify(invoice.fees) : null, // IRS-compliant separate tracking of delivery, shipping, and other charges
         attachmentPath: invoice.attachmentPath || null, // Path to original invoice file
         notes: invoice.notes || (invoice.originalText ? 
           invoice.originalText
