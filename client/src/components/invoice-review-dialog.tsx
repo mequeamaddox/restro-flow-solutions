@@ -210,7 +210,8 @@ export function InvoiceReviewDialog({ isOpen, onClose, invoiceData }: InvoiceRev
       ...editableData,
       subtotal: calculateSubtotal(),
       total: calculateTotal(),
-      fees: JSON.stringify(editableData.fees) // Store fees as JSON for IRS compliance
+      lineItems: editableData.lineItems, // Ensure line items are explicitly included
+      fees: editableData.fees // Store fees as array (backend will JSON.stringify)
     };
     
     approveInvoiceMutation.mutate(finalData);
