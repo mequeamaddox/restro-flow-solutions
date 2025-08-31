@@ -183,27 +183,29 @@ export default function Recipes() {
     const ingredients = recipe.ingredients || [];
     
     const buildSheetContent = `
-RECIPE BUILD SHEET
-==================
+═══════════════════════════════════════════════════════════════════════════
+                           ${currentLocation?.name?.toUpperCase() || 'RESTAURANT'}
+                              KITCHEN BUILD SHEET
+═══════════════════════════════════════════════════════════════════════════
 
-Recipe: ${recipe.name}
-Location: ${currentLocation?.name}
-Category: ${recipe.category}
-Serving Size: ${recipe.servingSize}
-Prep Time: ${recipe.prepTime} minutes
-Cook Time: ${recipe.cookTime} minutes
+RECIPE: ${recipe.name.toUpperCase()}
+Category: ${recipe.category?.charAt(0).toUpperCase() + recipe.category?.slice(1) || 'N/A'}
+Serves: ${recipe.servingSize} portion${recipe.servingSize === 1 ? '' : 's'}
+Prep Time: ${recipe.prepTime} min  |  Cook Time: ${recipe.cookTime} min
 
-INGREDIENTS:
+▓▓▓ INGREDIENTS ▓▓▓
 ${ingredients.map((ing: any, index: number) => {
-  // Find the inventory item from the inventoryItems array
   const inventoryItem = inventoryItems.find(item => item.id === ing.inventoryItemId);
-  return `${index + 1}. ${inventoryItem?.name || 'Unknown Item'} - ${ing.quantity} ${ing.unit}`;
+  return `${String(index + 1).padStart(2, '0')}. ${(inventoryItem?.name || 'Unknown Item').padEnd(25)} → ${ing.quantity} ${ing.unit}`;
 }).join('\n')}
 
-INSTRUCTIONS:
+▓▓▓ PREPARATION INSTRUCTIONS ▓▓▓
 ${recipe.instructions}
 
-Generated on: ${new Date().toLocaleDateString()} ${new Date().toLocaleTimeString()}
+═══════════════════════════════════════════════════════════════════════════
+Generated: ${new Date().toLocaleDateString()} at ${new Date().toLocaleTimeString()}
+Kitchen Use Only - Do Not Remove From Station
+═══════════════════════════════════════════════════════════════════════════
     `.trim();
 
     // Create and download the build sheet - mobile-friendly approach
@@ -242,40 +244,68 @@ Generated on: ${new Date().toLocaleDateString()} ${new Date().toLocaleTimeString
 
   const generateCostSheet = (recipe: any) => {
     console.log('Generating cost sheet for recipe:', recipe);
+    console.log('Recipe ingredients:', recipe.ingredients);
+    console.log('Available inventory items:', inventoryItems);
+    
     const ingredients = recipe.ingredients || [];
     let totalCost = 0;
     
     const costSheetContent = `
-RECIPE COST SHEET - INTERNAL USE
-=================================
+▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓
+                        ${currentLocation?.name?.toUpperCase() || 'RESTAURANT'}
+                       RECIPE COST ANALYSIS - CONFIDENTIAL
+▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓
 
-Recipe: ${recipe.name}
-Location: ${currentLocation?.name}
-Category: ${recipe.category}
-Serving Size: ${recipe.servingSize}
-Prep Time: ${recipe.prepTime} minutes
-Cook Time: ${recipe.cookTime} minutes
-${recipe.sellingPrice ? `Selling Price: $${recipe.sellingPrice}` : ''}
+RECIPE: ${recipe.name.toUpperCase()}
+Category: ${recipe.category?.charAt(0).toUpperCase() + recipe.category?.slice(1) || 'N/A'}
+Serves: ${recipe.servingSize} portion${recipe.servingSize === 1 ? '' : 's'}
+Prep: ${recipe.prepTime} min  |  Cook: ${recipe.cookTime} min
+${recipe.sellingPrice ? `Menu Price: $${parseFloat(recipe.sellingPrice).toFixed(2)}` : 'Menu Price: NOT SET'}
 
-INGREDIENTS WITH COSTS:
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+🧾 INGREDIENT COSTS
 ${ingredients.map((ing: any, index: number) => {
-  // Find the inventory item from the inventoryItems array
   const inventoryItem = inventoryItems.find(item => item.id === ing.inventoryItemId);
-  const cost = inventoryItem?.costPerUnit ? (ing.quantity * parseFloat(inventoryItem.costPerUnit)) : 0;
-  totalCost += cost;
-  return `${index + 1}. ${inventoryItem?.name || 'Unknown Item'} - ${ing.quantity} ${ing.unit} ($${cost.toFixed(2)})`;
+  const unitCost = inventoryItem?.costPerUnit ? parseFloat(inventoryItem.costPerUnit) : 0;
+  const lineCost = ing.quantity * unitCost;
+  totalCost += lineCost;
+  
+  console.log(`Ingredient ${index + 1}:`, {
+    name: inventoryItem?.name,
+    quantity: ing.quantity,
+    unit: ing.unit,
+    unitCost,
+    lineCost
+  });
+  
+  return `${String(index + 1).padStart(2, '0')}. ${(inventoryItem?.name || 'Unknown Item').padEnd(25)} ${String(ing.quantity).padStart(6)} ${ing.unit.padEnd(8)} @ $${unitCost.toFixed(4)}  = $${lineCost.toFixed(2)}`;
 }).join('\n')}
 
-COST ANALYSIS:
-Total Recipe Cost: $${totalCost.toFixed(2)}
-Cost Per Serving: $${(totalCost / recipe.servingSize).toFixed(2)}
-${recipe.sellingPrice ? `Food Cost %: ${((totalCost / parseFloat(recipe.sellingPrice)) * 100).toFixed(1)}%` : ''}
-${recipe.sellingPrice ? `Profit Margin: $${(parseFloat(recipe.sellingPrice) - (totalCost / recipe.servingSize)).toFixed(2)} per serving` : ''}
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-INSTRUCTIONS:
+💰 FINANCIAL ANALYSIS
+Total Recipe Cost:        $${totalCost.toFixed(2)}
+Cost Per Serving:         $${(totalCost / recipe.servingSize).toFixed(2)}
+${recipe.sellingPrice ? `
+Menu Price Per Serving:   $${parseFloat(recipe.sellingPrice).toFixed(2)}
+Food Cost Percentage:     ${((totalCost / recipe.servingSize) / parseFloat(recipe.sellingPrice) * 100).toFixed(1)}%
+Profit Per Serving:       $${(parseFloat(recipe.sellingPrice) - (totalCost / recipe.servingSize)).toFixed(2)}
+Target Food Cost (30%):   ${((totalCost / recipe.servingSize) / parseFloat(recipe.sellingPrice) * 100) <= 30 ? '✅ EXCELLENT' : ((totalCost / recipe.servingSize) / parseFloat(recipe.sellingPrice) * 100) <= 35 ? '⚠️  ACCEPTABLE' : '❌ TOO HIGH'}
+` : `
+Menu Price Per Serving:   NOT SET - PLEASE UPDATE
+Food Cost Percentage:     Cannot calculate without menu price
+Profit Analysis:          Requires menu price to be set
+`}
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+📝 PREPARATION NOTES
 ${recipe.instructions}
 
-Generated on: ${new Date().toLocaleDateString()} ${new Date().toLocaleTimeString()}
+▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓
+CONFIDENTIAL MANAGEMENT DOCUMENT - ${new Date().toLocaleDateString()} ${new Date().toLocaleTimeString()}
+For Internal Use Only - Keep Secure
+▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓
     `.trim();
 
     // Create and download the cost sheet - mobile-friendly approach
