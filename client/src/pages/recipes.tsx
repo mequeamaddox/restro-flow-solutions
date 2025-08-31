@@ -11,7 +11,7 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Plus, Search, ChefHat, DollarSign, Clock, Users, Trash2, Eye, AlertTriangle, Camera, FileText, Printer } from "lucide-react";
+import { Plus, Search, ChefHat, DollarSign, Clock, Users, Trash2, Eye, AlertTriangle, Camera, FileText, Printer, Calculator } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import { isUnauthorizedError } from "@/lib/authUtils";
@@ -179,7 +179,6 @@ export default function Recipes() {
   const generateBuildSheet = (recipe: any) => {
     console.log('Generating build sheet for recipe:', recipe);
     const ingredients = recipe.ingredients || [];
-    let totalCost = 0;
     
     const buildSheetContent = `
 RECIPE BUILD SHEET
@@ -191,20 +190,13 @@ Category: ${recipe.category}
 Serving Size: ${recipe.servingSize}
 Prep Time: ${recipe.prepTime} minutes
 Cook Time: ${recipe.cookTime} minutes
-${recipe.sellingPrice ? `Selling Price: $${recipe.sellingPrice}` : ''}
 
 INGREDIENTS:
 ${ingredients.map((ing: any, index: number) => {
   // Find the inventory item from the inventoryItems array
   const inventoryItem = inventoryItems.find(item => item.id === ing.inventoryItemId);
-  const cost = inventoryItem?.costPerUnit ? (ing.quantity * parseFloat(inventoryItem.costPerUnit)) : 0;
-  totalCost += cost;
-  return `${index + 1}. ${inventoryItem?.name || 'Unknown Item'} - ${ing.quantity} ${ing.unit} ($${cost.toFixed(2)})`;
+  return `${index + 1}. ${inventoryItem?.name || 'Unknown Item'} - ${ing.quantity} ${ing.unit}`;
 }).join('\n')}
-
-Total Recipe Cost: $${totalCost.toFixed(2)}
-Cost Per Serving: $${(totalCost / recipe.servingSize).toFixed(2)}
-${recipe.sellingPrice ? `Food Cost %: ${((totalCost / parseFloat(recipe.sellingPrice)) * 100).toFixed(1)}%` : ''}
 
 INSTRUCTIONS:
 ${recipe.instructions}
@@ -225,7 +217,62 @@ Generated on: ${new Date().toLocaleDateString()} ${new Date().toLocaleTimeString
 
     toast({
       title: "Build Sheet Generated",
-      description: `Downloaded ${recipe.name} build sheet successfully`,
+      description: `Downloaded ${recipe.name} build sheet for kitchen use`,
+    });
+  };
+
+  const generateCostSheet = (recipe: any) => {
+    console.log('Generating cost sheet for recipe:', recipe);
+    const ingredients = recipe.ingredients || [];
+    let totalCost = 0;
+    
+    const costSheetContent = `
+RECIPE COST SHEET - INTERNAL USE
+=================================
+
+Recipe: ${recipe.name}
+Location: ${currentLocation?.name}
+Category: ${recipe.category}
+Serving Size: ${recipe.servingSize}
+Prep Time: ${recipe.prepTime} minutes
+Cook Time: ${recipe.cookTime} minutes
+${recipe.sellingPrice ? `Selling Price: $${recipe.sellingPrice}` : ''}
+
+INGREDIENTS WITH COSTS:
+${ingredients.map((ing: any, index: number) => {
+  // Find the inventory item from the inventoryItems array
+  const inventoryItem = inventoryItems.find(item => item.id === ing.inventoryItemId);
+  const cost = inventoryItem?.costPerUnit ? (ing.quantity * parseFloat(inventoryItem.costPerUnit)) : 0;
+  totalCost += cost;
+  return `${index + 1}. ${inventoryItem?.name || 'Unknown Item'} - ${ing.quantity} ${ing.unit} ($${cost.toFixed(2)})`;
+}).join('\n')}
+
+COST ANALYSIS:
+Total Recipe Cost: $${totalCost.toFixed(2)}
+Cost Per Serving: $${(totalCost / recipe.servingSize).toFixed(2)}
+${recipe.sellingPrice ? `Food Cost %: ${((totalCost / parseFloat(recipe.sellingPrice)) * 100).toFixed(1)}%` : ''}
+${recipe.sellingPrice ? `Profit Margin: $${(parseFloat(recipe.sellingPrice) - (totalCost / recipe.servingSize)).toFixed(2)} per serving` : ''}
+
+INSTRUCTIONS:
+${recipe.instructions}
+
+Generated on: ${new Date().toLocaleDateString()} ${new Date().toLocaleTimeString()}
+    `.trim();
+
+    // Create and download the cost sheet
+    const blob = new Blob([costSheetContent], { type: 'text/plain' });
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `${recipe.name.replace(/[^a-z0-9]/gi, '_')}_cost_sheet.txt`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    window.URL.revokeObjectURL(url);
+
+    toast({
+      title: "Cost Sheet Generated",
+      description: `Downloaded ${recipe.name} cost analysis for management`,
     });
   };
 
@@ -812,17 +859,7 @@ Generated on: ${new Date().toLocaleDateString()} ${new Date().toLocaleTimeString
                         data-testid={`button-view-details-${recipe.id}`}
                       >
                         <Eye className="h-4 w-4 mr-1" />
-                        View Details
-                      </Button>
-                      <Button 
-                        variant="outline" 
-                        size="sm" 
-                        className="text-blue-600 hover:text-blue-700 hover:bg-blue-50"
-                        onClick={() => generateBuildSheet(recipe)}
-                        data-testid={`button-build-sheet-${recipe.id}`}
-                      >
-                        <FileText className="h-4 w-4 mr-1" />
-                        Build Sheet
+                        Details
                       </Button>
                       <AlertDialog>
                         <AlertDialogTrigger asChild>
@@ -853,6 +890,29 @@ Generated on: ${new Date().toLocaleDateString()} ${new Date().toLocaleTimeString
                           </AlertDialogFooter>
                         </AlertDialogContent>
                       </AlertDialog>
+                    </div>
+                    {/* Recipe Sheets Row */}
+                    <div className="flex gap-2">
+                      <Button 
+                        variant="outline" 
+                        size="sm" 
+                        className="flex-1 text-blue-600 hover:text-blue-700 hover:bg-blue-50"
+                        onClick={() => generateBuildSheet(recipe)}
+                        data-testid={`button-build-sheet-${recipe.id}`}
+                      >
+                        <FileText className="h-4 w-4 mr-1" />
+                        Build Sheet
+                      </Button>
+                      <Button 
+                        variant="outline" 
+                        size="sm" 
+                        className="flex-1 text-purple-600 hover:text-purple-700 hover:bg-purple-50"
+                        onClick={() => generateCostSheet(recipe)}
+                        data-testid={`button-cost-sheet-${recipe.id}`}
+                      >
+                        <Calculator className="h-4 w-4 mr-1" />
+                        Cost Sheet
+                      </Button>
                     </div>
                     {/* Photo Upload Row */}
                     <div className="flex gap-2">
