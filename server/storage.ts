@@ -138,7 +138,7 @@ export interface IStorage {
   deleteCategory(id: string): Promise<void>;
 
   // Vendor operations
-  getVendors(): Promise<Vendor[]>;
+  getVendors(locationId?: string): Promise<Vendor[]>;
   getVendor(id: string): Promise<Vendor | undefined>;
   createVendor(vendor: InsertVendor): Promise<Vendor>;
   updateVendor(id: string, vendor: Partial<InsertVendor>): Promise<Vendor>;
@@ -177,7 +177,7 @@ export interface IStorage {
   removeMenuItemIngredient(id: string): Promise<void>;
 
   // Purchase order operations
-  getPurchaseOrders(): Promise<(PurchaseOrder & { vendor?: Vendor; items?: PurchaseOrderItem[] })[]>;
+  getPurchaseOrders(locationId?: string): Promise<(PurchaseOrder & { vendor?: Vendor; items?: PurchaseOrderItem[] })[]>;
   getPurchaseOrder(id: string): Promise<(PurchaseOrder & { vendor?: Vendor; items: (PurchaseOrderItem & { inventoryItem: InventoryItem })[] }) | undefined>;
   createPurchaseOrder(order: InsertPurchaseOrder): Promise<PurchaseOrder>;
   updatePurchaseOrder(id: string, order: Partial<InsertPurchaseOrder>): Promise<PurchaseOrder>;
@@ -228,7 +228,7 @@ export interface IStorage {
   // Advanced MarginEdge-like Features
   
   // Invoice Processing
-  getInvoices(status?: string): Promise<any[]>;
+  getInvoices(status?: string, locationId?: string): Promise<any[]>;
   createInvoice(invoice: any): Promise<any>;
   updateInvoiceStatus(id: string, status: string): Promise<any>;
   updateInvoice(id: string, data: any): Promise<any>;
@@ -443,7 +443,12 @@ export class DatabaseStorage implements IStorage {
   }
 
   // Vendor operations
-  async getVendors(): Promise<Vendor[]> {
+  async getVendors(locationId?: string): Promise<Vendor[]> {
+    if (locationId) {
+      return await db.select().from(vendors)
+        .where(eq(vendors.locationId, locationId))
+        .orderBy(vendors.name);
+    }
     return await db.select().from(vendors).orderBy(vendors.name);
   }
 
@@ -944,12 +949,18 @@ export class DatabaseStorage implements IStorage {
   }
 
   // Purchase order operations
-  async getPurchaseOrders(): Promise<(PurchaseOrder & { vendor?: Vendor; items?: PurchaseOrderItem[] })[]> {
-    return await db
+  async getPurchaseOrders(locationId?: string): Promise<(PurchaseOrder & { vendor?: Vendor; items?: PurchaseOrderItem[] })[]> {
+    const query = db
       .select()
       .from(purchaseOrders)
       .leftJoin(vendors, eq(purchaseOrders.vendorId, vendors.id))
-      .orderBy(desc(purchaseOrders.createdAt))
+      .orderBy(desc(purchaseOrders.createdAt));
+    
+    if (locationId) {
+      query.where(eq(purchaseOrders.locationId, locationId));
+    }
+    
+    return await query
       .then(rows => rows.map(row => ({
         ...row.purchase_orders,
         vendor: row.vendors || undefined,
@@ -1262,7 +1273,7 @@ export class DatabaseStorage implements IStorage {
   }
   // Advanced MarginEdge-like Features Implementation
 
-  async getInvoices(status?: string): Promise<any[]> {
+  async getInvoices(status?: string, locationId?: string): Promise<any[]> {
     try {
       let query = db
         .select()
@@ -1270,8 +1281,16 @@ export class DatabaseStorage implements IStorage {
         .leftJoin(vendors, eq(invoiceProcessing.vendorId, vendors.id))
         .orderBy(desc(invoiceProcessing.createdAt));
 
+      const conditions = [];
       if (status && status !== 'all') {
-        query = query.where(eq(invoiceProcessing.status, status));
+        conditions.push(eq(invoiceProcessing.status, status));
+      }
+      if (locationId) {
+        conditions.push(eq(invoiceProcessing.locationId, locationId));
+      }
+      
+      if (conditions.length > 0) {
+        query = query.where(and(...conditions));
       }
 
       const results = await query;

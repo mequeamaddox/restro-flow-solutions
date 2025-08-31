@@ -14,15 +14,19 @@ import { insertVendorSchema, type InsertVendor } from "@shared/schema";
 import { useToast } from "@/hooks/use-toast";
 import { isUnauthorizedError } from "@/lib/authUtils";
 import { apiRequest } from "@/lib/queryClient";
+import { useLocation } from "@/contexts/LocationContext";
 
 export default function Vendors() {
   const [searchTerm, setSearchTerm] = useState("");
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const { currentLocation } = useLocation();
 
   const { data: vendors, isLoading } = useQuery({
-    queryKey: ['/api/vendors'],
+    queryKey: ['/api/vendors', currentLocation?.id],
+    queryFn: () => apiRequest('GET', `/api/vendors?locationId=${currentLocation?.id}`),
+    enabled: !!currentLocation,
   });
 
   const form = useForm<InsertVendor>({
@@ -33,6 +37,7 @@ export default function Vendors() {
       email: "",
       phone: "",
       address: "",
+      locationId: currentLocation?.id || "",
     },
   });
 
@@ -41,7 +46,7 @@ export default function Vendors() {
       await apiRequest('POST', '/api/vendors', data);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/vendors'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/vendors', currentLocation?.id] });
       setIsAddDialogOpen(false);
       form.reset();
       toast({
@@ -76,7 +81,7 @@ export default function Vendors() {
   );
 
   const onSubmit = (data: InsertVendor) => {
-    createVendorMutation.mutate(data);
+    createVendorMutation.mutate({ ...data, locationId: currentLocation?.id || "" });
   };
 
   return (

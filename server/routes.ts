@@ -82,8 +82,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Invoice Processing Routes
   app.get('/api/invoices', isAuthenticated, async (req, res) => {
     try {
-      const { status } = req.query;
-      const invoices = await storage.getInvoices(status as string);
+      const { status, locationId } = req.query;
+      const invoices = await storage.getInvoices(status as string, locationId as string);
       res.json(invoices);
     } catch (error) {
       console.error("Error fetching invoices:", error);
@@ -693,7 +693,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Vendors
   app.get('/api/vendors', isAuthenticated, async (req, res) => {
     try {
-      const vendors = await storage.getVendors();
+      const locationId = req.query.locationId as string;
+      const vendors = await storage.getVendors(locationId);
       res.json(vendors);
     } catch (error) {
       console.error("Error fetching vendors:", error);
@@ -1033,7 +1034,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Purchase Orders
   app.get('/api/purchase-orders', isAuthenticated, async (req, res) => {
     try {
-      const orders = await storage.getPurchaseOrders();
+      const locationId = req.query.locationId as string;
+      const orders = await storage.getPurchaseOrders(locationId);
       res.json(orders);
     } catch (error) {
       console.error("Error fetching purchase orders:", error);

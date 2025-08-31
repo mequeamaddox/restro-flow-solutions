@@ -81,6 +81,7 @@ export const vendors = pgTable("vendors", {
   email: varchar("email"),
   phone: varchar("phone"),
   address: text("address"),
+  locationId: uuid("location_id").references(() => locations.id).notNull(),
   createdAt: timestamp("created_at").defaultNow(),
 });
 
@@ -213,6 +214,7 @@ export const inventoryTransactions = pgTable("inventory_transactions", {
 // Relations
 export const locationsRelations = relations(locations, ({ many }) => ({
   users: many(users),
+  vendors: many(vendors),
   inventoryItems: many(inventoryItems),
   menuItems: many(menuItems),
   purchaseOrders: many(purchaseOrders),
@@ -231,7 +233,11 @@ export const categoriesRelations = relations(categories, ({ many }) => ({
   inventoryItems: many(inventoryItems),
 }));
 
-export const vendorsRelations = relations(vendors, ({ many }) => ({
+export const vendorsRelations = relations(vendors, ({ one, many }) => ({
+  location: one(locations, {
+    fields: [vendors.locationId],
+    references: [locations.id],
+  }),
   inventoryItems: many(inventoryItems),
   purchaseOrders: many(purchaseOrders),
 }));

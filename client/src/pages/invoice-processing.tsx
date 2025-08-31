@@ -64,16 +64,21 @@ export default function InvoiceProcessing() {
 
   // Queries
   const { data: invoices = [], isLoading: invoicesLoading } = useQuery({
-    queryKey: ["/api/invoices", statusFilter],
+    queryKey: ["/api/invoices", statusFilter, currentLocation?.id],
     queryFn: async () => {
-      const params = statusFilter !== "all" ? `?status=${statusFilter}` : "";
+      const urlParams = new URLSearchParams();
+      if (statusFilter !== "all") urlParams.append("status", statusFilter);
+      if (currentLocation?.id) urlParams.append("locationId", currentLocation.id);
+      const params = urlParams.toString() ? `?${urlParams.toString()}` : "";
       return apiRequest("GET", `/api/invoices${params}`).then(r => r.json());
     },
+    enabled: !!currentLocation,
   });
 
   const { data: vendors = [] } = useQuery({
-    queryKey: ["/api/vendors"],
-    queryFn: () => apiRequest("GET", "/api/vendors").then(r => r.json()),
+    queryKey: ["/api/vendors", currentLocation?.id],
+    queryFn: () => apiRequest("GET", `/api/vendors?locationId=${currentLocation?.id}`).then(r => r.json()),
+    enabled: !!currentLocation,
   });
 
   const { data: processingStats } = useQuery({
