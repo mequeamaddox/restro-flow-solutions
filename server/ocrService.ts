@@ -488,6 +488,7 @@ The OCR system works best with image files rather than scanned PDFs.`,
         /total[\s:$]*(\d+(?:,\d{3})*(?:\.\d{2})?)/i,
         /amount[\s:$]*(\d+(?:,\d{3})*(?:\.\d{2})?)/i,
         /balance[\s:$]*(\d+(?:,\d{3})*(?:\.\d{2})?)/i,
+        /balance\s+due[\s:$]*(\d+(?:,\d{3})*(?:\.\d{2})?)/i, // Food Lion "BALANCE DUE"
         /\$\s*(\d+(?:,\d{3})*(?:\.\d{2})?)\s*$/, // Dollar amount at end of line
         /(\d+\.\d{2})\s*$/, // Decimal amount at end of line (like "150.75")
         /grand[\s\-]*total[\s:$]*(\d+(?:,\d{3})*(?:\.\d{2})?)/i,
@@ -507,7 +508,8 @@ The OCR system works best with image files rather than scanned PDFs.`,
           if (amount > 0 && amount < 100000) { // Reasonable range
             // Priority scoring: total/amount keywords get higher priority
             let priority = 0;
-            if (line.toLowerCase().includes('total')) priority = 3;
+            if (line.toLowerCase().includes('balance due')) priority = 4; // Food Lion specific
+            else if (line.toLowerCase().includes('total')) priority = 3;
             else if (line.toLowerCase().includes('amount')) priority = 2;
             else if (i > lines.length / 2) priority = 1; // Bottom half gets some priority
             
@@ -528,6 +530,7 @@ The OCR system works best with image files rather than scanned PDFs.`,
         /(\d{1,2}-\d{1,2}-\d{2})/,       // MM-DD-YY (like 4-15-25)
         /date[:\s]*(\d{1,2}[\/\-]\d{1,2}[\/\-]\d{2,4})/i, // "Date: MM/DD/YYYY"
         /(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*[\s,]+(\d{1,2})[\s,]+(\d{4})/i, // "January 15, 2025"
+        /(\d{2}[A-Z]{3}\d{4})/, // "15APR2025" format
       ];
       
       for (const pattern of datePatterns) {
@@ -541,6 +544,18 @@ The OCR system works best with image files rather than scanned PDFs.`,
             const monthIndex = monthNames.findIndex(m => match[1].toLowerCase().startsWith(m.toLowerCase()));
             if (monthIndex >= 0) {
               dateStr = `${monthIndex + 1}/${match[2]}/${match[3]}`;
+            }
+          }
+          
+          // Handle "15APR2025" format specifically
+          if (match[1] && match[1].match(/\d{2}[A-Z]{3}\d{4}/)) {
+            const day = match[1].substring(0, 2);
+            const monthAbbr = match[1].substring(2, 5);
+            const year = match[1].substring(5, 9);
+            const monthNames = ['JAN', 'FEB', 'MAR', 'APR', 'MAY', 'JUN', 'JUL', 'AUG', 'SEP', 'OCT', 'NOV', 'DEC'];
+            const monthIndex = monthNames.indexOf(monthAbbr.toUpperCase());
+            if (monthIndex >= 0) {
+              dateStr = `${monthIndex + 1}/${day}/${year}`;
             }
           }
           
@@ -606,32 +621,27 @@ The OCR system works best with image files rather than scanned PDFs.`,
         }
       }
       
-      // Also check for single-line items with embedded prices
+      // Also check for single-line items with embedded prices (but be more selective)
       const singleLinePatterns = [
-        // Generic pattern: "ITEM NAME 1.23 A" or "ITEM NAME $1.23"
-        /^(.+?)\s+(\d+\.?\d*)\s*[A-Z*]*\s*\$?(\d+\.\d{2})\s*$/,
-        // Alternative: "DESCRIPTION QTY @ PRICE = TOTAL"
-        /^(.+?)\s+(\d+)\s*@\s*\$?(\d+\.\d{2})\s*=?\s*\$?(\d+\.\d{2})\s*$/
+        // Only match lines that clearly look like product entries with prices
+        /^(.+?)\s+(\d+)\s*@\s*\$?(\d+\.\d{2})\s*=?\s*\$?(\d+\.\d{2})\s*$/ // "DESCRIPTION QTY @ PRICE = TOTAL"
       ];
       
       for (const pattern of singleLinePatterns) {
         const match = line.match(pattern);
-        if (match) {
-          let description: string | undefined, quantity: number = 1, unitPrice: number | undefined, totalPrice: number | undefined;
+        if (match && match.length === 5) {
+          const description = match[1].trim();
+          const quantity = parseFloat(match[2]) || 1;
+          const unitPrice = parseFloat(match[3]);
+          const totalPrice = parseFloat(match[4]);
           
-          if (match.length === 4) { // Pattern with quantity
-            description = match[1].trim();
-            quantity = parseFloat(match[2]) || 1;
-            totalPrice = parseFloat(match[3]);
-            unitPrice = totalPrice / quantity;
-          } else if (match.length === 5) { // Full pattern with separate total
-            description = match[1].trim();
-            quantity = parseFloat(match[2]) || 1;
-            unitPrice = parseFloat(match[3]);
-            totalPrice = parseFloat(match[4]);
-          }
-          
-          if (description && description.length > 2 && totalPrice && totalPrice > 0 && unitPrice && unitPrice > 0) {
+          // Only add if it looks like a real product (not savings, discounts, etc.)
+          if (description && description.length > 2 && totalPrice && totalPrice > 0 && unitPrice && unitPrice > 0 &&
+              !description.toLowerCase().includes('saving') &&
+              !description.toLowerCase().includes('discount') &&
+              !description.toLowerCase().includes('tax') &&
+              !description.toLowerCase().includes('total')) {
+            
             lineItems.push({
               description: description.substring(0, 100), // Limit length
               quantity: quantity || 1,
@@ -645,28 +655,33 @@ The OCR system works best with image files rather than scanned PDFs.`,
       }
     }
     
-    // Calculate total from line items if we found any
+    // Calculate totals correctly - use actual invoice totals, not line item sums
     if (lineItems.length > 0) {
-      const calculatedTotal = lineItems.reduce((sum, item) => sum + item.totalPrice, 0);
-      // Use calculated total from line items as subtotal (before tax)
+      const calculatedSubtotal = lineItems.reduce((sum, item) => sum + item.totalPrice, 0);
+      console.log(`Line items subtotal: $${calculatedSubtotal.toFixed(2)} from ${lineItems.length} items`);
+      
+      // Set subtotal from line items if we don't have one
       if (subtotal === 0) {
-        subtotal = calculatedTotal;
-        console.log(`Set subtotal from line items: $${calculatedTotal.toFixed(2)}`);
+        subtotal = calculatedSubtotal;
+        console.log(`Set subtotal from line items: $${calculatedSubtotal.toFixed(2)}`);
       }
-      // If we have a different total extracted, the difference might be tax
-      if (total > 0 && total !== calculatedTotal) {
-        const taxAmount = total - calculatedTotal;
-        if (taxAmount >= 0 && taxAmount < calculatedTotal) { // Reasonable tax amount
-          console.log(`Calculated tax: $${taxAmount.toFixed(2)} (Total: $${total.toFixed(2)} - Subtotal: $${calculatedTotal.toFixed(2)})`);
-        } else {
-          // If tax calculation doesn't make sense, use calculated total
-          total = calculatedTotal;
-          console.log(`Used calculated total from line items: $${calculatedTotal.toFixed(2)}`);
-        }
+      
+      // For Food Lion receipts, look for the actual balance due amount
+      // This should be the real total the customer paid
+      let actualTotal = total;
+      
+      // If we found a total that's reasonable compared to line items, use it
+      if (total > 0 && total >= calculatedSubtotal * 0.8 && total <= calculatedSubtotal * 1.3) {
+        // Total is reasonable (within 20% variance for tax/discounts)
+        actualTotal = total;
+        console.log(`Using extracted total: $${total.toFixed(2)}`);
       } else {
-        total = calculatedTotal;
-        console.log(`Set total from line items: $${calculatedTotal.toFixed(2)}`);
+        // Use line item total if extracted total doesn't make sense
+        actualTotal = calculatedSubtotal;
+        console.log(`Using calculated total from line items: $${calculatedSubtotal.toFixed(2)}`);
       }
+      
+      total = actualTotal;
     }
     
     return {
