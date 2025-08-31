@@ -318,6 +318,43 @@ The OCR system works best with image files rather than scanned PDFs.`,
     }
   }
   
+  // Helper function to validate if a line represents a valid product
+  private static isValidProduct(description: string, totalPrice: number): boolean {
+    // Filter out obvious non-products
+    const excludePatterns = [
+      /^(MEAT|DAIRY|PRODUCE|SUBTOTAL|TOTAL|TAX|SAVINGS?|CHANGE|CASH|BALANCE|TICKET|STORE|REGISTER|CASHIER|CUSTOMER|SERVICE|DEPARTMENT)$/i,
+      /^(THANK|PLEASE|VISIT|WEBSITE|PHONE|EMAIL|ADDRESS|CITY|STATE|ZIP|DATE|TIME|RECEIPT|TRANSACTION)$/i,
+      /^(CREDIT|DEBIT|PAYMENT|REFUND|DISCOUNT|COUPON|LOYALTY|REWARDS|POINTS)$/i,
+      /^\d+$/, // Just numbers
+      /^[A-Z]{1,3}$/, // Short codes like "A", "B", "TX"
+      /saving/i,
+      /discount/i,
+      /promotion/i,
+      /special/i
+    ];
+    
+    // Check if description matches any exclude pattern
+    for (const pattern of excludePatterns) {
+      if (pattern.test(description)) {
+        console.log(`❌ Skipped "${description}" - matches exclude pattern`);
+        return false;
+      }
+    }
+    
+    // Basic validation
+    if (description.length < 3 || description.length > 100) {
+      console.log(`❌ Skipped "${description}" - invalid length`);
+      return false;
+    }
+    
+    if (totalPrice <= 0 || totalPrice >= 1000) {
+      console.log(`❌ Skipped "${description}" - invalid price: $${totalPrice}`);
+      return false;
+    }
+    
+    return true;
+  }
+  
   // Parse invoice data from extracted text
   static parseInvoiceFromText(text: string): {
     vendorName: string;
@@ -581,43 +618,89 @@ The OCR system works best with image files rather than scanned PDFs.`,
         console.log(`Line ${i}: "${line}"`);
       }
       
-      // Food Lion specific pattern matching
-      // Look for product lines that are ALL CAPS with specific patterns
-      const foodLionProductMatch = line.match(/^([A-Z][A-Z\s&\/\-0-9]{2,})\s*$/);
+      // Universal line item patterns - work for multiple invoice formats
+      const universalLinePatterns = [
+        // Pattern 1: "PRODUCT NAME" followed by "PRICE" on next line (Food Lion style)
+        {
+          productPattern: /^([A-Z][A-Z\s&\/\-0-9]{3,})\s*$/,
+          pricePattern: /^(\d+\.\d{2})\s*[A-Z*\s]*$/,
+          nextLine: true
+        },
+        // Pattern 2: Single line with product and price: "Product Name 12.50" or "Product Name $12.50"
+        {
+          productPattern: /^(.+?)\s+\$?(\d+\.\d{2})\s*$/,
+          pricePattern: null,
+          nextLine: false
+        },
+        // Pattern 3: "Item Description  Qty  Price  Total" table format
+        {
+          productPattern: /^(.+?)\s+(\d+(?:\.\d+)?)\s+(\d+\.\d{2})\s+(\d+\.\d{2})\s*$/,
+          pricePattern: null,
+          nextLine: false
+        },
+        // Pattern 4: Lines with clear quantity and price indicators
+        {
+          productPattern: /^(.+?)\s+(\d+)\s*x\s*\$?(\d+\.\d{2})\s*=?\s*\$?(\d+\.\d{2})\s*$/i,
+          pricePattern: null,
+          nextLine: false
+        }
+      ];
       
-      if (foodLionProductMatch && i + 1 < lines.length) {
-        const description = foodLionProductMatch[1].trim();
-        const nextLine = lines[i + 1].trim();
+      for (const pattern of universalLinePatterns) {
+        const match = line.match(pattern.productPattern);
         
-        console.log(`Checking potential product: "${description}"`);
-        console.log(`Next line: "${nextLine}"`);
-        
-        // Look for price pattern: "10.99 A *" or just "10.99"
-        const priceMatch = nextLine.match(/^(\d+\.\d{2})\s*[A-Z*\s]*$/);
-        
-        if (priceMatch) {
-          const totalPrice = parseFloat(priceMatch[1]);
-          
-          // Filter out obvious non-products
-          if (!description.match(/^(MEAT|DAIRY|PRODUCE|SUBTOTAL|TOTAL|TAX|SAVINGS?|CHANGE|CASH|BALANCE|TICKET|STORE|REGISTER|CASHIER|CUSTOMER|SERVICE)$/i) && 
-              description.length >= 5 && 
-              totalPrice > 0 && 
-              totalPrice < 1000) { // Reasonable price range
+        if (match) {
+          if (pattern.nextLine && i + 1 < lines.length) {
+            // Two-line pattern (like Food Lion)
+            const description = match[1].trim();
+            const nextLine = lines[i + 1].trim();
+            const priceMatch = nextLine.match(pattern.pricePattern!);
             
-            lineItems.push({
-              description,
-              quantity: 1,
-              unitPrice: totalPrice,
-              totalPrice
-            });
+            if (priceMatch) {
+              const totalPrice = parseFloat(priceMatch[1]);
+              
+              if (OCRService.isValidProduct(description, totalPrice)) {
+                lineItems.push({
+                  description,
+                  quantity: 1,
+                  unitPrice: totalPrice,
+                  totalPrice
+                });
+                
+                console.log(`✅ Found line item (2-line): ${description} - $${totalPrice.toFixed(2)}`);
+                i++; // Skip the price line since we just processed it
+                break;
+              }
+            }
+          } else if (!pattern.nextLine) {
+            // Single-line patterns
+            let description: string | undefined, quantity = 1, unitPrice: number | undefined, totalPrice: number | undefined;
             
-            console.log(`✅ Found line item: ${description} - $${totalPrice.toFixed(2)}`);
-            i++; // Skip the price line since we just processed it
-          } else {
-            console.log(`❌ Skipped "${description}" - appears to be section header or invalid`);
+            if (match.length === 3) {
+              // Simple "Product Name 12.50" format
+              description = match[1].trim();
+              totalPrice = parseFloat(match[2]);
+              unitPrice = totalPrice;
+            } else if (match.length === 5) {
+              // Full table format "Product Qty Price Total"
+              description = match[1].trim();
+              quantity = parseFloat(match[2]) || 1;
+              unitPrice = parseFloat(match[3]);
+              totalPrice = parseFloat(match[4]);
+            }
+            
+            if (description && unitPrice && totalPrice && OCRService.isValidProduct(description, totalPrice)) {
+              lineItems.push({
+                description: description.substring(0, 100),
+                quantity,
+                unitPrice: Math.round(unitPrice * 100) / 100,
+                totalPrice
+              });
+              
+              console.log(`✅ Found line item (1-line): ${description} - Qty: ${quantity} @ $${unitPrice.toFixed(2)} = $${totalPrice.toFixed(2)}`);
+              break;
+            }
           }
-        } else {
-          console.log(`❌ No price match for "${nextLine}"`);
         }
       }
       
