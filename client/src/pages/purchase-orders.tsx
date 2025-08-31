@@ -68,6 +68,17 @@ export default function PurchaseOrders() {
   const [selectedInventoryItem, setSelectedInventoryItem] = useState("");
   const [itemQuantity, setItemQuantity] = useState("");
   const [itemUnitCost, setItemUnitCost] = useState("");
+
+  // Real-time cost calculation
+  const getCurrentItemTotal = () => {
+    const qty = parseFloat(itemQuantity) || 0;
+    const cost = parseFloat(itemUnitCost) || 0;
+    return qty * cost;
+  };
+
+  const getSelectedItemInfo = () => {
+    return inventoryItems.find(item => item.id === selectedInventoryItem);
+  };
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const { currentLocation } = useLocation();
@@ -487,74 +498,305 @@ export default function PurchaseOrders() {
                     </Badge>
                   </div>
                   
-                  {/* Add Line Item Form */}
-                  <div className="grid grid-cols-4 gap-2 p-3 bg-gray-50 rounded-lg">
-                    <Select value={selectedInventoryItem} onValueChange={setSelectedInventoryItem}>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select item" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {inventoryItems.map((item: any) => (
-                          <SelectItem key={item.id} value={item.id}>
-                            {item.name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    <Input
-                      type="number"
-                      placeholder="Qty"
-                      value={itemQuantity}
-                      onChange={(e) => setItemQuantity(e.target.value)}
-                    />
-                    <Input
-                      type="number"
-                      step="0.01"
-                      placeholder="Unit Cost"
-                      value={itemUnitCost}
-                      onChange={(e) => setItemUnitCost(e.target.value)}
-                    />
-                    <Button type="button" onClick={addLineItem} className="w-full">
-                      <Plus className="h-4 w-4 mr-1" />
-                      Add
-                    </Button>
+                  {/* Add Line Item Form with Real-time Calculations */}
+                  <div className="p-4 bg-gray-50 rounded-lg border-2 border-dashed border-gray-200">
+                    <div className="grid grid-cols-12 gap-3 items-end">
+                      {/* Item Selection */}
+                      <div className="col-span-5">
+                        <label className="block text-xs font-medium text-gray-700 mb-1">
+                          Inventory Item
+                        </label>
+                        <Select value={selectedInventoryItem} onValueChange={setSelectedInventoryItem}>
+                          <SelectTrigger className="h-10">
+                            <SelectValue placeholder="Select item..." />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {inventoryItems.map((item: any) => (
+                              <SelectItem key={item.id} value={item.id}>
+                                <div className="flex flex-col">
+                                  <span className="font-medium">{item.name}</span>
+                                  <span className="text-xs text-gray-500">
+                                    Current: {item.currentStock} {item.unit}
+                                  </span>
+                                </div>
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        {getSelectedItemInfo() && (
+                          <div className="text-xs text-gray-600 mt-1 space-y-1">
+                            <p>Last cost: ${getSelectedItemInfo()?.unitCost?.toFixed(2) || '0.00'}</p>
+                            {parseFloat(itemUnitCost) > 0 && getSelectedItemInfo()?.unitCost && (
+                              <div className="flex items-center space-x-2">
+                                <span>Price change:</span>
+                                {parseFloat(itemUnitCost) > getSelectedItemInfo()?.unitCost ? (
+                                  <span className="text-red-600 font-medium">
+                                    +${(parseFloat(itemUnitCost) - getSelectedItemInfo()?.unitCost).toFixed(2)} 
+                                    (+{(((parseFloat(itemUnitCost) - getSelectedItemInfo()?.unitCost) / getSelectedItemInfo()?.unitCost) * 100).toFixed(1)}%)
+                                  </span>
+                                ) : parseFloat(itemUnitCost) < getSelectedItemInfo()?.unitCost ? (
+                                  <span className="text-green-600 font-medium">
+                                    -${(getSelectedItemInfo()?.unitCost - parseFloat(itemUnitCost)).toFixed(2)} 
+                                    (-{(((getSelectedItemInfo()?.unitCost - parseFloat(itemUnitCost)) / getSelectedItemInfo()?.unitCost) * 100).toFixed(1)}%)
+                                  </span>
+                                ) : (
+                                  <span className="text-gray-500">No change</span>
+                                )}
+                              </div>
+                            )}
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Quantity */}
+                      <div className="col-span-2">
+                        <label className="block text-xs font-medium text-gray-700 mb-1">
+                          Quantity
+                        </label>
+                        <Input
+                          type="number"
+                          min="0"
+                          step="0.01"
+                          placeholder="0"
+                          value={itemQuantity}
+                          onChange={(e) => setItemQuantity(e.target.value)}
+                          className="h-10 text-center"
+                          data-testid="input-quantity"
+                        />
+                      </div>
+
+                      {/* Unit Cost */}
+                      <div className="col-span-2">
+                        <label className="block text-xs font-medium text-gray-700 mb-1">
+                          Unit Cost
+                        </label>
+                        <div className="relative">
+                          <DollarSign className="absolute left-2 top-2.5 h-4 w-4 text-gray-400" />
+                          <Input
+                            type="number"
+                            min="0"
+                            step="0.01"
+                            placeholder="0.00"
+                            value={itemUnitCost}
+                            onChange={(e) => setItemUnitCost(e.target.value)}
+                            className="h-10 pl-8 text-center"
+                            data-testid="input-unit-cost"
+                          />
+                        </div>
+                      </div>
+
+                      {/* Live Total */}
+                      <div className="col-span-2">
+                        <label className="block text-xs font-medium text-gray-700 mb-1">
+                          Line Total
+                        </label>
+                        <div className="h-10 px-3 py-2 bg-green-50 border border-green-200 rounded-md flex items-center justify-center">
+                          <span className="text-sm font-bold text-green-700">
+                            ${getCurrentItemTotal().toFixed(2)}
+                          </span>
+                        </div>
+                      </div>
+
+                      {/* Add Button */}
+                      <div className="col-span-1">
+                        <Button 
+                          type="button" 
+                          onClick={addLineItem} 
+                          className="w-full h-10 bg-green-600 hover:bg-green-700"
+                          disabled={!selectedInventoryItem || !itemQuantity || !itemUnitCost}
+                          data-testid="button-add-line-item"
+                        >
+                          <Plus className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </div>
+
+                    {/* Quick Fill Suggestions */}
+                    {getSelectedItemInfo() && (
+                      <div className="flex items-center space-x-2 mt-3 pt-3 border-t border-gray-200">
+                        <span className="text-xs text-gray-600">Quick fill:</span>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          onClick={() => setItemUnitCost(getSelectedItemInfo()?.unitCost?.toString() || "")}
+                          className="h-6 px-2 text-xs"
+                        >
+                          Last Cost (${getSelectedItemInfo()?.unitCost?.toFixed(2)})
+                        </Button>
+                        {getSelectedItemInfo()?.reorderLevel && (
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            onClick={() => setItemQuantity((getSelectedItemInfo()?.reorderLevel * 2).toString())}
+                            className="h-6 px-2 text-xs"
+                          >
+                            Suggested Qty ({getSelectedItemInfo()?.reorderLevel * 2})
+                          </Button>
+                        )}
+                      </div>
+                    )}
                   </div>
 
-                  {/* Line Items Table */}
+                  {/* Line Items Table with Enhanced Cost Display */}
                   {lineItems.length > 0 && (
-                    <div className="border rounded-lg">
+                    <div className="border rounded-lg overflow-hidden">
                       <Table>
-                        <TableHeader>
+                        <TableHeader className="bg-gray-50">
                           <TableRow>
-                            <TableHead>Item</TableHead>
-                            <TableHead>Quantity</TableHead>
-                            <TableHead>Unit Cost</TableHead>
-                            <TableHead>Total</TableHead>
+                            <TableHead className="font-semibold">Item</TableHead>
+                            <TableHead className="text-center">Quantity</TableHead>
+                            <TableHead className="text-center">Unit Cost</TableHead>
+                            <TableHead className="text-center">Line Total</TableHead>
+                            <TableHead className="text-center">% of Total</TableHead>
                             <TableHead className="w-16"></TableHead>
                           </TableRow>
                         </TableHeader>
                         <TableBody>
-                          {lineItems.map((item, index) => (
-                            <TableRow key={index}>
-                              <TableCell className="font-medium">{item.inventoryItemName}</TableCell>
-                              <TableCell>{item.quantity}</TableCell>
-                              <TableCell>${item.unitCost.toFixed(2)}</TableCell>
-                              <TableCell>${item.totalCost.toFixed(2)}</TableCell>
-                              <TableCell>
-                                <Button
-                                  type="button"
-                                  variant="ghost"
-                                  size="sm"
-                                  onClick={() => removeLineItem(index)}
-                                  data-testid={`button-remove-item-${index}`}
-                                >
-                                  <X className="h-4 w-4" />
-                                </Button>
-                              </TableCell>
-                            </TableRow>
-                          ))}
+                          {lineItems.map((item, index) => {
+                            const percentOfTotal = getTotalAmount() > 0 ? (item.totalCost / getTotalAmount()) * 100 : 0;
+                            return (
+                              <TableRow key={index} className="hover:bg-gray-50">
+                                <TableCell>
+                                  <div className="flex flex-col">
+                                    <span className="font-medium">{item.inventoryItemName}</span>
+                                    <span className="text-xs text-gray-500">
+                                      Line #{index + 1}
+                                    </span>
+                                  </div>
+                                </TableCell>
+                                <TableCell className="text-center">
+                                  <div className="flex flex-col">
+                                    <span className="font-medium">{item.quantity}</span>
+                                    <span className="text-xs text-gray-500">units</span>
+                                  </div>
+                                </TableCell>
+                                <TableCell className="text-center">
+                                  <div className="flex flex-col">
+                                    <span className="font-medium">${item.unitCost.toFixed(2)}</span>
+                                    <span className="text-xs text-gray-500">per unit</span>
+                                  </div>
+                                </TableCell>
+                                <TableCell className="text-center">
+                                  <div className="flex flex-col">
+                                    <span className="font-bold text-green-700">${item.totalCost.toFixed(2)}</span>
+                                    <span className="text-xs text-gray-500">
+                                      {item.quantity} × ${item.unitCost.toFixed(2)}
+                                    </span>
+                                  </div>
+                                </TableCell>
+                                <TableCell className="text-center">
+                                  <div className="flex flex-col">
+                                    <span className="font-medium">{percentOfTotal.toFixed(1)}%</span>
+                                    <div className="w-full bg-gray-200 rounded-full h-1.5 mt-1">
+                                      <div 
+                                        className="bg-blue-600 h-1.5 rounded-full" 
+                                        style={{ width: `${Math.min(percentOfTotal, 100)}%` }}
+                                      ></div>
+                                    </div>
+                                  </div>
+                                </TableCell>
+                                <TableCell>
+                                  <Button
+                                    type="button"
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={() => removeLineItem(index)}
+                                    data-testid={`button-remove-item-${index}`}
+                                    className="hover:bg-red-50 hover:text-red-600"
+                                  >
+                                    <X className="h-4 w-4" />
+                                  </Button>
+                                </TableCell>
+                              </TableRow>
+                            );
+                          })}
                         </TableBody>
                       </Table>
+                      
+                      {/* Order Summary Footer */}
+                      <div className="bg-gray-50 border-t px-6 py-4">
+                        <div className="grid grid-cols-3 gap-6">
+                          <div className="text-center">
+                            <div className="text-2xl font-bold text-blue-600">{lineItems.length}</div>
+                            <div className="text-sm text-gray-600">Total Items</div>
+                          </div>
+                          <div className="text-center">
+                            <div className="text-2xl font-bold text-purple-600">
+                              {lineItems.reduce((sum, item) => sum + item.quantity, 0)}
+                            </div>
+                            <div className="text-sm text-gray-600">Total Quantity</div>
+                          </div>
+                          <div className="text-center">
+                            <div className="text-2xl font-bold text-green-600">
+                              ${getTotalAmount().toFixed(2)}
+                            </div>
+                            <div className="text-sm text-gray-600">Order Total</div>
+                          </div>
+                        </div>
+                        
+                        {/* Cost Breakdown & Insights */}
+                        <div className="mt-4 pt-4 border-t border-gray-200">
+                          <div className="grid grid-cols-2 gap-4 text-sm mb-4">
+                            <div className="flex justify-between">
+                              <span className="text-gray-600">Average cost per item:</span>
+                              <span className="font-medium">
+                                ${lineItems.length > 0 ? (getTotalAmount() / lineItems.length).toFixed(2) : '0.00'}
+                              </span>
+                            </div>
+                            <div className="flex justify-between">
+                              <span className="text-gray-600">Average cost per unit:</span>
+                              <span className="font-medium">
+                                ${lineItems.reduce((sum, item) => sum + item.quantity, 0) > 0 
+                                  ? (getTotalAmount() / lineItems.reduce((sum, item) => sum + item.quantity, 0)).toFixed(2) 
+                                  : '0.00'}
+                              </span>
+                            </div>
+                          </div>
+                          
+                          {/* Cost Insights */}
+                          {lineItems.length > 0 && (
+                            <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+                              <div className="flex items-center space-x-2 mb-2">
+                                <DollarSign className="h-4 w-4 text-blue-600" />
+                                <span className="text-sm font-medium text-blue-800">Cost Insights</span>
+                              </div>
+                              <div className="grid grid-cols-2 gap-3 text-xs">
+                                {(() => {
+                                  const mostExpensive = lineItems.reduce((max, item) => item.totalCost > max.totalCost ? item : max, lineItems[0]);
+                                  const cheapest = lineItems.reduce((min, item) => item.totalCost < min.totalCost ? item : min, lineItems[0]);
+                                  const priceChanges = lineItems.filter(item => {
+                                    const inventoryItem = inventoryItems.find(inv => inv.id === item.inventoryItemId);
+                                    return inventoryItem?.unitCost && Math.abs(inventoryItem.unitCost - item.unitCost) > 0.01;
+                                  });
+                                  
+                                  return (
+                                    <>
+                                      <div>
+                                        <span className="text-blue-700 font-medium">Highest cost item:</span>
+                                        <div className="text-blue-600">{mostExpensive.inventoryItemName} (${mostExpensive.totalCost.toFixed(2)})</div>
+                                      </div>
+                                      <div>
+                                        <span className="text-blue-700 font-medium">Lowest cost item:</span>
+                                        <div className="text-blue-600">{cheapest.inventoryItemName} (${cheapest.totalCost.toFixed(2)})</div>
+                                      </div>
+                                      {priceChanges.length > 0 && (
+                                        <div className="col-span-2 pt-2 border-t border-blue-200">
+                                          <span className="text-blue-700 font-medium">Price changes detected:</span>
+                                          <div className="text-blue-600">
+                                            {priceChanges.length} item{priceChanges.length !== 1 ? 's' : ''} with different pricing
+                                          </div>
+                                        </div>
+                                      )}
+                                    </>
+                                  );
+                                })()}
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      </div>
                     </div>
                   )}
                   
