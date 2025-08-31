@@ -399,8 +399,19 @@ The OCR system works best with image files rather than scanned PDFs.`,
       const description = singleLineMatch[1].trim();
       const price = parseFloat(singleLineMatch[2]);
       
+      // Check if this is a fee first (for separate IRS tracking)
+      if (OCRService.isValidFee(description, price)) {
+        return {
+          type: 'fee',
+          description: description.substring(0, 50),
+          amount: price
+        };
+      }
+      
+      // Otherwise check if it's a valid product
       if (OCRService.isValidProduct(description, price)) {
         return {
+          type: 'line_item',
           description: description.substring(0, 100),
           quantity: 1,
           unitPrice: price,
@@ -444,33 +455,46 @@ The OCR system works best with image files rather than scanned PDFs.`,
       }
     }
     
-    if (foundPrice > 0 && OCRService.isValidProduct(line, foundPrice)) {
-      // Calculate unit price if we have quantity > 1
-      let unitPrice = foundPrice;
-      let totalPrice = foundPrice;
-      
-      if (quantity > 1) {
-        // Check if foundPrice might be total price or unit price
-        const possibleUnitPrice = foundPrice / quantity;
-        if (possibleUnitPrice >= 0.50 && possibleUnitPrice <= 200) {
-          // Price seems reasonable as total, calculate unit price
-          unitPrice = Math.round(possibleUnitPrice * 100) / 100;
-          totalPrice = foundPrice;
-        } else {
-          // Price seems like unit price, calculate total
-          unitPrice = foundPrice;
-          totalPrice = Math.round(quantity * foundPrice * 100) / 100;
-        }
+    if (foundPrice > 0) {
+      // Check if this is a fee first
+      if (OCRService.isValidFee(line, foundPrice)) {
+        return {
+          type: 'fee',
+          description: line.substring(0, 50),
+          amount: foundPrice
+        };
       }
       
-      console.log(`📊 Final calculation: "${line}" - Qty: ${quantity}, Unit: $${unitPrice}, Total: $${totalPrice}`);
-      
-      return {
-        description: line.substring(0, 100),
-        quantity,
-        unitPrice,
-        totalPrice
-      };
+      // Otherwise check if it's a valid product
+      if (OCRService.isValidProduct(line, foundPrice)) {
+        // Calculate unit price if we have quantity > 1
+        let unitPrice = foundPrice;
+        let totalPrice = foundPrice;
+        
+        if (quantity > 1) {
+          // Check if foundPrice might be total price or unit price
+          const possibleUnitPrice = foundPrice / quantity;
+          if (possibleUnitPrice >= 0.50 && possibleUnitPrice <= 200) {
+            // Price seems reasonable as total, calculate unit price
+            unitPrice = Math.round(possibleUnitPrice * 100) / 100;
+            totalPrice = foundPrice;
+          } else {
+            // Price seems like unit price, calculate total
+            unitPrice = foundPrice;
+            totalPrice = Math.round(quantity * foundPrice * 100) / 100;
+          }
+        }
+        
+        console.log(`📊 Final calculation: "${line}" - Qty: ${quantity}, Unit: $${unitPrice}, Total: $${totalPrice}`);
+        
+        return {
+          type: 'line_item',
+          description: line.substring(0, 100),
+          quantity,
+          unitPrice,
+          totalPrice
+        };
+      }
     }
     
     return null;
@@ -492,6 +516,29 @@ The OCR system works best with image files rather than scanned PDFs.`,
     return null;
   }
 
+  // Helper function to detect if a line represents a fee/charge (for separate IRS tracking)
+  private static isValidFee(description: string, amount: number): boolean {
+    const feePatterns = [
+      /^(DELIVERY|SHIPPING|HANDLING|FREIGHT|TRANSPORT|FUEL)(\s+(CHARGE|FEE|COST))?$/i,
+      /(DELIVERY|SHIPPING|HANDLING|FREIGHT|TRANSPORT|FUEL)\s+(CHARGE|FEE|COST)/i,
+      /^(TAX|SALES\s+TAX|STATE\s+TAX|LOCAL\s+TAX)$/i,
+      /^(SERVICE\s+)?(CHARGE|FEE)$/i,
+      /^MISC(\.|ELLANEOUS)?\s+(CHARGE|FEE)$/i,
+      /^(PROCESSING|ADMIN|ADMINISTRATIVE)\s+(CHARGE|FEE)$/i
+    ];
+    
+    const isFee = feePatterns.some(pattern => pattern.test(description));
+    const validAmount = amount > 0 && amount <= 200; // Fees typically under $200
+    const validLength = description.length >= 3 && description.length <= 50;
+    
+    if (isFee && validAmount && validLength) {
+      console.log(`💳 Detected fee: "${description}" - $${amount}`);
+      return true;
+    }
+    
+    return false;
+  }
+
   // Helper function to validate if a line represents a valid product
   private static isValidProduct(description: string, totalPrice: number): boolean {
     // Filter out obvious non-products - MUCH MORE STRICT
@@ -500,9 +547,8 @@ The OCR system works best with image files rather than scanned PDFs.`,
       /^(THANK|PLEASE|VISIT|WEBSITE|PHONE|EMAIL|ADDRESS|CITY|STATE|ZIP|DATE|TIME|RECEIPT|TRANSACTION)$/i,
       /^(CREDIT|DEBIT|PAYMENT|REFUND|DISCOUNT|COUPON|LOYALTY|REWARDS|POINTS)$/i,
       /^(NAME|PRICE|AMOUNT|QUANTITY|DESCRIPTION|ORDER|SOLD|ACCT|RETD|PAID|CASH|COD|CHARGE)$/i,
-      /^(CUSTOMER|VENDOR|INVOICE|NUMBER|DELIVERY|SHIPPING|BILLING|CONTACT)$/i,
+      /^(CUSTOMER|VENDOR|INVOICE|NUMBER|BILLING|CONTACT)$/i,
       /^(EXT|EXTENDED|UNIT|EACH|PER|LB|OZ|KG|NOTES|PRODUCT|PRODUCTS|FARMED|FRESH|FROZEN)$/i, // Single words
-      /^(DELIVERY|CHARGE|FEE|SHIPPING|HANDLING|FREIGHT)$/i, // Fees/charges
       /^\d+$/, // Just numbers
       /^[A-Z]{1,3}$/, // Short codes
       /^(A-\d+|T-\d+|\d+-\d+)$/, // Reference codes
@@ -514,8 +560,6 @@ The OCR system works best with image files rather than scanned PDFs.`,
       /special/i,
       /slip/i,
       /reference/i,
-      /charge/i,
-      /delivery/i,
       /from:/i,
       /notes:/i
     ];
@@ -572,6 +616,10 @@ The OCR system works best with image files rather than scanned PDFs.`,
       quantity: number;
       unitPrice: number;
       totalPrice: number;
+    }>;
+    fees: Array<{
+      description: string;
+      amount: number;
     }>;
   } {
     const lines = text.split('\n');
@@ -826,15 +874,27 @@ The OCR system works best with image files rather than scanned PDFs.`,
       }
     }
     
-    // PASS 2: Extract high-confidence line items
+    // PASS 2: Extract high-confidence line items and fees
     const highConfidenceLines = scoredLines.filter(line => line.score >= 0.8);
     console.log(`🎯 Found ${highConfidenceLines.length} high-confidence product lines`);
+    
+    const fees: Array<{ description: string; amount: number }> = [];
     
     for (const scoredLine of highConfidenceLines) {
       const extracted = OCRService.extractLineItemFromScoredLine(scoredLine, lines);
       if (extracted) {
-        lineItems.push(extracted);
-        console.log(`✅ High-confidence: ${extracted.description} - $${extracted.totalPrice.toFixed(2)}`);
+        if (extracted.type === 'fee') {
+          fees.push({ description: extracted.description, amount: extracted.amount });
+          console.log(`💳 High-confidence fee: ${extracted.description} - $${extracted.amount.toFixed(2)}`);
+        } else if (extracted.type === 'line_item') {
+          lineItems.push({
+            description: extracted.description,
+            quantity: extracted.quantity,
+            unitPrice: extracted.unitPrice,
+            totalPrice: extracted.totalPrice
+          });
+          console.log(`✅ High-confidence: ${extracted.description} - $${extracted.totalPrice.toFixed(2)}`);
+        }
       }
     }
     
@@ -953,7 +1013,8 @@ The OCR system works best with image files rather than scanned PDFs.`,
       invoiceDate,
       total,
       subtotal,
-      lineItems
+      lineItems,
+      fees
     };
   }
 }

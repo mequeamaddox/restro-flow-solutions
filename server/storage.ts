@@ -1280,6 +1280,7 @@ export class DatabaseStorage implements IStorage {
         totalAmount: parseFloat(row.invoice_processing.total || '0'),
         subtotal: parseFloat(row.invoice_processing.subtotal || '0'),
         tax: parseFloat(row.invoice_processing.tax || '0'),
+        fees: row.invoice_processing.fees ? JSON.parse(row.invoice_processing.fees) : [],
       }));
     } catch (error) {
       console.error('Error fetching invoices:', error);
@@ -1307,6 +1308,7 @@ export class DatabaseStorage implements IStorage {
         uploadMethod: invoice.uploadMethod || 'upload',
         ocrConfidence: invoice.ocrConfidence ? parseFloat(invoice.ocrConfidence).toString() : null,
         lineItems: invoice.lineItems || null,
+        fees: invoice.fees || null, // IRS-compliant separate tracking of delivery, shipping, and other charges
         notes: invoice.notes || (invoice.originalText ? 
           invoice.originalText
             .replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F-\x9F]/g, '') // Remove control characters

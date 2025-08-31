@@ -902,6 +902,7 @@ export const invoiceProcessing = pgTable("invoice_processing", {
   uploadMethod: varchar("upload_method", { enum: ["photo", "email", "upload", "edi"] }),
   ocrConfidence: decimal("ocr_confidence", { precision: 5, scale: 2 }),
   lineItems: jsonb("line_items"),
+  fees: jsonb("fees"), // Separate tracking for delivery, shipping, handling charges for IRS compliance
   notes: text("notes"),
   approvedBy: varchar("approved_by").references(() => users.id),
   processedAt: timestamp("processed_at"),

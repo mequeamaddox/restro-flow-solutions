@@ -19,6 +19,11 @@ interface LineItem {
   totalPrice: number;
 }
 
+interface Fee {
+  description: string;
+  amount: number;
+}
+
 interface InvoiceReviewDialogProps {
   isOpen: boolean;
   onClose: () => void;
@@ -30,6 +35,7 @@ interface InvoiceReviewDialogProps {
     total: number;
     subtotal: number;
     lineItems: LineItem[];
+    fees: Fee[];
     ocrConfidence: number;
   } | null;
 }
@@ -49,7 +55,8 @@ export function InvoiceReviewDialog({ isOpen, onClose, invoiceData }: InvoiceRev
         invoiceDate: invoiceData.invoiceDate,
         total: invoiceData.total,
         subtotal: invoiceData.subtotal,
-        lineItems: [...invoiceData.lineItems]
+        lineItems: [...invoiceData.lineItems],
+        fees: [...(invoiceData.fees || [])]
       });
     }
   }, [invoiceData, isOpen]);
@@ -140,9 +147,55 @@ export function InvoiceReviewDialog({ isOpen, onClose, invoiceData }: InvoiceRev
     });
   };
 
-  const calculateTotal = () => {
+  const handleFeeEdit = (index: number, field: string, value: any) => {
+    if (!editableData) return;
+    
+    const newFees = [...editableData.fees];
+    newFees[index] = {
+      ...newFees[index],
+      [field]: field === 'amount' ? parseFloat(value) || 0 : value
+    };
+    
+    setEditableData({
+      ...editableData,
+      fees: newFees
+    });
+  };
+
+  const addFee = () => {
+    if (!editableData) return;
+    
+    setEditableData({
+      ...editableData,
+      fees: [...editableData.fees, {
+        description: "Delivery Charge",
+        amount: 0
+      }]
+    });
+  };
+
+  const removeFee = (index: number) => {
+    if (!editableData) return;
+    
+    const newFees = editableData.fees.filter((_: any, i: number) => i !== index);
+    setEditableData({
+      ...editableData,
+      fees: newFees
+    });
+  };
+
+  const calculateSubtotal = () => {
     if (!editableData) return 0;
     return editableData.lineItems.reduce((sum: number, item: LineItem) => sum + item.totalPrice, 0);
+  };
+
+  const calculateFeesTotal = () => {
+    if (!editableData) return 0;
+    return editableData.fees.reduce((sum: number, fee: Fee) => sum + fee.amount, 0);
+  };
+
+  const calculateTotal = () => {
+    return calculateSubtotal() + calculateFeesTotal();
   };
 
   const handleApprove = () => {
@@ -150,8 +203,9 @@ export function InvoiceReviewDialog({ isOpen, onClose, invoiceData }: InvoiceRev
     
     const finalData = {
       ...editableData,
+      subtotal: calculateSubtotal(),
       total: calculateTotal(),
-      subtotal: calculateTotal() // For simplicity, assuming no tax for now
+      fees: JSON.stringify(editableData.fees) // Store fees as JSON for IRS compliance
     };
     
     approveInvoiceMutation.mutate(finalData);
@@ -206,7 +260,19 @@ export function InvoiceReviewDialog({ isOpen, onClose, invoiceData }: InvoiceRev
                   />
                 </div>
                 <div>
-                  <Label>Calculated Total</Label>
+                  <Label>Subtotal (Line Items)</Label>
+                  <div className="text-lg font-semibold mt-1">
+                    ${calculateSubtotal().toFixed(2)}
+                  </div>
+                </div>
+                <div>
+                  <Label>Fees Total</Label>
+                  <div className="text-lg font-semibold mt-1">
+                    ${calculateFeesTotal().toFixed(2)}
+                  </div>
+                </div>
+                <div>
+                  <Label>Invoice Total</Label>
                   <div className="text-2xl font-bold text-green-600 mt-1">
                     ${calculateTotal().toFixed(2)}
                   </div>
@@ -279,6 +345,72 @@ export function InvoiceReviewDialog({ isOpen, onClose, invoiceData }: InvoiceRev
                 {editableData.lineItems.length === 0 && (
                   <div className="text-center text-gray-500 py-8">
                     No line items found. Click "Add Item" to add products manually.
+                  </div>
+                )}
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Fees Section - IRS Compliant Separate Tracking */}
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between">
+              <CardTitle className="flex items-center gap-2">
+                Fees & Charges ({editableData.fees.length})
+                <Badge variant="outline" className="text-xs">IRS Compliant</Badge>
+              </CardTitle>
+              <Button onClick={addFee} size="sm" variant="outline">
+                <Plus className="h-4 w-4 mr-1" />
+                Add Fee
+              </Button>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-3">
+                {editableData.fees.map((fee: Fee, index: number) => (
+                  <div key={index} className="border rounded-lg p-4 space-y-3 bg-orange-50 dark:bg-orange-950/20">
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm font-medium text-orange-700 dark:text-orange-300">
+                        Fee #{index + 1}
+                      </span>
+                      <Button
+                        onClick={() => removeFee(index)}
+                        size="sm"
+                        variant="ghost"
+                        className="text-red-600 hover:text-red-700"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </div>
+                    
+                    <div className="grid grid-cols-2 gap-3">
+                      <div>
+                        <Label>Description</Label>
+                        <Input
+                          value={fee.description}
+                          onChange={(e) => handleFeeEdit(index, 'description', e.target.value)}
+                          placeholder="Delivery, shipping, etc."
+                        />
+                      </div>
+                      <div>
+                        <Label>Amount</Label>
+                        <Input
+                          type="number"
+                          step="0.01"
+                          value={fee.amount}
+                          onChange={(e) => handleFeeEdit(index, 'amount', e.target.value)}
+                        />
+                      </div>
+                    </div>
+                    
+                    <div className="flex justify-between items-center pt-2 border-t border-orange-200 dark:border-orange-800">
+                      <span className="text-sm text-orange-600 dark:text-orange-400">Fee Amount:</span>
+                      <span className="font-semibold text-orange-700 dark:text-orange-300">${fee.amount.toFixed(2)}</span>
+                    </div>
+                  </div>
+                ))}
+                
+                {editableData.fees.length === 0 && (
+                  <div className="text-center text-gray-500 py-8">
+                    No fees detected. Click "Add Fee" to add delivery charges, shipping costs, etc.
                   </div>
                 )}
               </div>
