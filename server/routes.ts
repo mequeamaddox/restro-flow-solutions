@@ -816,7 +816,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           console.log('💾 Attempting to save item:', {
             name: item.name,
             description: `Imported from invoice`,
-            locationId: defaultLocation.id,
+            locationId: targetLocation.id,
             quantity: item.quantity.toString(),
             unit: item.unit,
             costPerUnit: item.costPerUnit.toString(),
