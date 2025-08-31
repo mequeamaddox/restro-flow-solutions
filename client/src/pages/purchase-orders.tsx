@@ -478,24 +478,93 @@ export default function PurchaseOrders() {
                     )}
                   />
                 </div>
-                <FormField
-                  control={form.control}
-                  name="totalAmount"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Total Amount *</FormLabel>
-                      <FormControl>
-                        <Input 
-                          type="number" 
-                          step="0.01" 
-                          placeholder="0.00"
-                          {...field} 
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
+                {/* Line Items Section */}
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between">
+                    <h3 className="text-lg font-medium">Line Items</h3>
+                    <Badge variant="secondary">
+                      {lineItems.length} item{lineItems.length !== 1 ? 's' : ''} - Total: ${getTotalAmount().toFixed(2)}
+                    </Badge>
+                  </div>
+                  
+                  {/* Add Line Item Form */}
+                  <div className="grid grid-cols-4 gap-2 p-3 bg-gray-50 rounded-lg">
+                    <Select value={selectedInventoryItem} onValueChange={setSelectedInventoryItem}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select item" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {inventoryItems.map((item: any) => (
+                          <SelectItem key={item.id} value={item.id}>
+                            {item.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <Input
+                      type="number"
+                      placeholder="Qty"
+                      value={itemQuantity}
+                      onChange={(e) => setItemQuantity(e.target.value)}
+                    />
+                    <Input
+                      type="number"
+                      step="0.01"
+                      placeholder="Unit Cost"
+                      value={itemUnitCost}
+                      onChange={(e) => setItemUnitCost(e.target.value)}
+                    />
+                    <Button type="button" onClick={addLineItem} className="w-full">
+                      <Plus className="h-4 w-4 mr-1" />
+                      Add
+                    </Button>
+                  </div>
+
+                  {/* Line Items Table */}
+                  {lineItems.length > 0 && (
+                    <div className="border rounded-lg">
+                      <Table>
+                        <TableHeader>
+                          <TableRow>
+                            <TableHead>Item</TableHead>
+                            <TableHead>Quantity</TableHead>
+                            <TableHead>Unit Cost</TableHead>
+                            <TableHead>Total</TableHead>
+                            <TableHead className="w-16"></TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {lineItems.map((item, index) => (
+                            <TableRow key={index}>
+                              <TableCell className="font-medium">{item.inventoryItemName}</TableCell>
+                              <TableCell>{item.quantity}</TableCell>
+                              <TableCell>${item.unitCost.toFixed(2)}</TableCell>
+                              <TableCell>${item.totalCost.toFixed(2)}</TableCell>
+                              <TableCell>
+                                <Button
+                                  type="button"
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => removeLineItem(index)}
+                                  data-testid={`button-remove-item-${index}`}
+                                >
+                                  <X className="h-4 w-4" />
+                                </Button>
+                              </TableCell>
+                            </TableRow>
+                          ))}
+                        </TableBody>
+                      </Table>
+                    </div>
                   )}
-                />
+                  
+                  {lineItems.length === 0 && (
+                    <div className="text-center py-6 text-gray-500">
+                      <Package className="h-12 w-12 mx-auto mb-2 opacity-50" />
+                      <p>No items added yet. Add items above to create your purchase order.</p>
+                    </div>
+                  )}
+                </div>
                 <FormField
                   control={form.control}
                   name="notes"
@@ -711,6 +780,89 @@ export default function PurchaseOrders() {
           </div>
         </CardContent>
       </Card>
+
+      {/* Low Stock Items Quick Actions */}
+      {lowStockItems.length > 0 && (
+        <Card className="border-orange-200 bg-orange-50">
+          <CardHeader className="pb-3">
+            <div className="flex items-center space-x-2">
+              <AlertTriangle className="h-5 w-5 text-orange-600" />
+              <CardTitle className="text-orange-800">Low Stock Items ({lowStockItems.length})</CardTitle>
+            </div>
+            <p className="text-sm text-orange-700">
+              These items are running low and may need reordering
+            </p>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+              {lowStockItems.slice(0, 6).map((item: any) => (
+                <div key={item.id} className="flex items-center justify-between p-3 bg-white rounded-lg border">
+                  <div>
+                    <p className="font-medium text-sm">{item.name}</p>
+                    <p className="text-xs text-gray-600">
+                      Current: {item.currentStock} | Reorder at: {item.reorderLevel}
+                    </p>
+                  </div>
+                  <div className="flex items-center space-x-1">
+                    <Package className="h-4 w-4 text-orange-600" />
+                    <span className="text-sm font-medium text-orange-600">
+                      {Math.max(0, item.reorderLevel - item.currentStock)}
+                    </span>
+                  </div>
+                </div>
+              ))}
+            </div>
+            {lowStockItems.length > 6 && (
+              <p className="text-sm text-orange-600 mt-3">
+                +{lowStockItems.length - 6} more items need attention
+              </p>
+            )}
+            <div className="flex items-center justify-between mt-4 pt-3 border-t border-orange-200">
+              <span className="text-sm text-orange-700">Quick Actions:</span>
+              <div className="flex space-x-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    // Group by vendor and create POs automatically
+                    const vendors = Array.from(new Set(lowStockItems.map((item: any) => item.vendorId).filter(Boolean)));
+                    if (vendors.length === 0) {
+                      toast({
+                        title: "No Vendors",
+                        description: "Please assign vendors to inventory items first",
+                        variant: "destructive"
+                      });
+                      return;
+                    }
+                    
+                    vendors.forEach((vendorId) => {
+                      const vendorItems = lowStockItems.filter((item: any) => item.vendorId === vendorId);
+                      createFromLowStockMutation.mutate({
+                        vendorId,
+                        lowStockItems: vendorItems
+                      });
+                    });
+                  }}
+                  className="text-orange-700 border-orange-300 hover:bg-orange-100"
+                  data-testid="button-create-pos-from-low-stock"
+                >
+                  <ShoppingCart className="h-4 w-4 mr-1" />
+                  Create POs
+                </Button>
+                <Button
+                  variant="outline" 
+                  size="sm"
+                  onClick={() => window.location.href = '/inventory'}
+                  className="text-orange-700 border-orange-300 hover:bg-orange-100"
+                >
+                  <Eye className="h-4 w-4 mr-1" />
+                  View All
+                </Button>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Purchase Orders Grid */}
       {isLoading ? (
