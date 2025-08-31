@@ -501,11 +501,11 @@ export default function PurchaseOrders() {
                   </div>
                   
                   {/* Add Line Item Form with Real-time Calculations */}
-                  <div className="p-4 bg-white rounded-lg border border-gray-200 shadow-sm">
+                  <div className="p-4 bg-slate-800 rounded-lg border border-slate-600 shadow-sm">
                     <div className="grid grid-cols-12 gap-3 items-end">
                       {/* Item Selection */}
                       <div className="col-span-5">
-                        <label className="block text-xs font-medium text-gray-700 mb-1">
+                        <label className="block text-xs font-medium text-gray-300 mb-1">
                           Inventory Item
                         </label>
                         <Select value={selectedInventoryItem} onValueChange={setSelectedInventoryItem}>
@@ -552,7 +552,7 @@ export default function PurchaseOrders() {
 
                       {/* Quantity */}
                       <div className="col-span-2">
-                        <label className="block text-xs font-medium text-gray-700 mb-1">
+                        <label className="block text-xs font-medium text-gray-300 mb-1">
                           Quantity {getSelectedItemInfo()?.unit && `(${getSelectedItemInfo()?.unit})`}
                         </label>
                         <Input
@@ -574,7 +574,7 @@ export default function PurchaseOrders() {
 
                       {/* Unit Cost */}
                       <div className="col-span-2">
-                        <label className="block text-xs font-medium text-gray-700 mb-1">
+                        <label className="block text-xs font-medium text-gray-300 mb-1">
                           Unit Cost
                         </label>
                         <div className="relative">
@@ -594,7 +594,7 @@ export default function PurchaseOrders() {
 
                       {/* Live Total */}
                       <div className="col-span-2">
-                        <label className="block text-xs font-medium text-gray-700 mb-1">
+                        <label className="block text-xs font-medium text-gray-300 mb-1">
                           Line Total
                         </label>
                         <div className="h-10 px-3 py-2 bg-green-50 border border-green-200 rounded-md flex items-center justify-center">
