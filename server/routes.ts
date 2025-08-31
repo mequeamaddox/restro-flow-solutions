@@ -2474,7 +2474,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           
           await sendEmail({
             to: email,
-            from: 'noreply@restroflow.com', // Replace with your verified SendGrid sender
+            from: 'mequeamaddox@gmail.com', // Use your verified email address
             subject: 'Welcome to RestroFlow - Complete Your Onboarding',
             html: `
               <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
@@ -2492,6 +2492,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           console.log(`✅ Email sent successfully to ${email}`);
         } catch (emailError) {
           console.error(`❌ Failed to send email to ${email}:`, emailError);
+          console.error(`Full error details:`, JSON.stringify(emailError, null, 2));
           // Don't fail the whole request if email fails - still return the link
         }
       } else if (sendMethod === 'text' && phone) {
