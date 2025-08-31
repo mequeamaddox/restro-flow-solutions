@@ -789,21 +789,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Import invoice line items to inventory
   app.post('/api/inventory/import-from-invoice', isAuthenticated, async (req, res) => {
     try {
-      const { items } = req.body;
+      const { items, locationId } = req.body;
       const userId = (req.user as any)?.claims?.sub;
       
       if (!items || !Array.isArray(items)) {
         return res.status(400).json({ message: "Invalid items data" });
       }
 
-      console.log('🔄 Importing items to inventory:', items);
+      if (!locationId) {
+        return res.status(400).json({ message: "Location ID is required for import" });
+      }
 
-      // Get the first location as default
+      console.log('🔄 Importing items to inventory for location:', locationId, items);
+
+      // Verify the location exists
       const locations = await storage.getLocations();
-      const defaultLocation = locations[0];
+      const targetLocation = locations.find(loc => loc.id === locationId);
       
-      if (!defaultLocation) {
-        return res.status(400).json({ message: "No locations found. Please create a location first." });
+      if (!targetLocation) {
+        return res.status(400).json({ message: "Invalid location ID" });
       }
 
       let importedCount = 0;
@@ -823,7 +827,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             name: item.name,
             description: `Imported from invoice`,
             categoryId: null, // Will need to map to actual category
-            locationId: defaultLocation.id,
+            locationId: targetLocation.id,
             quantity: item.quantity.toString(),
             unit: item.unit,
             costPerUnit: item.costPerUnit.toString(),

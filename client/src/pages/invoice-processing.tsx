@@ -36,6 +36,7 @@ import {
 import { format } from "date-fns";
 import { SubscriptionBanner } from "@/components/subscription/subscription-banner";
 import { InvoiceReviewDialog } from "@/components/invoice-review-dialog";
+import { useLocation } from "@/contexts/LocationContext";
 
 const invoiceSchema = z.object({
   vendorId: z.string().min(1, "Vendor is required"),
@@ -51,6 +52,7 @@ type InvoiceFormData = z.infer<typeof invoiceSchema>;
 
 export default function InvoiceProcessing() {
   const { toast } = useToast();
+  const { currentLocation } = useLocation();
   const [selectedInvoice, setSelectedInvoice] = useState<any>(null);
   const [reviewInvoice, setReviewInvoice] = useState<any>(null);
   const [isReviewOpen, setIsReviewOpen] = useState(false);
@@ -176,7 +178,13 @@ export default function InvoiceProcessing() {
 
   const importToInventoryMutation = useMutation({
     mutationFn: async (items: any[]) => {
-      const response = await apiRequest("POST", "/api/inventory/import-from-invoice", { items });
+      if (!currentLocation) {
+        throw new Error("Please select a location before importing items");
+      }
+      const response = await apiRequest("POST", "/api/inventory/import-from-invoice", { 
+        items, 
+        locationId: currentLocation.id 
+      });
       return response.json();
     },
     onSuccess: (data) => {
@@ -246,6 +254,15 @@ export default function InvoiceProcessing() {
   };
 
   const importSelectedItems = (invoiceId: string, lineItems: any[]) => {
+    if (!currentLocation) {
+      toast({
+        title: "No location selected",
+        description: "Please select a location before importing items",
+        variant: "destructive",
+      });
+      return;
+    }
+    
     const selections = selectedLineItems[invoiceId] || new Array(lineItems.length).fill(true);
     const selectedItems = lineItems.filter((_: any, index: number) => selections[index]);
     
