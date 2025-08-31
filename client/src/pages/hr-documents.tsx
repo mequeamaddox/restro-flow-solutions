@@ -84,11 +84,7 @@ export default function HRDocumentsPage() {
   // Document upload mutation
   const uploadDocumentMutation = useMutation({
     mutationFn: async (data: DocumentFormData & { filePath: string; fileSize: number; mimeType: string }) => {
-      return await apiRequest('/api/hr/documents', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(data),
-      });
+      return await apiRequest('POST', '/api/hr/documents', data);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/hr/documents'] });
@@ -110,11 +106,7 @@ export default function HRDocumentsPage() {
   // Onboarding creation mutation
   const createOnboardingMutation = useMutation({
     mutationFn: async (data: OnboardingFormData & { totalSteps: number }) => {
-      return await apiRequest('/api/hr/onboarding', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(data),
-      });
+      return await apiRequest('POST', '/api/hr/onboarding', data);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/hr/onboarding'] });
@@ -136,11 +128,7 @@ export default function HRDocumentsPage() {
   // Invitation creation mutation
   const createInvitationMutation = useMutation({
     mutationFn: async (data: InviteFormData) => {
-      return await apiRequest('/api/hr/onboarding/invite', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(data),
-      });
+      return await apiRequest('POST', '/api/hr/onboarding/invite', data);
     },
     onSuccess: (response) => {
       toast({
