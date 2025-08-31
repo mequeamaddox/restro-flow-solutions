@@ -15,6 +15,7 @@ import { Plus, Search, ChefHat, DollarSign, Clock, Users, Trash2, Eye, AlertTria
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import { isUnauthorizedError } from "@/lib/authUtils";
+import { useLocation } from "@/contexts/LocationContext";
 import { z } from "zod";
 
 const recipeFormSchema = z.object({
@@ -38,14 +39,19 @@ export default function Recipes() {
   const [ingredients, setIngredients] = useState([{ inventoryItemId: '', quantity: 0, unit: '' }]);
   const [targetFoodCost, setTargetFoodCost] = useState(30); // 30% default food cost
   const { toast } = useToast();
+  const { currentLocation } = useLocation();
   const queryClient = useQueryClient();
 
   const { data: recipes = [], isLoading } = useQuery<any[]>({
-    queryKey: ['/api/recipes'],
+    queryKey: ['/api/recipes', currentLocation?.id],
+    queryFn: () => apiRequest('GET', `/api/recipes?locationId=${currentLocation?.id}`).then(r => r.json()),
+    enabled: !!currentLocation,
   });
 
   const { data: inventoryItems = [] } = useQuery<any[]>({
-    queryKey: ['/api/inventory'],
+    queryKey: ['/api/inventory', currentLocation?.id],
+    queryFn: () => apiRequest('GET', `/api/inventory?locationId=${currentLocation?.id}`).then(r => r.json()),
+    enabled: !!currentLocation,
   });
 
   const form = useForm<RecipeFormData>({
@@ -70,11 +76,12 @@ export default function Recipes() {
       }
       await apiRequest('POST', '/api/recipes', {
         ...data,
+        locationId: currentLocation?.id,
         ingredients: validIngredients
       });
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/recipes'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/recipes', currentLocation?.id] });
       setIsCreateDialogOpen(false);
       form.reset();
       setIngredients([{ inventoryItemId: '', quantity: 0, unit: '' }]);
@@ -110,7 +117,7 @@ export default function Recipes() {
       await apiRequest('DELETE', `/api/recipes/${id}`);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/recipes'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/recipes', currentLocation?.id] });
       setIsDetailsDialogOpen(false);
       toast({
         title: "Success",

@@ -910,7 +910,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Recipes
   app.get('/api/recipes', isAuthenticated, async (req, res) => {
     try {
-      const recipes = await storage.getRecipes();
+      const locationId = req.query.locationId as string;
+      const recipes = await storage.getRecipes(locationId);
       res.json(recipes);
     } catch (error) {
       console.error("Error fetching recipes:", error);

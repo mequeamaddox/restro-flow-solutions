@@ -810,8 +810,14 @@ export class DatabaseStorage implements IStorage {
   }
 
   // Recipe operations
-  async getRecipes(): Promise<(Recipe & { ingredientCount: number; estimatedCost: number })[]> {
-    const allRecipes = await db.select().from(recipes).orderBy(recipes.name);
+  async getRecipes(locationId?: string): Promise<(Recipe & { ingredientCount: number; estimatedCost: number })[]> {
+    let query = db.select().from(recipes).orderBy(recipes.name);
+    
+    if (locationId) {
+      query = query.where(eq(recipes.locationId, locationId));
+    }
+    
+    const allRecipes = await query;
     
     const recipesWithStats = await Promise.all(allRecipes.map(async (recipe) => {
       // Get ingredient count and cost

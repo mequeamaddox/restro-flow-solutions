@@ -112,6 +112,7 @@ export const recipes = pgTable("recipes", {
   name: varchar("name", { length: 200 }).notNull(),
   description: text("description"),
   category: varchar("category", { length: 50 }).notNull(),
+  locationId: uuid("location_id").references(() => locations.id).notNull(),
   servingSize: integer("serving_size").notNull().default(1),
   prepTime: integer("prep_time").notNull(), // minutes
   cookTime: integer("cook_time").notNull().default(0), // minutes
