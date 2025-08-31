@@ -644,7 +644,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Dashboard metrics
   app.get('/api/dashboard/metrics', isAuthenticated, async (req, res) => {
     try {
-      const metrics = await storage.getDashboardMetrics();
+      const locationId = req.query.locationId as string;
+      const metrics = await storage.getDashboardMetrics(locationId);
       res.json(metrics);
     } catch (error) {
       console.error("Error fetching dashboard metrics:", error);

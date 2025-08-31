@@ -195,7 +195,7 @@ export interface IStorage {
   getInventoryTransactions(itemId?: string): Promise<(InventoryTransaction & { inventoryItem?: InventoryItem; creator?: User })[]>;
 
   // Dashboard metrics
-  getDashboardMetrics(): Promise<{
+  getDashboardMetrics(locationId?: string): Promise<{
     totalInventoryValue: number;
     lowStockCount: number;
     weeklyWaste: number;
@@ -799,13 +799,18 @@ export class DatabaseStorage implements IStorage {
     })));
   }
 
-  async getTotalInventoryValue(): Promise<number> {
-    const [result] = await db
+  async getTotalInventoryValue(locationId?: string): Promise<number> {
+    let query = db
       .select({
         total: sql<string>`COALESCE(SUM(${inventoryItems.quantity} * ${inventoryItems.costPerUnit}), 0)`,
       })
       .from(inventoryItems);
     
+    if (locationId) {
+      query = query.where(eq(inventoryItems.locationId, locationId));
+    }
+    
+    const [result] = await query;
     return parseFloat(result?.total || '0');
   }
 
@@ -1145,15 +1150,15 @@ export class DatabaseStorage implements IStorage {
   }
 
   // Dashboard metrics
-  async getDashboardMetrics(): Promise<{
+  async getDashboardMetrics(locationId?: string): Promise<{
     totalInventoryValue: number;
     lowStockCount: number;
     weeklyWaste: number;
     foodCostPercentage: number;
   }> {
-    const totalInventoryValue = await this.getTotalInventoryValue();
+    const totalInventoryValue = await this.getTotalInventoryValue(locationId);
     
-    const lowStockItems = await this.getLowStockItems();
+    const lowStockItems = await this.getLowStockItems(locationId);
     const lowStockCount = lowStockItems.length;
     
     const weekAgo = new Date();
