@@ -30,6 +30,8 @@ import {
   insertWasteEntrySchema,
   insertInventoryTransactionSchema,
   insertPosIntegrationSchema,
+  insertTeamResourceSchema,
+  teamResources,
 } from "@shared/schema";
 
 // File upload configuration
@@ -1876,6 +1878,69 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error('Error deleting pay period:', error);
       res.status(500).json({ message: 'Failed to delete pay period' });
+    }
+  });
+
+  // Team Resources Routes
+  app.get('/api/hr/team-resources', isAuthenticated, async (req, res) => {
+    try {
+      const resources = await db.select().from(teamResources).orderBy(desc(teamResources.uploadedAt));
+      res.json(resources);
+    } catch (error) {
+      console.error('Error fetching team resources:', error);
+      res.status(500).json({ message: 'Failed to fetch team resources' });
+    }
+  });
+
+  app.post('/api/hr/team-resources', isAuthenticated, async (req, res) => {
+    try {
+      const userId = (req.user as any).claims.sub;
+      const resourceData = insertTeamResourceSchema.parse({
+        ...req.body,
+        uploadedBy: userId,
+      });
+      const [resource] = await db.insert(teamResources).values(resourceData).returning();
+      res.status(201).json(resource);
+    } catch (error) {
+      console.error('Error creating team resource:', error);
+      res.status(500).json({ message: 'Failed to create team resource' });
+    }
+  });
+
+  app.delete('/api/hr/team-resources/:id', isAuthenticated, async (req, res) => {
+    try {
+      const { id } = req.params;
+      await db.delete(teamResources).where(eq(teamResources.id, id));
+      res.status(204).send();
+    } catch (error) {
+      console.error('Error deleting team resource:', error);
+      res.status(500).json({ message: 'Failed to delete team resource' });
+    }
+  });
+
+  // Object Storage routes for file uploads
+  app.post('/api/objects/upload', isAuthenticated, async (req, res) => {
+    try {
+      const objectStorageService = new ObjectStorageService();
+      const uploadURL = await objectStorageService.getObjectEntityUploadURL();
+      res.json({ uploadURL });
+    } catch (error) {
+      console.error('Error getting upload URL:', error);
+      res.status(500).json({ error: 'Failed to get upload URL' });
+    }
+  });
+
+  app.get('/objects/:objectPath(*)', isAuthenticated, async (req, res) => {
+    try {
+      const objectStorageService = new ObjectStorageService();
+      const objectFile = await objectStorageService.getObjectEntityFile(req.path);
+      objectStorageService.downloadObject(objectFile, res);
+    } catch (error) {
+      console.error('Error downloading object:', error);
+      if (error instanceof ObjectNotFoundError) {
+        return res.sendStatus(404);
+      }
+      return res.sendStatus(500);
     }
   });
 

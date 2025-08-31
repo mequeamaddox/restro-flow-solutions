@@ -8,10 +8,12 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { MessageSquare, Send, Bell, Users, Megaphone, Clock, Eye } from "lucide-react";
+import { MessageSquare, Send, Bell, Users, Megaphone, Clock, Eye, FileText, Upload, Download, Trash2, Folder } from "lucide-react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { ObjectUploader } from "@/components/ObjectUploader";
 
 interface Message {
   id: string;
@@ -29,9 +31,23 @@ interface Message {
   }>;
 }
 
+interface TeamResource {
+  id: string;
+  name: string;
+  description?: string;
+  fileUrl: string;
+  fileType: string;
+  fileSize: number;
+  category: 'document' | 'form' | 'recipe' | 'policy' | 'manual' | 'other';
+  uploadedBy: string;
+  uploadedAt: string;
+}
+
 export default function HRMessaging() {
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [messageTypeFilter, setMessageTypeFilter] = useState<string>("all");
+  const [resourceCategoryFilter, setResourceCategoryFilter] = useState<string>("all");
+  const [isResourceDialogOpen, setIsResourceDialogOpen] = useState(false);
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
@@ -45,6 +61,10 @@ export default function HRMessaging() {
 
   const { data: departments = [] } = useQuery({
     queryKey: ['/api/hr/departments'],
+  });
+
+  const { data: teamResources = [] } = useQuery({
+    queryKey: ['/api/hr/team-resources'],
   });
 
   const createMessageMutation = useMutation({
@@ -61,9 +81,41 @@ export default function HRMessaging() {
     },
   });
 
+  const createResourceMutation = useMutation({
+    mutationFn: async (resourceData: any) => {
+      return await apiRequest('POST', '/api/hr/team-resources', resourceData);
+    },
+    onSuccess: () => {
+      toast({ title: "Success", description: "Resource uploaded successfully" });
+      queryClient.invalidateQueries({ queryKey: ['/api/hr/team-resources'] });
+      setIsResourceDialogOpen(false);
+    },
+    onError: () => {
+      toast({ title: "Error", description: "Failed to upload resource", variant: "destructive" });
+    },
+  });
+
+  const deleteResourceMutation = useMutation({
+    mutationFn: async (id: string) => {
+      return await apiRequest('DELETE', `/api/hr/team-resources/${id}`);
+    },
+    onSuccess: () => {
+      toast({ title: "Success", description: "Resource deleted successfully" });
+      queryClient.invalidateQueries({ queryKey: ['/api/hr/team-resources'] });
+    },
+    onError: () => {
+      toast({ title: "Error", description: "Failed to delete resource", variant: "destructive" });
+    },
+  });
+
   const filteredMessages = messages.filter((message: Message) => {
     const matchesType = messageTypeFilter === "all" || message.messageType === messageTypeFilter;
     return matchesType;
+  });
+
+  const filteredResources = teamResources.filter((resource: TeamResource) => {
+    const matchesCategory = resourceCategoryFilter === "all" || resource.category === resourceCategoryFilter;
+    return matchesCategory;
   });
 
   const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
@@ -79,6 +131,48 @@ export default function HRMessaging() {
     };
 
     createMessageMutation.mutate(messageData);
+  };
+
+  const handleResourceUpload = async () => {
+    return await apiRequest('POST', '/api/objects/upload');
+  };
+
+  const handleResourceComplete = (result: any) => {
+    if (result.successful?.[0]?.uploadURL) {
+      // This would normally open a dialog to collect metadata
+      toast({ title: "Upload Complete", description: "Please add resource details" });
+      setIsResourceDialogOpen(true);
+    }
+  };
+
+  const formatFileSize = (bytes: number) => {
+    if (bytes === 0) return '0 Bytes';
+    const k = 1024;
+    const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+  };
+
+  const getCategoryIcon = (category: string) => {
+    switch (category) {
+      case 'document': return <FileText className="h-4 w-4" />;
+      case 'form': return <FileText className="h-4 w-4" />;
+      case 'recipe': return <FileText className="h-4 w-4" />;
+      case 'policy': return <FileText className="h-4 w-4" />;
+      case 'manual': return <FileText className="h-4 w-4" />;
+      default: return <FileText className="h-4 w-4" />;
+    }
+  };
+
+  const getCategoryColor = (category: string) => {
+    switch (category) {
+      case 'document': return 'bg-blue-100 text-blue-800';
+      case 'form': return 'bg-green-100 text-green-800';
+      case 'recipe': return 'bg-orange-100 text-orange-800';
+      case 'policy': return 'bg-red-100 text-red-800';
+      case 'manual': return 'bg-purple-100 text-purple-800';
+      default: return 'bg-gray-100 text-gray-800';
+    }
   };
 
   const getMessageTypeColor = (messageType: string) => {
@@ -147,24 +241,42 @@ export default function HRMessaging() {
 
   return (
     <div className="max-w-7xl mx-auto p-6">
-      <div className="mb-6">
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-3xl font-bold flex items-center gap-2">
-              <MessageSquare className="h-8 w-8" />
-              Team Communication
-            </h1>
-            <p className="text-gray-600">Send announcements and messages to your team</p>
-          </div>
-          
-          <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
+      <div className="mb-8">
+        <h1 className="text-3xl font-bold mb-2">Team Communication & Resources</h1>
+        <p className="text-gray-600">Send messages to your team and manage shared documents, forms, and resources</p>
+      </div>
+
+      <Tabs defaultValue="messages" className="w-full">
+        <TabsList className="grid w-full grid-cols-2">
+          <TabsTrigger value="messages" data-testid="tab-messages">
+            <MessageSquare className="h-4 w-4 mr-2" />
+            Messages
+          </TabsTrigger>
+          <TabsTrigger value="resources" data-testid="tab-resources">
+            <Folder className="h-4 w-4 mr-2" />
+            Team Resources
+          </TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="messages" className="space-y-6 mt-6">
+          <div className="mb-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <h2 className="text-2xl font-bold flex items-center gap-2">
+                  <MessageSquare className="h-6 w-6" />
+                  Team Messages
+                </h2>
+                <p className="text-gray-600">Send announcements and messages to your team</p>
+              </div>
+              
+              <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
             <DialogTrigger asChild>
               <Button>
                 <Send className="h-4 w-4 mr-2" />
                 Send Message
-              </Button>
-            </DialogTrigger>
-            <DialogContent className="max-w-2xl">
+                </Button>
+              </DialogTrigger>
+              <DialogContent className="max-w-2xl">
               <form onSubmit={handleSubmit}>
                 <DialogHeader>
                   <DialogTitle>Send Message</DialogTitle>
@@ -460,6 +572,139 @@ export default function HRMessaging() {
           )}
         </div>
       )}
+        </TabsContent>
+
+        <TabsContent value="resources" className="space-y-6 mt-6">
+          <div className="mb-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <h2 className="text-2xl font-bold flex items-center gap-2">
+                  <Folder className="h-6 w-6" />
+                  Team Resources
+                </h2>
+                <p className="text-gray-600">Manage documents, forms, recipes, and other shared files</p>
+              </div>
+              
+              <ObjectUploader
+                maxNumberOfFiles={1}
+                maxFileSize={52428800}
+                onGetUploadParameters={handleResourceUpload}
+                onComplete={handleResourceComplete}
+                buttonClassName=""
+                data-testid="button-upload-resource"
+              >
+                <div className="flex items-center gap-2">
+                  <Upload className="h-4 w-4" />
+                  Upload File
+                </div>
+              </ObjectUploader>
+            </div>
+          </div>
+
+          {/* Resource filters */}
+          <div className="flex gap-4 mb-6">
+            <div className="flex-1">
+              <Label htmlFor="resource-category-filter">Filter by Category</Label>
+              <Select value={resourceCategoryFilter} onValueChange={setResourceCategoryFilter}>
+                <SelectTrigger id="resource-category-filter">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Categories</SelectItem>
+                  <SelectItem value="document">📄 Documents</SelectItem>
+                  <SelectItem value="form">📋 Forms</SelectItem>
+                  <SelectItem value="recipe">🍽️ Recipes</SelectItem>
+                  <SelectItem value="policy">📖 Policies</SelectItem>
+                  <SelectItem value="manual">📚 Manuals</SelectItem>
+                  <SelectItem value="other">📁 Other</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+
+          {/* Resources grid */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {filteredResources.map((resource: TeamResource) => {
+              const employee = employees.find((emp: any) => emp.id === resource.uploadedBy);
+              return (
+                <Card key={resource.id}>
+                  <CardHeader className="pb-3">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        {getCategoryIcon(resource.category)}
+                        <Badge className={getCategoryColor(resource.category)}>
+                          {resource.category}
+                        </Badge>
+                      </div>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => deleteResourceMutation.mutate(resource.id)}
+                        data-testid={`button-delete-${resource.id}`}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-3">
+                      <div>
+                        <h3 className="font-medium text-gray-900" data-testid={`text-resource-name-${resource.id}`}>
+                          {resource.name}
+                        </h3>
+                        {resource.description && (
+                          <p className="text-sm text-gray-600 mt-1">{resource.description}</p>
+                        )}
+                      </div>
+                      
+                      <div className="flex items-center justify-between text-sm text-gray-500">
+                        <span>{formatFileSize(resource.fileSize)}</span>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => window.open(resource.fileUrl, '_blank')}
+                          data-testid={`button-download-${resource.id}`}
+                        >
+                          <Download className="h-4 w-4 mr-1" />
+                          Download
+                        </Button>
+                      </div>
+                      
+                      <div className="flex items-center gap-2 text-xs text-gray-500 pt-2 border-t">
+                        <Avatar className="h-5 w-5">
+                          <AvatarImage src={employee?.profilePhoto} />
+                          <AvatarFallback className="text-xs">
+                            {employee?.firstName?.charAt(0)}{employee?.lastName?.charAt(0)}
+                          </AvatarFallback>
+                        </Avatar>
+                        <span>
+                          {employee ? `${employee.firstName} ${employee.lastName}` : 'Unknown User'}
+                        </span>
+                        <span>•</span>
+                        <Clock className="h-3 w-3" />
+                        <span>{new Date(resource.uploadedAt).toLocaleDateString()}</span>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              );
+            })}
+          </div>
+
+          {filteredResources.length === 0 && (
+            <div className="text-center py-12">
+              <Folder className="h-12 w-12 mx-auto text-gray-400 mb-4" />
+              <h3 className="text-lg font-medium text-gray-900 mb-2">No resources found</h3>
+              <p className="text-gray-600 mb-4">
+                {resourceCategoryFilter !== "all"
+                  ? "Try changing your category filter"
+                  : "Upload your first team resource to get started"
+                }
+              </p>
+            </div>
+          )}
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }

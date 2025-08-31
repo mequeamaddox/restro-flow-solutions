@@ -571,6 +571,21 @@ export const timeEntries = pgTable("time_entries", {
   updatedAt: timestamp("updated_at").defaultNow(),
 });
 
+// Team Resources for document management
+export const teamResources = pgTable("team_resources", {
+  id: uuid("id").primaryKey().default(sql`gen_random_uuid()`),
+  name: varchar("name", { length: 255 }).notNull(),
+  description: text("description"),
+  fileUrl: varchar("file_url", { length: 500 }).notNull(),
+  fileType: varchar("file_type", { length: 100 }).notNull(),
+  fileSize: integer("file_size").notNull(),
+  category: varchar("category").default("other"), // document, form, recipe, policy, manual, other
+  uploadedBy: varchar("uploaded_by").notNull(),
+  uploadedAt: timestamp("uploaded_at").defaultNow(),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
 // HR Insert schemas and Types (moved here after table definitions)
 export const insertDepartmentSchema = createInsertSchema(departments).omit({ id: true, createdAt: true, updatedAt: true });
 export const insertPositionSchema = createInsertSchema(positions).omit({ id: true, createdAt: true, updatedAt: true });
@@ -584,6 +599,7 @@ export const insertMessageSchema = createInsertSchema(messages).omit({ id: true,
 export const insertMessageThreadSchema = createInsertSchema(messageThreads).omit({ id: true, createdAt: true, updatedAt: true });
 export const insertPerformanceReviewSchema = createInsertSchema(performanceReviews).omit({ id: true, createdAt: true, updatedAt: true });
 export const insertTimeEntrySchema = createInsertSchema(timeEntries).omit({ id: true, createdAt: true, updatedAt: true });
+export const insertTeamResourceSchema = createInsertSchema(teamResources).omit({ id: true, createdAt: true, updatedAt: true });
 
 // Internal Payroll System Tables
 export const payPeriods = pgTable("pay_periods", {
@@ -685,6 +701,8 @@ export type PerformanceReview = typeof performanceReviews.$inferSelect;
 export type InsertPerformanceReview = z.infer<typeof insertPerformanceReviewSchema>;
 export type TimeEntry = typeof timeEntries.$inferSelect;
 export type InsertTimeEntry = z.infer<typeof insertTimeEntrySchema>;
+export type TeamResource = typeof teamResources.$inferSelect;
+export type InsertTeamResource = z.infer<typeof insertTeamResourceSchema>;
 
 // Payroll Types
 export type PayPeriod = typeof payPeriods.$inferSelect;
