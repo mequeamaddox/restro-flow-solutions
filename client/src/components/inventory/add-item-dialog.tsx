@@ -23,9 +23,10 @@ interface AddItemDialogProps {
   onSuccess: () => void;
   categories: Category[];
   vendors: Vendor[];
+  editingItem?: any;
 }
 
-export default function AddItemDialog({ isOpen, onClose, onSuccess, categories, vendors }: AddItemDialogProps) {
+export default function AddItemDialog({ isOpen, onClose, onSuccess, categories, vendors, editingItem }: AddItemDialogProps) {
   const { toast } = useToast();
   const { currentLocation } = useLocation();
   const [isScannerOpen, setIsScannerOpen] = useState(false);
@@ -97,9 +98,11 @@ export default function AddItemDialog({ isOpen, onClose, onSuccess, categories, 
 
   return (
     <Dialog open={isOpen} onOpenChange={handleClose}>
-      <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-y-auto">
+      <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-y-auto bg-slate-900 border-slate-700">
         <DialogHeader>
-          <DialogTitle>Add New Inventory Item</DialogTitle>
+          <DialogTitle className="text-white">
+            {editingItem ? 'Edit Inventory Item' : 'Add New Inventory Item'}
+          </DialogTitle>
         </DialogHeader>
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
@@ -301,9 +304,12 @@ export default function AddItemDialog({ isOpen, onClose, onSuccess, categories, 
               <Button 
                 type="submit" 
                 disabled={createItemMutation.isPending}
-                className="bg-primary-600 hover:bg-primary-700"
+                className="bg-blue-600 hover:bg-blue-700 text-white"
               >
-                {createItemMutation.isPending ? "Adding..." : "Add Item"}
+                {createItemMutation.isPending ? 
+                  (editingItem ? "Updating..." : "Adding...") : 
+                  (editingItem ? "Update Item" : "Add Item")
+                }
               </Button>
             </div>
           </form>

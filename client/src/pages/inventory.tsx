@@ -4,7 +4,8 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Plus, Search, Filter } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { Plus, Search, Filter, Package, TrendingUp, AlertTriangle, DollarSign, Download, Upload } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { isUnauthorizedError } from "@/lib/authUtils";
 import { useLocation } from "@/contexts/LocationContext";
@@ -15,6 +16,7 @@ import QuickAddWidget from "@/components/inventory/quick-add-widget";
 
 export default function Inventory() {
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
+  const [editingItem, setEditingItem] = useState<any>(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [categoryFilter, setCategoryFilter] = useState("");
   const { toast } = useToast();
@@ -34,6 +36,11 @@ export default function Inventory() {
     queryKey: ['/api/vendors'],
   });
 
+  const { data: lowStockItems = [] } = useQuery({
+    queryKey: ['/api/inventory/low-stock', currentLocation?.id],
+    enabled: !!currentLocation,
+  });
+
   // Filter items based on search and category
   const filteredItems = (inventoryItems as any[])?.filter((item: any) => {
     const matchesSearch = item.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -45,6 +52,7 @@ export default function Inventory() {
   const handleAddSuccess = () => {
     queryClient.invalidateQueries({ queryKey: ['/api/inventory'] });
     queryClient.invalidateQueries({ queryKey: ['/api/dashboard/metrics'] });
+    queryClient.invalidateQueries({ queryKey: ['/api/inventory/low-stock'] });
     setIsAddDialogOpen(false);
     toast({
       title: "Success",
@@ -52,51 +60,158 @@ export default function Inventory() {
     });
   };
 
+  const handleEditSuccess = () => {
+    queryClient.invalidateQueries({ queryKey: ['/api/inventory'] });
+    queryClient.invalidateQueries({ queryKey: ['/api/dashboard/metrics'] });
+    queryClient.invalidateQueries({ queryKey: ['/api/inventory/low-stock'] });
+    setEditingItem(null);
+    toast({
+      title: "Success",
+      description: "Inventory item updated successfully",
+    });
+  };
+
+  const handleEditItem = (item: any) => {
+    setEditingItem(item);
+  };
+
+  // Calculate inventory metrics
+  const totalItems = (inventoryItems as any[])?.length || 0;
+  const totalValue = (inventoryItems as any[])?.reduce((sum: number, item: any) => {
+    return sum + (parseFloat(item.quantity) * parseFloat(item.costPerUnit));
+  }, 0) || 0;
+  const lowStockCount = (lowStockItems as any[])?.length || 0;
+  const averageValue = totalItems > 0 ? totalValue / totalItems : 0;
+
   return (
-    <div className="p-4 lg:p-6 space-y-6">
+    <div className="p-4 lg:p-6 space-y-6 bg-slate-950 min-h-screen">
       {/* Location Banner */}
       <LocationBanner />
       
       {/* Page Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-semibold text-gray-900">Inventory Management</h1>
-          <p className="text-gray-600">
+          <h1 className="text-3xl font-bold text-white">Inventory Management</h1>
+          <p className="text-slate-400 mt-1">
             {currentLocation ? `Managing inventory for ${currentLocation.name}` : 'Select a location to view inventory'}
           </p>
         </div>
-        <Button 
-          onClick={() => setIsAddDialogOpen(true)}
-          className="bg-primary-600 hover:bg-primary-700"
-          disabled={!currentLocation}
-        >
-          <Plus className="h-4 w-4 mr-2" />
-          Add Item
-        </Button>
+        <div className="flex flex-wrap gap-2">
+          <Button 
+            variant="outline"
+            className="border-slate-600 text-slate-300 hover:bg-slate-800"
+            disabled={!currentLocation}
+          >
+            <Download className="h-4 w-4 mr-2" />
+            Export
+          </Button>
+          <Button 
+            variant="outline"
+            className="border-slate-600 text-slate-300 hover:bg-slate-800"
+            disabled={!currentLocation}
+          >
+            <Upload className="h-4 w-4 mr-2" />
+            Import
+          </Button>
+          <Button 
+            onClick={() => setIsAddDialogOpen(true)}
+            className="bg-blue-600 hover:bg-blue-700 text-white"
+            disabled={!currentLocation}
+            data-testid="button-add-item"
+          >
+            <Plus className="h-4 w-4 mr-2" />
+            Add Item
+          </Button>
+        </div>
       </div>
+
+      {/* Inventory Metrics */}
+      {currentLocation && (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+          <Card className="bg-slate-900/50 border-slate-700">
+            <CardContent className="p-6">
+              <div className="flex items-center">
+                <Package className="h-8 w-8 text-blue-500" />
+                <div className="ml-4">
+                  <p className="text-sm font-medium text-slate-400">Total Items</p>
+                  <p className="text-2xl font-bold text-white">{totalItems}</p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+          
+          <Card className="bg-slate-900/50 border-slate-700">
+            <CardContent className="p-6">
+              <div className="flex items-center">
+                <DollarSign className="h-8 w-8 text-green-500" />
+                <div className="ml-4">
+                  <p className="text-sm font-medium text-slate-400">Total Value</p>
+                  <p className="text-2xl font-bold text-white">${totalValue.toFixed(2)}</p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+          
+          <Card className="bg-slate-900/50 border-slate-700">
+            <CardContent className="p-6">
+              <div className="flex items-center">
+                <AlertTriangle className={`h-8 w-8 ${lowStockCount > 0 ? 'text-red-500' : 'text-slate-500'}`} />
+                <div className="ml-4">
+                  <p className="text-sm font-medium text-slate-400">Low Stock</p>
+                  <div className="flex items-center gap-2">
+                    <p className="text-2xl font-bold text-white">{lowStockCount}</p>
+                    {lowStockCount > 0 && (
+                      <Badge variant="destructive" className="text-xs">Alert</Badge>
+                    )}
+                  </div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+          
+          <Card className="bg-slate-900/50 border-slate-700">
+            <CardContent className="p-6">
+              <div className="flex items-center">
+                <TrendingUp className="h-8 w-8 text-purple-500" />
+                <div className="ml-4">
+                  <p className="text-sm font-medium text-slate-400">Avg. Value</p>
+                  <p className="text-2xl font-bold text-white">${averageValue.toFixed(2)}</p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      )}
 
       {/* Main Content Layout */}
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
         {/* Main Content */}
         <div className="lg:col-span-3 space-y-6">
-          {/* Filters */}
-          <Card className="bg-slate-800/50 border-slate-700">
-            <CardContent className="pt-6">
+          {/* Filters and Search */}
+          <Card className="bg-slate-900/50 border-slate-700">
+            <CardHeader>
+              <CardTitle className="text-white flex items-center gap-2">
+                <Filter className="h-5 w-5" />
+                Filter & Search
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
               <div className="flex flex-col md:flex-row gap-4">
                 <div className="relative flex-1">
-                  <Search className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
+                  <Search className="absolute left-3 top-3 h-4 w-4 text-slate-400" />
                   <Input
                     placeholder="Search inventory items..."
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
-                    className="pl-10 bg-slate-700 border-slate-600 text-white"
+                    className="pl-10 bg-slate-800 border-slate-600 text-white placeholder:text-slate-400 focus:border-blue-500"
+                    data-testid="input-search"
                   />
                 </div>
                 <Select value={categoryFilter} onValueChange={setCategoryFilter}>
-                  <SelectTrigger className="w-full md:w-48 bg-slate-700 border-slate-600 text-white">
+                  <SelectTrigger className="w-full md:w-56 bg-slate-800 border-slate-600 text-white">
                     <SelectValue placeholder="All Categories" />
                   </SelectTrigger>
-                  <SelectContent>
+                  <SelectContent className="bg-slate-800 border-slate-600">
                     <SelectItem value="all">All Categories</SelectItem>
                     {(categories as any[])?.map((category: any) => (
                       <SelectItem key={category.id} value={category.id}>
@@ -106,16 +221,54 @@ export default function Inventory() {
                   </SelectContent>
                 </Select>
               </div>
+              
+              {/* Results Summary */}
+              {currentLocation && (
+                <div className="flex items-center justify-between text-sm text-slate-400">
+                  <span>
+                    {filteredItems?.length || 0} of {totalItems} items
+                    {searchTerm && ` matching "${searchTerm}"`}
+                    {categoryFilter && categoryFilter !== 'all' && ` in selected category`}
+                  </span>
+                  {(searchTerm || (categoryFilter && categoryFilter !== 'all')) && (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => {
+                        setSearchTerm('');
+                        setCategoryFilter('');
+                      }}
+                      className="text-slate-400 hover:text-white"
+                    >
+                      Clear filters
+                    </Button>
+                  )}
+                </div>
+              )}
             </CardContent>
           </Card>
 
           {/* Inventory Table */}
-          <Card className="bg-slate-800/50 border-slate-700">
-            <CardContent>
+          <Card className="bg-slate-900/50 border-slate-700">
+            <CardHeader>
+              <CardTitle className="text-white flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <Package className="h-5 w-5" />
+                  Inventory Items
+                </div>
+                {filteredItems?.length > 0 && (
+                  <Badge variant="secondary" className="bg-slate-800 text-slate-300">
+                    {filteredItems.length} items
+                  </Badge>
+                )}
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="p-0">
               <InventoryTable 
                 items={filteredItems} 
                 isLoading={isLoading}
                 showPagination={true}
+                onEditItem={handleEditItem}
               />
             </CardContent>
           </Card>
@@ -137,6 +290,18 @@ export default function Inventory() {
         categories={(categories as any[]) || []}
         vendors={(vendors as any[]) || []}
       />
+
+      {/* Edit Item Dialog */}
+      {editingItem && (
+        <AddItemDialog
+          isOpen={!!editingItem}
+          onClose={() => setEditingItem(null)}
+          onSuccess={handleEditSuccess}
+          categories={(categories as any[]) || []}
+          vendors={(vendors as any[]) || []}
+          editingItem={editingItem}
+        />
+      )}
     </div>
   );
 }

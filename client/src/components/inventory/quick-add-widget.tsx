@@ -168,12 +168,12 @@ export default function QuickAddWidget() {
 
   return (
     <>
-      <Card className="w-full max-w-md">
+      <Card className="w-full max-w-md bg-slate-900/50 border-slate-700">
         <CardHeader className="pb-3">
           <CardTitle className="flex items-center justify-between text-lg">
             <div className="flex items-center">
-              <Camera className="h-5 w-5 mr-2 text-primary-600" />
-              Quick Add Inventory
+              <Camera className="h-5 w-5 mr-2 text-blue-500" />
+              <span className="text-white">Quick Add Inventory</span>
             </div>
             {items.length > 0 && (
               <Badge variant="secondary" className="text-xs">
@@ -187,8 +187,9 @@ export default function QuickAddWidget() {
           {/* Scan Button */}
           <Button
             onClick={() => setIsScannerOpen(true)}
-            className="w-full h-12 text-base bg-primary-600 hover:bg-primary-700"
+            className="w-full h-12 text-base bg-blue-600 hover:bg-blue-700 text-white"
             disabled={!currentLocation}
+            data-testid="button-scan-barcode"
           >
             <Camera className="h-5 w-5 mr-2" />
             Scan Barcode to Add Item
@@ -198,12 +199,12 @@ export default function QuickAddWidget() {
           {items.length > 0 && (
             <div className="space-y-3">
               <div className="flex items-center justify-between">
-                <h4 className="font-medium text-sm text-gray-700">Scanned Items</h4>
+                <h4 className="font-medium text-sm text-white">Scanned Items</h4>
                 <Button
                   variant="ghost"
                   size="sm"
                   onClick={() => setIsExpanded(!isExpanded)}
-                  className="text-xs"
+                  className="text-xs text-slate-300 hover:text-white"
                 >
                   {isExpanded ? 'Collapse' : 'Expand'}
                 </Button>
@@ -218,23 +219,23 @@ export default function QuickAddWidget() {
                     key={item.barcode}
                     className={cn(
                       "p-3 rounded-lg border transition-colors",
-                      item.status === 'success' && "border-green-200 bg-green-50",
-                      item.status === 'error' && "border-red-200 bg-red-50",
-                      item.status === 'adding' && "border-blue-200 bg-blue-50",
-                      item.status === 'pending' && "border-gray-200 bg-white"
+                      item.status === 'success' && "border-green-600 bg-green-950/30",
+                      item.status === 'error' && "border-red-600 bg-red-950/30",
+                      item.status === 'adding' && "border-blue-600 bg-blue-950/30",
+                      item.status === 'pending' && "border-slate-600 bg-slate-800/50"
                     )}
                   >
                     <div className="flex items-start justify-between mb-2">
                       <div className="flex items-center space-x-2">
                         {getStatusIcon(item.status)}
-                        <span className="text-xs font-mono text-gray-500">{item.barcode}</span>
+                        <span className="text-xs font-mono text-slate-400">{item.barcode}</span>
                       </div>
                       {item.status === 'pending' && (
                         <Button
                           variant="ghost"
                           size="sm"
                           onClick={() => removeItem(item.barcode)}
-                          className="h-6 w-6 p-0 text-gray-400 hover:text-red-600"
+                          className="h-6 w-6 p-0 text-slate-400 hover:text-red-400"
                         >
                           <X className="h-3 w-3" />
                         </Button>
@@ -247,7 +248,7 @@ export default function QuickAddWidget() {
                           value={item.name}
                           onChange={(e) => updateItem(item.barcode, 'name', e.target.value)}
                           placeholder="Product name"
-                          className="text-sm"
+                          className="text-sm bg-slate-700 border-slate-600 text-white placeholder:text-slate-400"
                         />
                         <div className="grid grid-cols-3 gap-2">
                           <Input
@@ -255,13 +256,13 @@ export default function QuickAddWidget() {
                             onChange={(e) => updateItem(item.barcode, 'quantity', e.target.value)}
                             placeholder="Qty"
                             type="number"
-                            className="text-sm"
+                            className="text-sm bg-slate-700 border-slate-600 text-white placeholder:text-slate-400"
                           />
                           <Input
                             value={item.unit}
                             onChange={(e) => updateItem(item.barcode, 'unit', e.target.value)}
                             placeholder="Unit"
-                            className="text-sm"
+                            className="text-sm bg-slate-700 border-slate-600 text-white placeholder:text-slate-400"
                           />
                           <Input
                             value={item.costPerUnit}
@@ -269,13 +270,13 @@ export default function QuickAddWidget() {
                             placeholder="Cost"
                             type="number"
                             step="0.01"
-                            className="text-sm"
+                            className="text-sm bg-slate-700 border-slate-600 text-white placeholder:text-slate-400"
                           />
                         </div>
                         <Button
                           onClick={() => addToInventory(item)}
                           size="sm"
-                          className="w-full h-8 text-xs"
+                          className="w-full h-8 text-xs bg-blue-600 hover:bg-blue-700 text-white"
                           disabled={!item.name || !item.quantity || !item.costPerUnit}
                         >
                           <Plus className="h-3 w-3 mr-1" />
@@ -286,8 +287,8 @@ export default function QuickAddWidget() {
 
                     {!isExpanded && (
                       <div className="text-sm">
-                        <p className="font-medium truncate">{item.name}</p>
-                        <p className="text-xs text-gray-500">
+                        <p className="font-medium truncate text-white">{item.name}</p>
+                        <p className="text-xs text-slate-400">
                           {item.quantity} {item.unit} @ ${item.costPerUnit}
                         </p>
                       </div>
@@ -298,13 +299,13 @@ export default function QuickAddWidget() {
 
               {/* Bulk Actions */}
               {(pendingCount > 0 || successCount > 0) && (
-                <div className="flex space-x-2 pt-2 border-t border-gray-100">
+                <div className="flex space-x-2 pt-2 border-t border-slate-600">
                   {pendingCount > 0 && (
                     <Button
                       onClick={addAllToInventory}
                       size="sm"
                       variant="outline"
-                      className="flex-1 text-xs"
+                      className="flex-1 text-xs border-slate-600 text-slate-300 hover:bg-slate-700 hover:text-white"
                     >
                       Add All ({pendingCount})
                     </Button>
@@ -314,7 +315,7 @@ export default function QuickAddWidget() {
                       onClick={clearCompleted}
                       size="sm"
                       variant="ghost"
-                      className="flex-1 text-xs"
+                      className="flex-1 text-xs text-slate-400 hover:text-white hover:bg-slate-700"
                     >
                       Clear Done ({successCount})
                     </Button>
@@ -325,8 +326,8 @@ export default function QuickAddWidget() {
           )}
 
           {/* Location Indicator */}
-          <div className="text-xs text-gray-500 text-center">
-            Adding to: {currentLocation.name}
+          <div className="text-xs text-slate-400 text-center">
+            Adding to: <span className="text-blue-400 font-medium">{currentLocation.name}</span>
           </div>
         </CardContent>
       </Card>
