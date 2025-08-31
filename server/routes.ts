@@ -2454,6 +2454,110 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Onboarding Token Management - Generate shareable links
+  app.post("/api/hr/onboarding/invite", isAuthenticated, requirePermission(Permission.MANAGE_EMPLOYEES), async (req, res) => {
+    try {
+      const { employeeId, email, phone, sendMethod = 'email' } = req.body;
+      
+      // Create secure token for the employee
+      const token = await storage.createOnboardingToken(employeeId, 72); // 3 days expiration
+      
+      // Generate shareable URL
+      const baseUrl = req.protocol + '://' + req.get('host');
+      const inviteUrl = `${baseUrl}/onboarding/${token.token}`;
+      
+      // Send invitation based on method
+      if (sendMethod === 'email' && email) {
+        // TODO: Implement email sending with SendGrid
+        console.log(`Would send email to ${email} with link: ${inviteUrl}`);
+      } else if (sendMethod === 'text' && phone) {
+        // TODO: Implement SMS sending
+        console.log(`Would send text to ${phone} with link: ${inviteUrl}`);
+      }
+      
+      res.status(201).json({ 
+        token: token.token,
+        inviteUrl,
+        expiresAt: token.expiresAt,
+        message: `Onboarding invitation created successfully`
+      });
+    } catch (error) {
+      console.error("Error creating onboarding invitation:", error);
+      res.status(500).json({ message: "Failed to create onboarding invitation" });
+    }
+  });
+
+  // Public onboarding access - validate token and show form
+  app.get("/api/onboarding/:token", async (req, res) => {
+    try {
+      const { token } = req.params;
+      const validation = await storage.validateOnboardingToken(token);
+      
+      if (!validation.isValid) {
+        return res.status(404).json({ 
+          error: "Invalid or expired invitation link",
+          message: "This invitation link is no longer valid. Please contact your manager for a new link."
+        });
+      }
+      
+      res.json({
+        isValid: true,
+        employee: {
+          firstName: validation.employee?.firstName,
+          lastName: validation.employee?.lastName,
+          email: validation.employee?.email,
+          position: validation.employee?.position,
+          department: validation.employee?.department
+        }
+      });
+    } catch (error) {
+      console.error("Error validating onboarding token:", error);
+      res.status(500).json({ message: "Failed to validate invitation" });
+    }
+  });
+
+  // Public onboarding submission
+  app.post("/api/onboarding/:token/complete", async (req, res) => {
+    try {
+      const { token } = req.params;
+      const validation = await storage.validateOnboardingToken(token);
+      
+      if (!validation.isValid) {
+        return res.status(404).json({ 
+          error: "Invalid or expired invitation link" 
+        });
+      }
+
+      // Update employee information with submitted data
+      const { personalInfo, emergencyContact, bankingInfo, documents } = req.body;
+      
+      // Update employee record
+      if (validation.employee) {
+        await storage.updateEmployee(validation.employee.id, {
+          ...personalInfo,
+          emergencyContactName: emergencyContact?.name,
+          emergencyContactPhone: emergencyContact?.phone,
+          emergencyContactRelationship: emergencyContact?.relationship,
+          bankAccountNumber: bankingInfo?.accountNumber,
+          bankRoutingNumber: bankingInfo?.routingNumber,
+          bankName: bankingInfo?.bankName,
+          status: 'active' // Mark as active after onboarding completion
+        });
+      }
+      
+      // Mark token as used
+      await storage.markOnboardingTokenAsUsed(token);
+      
+      res.json({ 
+        success: true,
+        message: "Onboarding completed successfully! Welcome to the team!" 
+      });
+    } catch (error) {
+      console.error("Error completing onboarding:", error);
+      res.status(500).json({ message: "Failed to complete onboarding" });
+    }
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }

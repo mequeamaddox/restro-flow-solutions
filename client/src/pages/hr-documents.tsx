@@ -13,7 +13,7 @@ import { ObjectUploader } from '@/components/ObjectUploader';
 import { 
   FileText, Upload, CheckCircle, Clock, AlertTriangle, Users, 
   Calendar, BarChart3, Download, Eye, Trash2, Plus, Filter,
-  Award, Target, TrendingUp, User, Settings, Search
+  Award, Target, TrendingUp, User, Settings, Search, Send
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { apiRequest, queryClient } from '@/lib/queryClient';
@@ -37,6 +37,13 @@ interface OnboardingFormData {
   assignedMentorId?: string;
 }
 
+interface InviteFormData {
+  employeeId: string;
+  email: string;
+  phone?: string;
+  sendMethod: 'email' | 'text';
+}
+
 export default function HRDocumentsPage() {
   const { toast } = useToast();
   const [selectedEmployee, setSelectedEmployee] = useState<string>('');
@@ -44,6 +51,7 @@ export default function HRDocumentsPage() {
   const [onboardingFilter, setOnboardingFilter] = useState<string>('all');
   const [showDocumentDialog, setShowDocumentDialog] = useState(false);
   const [showOnboardingDialog, setShowOnboardingDialog] = useState(false);
+  const [showInviteDialog, setShowInviteDialog] = useState(false);
 
   // Fetch data
   const { data: employees } = useQuery<Employee[]>({
@@ -118,6 +126,30 @@ export default function HRDocumentsPage() {
       toast({
         title: "Error",
         description: "Failed to start onboarding process",
+        variant: "destructive",
+      });
+    },
+  });
+
+  // Invitation creation mutation
+  const createInvitationMutation = useMutation({
+    mutationFn: async (data: InviteFormData) => {
+      return await apiRequest('/api/hr/onboarding/invite', {
+        method: 'POST',
+        body: JSON.stringify(data),
+      });
+    },
+    onSuccess: (response) => {
+      toast({
+        title: "Invitation Sent",
+        description: `Onboarding invitation created successfully! Link expires in 72 hours.`,
+      });
+      setShowInviteDialog(false);
+    },
+    onError: (error) => {
+      toast({
+        title: "Error",
+        description: "Failed to create onboarding invitation",
         variant: "destructive",
       });
     },
@@ -329,6 +361,78 @@ export default function HRDocumentsPage() {
                 </div>
 
                 <Button type="submit" className="w-full">Start Onboarding Process</Button>
+              </form>
+            </DialogContent>
+          </Dialog>
+
+          <Dialog open={showInviteDialog} onOpenChange={setShowInviteDialog}>
+            <DialogTrigger asChild>
+              <Button variant="outline" data-testid="button-invite-employee">
+                <Send className="w-4 h-4 mr-2" />
+                Invite Employee
+              </Button>
+            </DialogTrigger>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>Send Onboarding Invitation</DialogTitle>
+              </DialogHeader>
+              <form id="invite-form" className="space-y-4">
+                <div>
+                  <Label htmlFor="employeeId">Employee</Label>
+                  <Select name="employeeId" required>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select employee" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {employees?.map(emp => (
+                        <SelectItem key={emp.id} value={emp.id}>
+                          {emp.firstName} {emp.lastName}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                
+                <div>
+                  <Label htmlFor="email">Email Address</Label>
+                  <Input name="email" type="email" placeholder="employee@example.com" required />
+                </div>
+
+                <div>
+                  <Label htmlFor="phone">Phone Number (Optional)</Label>
+                  <Input name="phone" type="tel" placeholder="+1 (555) 123-4567" />
+                </div>
+
+                <div>
+                  <Label htmlFor="sendMethod">Send Method</Label>
+                  <Select name="sendMethod" defaultValue="email" required>
+                    <SelectTrigger>
+                      <SelectValue placeholder="How to send invitation" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="email">Email</SelectItem>
+                      <SelectItem value="text">Text Message</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="flex justify-end gap-2">
+                  <Button type="button" variant="outline" onClick={() => setShowInviteDialog(false)}>
+                    Cancel
+                  </Button>
+                  <Button type="submit" disabled={createInvitationMutation.isPending} onClick={(e) => {
+                    e.preventDefault();
+                    const formData = new FormData(document.getElementById('invite-form') as HTMLFormElement);
+                    createInvitationMutation.mutate({
+                      employeeId: formData.get('employeeId') as string,
+                      email: formData.get('email') as string,
+                      phone: formData.get('phone') as string || undefined,
+                      sendMethod: formData.get('sendMethod') as 'email' | 'text',
+                    });
+                  }}>
+                    {createInvitationMutation.isPending ? 'Sending...' : 'Send Invitation'}
+                  </Button>
+                </div>
               </form>
             </DialogContent>
           </Dialog>

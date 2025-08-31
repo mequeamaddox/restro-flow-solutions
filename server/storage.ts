@@ -1,3 +1,4 @@
+import crypto from 'crypto';
 import {
   users,
   locations,
@@ -14,6 +15,7 @@ import {
   inventoryTransactions,
   invoiceProcessing,
   autoOrderRules,
+  onboardingTokens,
   type User,
   type UpsertUser,
   type Location,
@@ -124,6 +126,8 @@ import {
   type InsertEmployeeOnboarding,
   type EmployeeOnboardingStep,
   type InsertEmployeeOnboardingStep,
+  type OnboardingToken,
+  type InsertOnboardingToken,
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, sql, desc, and, gte, lte, ilike, sum, isNull, asc } from "drizzle-orm";
@@ -2849,6 +2853,50 @@ export class DatabaseStorage implements IStorage {
       overdueOnboarding: overdueOnboarding.length,
       averageCompletionDays
     };
+  }
+
+  // Onboarding Token Management for Public Access
+  async createOnboardingToken(employeeId: string, expirationHours: number = 72): Promise<OnboardingToken> {
+    const token = crypto.randomUUID() + '-' + Date.now().toString(36);
+    const expiresAt = new Date(Date.now() + expirationHours * 60 * 60 * 1000);
+    
+    const [newToken] = await db
+      .insert(onboardingTokens)
+      .values({
+        employeeId,
+        token,
+        expiresAt,
+      })
+      .returning();
+    
+    return newToken;
+  }
+
+  async getOnboardingTokenByToken(token: string): Promise<OnboardingToken | undefined> {
+    const [tokenRecord] = await db
+      .select()
+      .from(onboardingTokens)
+      .where(eq(onboardingTokens.token, token));
+    
+    return tokenRecord;
+  }
+
+  async validateOnboardingToken(token: string): Promise<{ isValid: boolean; employee?: Employee }> {
+    const tokenRecord = await this.getOnboardingTokenByToken(token);
+    
+    if (!tokenRecord || tokenRecord.isUsed || new Date() > new Date(tokenRecord.expiresAt)) {
+      return { isValid: false };
+    }
+
+    const employee = await this.getEmployee(tokenRecord.employeeId);
+    return { isValid: true, employee };
+  }
+
+  async markOnboardingTokenAsUsed(token: string): Promise<void> {
+    await db
+      .update(onboardingTokens)
+      .set({ isUsed: true, completedAt: new Date() })
+      .where(eq(onboardingTokens.token, token));
   }
 }
 

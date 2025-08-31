@@ -35,6 +35,7 @@ import HRPayroll from "@/pages/hr-payroll";
 import HRDepartments from "@/pages/hr-departments";
 import HRPositions from "@/pages/hr-positions";
 import HRDocuments from "@/pages/hr-documents";
+import PublicOnboarding from "@/pages/public-onboarding";
 import Sidebar from "@/components/layout/sidebar";
 import Header from "@/components/layout/header";
 
@@ -47,6 +48,7 @@ function Router() {
       <Switch>
         <Route path="/" component={Landing} />
         <Route path="/pricing" component={Pricing} />
+        <Route path="/onboarding/:token" component={PublicOnboarding} />
         <Route component={NotFound} />
       </Switch>
     );

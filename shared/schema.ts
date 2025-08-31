@@ -1114,6 +1114,17 @@ export const employeeOnboardingSteps = pgTable("employee_onboarding_steps", {
   updatedAt: timestamp("updated_at").defaultNow(),
 });
 
+// Onboarding tokens for public access links
+export const onboardingTokens = pgTable("onboarding_tokens", {
+  id: uuid("id").primaryKey().default(sql`gen_random_uuid()`),
+  employeeId: uuid("employee_id").references(() => employees.id).notNull(),
+  token: varchar("token", { length: 255 }).notNull().unique(),
+  expiresAt: timestamp("expires_at").notNull(),
+  isUsed: boolean("is_used").default(false),
+  createdAt: timestamp("created_at").defaultNow(),
+  completedAt: timestamp("completed_at"),
+});
+
 export type SecurityLog = typeof securityLogs.$inferSelect;
 export type AuditLog = typeof auditLogs.$inferSelect;
 export type CostAlert = typeof costAlerts.$inferSelect;
@@ -1172,6 +1183,8 @@ export type InsertAutoOrderRule = typeof autoOrderRules.$inferInsert;
 // Employee document and onboarding types
 export type EmployeeDocument = typeof employeeDocuments.$inferSelect;
 export type InsertEmployeeDocument = typeof employeeDocuments.$inferInsert;
+export type OnboardingToken = typeof onboardingTokens.$inferSelect;
+export type InsertOnboardingToken = typeof onboardingTokens.$inferInsert;
 export type DocumentRequirement = typeof documentRequirements.$inferSelect;
 export type InsertDocumentRequirement = typeof documentRequirements.$inferInsert;
 export type OnboardingTemplate = typeof onboardingTemplates.$inferSelect;
