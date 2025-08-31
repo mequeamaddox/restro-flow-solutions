@@ -1096,6 +1096,54 @@ export class DatabaseStorage implements IStorage {
     })));
   }
 
+  // Calculate food cost percentage from real POS sales and inventory costs
+  async calculateFoodCostPercentage(): Promise<number> {
+    try {
+      // Get today's sales data from POS
+      const today = new Date();
+      const startOfDay = new Date(today.setHours(0, 0, 0, 0));
+      const endOfDay = new Date(today.setHours(23, 59, 59, 999));
+
+      // Get total revenue from POS sales
+      const salesData = await db
+        .select({
+          totalRevenue: sql<number>`COALESCE(SUM(CAST(${posSales.total} AS DECIMAL)), 0)`,
+        })
+        .from(posSales)
+        .where(
+          sql`${posSales.orderDate} >= ${startOfDay} 
+          AND ${posSales.orderDate} <= ${endOfDay}`
+        );
+
+      const totalRevenue = Number(salesData[0]?.totalRevenue || 0);
+
+      if (totalRevenue === 0) {
+        return 0; // No sales means no food cost percentage
+      }
+
+      // Get COGS from inventory transactions (items used/sold today)
+      const cogsData = await db
+        .select({
+          totalCogs: sql<number>`COALESCE(SUM(CAST(${inventoryTransactions.quantity} AS DECIMAL) * 
+            (SELECT CAST(cost_per_unit AS DECIMAL) FROM inventory_items WHERE id = ${inventoryTransactions.inventoryItemId})), 0)`,
+        })
+        .from(inventoryTransactions)
+        .where(
+          sql`${inventoryTransactions.type} = 'out' 
+          AND ${inventoryTransactions.createdAt} >= ${startOfDay} 
+          AND ${inventoryTransactions.createdAt} <= ${endOfDay}`
+        );
+
+      const totalCogs = Number(cogsData[0]?.totalCogs || 0);
+      
+      // Calculate food cost percentage: (COGS / Revenue) * 100
+      return (totalCogs / totalRevenue) * 100;
+    } catch (error) {
+      console.error('Error calculating food cost percentage:', error);
+      return 0; // Return 0 if calculation fails
+    }
+  }
+
   // Dashboard metrics
   async getDashboardMetrics(): Promise<{
     totalInventoryValue: number;
@@ -1112,8 +1160,8 @@ export class DatabaseStorage implements IStorage {
     weekAgo.setDate(weekAgo.getDate() - 7);
     const wasteStats = await this.getWasteStats(weekAgo, new Date());
     
-    // Mock food cost percentage calculation (would need sales data from POS)
-    const foodCostPercentage = 28.5;
+    // Calculate real food cost percentage from POS sales and inventory costs
+    const foodCostPercentage = await this.calculateFoodCostPercentage();
     
     return {
       totalInventoryValue,
