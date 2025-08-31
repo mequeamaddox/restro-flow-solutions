@@ -78,7 +78,7 @@ export default function PurchaseOrders() {
   };
 
   const getSelectedItemInfo = () => {
-    return inventoryItems.find(item => item.id === selectedInventoryItem);
+    return inventoryItems.find((item: any) => item.id === selectedInventoryItem);
   };
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -150,7 +150,7 @@ export default function PurchaseOrders() {
       return;
     }
 
-    const inventoryItem = inventoryItems.find(item => item.id === selectedInventoryItem);
+    const inventoryItem = inventoryItems.find((item: any) => item.id === selectedInventoryItem);
     if (!inventoryItem) return;
 
     const quantity = parseFloat(itemQuantity);
@@ -257,7 +257,7 @@ export default function PurchaseOrders() {
         status: data.status,
         orderDate: data.orderDate,
         expectedDeliveryDate: data.expectedDeliveryDate || null,
-        totalAmount: data.totalAmount,
+        totalAmount: getTotalAmount().toString(),
         notes: data.notes || null,
       };
       await apiRequest('PUT', `/api/purchase-orders/${selectedOrder.id}`, poData);
@@ -320,7 +320,7 @@ export default function PurchaseOrders() {
       status: order.status,
       orderDate: order.orderDate ? new Date(order.orderDate).toISOString().split('T')[0] : "",
       expectedDeliveryDate: order.expectedDeliveryDate ? new Date(order.expectedDeliveryDate).toISOString().split('T')[0] : "",
-      totalAmount: order.totalAmount,
+      // totalAmount is calculated, not editable in form
       notes: order.notes || "",
     });
     setIsDetailsDialogOpen(false);
@@ -774,7 +774,7 @@ export default function PurchaseOrders() {
                                   const mostExpensive = lineItems.reduce((max, item) => item.totalCost > max.totalCost ? item : max, lineItems[0]);
                                   const cheapest = lineItems.reduce((min, item) => item.totalCost < min.totalCost ? item : min, lineItems[0]);
                                   const priceChanges = lineItems.filter(item => {
-                                    const inventoryItem = inventoryItems.find(inv => inv.id === item.inventoryItemId);
+                                    const inventoryItem = inventoryItems.find((inv: any) => inv.id === item.inventoryItemId);
                                     return inventoryItem?.unitCost && Math.abs(inventoryItem.unitCost - item.unitCost) > 0.01;
                                   });
                                   
@@ -941,24 +941,14 @@ export default function PurchaseOrders() {
                   )}
                 />
               </div>
-              <FormField
-                control={form.control}
-                name="totalAmount"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Total Amount *</FormLabel>
-                    <FormControl>
-                      <Input 
-                        type="number" 
-                        step="0.01" 
-                        placeholder="0.00"
-                        {...field} 
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+              {/* Total Amount is calculated automatically, not editable */}
+              <div className="bg-gray-50 p-4 rounded-lg">
+                <label className="text-sm font-medium text-gray-700">Total Amount</label>
+                <p className="text-2xl font-semibold text-green-600 mt-1">
+                  ${selectedOrder?.totalAmount ? parseFloat(selectedOrder.totalAmount).toFixed(2) : '0.00'}
+                </p>
+                <p className="text-xs text-gray-500 mt-1">Calculated from line items</p>
+              </div>
               <FormField
                 control={form.control}
                 name="notes"
@@ -1074,7 +1064,7 @@ export default function PurchaseOrders() {
                   size="sm"
                   onClick={() => {
                     // Group by vendor and create POs automatically
-                    const vendors = Array.from(new Set(lowStockItems.map((item: any) => item.vendorId).filter(Boolean)));
+                    const vendors = Array.from(new Set(lowStockItems.map((item: any) => item.vendorId).filter(Boolean))) as string[];
                     if (vendors.length === 0) {
                       toast({
                         title: "No Vendors",
@@ -1084,7 +1074,7 @@ export default function PurchaseOrders() {
                       return;
                     }
                     
-                    vendors.forEach((vendorId) => {
+                    vendors.forEach((vendorId: string) => {
                       const vendorItems = lowStockItems.filter((item: any) => item.vendorId === vendorId);
                       createFromLowStockMutation.mutate({
                         vendorId,
@@ -1133,7 +1123,7 @@ export default function PurchaseOrders() {
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {filteredOrders?.map((order) => (
+          {filteredOrders?.map((order: any) => (
             <Card key={order.id} className="hover:shadow-lg transition-shadow cursor-pointer">
               <CardHeader>
                 <div className="flex items-center justify-between">
