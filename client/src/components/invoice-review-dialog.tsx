@@ -15,6 +15,7 @@ import { useToast } from "@/hooks/use-toast";
 interface LineItem {
   description: string;
   quantity: number;
+  unitType: string; // e.g., "lbs", "cases", "each", "gallons"
   unitPrice: number;
   totalPrice: number;
 }
@@ -132,6 +133,7 @@ export function InvoiceReviewDialog({ isOpen, onClose, invoiceData }: InvoiceRev
       lineItems: [...editableData.lineItems, {
         description: "New Item",
         quantity: 1,
+        unitType: "each",
         unitPrice: 0,
         totalPrice: 0
       }]
@@ -319,7 +321,7 @@ export function InvoiceReviewDialog({ isOpen, onClose, invoiceData }: InvoiceRev
                       </Button>
                     </div>
                     
-                    <div className="grid grid-cols-4 gap-3">
+                    <div className="grid grid-cols-5 gap-3">
                       <div className="col-span-2">
                         <Label>Description</Label>
                         <Input
@@ -336,6 +338,27 @@ export function InvoiceReviewDialog({ isOpen, onClose, invoiceData }: InvoiceRev
                           value={item.quantity}
                           onChange={(e) => handleLineItemEdit(index, 'quantity', e.target.value)}
                         />
+                      </div>
+                      <div>
+                        <Label>Unit Type</Label>
+                        <select
+                          value={item.unitType || 'each'}
+                          onChange={(e) => handleLineItemEdit(index, 'unitType', e.target.value)}
+                          className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                        >
+                          <option value="each">Each</option>
+                          <option value="lbs">Lbs</option>
+                          <option value="cases">Cases</option>
+                          <option value="gallons">Gallons</option>
+                          <option value="oz">Oz</option>
+                          <option value="kg">Kg</option>
+                          <option value="liters">Liters</option>
+                          <option value="boxes">Boxes</option>
+                          <option value="bags">Bags</option>
+                          <option value="bottles">Bottles</option>
+                          <option value="cans">Cans</option>
+                          <option value="packs">Packs</option>
+                        </select>
                       </div>
                       <div>
                         <Label>Unit Price</Label>
