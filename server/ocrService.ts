@@ -188,18 +188,19 @@ Please try:
         
         await fs.writeFile(tempPdfPath, buffer);
         
-        // Convert PDF to images using pdf2pic
+        // Convert PDF to images using pdf2pic with better error handling
         const convert = pdf2pic.fromPath(tempPdfPath, {
-          density: 200,           // DPI - higher quality
+          density: 300,           // Higher DPI for better OCR
           saveFilename: "page",
           savePath: tempDir,
           format: "png",
-          width: 2000,           // High resolution for better OCR
-          height: 2000
+          width: 2480,           // A4 at 300 DPI
+          height: 3508,
+          quality: 100
         });
         
         console.log('Converting PDF pages to images...');
-        const results = await convert.bulk(-1); // Convert all pages
+        const results = await convert.bulk(-1, { responseType: 'image' }); // Convert all pages
         
         let combinedText = '';
         let totalConfidence = 0;
@@ -210,20 +211,25 @@ Please try:
           if (result.path) {
             console.log(`Processing page ${pageCount + 1} image...`);
             
-            const imageBuffer = await fs.readFile(result.path);
-            const pageResult = await this.extractTextFromImage(imageBuffer);
-            
-            if (pageResult.text && pageResult.confidence > 20) {
-              combinedText += pageResult.text + '\n\n';
-              totalConfidence += pageResult.confidence;
-              pageCount++;
-            }
-            
-            // Clean up temporary image file
             try {
-              await fs.unlink(result.path);
-            } catch (cleanupError) {
-              console.log('Failed to clean up temporary image:', cleanupError);
+              const imageBuffer = await fs.readFile(result.path);
+              const pageResult = await this.extractTextFromImage(imageBuffer);
+              
+              if (pageResult.text && pageResult.confidence > 20) {
+                combinedText += pageResult.text + '\n\n';
+                totalConfidence += pageResult.confidence;
+                pageCount++;
+                console.log(`Page ${pageCount} processed with ${pageResult.confidence}% confidence`);
+              }
+              
+              // Clean up temporary image file
+              try {
+                await fs.unlink(result.path);
+              } catch (cleanupError) {
+                console.log('Failed to clean up temporary image:', cleanupError);
+              }
+            } catch (pageError) {
+              console.error(`Failed to process page ${pageCount + 1}:`, pageError);
             }
           }
         }
@@ -249,6 +255,7 @@ Please try:
         
       } catch (conversionError) {
         console.error('PDF-to-image conversion failed:', conversionError);
+        console.log('This may be due to missing ImageMagick/GraphicsMagick. Falling back to direct text extraction...');
       }
       
       // Fallback: Try direct Tesseract on PDF (last resort)
@@ -395,7 +402,7 @@ The OCR system works best with image files rather than scanned PDFs.`,
         console.log(`Found vendor address: ${vendorAddress}`);
       }
       
-      // Look for invoice numbers - multiple patterns
+      // Look for invoice numbers - multiple patterns with better validation
       const invoicePatterns = [
         /invoice\s*#?\s*:?\s*(\w+)/i,
         /inv\s*#?\s*:?\s*(\w+)/i,
@@ -403,20 +410,28 @@ The OCR system works best with image files rather than scanned PDFs.`,
         /#\s*(\d+)/,    // Number with # prefix
         /order\s*no\.?\s*(\d+)/i,  // Order number
         /customer['']?s?\s*order\s*no\.?\s*(\d+)/i, // Customer's order no
+        /invoice\s*number\s*:?\s*(\w+)/i,
+        /document\s*#?\s*:?\s*(\w+)/i,
+        /ref\s*#?\s*:?\s*(\w+)/i,
       ];
       
       // Special check for standalone numbers at start of line (common invoice format)
-      if (line.match(/^\d{5,8}$/) && i < 15 && invoiceNumber === 'N/A') { // First 15 lines, 5-8 digits like "177132"
+      if (line.match(/^\d{4,8}$/) && i < 15 && invoiceNumber === 'N/A') { // First 15 lines, 4-8 digits like "177132"
         invoiceNumber = line;
         console.log(`Found standalone invoice number: ${line} at line ${i}`);
       }
       
+      // Check for invoice patterns with more context awareness
       for (const pattern of invoicePatterns) {
         const match = line.match(pattern);
         if (match && match[1]) {
           const candidate = match[1].trim();
-          if (candidate.length >= 3 && candidate.length <= 12) {
+          // Better validation: should be alphanumeric, reasonable length
+          if (candidate.length >= 3 && candidate.length <= 15 && 
+              candidate.match(/^[A-Za-z0-9\-_]+$/) && 
+              !candidate.match(/^(total|amount|tax|subtotal)$/i)) {
             invoiceNumber = candidate;
+            console.log(`Found invoice number: ${candidate} in line: "${line}"`);
             break;
           }
         }
@@ -475,45 +490,64 @@ The OCR system works best with image files rather than scanned PDFs.`,
         /balance[\s:$]*(\d+(?:,\d{3})*(?:\.\d{2})?)/i,
         /\$\s*(\d+(?:,\d{3})*(?:\.\d{2})?)\s*$/, // Dollar amount at end of line
         /(\d+\.\d{2})\s*$/, // Decimal amount at end of line (like "150.75")
-        /grand\s*total[\s:$]*(\d+(?:,\d{3})*(?:\.\d{2})?)/i,
-        /net\s*amount[\s:$]*(\d+(?:,\d{3})*(?:\.\d{2})?)/i,
-        /invoice\s*total[\s:$]*(\d+(?:,\d{3})*(?:\.\d{2})?)/i,
+        /grand[\s\-]*total[\s:$]*(\d+(?:,\d{3})*(?:\.\d{2})?)/i,
+        /net[\s\-]*amount[\s:$]*(\d+(?:,\d{3})*(?:\.\d{2})?)/i,
+        /invoice[\s\-]*total[\s:$]*(\d+(?:,\d{3})*(?:\.\d{2})?)/i,
         /payment[\s:$]*(\d+(?:,\d{3})*(?:\.\d{2})?)/i,
         /due[\s:$]*(\d+(?:,\d{3})*(?:\.\d{2})?)/i,
-        /\$(\d+(?:,\d{3})*(?:\.\d{2})?)/g, // Any dollar amount in the document
+        /\$(\d+(?:,\d{3})*(?:\.\d{2})?)(?!.*\d)/, // Dollar amount not followed by more digits
+        /^(\d+\.\d{2})\s*[A-Z]?\s*$/, // Amount followed by single letter (like "150.75 T")
       ];
       
-      // Look for amounts in various positions (bottom half of document usually has totals)
-      if (i > lines.length / 2) { // Focus on bottom half for financial totals
-        for (const pattern of totalPatterns) {
-          const match = line.match(pattern);
-          if (match && match[1]) {
-            const amount = parseFloat(match[1].replace(/,/g, ''));
-            if (amount > 0 && amount < 100000) { // Reasonable range
-              if (total === 0 || amount > total) { // Take the largest reasonable amount
-                total = amount;
-                console.log(`Found potential total amount: $${amount} in line: "${line}"`);
-              }
+      // Look for amounts in various positions with priority for context
+      for (const pattern of totalPatterns) {
+        const match = line.match(pattern);
+        if (match && match[1]) {
+          const amount = parseFloat(match[1].replace(/,/g, ''));
+          if (amount > 0 && amount < 100000) { // Reasonable range
+            // Priority scoring: total/amount keywords get higher priority
+            let priority = 0;
+            if (line.toLowerCase().includes('total')) priority = 3;
+            else if (line.toLowerCase().includes('amount')) priority = 2;
+            else if (i > lines.length / 2) priority = 1; // Bottom half gets some priority
+            
+            if (total === 0 || (amount > total && priority >= 1) || priority > 2) {
+              total = amount;
+              console.log(`Found total amount: $${amount} (priority: ${priority}) in line: "${line}"`);
             }
           }
         }
       }
       
-      // Look for dates - multiple formats
+      // Look for dates - multiple formats with better validation
       const datePatterns = [
         /(\d{1,2}\/\d{1,2}\/\d{4})/,     // MM/DD/YYYY
         /(\d{4}-\d{2}-\d{2})/,           // YYYY-MM-DD  
         /(\d{1,2}-\d{1,2}-\d{4})/,       // MM-DD-YYYY
         /(\d{1,2}\/\d{1,2}\/\d{2})/,     // MM/DD/YY
         /(\d{1,2}-\d{1,2}-\d{2})/,       // MM-DD-YY (like 4-15-25)
+        /date[:\s]*(\d{1,2}[\/\-]\d{1,2}[\/\-]\d{2,4})/i, // "Date: MM/DD/YYYY"
+        /(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*[\s,]+(\d{1,2})[\s,]+(\d{4})/i, // "January 15, 2025"
       ];
       
       for (const pattern of datePatterns) {
         const match = line.match(pattern);
         if (match && match[1]) {
-          const parsedDate = new Date(match[1]);
-          if (!isNaN(parsedDate.getTime()) && parsedDate.getFullYear() >= 2020) {
+          let dateStr = match[1];
+          
+          // Handle month name format
+          if (match.length > 3) {
+            const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+            const monthIndex = monthNames.findIndex(m => match[1].toLowerCase().startsWith(m.toLowerCase()));
+            if (monthIndex >= 0) {
+              dateStr = `${monthIndex + 1}/${match[2]}/${match[3]}`;
+            }
+          }
+          
+          const parsedDate = new Date(dateStr);
+          if (!isNaN(parsedDate.getTime()) && parsedDate.getFullYear() >= 2020 && parsedDate.getFullYear() <= 2030) {
             invoiceDate = parsedDate.toISOString().split('T')[0];
+            console.log(`Found invoice date: ${invoiceDate} from line: "${line}"`);
             break;
           }
         }
