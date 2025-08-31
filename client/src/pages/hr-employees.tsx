@@ -383,17 +383,20 @@ export default function HREmployees() {
                 )}
               </div>
               
-              <Button
-                variant="outline"
-                size="sm"
-                className="w-full mt-3"
-                onClick={() => {
-                  setEditingEmployee(employee);
-                  setIsCreateDialogOpen(true);
-                }}
-              >
-                Edit Employee
-              </Button>
+              {hasPermission(Permission.MANAGE_EMPLOYEES) && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="w-full mt-3"
+                  onClick={() => {
+                    setEditingEmployee(employee);
+                    setIsCreateDialogOpen(true);
+                  }}
+                  data-testid={`edit-employee-${employee.id}`}
+                >
+                  Edit Employee
+                </Button>
+              )}
             </CardContent>
           </Card>
         ))}
