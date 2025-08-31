@@ -201,48 +201,65 @@ export function hasAllPermissions(userRole: string, permissions: Permission[]): 
 
 // Middleware to check permissions
 export function requirePermission(permission: Permission) {
-  return (req: Request, res: Response, next: NextFunction) => {
+  return async (req: Request, res: Response, next: NextFunction) => {
     const user = (req as any).user;
     
     if (!user) {
       return res.status(401).json({ message: "Unauthorized - No user session" });
     }
     
-    // Get user role from database or session
-    const userRole = user.claims?.role || user.role || 'employee';
-    
-    if (!hasPermission(userRole, permission)) {
-      return res.status(403).json({ 
-        message: "Forbidden - Insufficient permissions",
-        required: permission,
-        userRole
-      });
+    try {
+      // Import storage to get user role from database
+      const { storage } = await import('./storage');
+      const userId = user.claims?.sub;
+      const dbUser = await storage.getUser(userId);
+      const userRole = dbUser?.role || 'employee';
+      
+      if (!hasPermission(userRole, permission)) {
+        return res.status(403).json({ 
+          message: "Forbidden - Insufficient permissions",
+          required: permission,
+          userRole
+        });
+      }
+      
+      next();
+    } catch (error) {
+      console.error('Error checking permissions:', error);
+      return res.status(500).json({ message: "Internal server error" });
     }
-    
-    next();
   };
 }
 
 // Middleware to check multiple permissions (OR logic)
 export function requireAnyPermission(permissions: Permission[]) {
-  return (req: Request, res: Response, next: NextFunction) => {
+  return async (req: Request, res: Response, next: NextFunction) => {
     const user = (req as any).user;
     
     if (!user) {
       return res.status(401).json({ message: "Unauthorized - No user session" });
     }
     
-    const userRole = user.claims?.role || user.role || 'employee';
-    
-    if (!hasAnyPermission(userRole, permissions)) {
-      return res.status(403).json({ 
-        message: "Forbidden - Insufficient permissions",
-        required: permissions,
-        userRole
-      });
+    try {
+      // Import storage to get user role from database
+      const { storage } = await import('./storage');
+      const userId = user.claims?.sub;
+      const dbUser = await storage.getUser(userId);
+      const userRole = dbUser?.role || 'employee';
+      
+      if (!hasAnyPermission(userRole, permissions)) {
+        return res.status(403).json({ 
+          message: "Forbidden - Insufficient permissions",
+          required: permissions,
+          userRole
+        });
+      }
+      
+      next();
+    } catch (error) {
+      console.error('Error checking permissions:', error);
+      return res.status(500).json({ message: "Internal server error" });
     }
-    
-    next();
   };
 }
 
