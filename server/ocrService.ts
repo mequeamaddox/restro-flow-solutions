@@ -110,6 +110,21 @@ Please try:
       throw new Error('AWS credentials not configured');
     }
 
+    // Check if buffer size is reasonable for Textract (max 10MB)
+    if (buffer.length > 10 * 1024 * 1024) {
+      throw new Error('Document too large for AWS Textract (max 10MB)');
+    }
+
+    // Check if buffer appears to be a valid PDF/image
+    const fileSignature = buffer.subarray(0, 4);
+    const isPdf = fileSignature.toString() === '%PDF';
+    const isJpeg = fileSignature[0] === 0xFF && fileSignature[1] === 0xD8;
+    const isPng = fileSignature.toString('hex') === '89504e47';
+    
+    if (!isPdf && !isJpeg && !isPng) {
+      throw new Error('Unsupported document format for AWS Textract');
+    }
+
     const textract = new TextractClient({
       region: process.env.AWS_REGION || 'us-east-1',
       credentials: {
@@ -159,9 +174,85 @@ Please try:
   // Convert scanned PDF to images and run OCR
   private static async extractTextFromScannedPDF(buffer: Buffer): Promise<{ text: string; confidence: number }> {
     try {
-      console.log('Attempting direct OCR on PDF without conversion...');
+      console.log('Converting PDF to images for enhanced OCR...');
       
-      // Sometimes Tesseract can handle PDFs directly, let's try that first
+      // Try PDF-to-image conversion first (proper approach for scanned PDFs)
+      try {
+        // Write buffer to temporary file for pdf2pic
+        const fs = await import('fs/promises');
+        const path = await import('path');
+        const os = await import('os');
+        
+        const tempDir = os.tmpdir();
+        const tempPdfPath = path.join(tempDir, `temp_pdf_${Date.now()}.pdf`);
+        
+        await fs.writeFile(tempPdfPath, buffer);
+        
+        // Convert PDF to images using pdf2pic
+        const convert = pdf2pic.fromPath(tempPdfPath, {
+          density: 200,           // DPI - higher quality
+          saveFilename: "page",
+          savePath: tempDir,
+          format: "png",
+          width: 2000,           // High resolution for better OCR
+          height: 2000
+        });
+        
+        console.log('Converting PDF pages to images...');
+        const results = await convert.bulk(-1); // Convert all pages
+        
+        let combinedText = '';
+        let totalConfidence = 0;
+        let pageCount = 0;
+        
+        // Process each page image with Tesseract
+        for (const result of results) {
+          if (result.path) {
+            console.log(`Processing page ${pageCount + 1} image...`);
+            
+            const imageBuffer = await fs.readFile(result.path);
+            const pageResult = await this.extractTextFromImage(imageBuffer);
+            
+            if (pageResult.text && pageResult.confidence > 20) {
+              combinedText += pageResult.text + '\n\n';
+              totalConfidence += pageResult.confidence;
+              pageCount++;
+            }
+            
+            // Clean up temporary image file
+            try {
+              await fs.unlink(result.path);
+            } catch (cleanupError) {
+              console.log('Failed to clean up temporary image:', cleanupError);
+            }
+          }
+        }
+        
+        // Clean up temporary PDF file
+        try {
+          await fs.unlink(tempPdfPath);
+        } catch (cleanupError) {
+          console.log('Failed to clean up temporary PDF:', cleanupError);
+        }
+        
+        if (pageCount > 0) {
+          const averageConfidence = totalConfidence / pageCount;
+          console.log(`PDF-to-image OCR completed: ${pageCount} pages processed with ${averageConfidence.toFixed(1)}% average confidence`);
+          
+          return {
+            text: combinedText.trim(),
+            confidence: Math.round(averageConfidence)
+          };
+        }
+        
+        console.log('PDF-to-image conversion produced no usable text');
+        
+      } catch (conversionError) {
+        console.error('PDF-to-image conversion failed:', conversionError);
+      }
+      
+      // Fallback: Try direct Tesseract on PDF (last resort)
+      console.log('Attempting direct OCR on PDF as fallback...');
       try {
         const worker = await createWorker('eng');
         
@@ -180,15 +271,15 @@ Please try:
           };
         }
         
-        console.log(`Direct PDF OCR low confidence (${confidence}%), trying conversion method...`);
+        console.log(`Direct PDF OCR low confidence (${confidence}%), providing user guidance...`);
         
       } catch (directError) {
-        console.log('Direct PDF OCR failed, trying conversion method...');
+        console.log('Direct PDF OCR failed, providing user guidance...');
       }
       
-      // Fallback to user guidance for scanned PDFs
+      // Return user guidance when all OCR methods fail
       return {
-        text: `This appears to be a scanned PDF that requires image conversion for optimal OCR.
+        text: `Enhanced OCR processing encountered limitations with this PDF format.
 
 For the best results with scanned invoices:
 
@@ -198,14 +289,14 @@ For the best results with scanned invoices:
 
 Alternative: Take a clear photo of the invoice with your phone camera and upload that instead.
 
-The system detected this is a scanned document but the automatic conversion encountered technical limitations.`,
+The system attempted advanced PDF processing but encountered technical limitations with this specific document format.`,
         confidence: 25
       };
       
     } catch (error) {
       console.error('Scanned PDF processing failed completely:', error);
       return {
-        text: `Scanned PDF processing not available. 
+        text: `Advanced PDF processing not available. 
 
 Please convert your PDF to a JPG or PNG image and upload that instead for OCR processing.
 
@@ -492,7 +583,7 @@ The OCR system works best with image files rather than scanned PDFs.`,
       for (const pattern of singleLinePatterns) {
         const match = line.match(pattern);
         if (match) {
-          let description, quantity, unitPrice, totalPrice;
+          let description: string | undefined, quantity: number = 1, unitPrice: number | undefined, totalPrice: number | undefined;
           
           if (match.length === 4) { // Pattern with quantity
             description = match[1].trim();
@@ -506,15 +597,15 @@ The OCR system works best with image files rather than scanned PDFs.`,
             totalPrice = parseFloat(match[4]);
           }
           
-          if (description && description.length > 2 && totalPrice > 0) {
+          if (description && description.length > 2 && totalPrice && totalPrice > 0 && unitPrice && unitPrice > 0) {
             lineItems.push({
               description: description.substring(0, 100), // Limit length
-              quantity,
+              quantity: quantity || 1,
               unitPrice: Math.round(unitPrice * 100) / 100,
               totalPrice
             });
             
-            console.log(`Found line item: ${description} - Qty: ${quantity} @ $${unitPrice.toFixed(2)} = $${totalPrice.toFixed(2)}`);
+            console.log(`Found line item: ${description} - Qty: ${quantity || 1} @ $${unitPrice.toFixed(2)} = $${totalPrice.toFixed(2)}`);
           }
         }
       }
