@@ -86,6 +86,7 @@ export default function HRDocumentsPage() {
     mutationFn: async (data: DocumentFormData & { filePath: string; fileSize: number; mimeType: string }) => {
       return await apiRequest('/api/hr/documents', {
         method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(data),
       });
     },
@@ -111,6 +112,7 @@ export default function HRDocumentsPage() {
     mutationFn: async (data: OnboardingFormData & { totalSteps: number }) => {
       return await apiRequest('/api/hr/onboarding', {
         method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(data),
       });
     },
@@ -136,6 +138,7 @@ export default function HRDocumentsPage() {
     mutationFn: async (data: InviteFormData) => {
       return await apiRequest('/api/hr/onboarding/invite', {
         method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(data),
       });
     },

@@ -2264,7 +2264,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post("/api/hr/documents", isAuthenticated, async (req, res) => {
     try {
-      const userId = req.user?.claims?.sub;
+      const userId = (req.user as any)?.claims?.sub;
       const documentData = {
         ...req.body,
         uploadedBy: userId
@@ -2280,7 +2280,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.put("/api/hr/documents/:id", isAuthenticated, async (req, res) => {
     try {
       const { id } = req.params;
-      const userId = req.user?.claims?.sub;
+      const userId = (req.user as any)?.claims?.sub;
       const updateData = {
         ...req.body,
         reviewedBy: userId,
@@ -2347,7 +2347,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post("/api/hr/onboarding/templates", isAuthenticated, async (req, res) => {
     try {
-      const userId = req.user?.claims?.sub;
+      const userId = (req.user as any)?.claims?.sub;
       const templateData = {
         ...req.body,
         createdBy: userId
@@ -2428,7 +2428,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.put("/api/hr/onboarding/steps/:id", isAuthenticated, async (req, res) => {
     try {
       const { id } = req.params;
-      const userId = req.user?.claims?.sub;
+      const userId = (req.user as any)?.claims?.sub;
       const updateData = {
         ...req.body,
         completedBy: userId,
@@ -2506,8 +2506,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
           firstName: validation.employee?.firstName,
           lastName: validation.employee?.lastName,
           email: validation.employee?.email,
-          position: validation.employee?.position,
-          department: validation.employee?.department
+          positionId: validation.employee?.positionId,
+          departmentId: validation.employee?.departmentId
         }
       });
     } catch (error) {
