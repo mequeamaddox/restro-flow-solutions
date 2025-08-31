@@ -2455,11 +2455,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Onboarding Token Management - Generate shareable links
-  app.post("/api/hr/onboarding/invite", isAuthenticated, async (req, res) => {
+  app.post("/api/hr/onboarding/invite", isAuthenticated, requirePermission(Permission.MANAGE_EMPLOYEES), async (req, res) => {
     try {
-      console.log("=== Onboarding Invite Request ===");
-      console.log("User:", (req.user as any)?.claims?.sub);
-      console.log("Body:", req.body);
       const { employeeId, email, phone, sendMethod = 'email' } = req.body;
       
       // Create secure token for the employee
@@ -2471,8 +2468,32 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Send invitation based on method
       if (sendMethod === 'email' && email) {
-        // TODO: Implement email sending with SendGrid
-        console.log(`Would send email to ${email} with link: ${inviteUrl}`);
+        try {
+          const { sendEmail } = await import('../sendgrid');
+          const employee = await storage.getEmployee(employeeId);
+          
+          await sendEmail({
+            to: email,
+            from: 'noreply@restroflow.com', // Replace with your verified SendGrid sender
+            subject: 'Welcome to RestroFlow - Complete Your Onboarding',
+            html: `
+              <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+                <h2 style="color: #1f2937;">Welcome to RestroFlow!</h2>
+                <p>Hi ${employee?.firstName || 'there'},</p>
+                <p>You've been invited to join our team! Please complete your onboarding by clicking the link below:</p>
+                <div style="text-align: center; margin: 30px 0;">
+                  <a href="${inviteUrl}" style="background-color: #f97316; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; display: inline-block;">Complete Onboarding</a>
+                </div>
+                <p>This invitation will expire in 3 days. If you have any questions, please contact your manager.</p>
+                <p>Best regards,<br>The RestroFlow Team</p>
+              </div>
+            `
+          });
+          console.log(`✅ Email sent successfully to ${email}`);
+        } catch (emailError) {
+          console.error(`❌ Failed to send email to ${email}:`, emailError);
+          // Don't fail the whole request if email fails - still return the link
+        }
       } else if (sendMethod === 'text' && phone) {
         // TODO: Implement SMS sending
         console.log(`Would send text to ${phone} with link: ${inviteUrl}`);
