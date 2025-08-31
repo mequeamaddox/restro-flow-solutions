@@ -382,6 +382,16 @@ export const messagePriorityEnum = pgEnum("message_priority", ["normal", "high",
 export const reviewStatusEnum = pgEnum("review_status", ["draft", "pending-employee", "completed", "archived"]);
 export const timeEntryStatusEnum = pgEnum("time_entry_status", ["clocked-in", "on-break", "clocked-out"]);
 
+// Employee document and onboarding enums
+export const documentTypeEnum = pgEnum("document_type", [
+  "identification", "tax-forms", "emergency-contact", "bank-info", 
+  "employment-agreement", "handbook", "training-certificate", 
+  "performance-review", "disciplinary-action", "other"
+]);
+export const documentStatusEnum = pgEnum("document_status", ["required", "uploaded", "approved", "rejected", "expired"]);
+export const onboardingStepStatusEnum = pgEnum("onboarding_step_status", ["pending", "in-progress", "completed", "skipped"]);
+export const onboardingStatusEnum = pgEnum("onboarding_status", ["not-started", "in-progress", "completed", "overdue"]);
+
 // Employee Management Tables (HR Add-on)
 // Departments and organizational structure
 export const departments = pgTable("departments", {
@@ -999,6 +1009,111 @@ export const autoOrderRules = pgTable("auto_order_rules", {
   updatedAt: timestamp("updated_at").defaultNow(),
 });
 
+// Employee Documents Management
+export const employeeDocuments = pgTable("employee_documents", {
+  id: uuid("id").primaryKey().default(sql`gen_random_uuid()`),
+  employeeId: uuid("employee_id").references(() => employees.id).notNull(),
+  documentType: documentTypeEnum("document_type").notNull(),
+  documentName: varchar("document_name", { length: 200 }).notNull(),
+  filePath: varchar("file_path", { length: 500 }), // Object storage path
+  fileSize: integer("file_size"), // in bytes
+  mimeType: varchar("mime_type", { length: 100 }),
+  status: documentStatusEnum("status").default("required"),
+  isRequired: boolean("is_required").default(false),
+  expirationDate: timestamp("expiration_date"),
+  uploadedBy: varchar("uploaded_by").references(() => users.id),
+  reviewedBy: varchar("reviewed_by").references(() => users.id),
+  reviewedAt: timestamp("reviewed_at"),
+  reviewNotes: text("review_notes"),
+  version: integer("version").default(1),
+  replacedDocumentId: uuid("replaced_document_id"), // References another document that this replaces
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// Document Template Requirements (What documents are required for each position/location)
+export const documentRequirements = pgTable("document_requirements", {
+  id: uuid("id").primaryKey().default(sql`gen_random_uuid()`),
+  locationId: uuid("location_id").references(() => locations.id),
+  positionId: uuid("position_id").references(() => positions.id),
+  documentType: documentTypeEnum("document_type").notNull(),
+  isRequired: boolean("is_required").default(true),
+  description: text("description"),
+  dueDaysAfterHire: integer("due_days_after_hire").default(7), // Days after hire date when due
+  renewalPeriodDays: integer("renewal_period_days"), // For documents that expire
+  reminderDaysBefore: integer("reminder_days_before").default(7), // Days before expiration to remind
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// Onboarding Workflows and Checklists
+export const onboardingTemplates = pgTable("onboarding_templates", {
+  id: uuid("id").primaryKey().default(sql`gen_random_uuid()`),
+  name: varchar("name", { length: 200 }).notNull(),
+  description: text("description"),
+  locationId: uuid("location_id").references(() => locations.id),
+  positionId: uuid("position_id").references(() => positions.id),
+  isDefault: boolean("is_default").default(false),
+  estimatedDurationDays: integer("estimated_duration_days").default(7),
+  createdBy: varchar("created_by").references(() => users.id).notNull(),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// Individual onboarding steps within templates
+export const onboardingSteps = pgTable("onboarding_steps", {
+  id: uuid("id").primaryKey().default(sql`gen_random_uuid()`),
+  templateId: uuid("template_id").references(() => onboardingTemplates.id).notNull(),
+  stepOrder: integer("step_order").notNull(),
+  title: varchar("title", { length: 200 }).notNull(),
+  description: text("description"),
+  category: varchar("category", { length: 50 }), // documents, training, orientation, equipment, etc.
+  requiredDocuments: jsonb("required_documents"), // Array of document types needed
+  assignedToRole: varchar("assigned_to_role", { length: 50 }), // Who is responsible for this step
+  estimatedDurationHours: decimal("estimated_duration_hours", { precision: 4, scale: 2 }).default("1"),
+  isRequired: boolean("is_required").default(true),
+  dependsOnStepIds: jsonb("depends_on_step_ids"), // Array of step IDs that must be completed first
+  instructions: text("instructions"),
+  resourceLinks: jsonb("resource_links"), // Links to training materials, videos, etc.
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// Employee onboarding progress tracking
+export const employeeOnboarding = pgTable("employee_onboarding", {
+  id: uuid("id").primaryKey().default(sql`gen_random_uuid()`),
+  employeeId: uuid("employee_id").references(() => employees.id).notNull(),
+  templateId: uuid("template_id").references(() => onboardingTemplates.id).notNull(),
+  status: onboardingStatusEnum("status").default("not-started"),
+  startDate: timestamp("start_date"),
+  targetCompletionDate: timestamp("target_completion_date"),
+  actualCompletionDate: timestamp("actual_completion_date"),
+  completedSteps: integer("completed_steps").default(0),
+  totalSteps: integer("total_steps").notNull(),
+  progressPercentage: decimal("progress_percentage", { precision: 5, scale: 2 }).default("0"),
+  assignedMentorId: uuid("assigned_mentor_id").references(() => employees.id),
+  notes: text("notes"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// Individual step completion tracking
+export const employeeOnboardingSteps = pgTable("employee_onboarding_steps", {
+  id: uuid("id").primaryKey().default(sql`gen_random_uuid()`),
+  employeeOnboardingId: uuid("employee_onboarding_id").references(() => employeeOnboarding.id).notNull(),
+  stepId: uuid("step_id").references(() => onboardingSteps.id).notNull(),
+  status: onboardingStepStatusEnum("status").default("pending"),
+  startedDate: timestamp("started_date"),
+  completedDate: timestamp("completed_date"),
+  completedBy: varchar("completed_by").references(() => users.id),
+  timeSpentHours: decimal("time_spent_hours", { precision: 4, scale: 2 }),
+  notes: text("notes"),
+  rating: integer("rating"), // 1-5 rating of step completion quality
+  feedback: text("feedback"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
 export type SecurityLog = typeof securityLogs.$inferSelect;
 export type AuditLog = typeof auditLogs.$inferSelect;
 export type CostAlert = typeof costAlerts.$inferSelect;
@@ -1054,5 +1169,25 @@ export type InsertInventoryTransaction = z.infer<typeof insertInventoryTransacti
 export type AutoOrderRule = typeof autoOrderRules.$inferSelect;
 export type InsertAutoOrderRule = typeof autoOrderRules.$inferInsert;
 
+// Employee document and onboarding types
+export type EmployeeDocument = typeof employeeDocuments.$inferSelect;
+export type InsertEmployeeDocument = typeof employeeDocuments.$inferInsert;
+export type DocumentRequirement = typeof documentRequirements.$inferSelect;
+export type InsertDocumentRequirement = typeof documentRequirements.$inferInsert;
+export type OnboardingTemplate = typeof onboardingTemplates.$inferSelect;
+export type InsertOnboardingTemplate = typeof onboardingTemplates.$inferInsert;
+export type OnboardingStep = typeof onboardingSteps.$inferSelect;
+export type InsertOnboardingStep = typeof onboardingSteps.$inferInsert;
+export type EmployeeOnboarding = typeof employeeOnboarding.$inferSelect;
+export type InsertEmployeeOnboarding = typeof employeeOnboarding.$inferInsert;
+export type EmployeeOnboardingStep = typeof employeeOnboardingSteps.$inferSelect;
+export type InsertEmployeeOnboardingStep = typeof employeeOnboardingSteps.$inferInsert;
+
 export const insertAutoOrderRuleSchema = createInsertSchema(autoOrderRules);
+export const insertEmployeeDocumentSchema = createInsertSchema(employeeDocuments).omit({ id: true, createdAt: true, updatedAt: true });
+export const insertDocumentRequirementSchema = createInsertSchema(documentRequirements).omit({ id: true, createdAt: true, updatedAt: true });
+export const insertOnboardingTemplateSchema = createInsertSchema(onboardingTemplates).omit({ id: true, createdAt: true, updatedAt: true });
+export const insertOnboardingStepSchema = createInsertSchema(onboardingSteps).omit({ id: true, createdAt: true, updatedAt: true });
+export const insertEmployeeOnboardingSchema = createInsertSchema(employeeOnboarding).omit({ id: true, createdAt: true, updatedAt: true });
+export const insertEmployeeOnboardingStepSchema = createInsertSchema(employeeOnboardingSteps).omit({ id: true, createdAt: true, updatedAt: true });
 

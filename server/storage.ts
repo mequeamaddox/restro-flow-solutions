@@ -105,6 +105,25 @@ import {
   type InsertPayrollDeduction,
   type EmployeeDeduction,
   type InsertEmployeeDeduction,
+  // Document and onboarding imports
+  employeeDocuments,
+  documentRequirements,
+  onboardingTemplates,
+  onboardingSteps,
+  employeeOnboarding,
+  employeeOnboardingSteps,
+  type EmployeeDocument,
+  type InsertEmployeeDocument,
+  type DocumentRequirement,
+  type InsertDocumentRequirement,
+  type OnboardingTemplate,
+  type InsertOnboardingTemplate,
+  type OnboardingStep,
+  type InsertOnboardingStep,
+  type EmployeeOnboarding,
+  type InsertEmployeeOnboarding,
+  type EmployeeOnboardingStep,
+  type InsertEmployeeOnboardingStep,
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, sql, desc, and, gte, lte, ilike, sum, isNull, asc } from "drizzle-orm";
@@ -2582,6 +2601,254 @@ export class DatabaseStorage implements IStorage {
 
   async removeEmployeeDeduction(id: string): Promise<void> {
     await db.delete(employeeDeductions).where(eq(employeeDeductions.id, id));
+  }
+
+  // Employee Documents Management
+  async getEmployeeDocuments(employeeId?: string): Promise<EmployeeDocument[]> {
+    const query = db.select().from(employeeDocuments);
+    if (employeeId) {
+      return await query.where(eq(employeeDocuments.employeeId, employeeId));
+    }
+    return await query;
+  }
+
+  async createEmployeeDocument(document: InsertEmployeeDocument): Promise<EmployeeDocument> {
+    const [newDocument] = await db
+      .insert(employeeDocuments)
+      .values(document)
+      .returning();
+    return newDocument;
+  }
+
+  async updateEmployeeDocument(id: string, document: Partial<InsertEmployeeDocument>): Promise<EmployeeDocument> {
+    const [updatedDocument] = await db
+      .update(employeeDocuments)
+      .set({ ...document, updatedAt: new Date() })
+      .where(eq(employeeDocuments.id, id))
+      .returning();
+    return updatedDocument;
+  }
+
+  async deleteEmployeeDocument(id: string): Promise<void> {
+    await db.delete(employeeDocuments).where(eq(employeeDocuments.id, id));
+  }
+
+  async getDocumentRequirements(locationId?: string, positionId?: string): Promise<DocumentRequirement[]> {
+    let query = db.select().from(documentRequirements);
+    
+    if (locationId && positionId) {
+      query = query.where(
+        and(
+          eq(documentRequirements.locationId, locationId),
+          eq(documentRequirements.positionId, positionId)
+        )
+      );
+    } else if (locationId) {
+      query = query.where(eq(documentRequirements.locationId, locationId));
+    } else if (positionId) {
+      query = query.where(eq(documentRequirements.positionId, positionId));
+    }
+    
+    return await query;
+  }
+
+  async createDocumentRequirement(requirement: InsertDocumentRequirement): Promise<DocumentRequirement> {
+    const [newRequirement] = await db
+      .insert(documentRequirements)
+      .values(requirement)
+      .returning();
+    return newRequirement;
+  }
+
+  async updateDocumentRequirement(id: string, requirement: Partial<InsertDocumentRequirement>): Promise<DocumentRequirement> {
+    const [updatedRequirement] = await db
+      .update(documentRequirements)
+      .set({ ...requirement, updatedAt: new Date() })
+      .where(eq(documentRequirements.id, id))
+      .returning();
+    return updatedRequirement;
+  }
+
+  async deleteDocumentRequirement(id: string): Promise<void> {
+    await db.delete(documentRequirements).where(eq(documentRequirements.id, id));
+  }
+
+  // Onboarding Templates Management
+  async getOnboardingTemplates(locationId?: string, positionId?: string): Promise<OnboardingTemplate[]> {
+    let query = db.select().from(onboardingTemplates);
+    
+    if (locationId && positionId) {
+      query = query.where(
+        and(
+          eq(onboardingTemplates.locationId, locationId),
+          eq(onboardingTemplates.positionId, positionId)
+        )
+      );
+    } else if (locationId) {
+      query = query.where(eq(onboardingTemplates.locationId, locationId));
+    } else if (positionId) {
+      query = query.where(eq(onboardingTemplates.positionId, positionId));
+    }
+    
+    return await query;
+  }
+
+  async createOnboardingTemplate(template: InsertOnboardingTemplate): Promise<OnboardingTemplate> {
+    const [newTemplate] = await db
+      .insert(onboardingTemplates)
+      .values(template)
+      .returning();
+    return newTemplate;
+  }
+
+  async updateOnboardingTemplate(id: string, template: Partial<InsertOnboardingTemplate>): Promise<OnboardingTemplate> {
+    const [updatedTemplate] = await db
+      .update(onboardingTemplates)
+      .set({ ...template, updatedAt: new Date() })
+      .where(eq(onboardingTemplates.id, id))
+      .returning();
+    return updatedTemplate;
+  }
+
+  async deleteOnboardingTemplate(id: string): Promise<void> {
+    await db.delete(onboardingTemplates).where(eq(onboardingTemplates.id, id));
+  }
+
+  // Onboarding Steps Management
+  async getOnboardingSteps(templateId: string): Promise<OnboardingStep[]> {
+    return await db
+      .select()
+      .from(onboardingSteps)
+      .where(eq(onboardingSteps.templateId, templateId))
+      .orderBy(onboardingSteps.stepOrder);
+  }
+
+  async createOnboardingStep(step: InsertOnboardingStep): Promise<OnboardingStep> {
+    const [newStep] = await db
+      .insert(onboardingSteps)
+      .values(step)
+      .returning();
+    return newStep;
+  }
+
+  async updateOnboardingStep(id: string, step: Partial<InsertOnboardingStep>): Promise<OnboardingStep> {
+    const [updatedStep] = await db
+      .update(onboardingSteps)
+      .set({ ...step, updatedAt: new Date() })
+      .where(eq(onboardingSteps.id, id))
+      .returning();
+    return updatedStep;
+  }
+
+  async deleteOnboardingStep(id: string): Promise<void> {
+    await db.delete(onboardingSteps).where(eq(onboardingSteps.id, id));
+  }
+
+  // Employee Onboarding Progress
+  async getEmployeeOnboarding(employeeId?: string): Promise<EmployeeOnboarding[]> {
+    const query = db.select().from(employeeOnboarding);
+    if (employeeId) {
+      return await query.where(eq(employeeOnboarding.employeeId, employeeId));
+    }
+    return await query;
+  }
+
+  async createEmployeeOnboarding(onboarding: InsertEmployeeOnboarding): Promise<EmployeeOnboarding> {
+    const [newOnboarding] = await db
+      .insert(employeeOnboarding)
+      .values(onboarding)
+      .returning();
+    return newOnboarding;
+  }
+
+  async updateEmployeeOnboarding(id: string, onboarding: Partial<InsertEmployeeOnboarding>): Promise<EmployeeOnboarding> {
+    const [updatedOnboarding] = await db
+      .update(employeeOnboarding)
+      .set({ ...onboarding, updatedAt: new Date() })
+      .where(eq(employeeOnboarding.id, id))
+      .returning();
+    return updatedOnboarding;
+  }
+
+  async deleteEmployeeOnboarding(id: string): Promise<void> {
+    await db.delete(employeeOnboarding).where(eq(employeeOnboarding.id, id));
+  }
+
+  // Employee Onboarding Step Progress
+  async getEmployeeOnboardingSteps(employeeOnboardingId: string): Promise<EmployeeOnboardingStep[]> {
+    return await db
+      .select()
+      .from(employeeOnboardingSteps)
+      .where(eq(employeeOnboardingSteps.employeeOnboardingId, employeeOnboardingId));
+  }
+
+  async createEmployeeOnboardingStep(step: InsertEmployeeOnboardingStep): Promise<EmployeeOnboardingStep> {
+    const [newStep] = await db
+      .insert(employeeOnboardingSteps)
+      .values(step)
+      .returning();
+    return newStep;
+  }
+
+  async updateEmployeeOnboardingStep(id: string, step: Partial<InsertEmployeeOnboardingStep>): Promise<EmployeeOnboardingStep> {
+    const [updatedStep] = await db
+      .update(employeeOnboardingSteps)
+      .set({ ...step, updatedAt: new Date() })
+      .where(eq(employeeOnboardingSteps.id, id))
+      .returning();
+    return updatedStep;
+  }
+
+  async deleteEmployeeOnboardingStep(id: string): Promise<void> {
+    await db.delete(employeeOnboardingSteps).where(eq(employeeOnboardingSteps.id, id));
+  }
+
+  // Advanced onboarding analytics
+  async getOnboardingProgress(locationId?: string): Promise<{
+    totalActiveOnboarding: number;
+    completedThisMonth: number;
+    overdueOnboarding: number;
+    averageCompletionDays: number;
+  }> {
+    const allOnboarding = await this.getEmployeeOnboarding();
+    const activeOnboarding = allOnboarding.filter(o => o.status === 'in-progress');
+    
+    const now = new Date();
+    const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+    const completedThisMonth = allOnboarding.filter(o => 
+      o.status === 'completed' && 
+      o.actualCompletionDate && 
+      new Date(o.actualCompletionDate) >= startOfMonth
+    );
+    
+    const overdueOnboarding = allOnboarding.filter(o => 
+      o.status === 'in-progress' && 
+      o.targetCompletionDate && 
+      new Date(o.targetCompletionDate) < now
+    );
+    
+    // Calculate average completion days from completed onboarding
+    const completedWithDates = allOnboarding.filter(o => 
+      o.status === 'completed' && o.startDate && o.actualCompletionDate
+    );
+    
+    let averageCompletionDays = 7; // Default estimate
+    if (completedWithDates.length > 0) {
+      const totalDays = completedWithDates.reduce((sum, o) => {
+        const start = new Date(o.startDate!);
+        const end = new Date(o.actualCompletionDate!);
+        const daysDiff = Math.ceil((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24));
+        return sum + daysDiff;
+      }, 0);
+      averageCompletionDays = Math.round(totalDays / completedWithDates.length);
+    }
+    
+    return {
+      totalActiveOnboarding: activeOnboarding.length,
+      completedThisMonth: completedThisMonth.length,
+      overdueOnboarding: overdueOnboarding.length,
+      averageCompletionDays
+    };
   }
 }
 

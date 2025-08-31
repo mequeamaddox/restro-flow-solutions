@@ -52,6 +52,7 @@ const navigation = [
 const hrNavigation = [
   { name: 'HR Dashboard', href: '/hr/dashboard', icon: Users, badge: 'ADD-ON' },
   { name: 'Employees', href: '/hr/employees', icon: Users },
+  { name: 'Documents & Onboarding', href: '/hr/documents', icon: FileText },
   { name: 'Analytics', href: '/hr/analytics', icon: BarChart3, badge: 'LIVE' },
   { name: 'Scheduling', href: '/hr/scheduling', icon: Calendar },
   { name: 'Time Clock', href: '/hr/time-clock', icon: Clock },

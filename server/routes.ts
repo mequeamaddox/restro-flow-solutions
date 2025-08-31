@@ -2250,6 +2250,210 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Employee Documents Management API
+  app.get("/api/hr/documents", isAuthenticated, async (req, res) => {
+    try {
+      const { employeeId } = req.query;
+      const documents = await storage.getEmployeeDocuments(employeeId as string);
+      res.json(documents);
+    } catch (error) {
+      console.error("Error fetching documents:", error);
+      res.status(500).json({ message: "Failed to fetch documents" });
+    }
+  });
+
+  app.post("/api/hr/documents", isAuthenticated, async (req, res) => {
+    try {
+      const userId = req.user?.claims?.sub;
+      const documentData = {
+        ...req.body,
+        uploadedBy: userId
+      };
+      const document = await storage.createEmployeeDocument(documentData);
+      res.status(201).json(document);
+    } catch (error) {
+      console.error("Error creating document:", error);
+      res.status(500).json({ message: "Failed to create document" });
+    }
+  });
+
+  app.put("/api/hr/documents/:id", isAuthenticated, async (req, res) => {
+    try {
+      const { id } = req.params;
+      const userId = req.user?.claims?.sub;
+      const updateData = {
+        ...req.body,
+        reviewedBy: userId,
+        reviewedAt: new Date()
+      };
+      const document = await storage.updateEmployeeDocument(id, updateData);
+      res.json(document);
+    } catch (error) {
+      console.error("Error updating document:", error);
+      res.status(500).json({ message: "Failed to update document" });
+    }
+  });
+
+  app.delete("/api/hr/documents/:id", isAuthenticated, async (req, res) => {
+    try {
+      const { id } = req.params;
+      await storage.deleteEmployeeDocument(id);
+      res.status(204).send();
+    } catch (error) {
+      console.error("Error deleting document:", error);
+      res.status(500).json({ message: "Failed to delete document" });
+    }
+  });
+
+  // Document Requirements Management API
+  app.get("/api/hr/document-requirements", isAuthenticated, async (req, res) => {
+    try {
+      const { locationId, positionId } = req.query;
+      const requirements = await storage.getDocumentRequirements(
+        locationId as string,
+        positionId as string
+      );
+      res.json(requirements);
+    } catch (error) {
+      console.error("Error fetching document requirements:", error);
+      res.status(500).json({ message: "Failed to fetch document requirements" });
+    }
+  });
+
+  app.post("/api/hr/document-requirements", isAuthenticated, async (req, res) => {
+    try {
+      const requirement = await storage.createDocumentRequirement(req.body);
+      res.status(201).json(requirement);
+    } catch (error) {
+      console.error("Error creating document requirement:", error);
+      res.status(500).json({ message: "Failed to create document requirement" });
+    }
+  });
+
+  // Onboarding Templates Management API
+  app.get("/api/hr/onboarding/templates", isAuthenticated, async (req, res) => {
+    try {
+      const { locationId, positionId } = req.query;
+      const templates = await storage.getOnboardingTemplates(
+        locationId as string,
+        positionId as string
+      );
+      res.json(templates);
+    } catch (error) {
+      console.error("Error fetching onboarding templates:", error);
+      res.status(500).json({ message: "Failed to fetch onboarding templates" });
+    }
+  });
+
+  app.post("/api/hr/onboarding/templates", isAuthenticated, async (req, res) => {
+    try {
+      const userId = req.user?.claims?.sub;
+      const templateData = {
+        ...req.body,
+        createdBy: userId
+      };
+      const template = await storage.createOnboardingTemplate(templateData);
+      res.status(201).json(template);
+    } catch (error) {
+      console.error("Error creating onboarding template:", error);
+      res.status(500).json({ message: "Failed to create onboarding template" });
+    }
+  });
+
+  app.get("/api/hr/onboarding/templates/:id/steps", isAuthenticated, async (req, res) => {
+    try {
+      const { id } = req.params;
+      const steps = await storage.getOnboardingSteps(id);
+      res.json(steps);
+    } catch (error) {
+      console.error("Error fetching onboarding steps:", error);
+      res.status(500).json({ message: "Failed to fetch onboarding steps" });
+    }
+  });
+
+  app.post("/api/hr/onboarding/steps", isAuthenticated, async (req, res) => {
+    try {
+      const step = await storage.createOnboardingStep(req.body);
+      res.status(201).json(step);
+    } catch (error) {
+      console.error("Error creating onboarding step:", error);
+      res.status(500).json({ message: "Failed to create onboarding step" });
+    }
+  });
+
+  // Employee Onboarding Progress API
+  app.get("/api/hr/onboarding", isAuthenticated, async (req, res) => {
+    try {
+      const { employeeId } = req.query;
+      const onboarding = await storage.getEmployeeOnboarding(employeeId as string);
+      res.json(onboarding);
+    } catch (error) {
+      console.error("Error fetching employee onboarding:", error);
+      res.status(500).json({ message: "Failed to fetch employee onboarding" });
+    }
+  });
+
+  app.post("/api/hr/onboarding", isAuthenticated, async (req, res) => {
+    try {
+      const onboarding = await storage.createEmployeeOnboarding(req.body);
+      res.status(201).json(onboarding);
+    } catch (error) {
+      console.error("Error creating employee onboarding:", error);
+      res.status(500).json({ message: "Failed to create employee onboarding" });
+    }
+  });
+
+  app.put("/api/hr/onboarding/:id", isAuthenticated, async (req, res) => {
+    try {
+      const { id } = req.params;
+      const onboarding = await storage.updateEmployeeOnboarding(id, req.body);
+      res.json(onboarding);
+    } catch (error) {
+      console.error("Error updating employee onboarding:", error);
+      res.status(500).json({ message: "Failed to update employee onboarding" });
+    }
+  });
+
+  app.get("/api/hr/onboarding/:id/steps", isAuthenticated, async (req, res) => {
+    try {
+      const { id } = req.params;
+      const steps = await storage.getEmployeeOnboardingSteps(id);
+      res.json(steps);
+    } catch (error) {
+      console.error("Error fetching onboarding progress steps:", error);
+      res.status(500).json({ message: "Failed to fetch onboarding progress steps" });
+    }
+  });
+
+  app.put("/api/hr/onboarding/steps/:id", isAuthenticated, async (req, res) => {
+    try {
+      const { id } = req.params;
+      const userId = req.user?.claims?.sub;
+      const updateData = {
+        ...req.body,
+        completedBy: userId,
+        completedDate: req.body.status === 'completed' ? new Date() : req.body.completedDate
+      };
+      const step = await storage.updateEmployeeOnboardingStep(id, updateData);
+      res.json(step);
+    } catch (error) {
+      console.error("Error updating onboarding step:", error);
+      res.status(500).json({ message: "Failed to update onboarding step" });
+    }
+  });
+
+  // Onboarding Analytics API
+  app.get("/api/hr/onboarding/analytics", isAuthenticated, async (req, res) => {
+    try {
+      const { locationId } = req.query;
+      const analytics = await storage.getOnboardingProgress(locationId as string);
+      res.json(analytics);
+    } catch (error) {
+      console.error("Error fetching onboarding analytics:", error);
+      res.status(500).json({ message: "Failed to fetch onboarding analytics" });
+    }
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }
