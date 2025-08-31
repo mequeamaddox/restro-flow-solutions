@@ -323,31 +323,50 @@ The OCR system works best with image files rather than scanned PDFs.`,
     let score = 0;
     
     // 1. Has price pattern (decimal or integer) - strong indicator
-    const hasDecimalPrice = /\$?(\d+\.\d{2})/.test(line);
+    const hasDecimalPrice = /\$(\d+\.\d{2})/.test(line);
     const hasIntegerPrice = /^\d{3,6}$/.test(line) && parseInt(line) > 50 && parseInt(line) < 100000;
     if (hasDecimalPrice || hasIntegerPrice) score += 1.0;
     
     // 2. Food-related keywords - strong indicator for restaurants
-    const foodKeywords = ['beef', 'pork', 'chicken', 'fish', 'salmon', 'shrimp', 'clam', 'crab', 'crawfish', 'cheese', 'milk', 'bread', 'rice', 'oil', 'sauce', 'spice'];
+    const foodKeywords = ['beef', 'pork', 'chicken', 'fish', 'salmon', 'shrimp', 'clam', 'crab', 'crawfish', 'cheese', 'milk', 'bread', 'rice', 'oil', 'sauce', 'spice', 'fillet', 'farmed', 'fresh', 'frozen'];
     const hasFoodKeyword = foodKeywords.some(keyword => line.toLowerCase().includes(keyword));
     if (hasFoodKeyword) score += 0.8;
     
-    // 3. Near other potential item lines - clustering indicator
+    // 3. Complex invoice line patterns (like Inland Foods) - very strong indicator
+    // Pattern: "12051.LB FILLET, FARMED CHILEAN. v 1000 LB. 5 rm 128008 $8.87AB $113.54 SALMON FILLET PBO 34"
+    const complexInvoicePattern = /\d+\.?LB|FILLET|FARMED|\$\d+\.\d{2}.*\$\d+\.\d{2}|LB\.\s*\d+/i;
+    if (complexInvoicePattern.test(line)) {
+      score += 1.2;
+      console.log(`🎯 Complex invoice pattern detected in: "${line.substring(0, 50)}..."`);
+    }
+    
+    // 4. Multiple prices in one line (unit + total) - strong indicator
+    const priceMatches = line.match(/\$\d+\.\d{2}/g);
+    if (priceMatches && priceMatches.length >= 2) {
+      score += 1.0;
+      console.log(`💰 Multiple prices found in: "${line.substring(0, 50)}..."`);
+    }
+    
+    // 5. Near other potential item lines - clustering indicator
     const nearbyProductLines = OCRService.countNearbyProductLines(index, allLines);
     if (nearbyProductLines >= 2) score += 0.5;
     
-    // 4. Not blacklisted headers/footers - negative indicator
-    const blacklist = ['subtotal', 'total', 'tax', 'invoice', 'thank', 'customer', 'address', 'phone', 'email', 'date', 'order', 'quantity', 'description', 'price', 'amount'];
-    const isBlacklisted = blacklist.some(word => line.toLowerCase().includes(word));
+    // 6. Not blacklisted headers/footers - negative indicator
+    const blacklist = ['subtotal', 'total', 'tax', 'invoice', 'thank', 'customer', 'address', 'phone', 'email', 'date', 'order', 'quantity', 'description', 'amount'];
+    const isBlacklisted = blacklist.some(word => line.toLowerCase().includes(word.toLowerCase()));
     if (isBlacklisted) score -= 1.5;
     
-    // 5. Looks like product description - positive indicator
-    const looksLikeProduct = /^[A-Za-z][A-Za-z\s&\/\-0-9',\.]{3,50}$/.test(line) && line.length >= 5;
+    // 7. Looks like product description - positive indicator
+    const looksLikeProduct = /^[A-Za-z0-9][A-Za-z\s&\/\-0-9',\.]{3,50}/.test(line) && line.length >= 5;
     if (looksLikeProduct) score += 0.4;
     
-    // 6. Position-based scoring - items usually in middle section
+    // 8. Position-based scoring - items usually in middle section
     const middleSection = index > allLines.length * 0.2 && index < allLines.length * 0.8;
     if (middleSection) score += 0.2;
+    
+    // 9. Contains both weight/quantity and food terms
+    const hasWeight = /\d+\.?\d*\s*(LB|lb|OZ|oz|KG|kg|EA|each)/i.test(line);
+    if (hasWeight && hasFoodKeyword) score += 0.6;
     
     return Math.max(0, score); // Don't allow negative scores
   }
@@ -374,7 +393,28 @@ The OCR system works best with image files rather than scanned PDFs.`,
     const line = scoredLine.text;
     const index = scoredLine.index;
     
-    // Strategy 1: Line contains both product and price
+    // Strategy 1: Complex invoice format (Inland Foods style)
+    // Pattern: "12051.LB FILLET, FARMED CHILEAN. v 1000 LB. 5 rm 128008 $8.87AB $113.54 SALMON FILLET PBO 34"
+    const complexMatch = line.match(/(\d+\.?\d*)\s*(LB|lb)\s+([^$]+?)\s+.*?(\d+)\s*(LB|lb)[^$]*\$(\d+\.\d{2})[^$]*\$(\d+\.\d{2})/i);
+    if (complexMatch) {
+      const quantity = parseInt(complexMatch[4]); // 1000
+      const description = complexMatch[3].trim(); // "FILLET, FARMED CHILEAN"
+      const unitPrice = parseFloat(complexMatch[6]); // $8.87
+      const totalPrice = parseFloat(complexMatch[7]); // $113.54
+      
+      console.log(`🎯 Complex pattern extracted: "${description}" - Qty: ${quantity}, Unit: $${unitPrice}, Total: $${totalPrice}`);
+      
+      if (OCRService.isValidProduct(description, totalPrice)) {
+        return {
+          description: description.substring(0, 100),
+          quantity,
+          unitPrice,
+          totalPrice
+        };
+      }
+    }
+    
+    // Strategy 2: Standard line contains both product and price
     const singleLineMatch = line.match(/^(.+?)\s+\$?(\d+\.\d{2})\s*$/);
     if (singleLineMatch) {
       const description = singleLineMatch[1].trim();
@@ -390,7 +430,7 @@ The OCR system works best with image files rather than scanned PDFs.`,
       }
     }
     
-    // Strategy 2: Look for quantity before and price after (C&C Seafood style)
+    // Strategy 3: Look for quantity before and price after (C&C Seafood style)
     let quantity = 1;
     let foundPrice = 0;
     
