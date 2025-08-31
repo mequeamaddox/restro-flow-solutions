@@ -7,7 +7,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
-import { Plus, Trash2, Edit3, Check, X } from "lucide-react";
+import { Plus, Trash2, Edit3, Check, X, FileText, ExternalLink } from "lucide-react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
@@ -37,6 +37,7 @@ interface InvoiceReviewDialogProps {
     lineItems: LineItem[];
     fees: Fee[];
     ocrConfidence: number;
+    attachmentPath?: string;
   } | null;
 }
 
@@ -223,6 +224,18 @@ export function InvoiceReviewDialog({ isOpen, onClose, invoiceData }: InvoiceRev
             <Badge variant="secondary" className="ml-2">
               {invoiceData.ocrConfidence}% OCR Confidence
             </Badge>
+            {invoiceData.attachmentPath && (
+              <Button
+                size="sm"
+                variant="outline"
+                className="ml-auto"
+                onClick={() => window.open(`/api/invoices/${invoiceData.id}/attachment`, '_blank')}
+              >
+                <FileText className="h-4 w-4 mr-1" />
+                View Original
+                <ExternalLink className="h-3 w-3 ml-1" />
+              </Button>
+            )}
           </DialogTitle>
         </DialogHeader>
 

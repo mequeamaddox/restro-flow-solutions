@@ -232,6 +232,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.log('OCR completed with confidence:', ocrResult.confidence);
       console.log('Extracted text preview:', ocrResult.text.substring(0, 200) + '...');
 
+      // Save the uploaded file permanently
+      const timestamp = Date.now();
+      const sanitizedFilename = req.file.originalname.replace(/[^a-zA-Z0-9.-]/g, '_');
+      const fileExtension = path.extname(sanitizedFilename);
+      const baseFilename = path.basename(sanitizedFilename, fileExtension);
+      const fileName = `${timestamp}_${baseFilename}${fileExtension}`;
+      const filePath = path.join('uploads', 'invoices', fileName);
+      
+      // Ensure the directory exists
+      const uploadDir = path.dirname(filePath);
+      if (!fs.existsSync(uploadDir)) {
+        fs.mkdirSync(uploadDir, { recursive: true });
+      }
+      
+      // Write the file to disk
+      fs.writeFileSync(filePath, req.file.buffer);
+      console.log('Saved invoice file to:', filePath);
+
       // Parse invoice data from extracted text
       const parsedData = OCRService.parseInvoiceFromText(ocrResult.text);
       
@@ -310,6 +328,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         uploadMethod: req.body.uploadMethod || 'upload',
         status: 'pending',
         lineItems: parsedData.lineItems, // Include extracted line items
+        fees: parsedData.fees, // Include IRS-compliant separate fee tracking
+        attachmentPath: filePath, // Store path to original invoice file
         originalText: sanitizedText,
         processedAt: new Date(),
       };
@@ -333,6 +353,49 @@ export async function registerRoutes(app: Express): Promise<Server> {
         message: "Failed to process invoice upload",
         error: (error as Error).message 
       });
+    }
+  });
+
+  // Route to serve invoice attachments
+  app.get('/api/invoices/:id/attachment', isAuthenticated, async (req, res) => {
+    try {
+      const { id } = req.params;
+      
+      // Get invoice data to find attachment path
+      const invoices = await storage.getInvoices();
+      const invoice = invoices.find(inv => inv.id === id);
+      
+      if (!invoice || !invoice.attachmentPath) {
+        return res.status(404).json({ message: "Invoice attachment not found" });
+      }
+      
+      // Check if file exists
+      if (!fs.existsSync(invoice.attachmentPath)) {
+        return res.status(404).json({ message: "Attachment file not found on disk" });
+      }
+      
+      // Get file info
+      const fileName = path.basename(invoice.attachmentPath);
+      const fileExtension = path.extname(fileName);
+      
+      // Set appropriate content type
+      let contentType = 'application/octet-stream';
+      if (fileExtension === '.pdf') contentType = 'application/pdf';
+      else if (fileExtension === '.jpg' || fileExtension === '.jpeg') contentType = 'image/jpeg';
+      else if (fileExtension === '.png') contentType = 'image/png';
+      else if (fileExtension === '.txt') contentType = 'text/plain';
+      
+      // Set headers for file download/viewing
+      res.setHeader('Content-Type', contentType);
+      res.setHeader('Content-Disposition', `inline; filename="${fileName}"`);
+      
+      // Stream the file
+      const fileStream = fs.createReadStream(invoice.attachmentPath);
+      fileStream.pipe(res);
+      
+    } catch (error) {
+      console.error("Error serving invoice attachment:", error);
+      res.status(500).json({ message: "Failed to serve attachment" });
     }
   });
 

@@ -903,6 +903,7 @@ export const invoiceProcessing = pgTable("invoice_processing", {
   ocrConfidence: decimal("ocr_confidence", { precision: 5, scale: 2 }),
   lineItems: jsonb("line_items"),
   fees: jsonb("fees"), // Separate tracking for delivery, shipping, handling charges for IRS compliance
+  attachmentPath: varchar("attachment_path", { length: 500 }), // Path to original invoice file
   notes: text("notes"),
   approvedBy: varchar("approved_by").references(() => users.id),
   processedAt: timestamp("processed_at"),

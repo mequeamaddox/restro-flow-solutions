@@ -1309,6 +1309,7 @@ export class DatabaseStorage implements IStorage {
         ocrConfidence: invoice.ocrConfidence ? parseFloat(invoice.ocrConfidence).toString() : null,
         lineItems: invoice.lineItems || null,
         fees: invoice.fees || null, // IRS-compliant separate tracking of delivery, shipping, and other charges
+        attachmentPath: invoice.attachmentPath || null, // Path to original invoice file
         notes: invoice.notes || (invoice.originalText ? 
           invoice.originalText
             .replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F-\x9F]/g, '') // Remove control characters
