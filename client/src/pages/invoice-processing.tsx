@@ -174,6 +174,27 @@ export default function InvoiceProcessing() {
     },
   });
 
+  const importToInventoryMutation = useMutation({
+    mutationFn: async (items: any[]) => {
+      const response = await apiRequest("POST", "/api/inventory/import-from-invoice", { items });
+      return response.json();
+    },
+    onSuccess: (data) => {
+      toast({ 
+        title: "Items Imported",
+        description: `Successfully imported ${data.count} items to inventory`
+      });
+      queryClient.invalidateQueries({ queryKey: ["/api/inventory"] });
+    },
+    onError: (error) => {
+      toast({
+        title: "Import failed",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
   const form = useForm<InvoiceFormData>({
     resolver: zodResolver(invoiceSchema),
     defaultValues: {
@@ -216,6 +237,34 @@ export default function InvoiceProcessing() {
   const getSelectedItemsCount = (invoiceId: string) => {
     const selections = selectedLineItems[invoiceId];
     return selections ? selections.filter(Boolean).length : 0;
+  };
+
+  const importSelectedItems = (invoiceId: string, lineItems: any[]) => {
+    const selections = selectedLineItems[invoiceId] || new Array(lineItems.length).fill(true);
+    const selectedItems = lineItems.filter((_: any, index: number) => selections[index]);
+    
+    if (selectedItems.length === 0) {
+      toast({
+        title: "No items selected",
+        description: "Please select at least one item to import",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // Convert line items to inventory format
+    const inventoryItems = selectedItems.map((item: any) => ({
+      name: item.description,
+      category: 'Food', // Default category
+      quantity: item.quantity || 1,
+      unit: item.unitType || 'each',
+      costPerUnit: item.unitPrice || 0,
+      reorderLevel: Math.ceil((item.quantity || 1) * 0.2), // 20% of current quantity
+      reorderQuantity: item.quantity || 1,
+      supplier: 'Imported from Invoice'
+    }));
+
+    importToInventoryMutation.mutate(inventoryItems);
   };
 
   const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -664,13 +713,7 @@ export default function InvoiceProcessing() {
                                         variant="outline"
                                         size="sm"
                                         className="border-slate-600 text-slate-300 hover:bg-slate-700"
-                                        onClick={() => {
-                                          // Get selected items using React state
-                                          const selections = selectedLineItems[invoice.id] || new Array(invoice.lineItems.length).fill(true);
-                                          const selectedItems = invoice.lineItems.filter((_: any, index: number) => selections[index]);
-                                          console.log('Import selected items to inventory:', selectedItems);
-                                          // TODO: Add actual import functionality
-                                        }}
+                                        onClick={() => importSelectedItems(invoice.id, invoice.lineItems)}
                                       >
                                         <Package className="h-4 w-4 mr-2" />
                                         Import Selected ({getSelectedItemsCount(invoice.id)})

@@ -786,6 +786,53 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Import invoice line items to inventory
+  app.post('/api/inventory/import-from-invoice', isAuthenticated, async (req, res) => {
+    try {
+      const { items } = req.body;
+      const userId = (req.user as any)?.claims?.sub;
+      
+      if (!items || !Array.isArray(items)) {
+        return res.status(400).json({ message: "Invalid items data" });
+      }
+
+      console.log('🔄 Importing items to inventory:', items);
+
+      let importedCount = 0;
+      for (const item of items) {
+        try {
+          await storage.createInventoryItem({
+            name: item.name,
+            categoryId: null, // Will need to map to actual category
+            quantity: item.quantity,
+            unit: item.unit,
+            costPerUnit: item.costPerUnit,
+            reorderLevel: item.reorderLevel,
+            reorderQuantity: item.reorderQuantity,
+            supplier: item.supplier,
+            locationId: null, // Default location
+            createdBy: userId,
+          });
+          importedCount++;
+        } catch (error) {
+          console.error('Error importing item:', item.name, error);
+          // Continue with other items even if one fails
+        }
+      }
+
+      console.log(`✅ Successfully imported ${importedCount} out of ${items.length} items`);
+      
+      res.json({ 
+        message: "Items imported successfully", 
+        count: importedCount,
+        total: items.length 
+      });
+    } catch (error) {
+      console.error("❌ Error importing items to inventory:", error);
+      res.status(500).json({ message: "Failed to import items" });
+    }
+  });
+
   app.post('/api/inventory', isAuthenticated, async (req, res) => {
     try {
       const itemData = insertInventoryItemSchema.parse(req.body);
