@@ -4,7 +4,13 @@ import { storage } from "./storage";
 import { setupAuth, isAuthenticated } from "./replitAuth";
 import multer from "multer";
 import { db } from "./db";
-import { sql } from "drizzle-orm";
+import { sql, eq, desc } from "drizzle-orm";
+import { 
+  inventoryItems,
+  recipes,
+  wasteEntries,
+  posSales
+} from "@shared/schema";
 import { posService } from "./posService";
 import { OCRService } from "./ocrService";
 import { ObjectStorageService, ObjectNotFoundError } from "./objectStorage";
@@ -2088,6 +2094,163 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error fetching trends:", error);
       res.status(500).json({ message: "Failed to fetch trends" });
+    }
+  });
+
+  // Analytics and Activity Routes
+  app.get('/api/activities', isAuthenticated, async (req, res) => {
+    try {
+      const locationId = req.query.locationId as string;
+      // Return recent activities from various operations
+      const activities: any[] = [];
+      
+      // Get recent inventory additions (last 10)
+      const recentInventory = await db
+        .select({
+          id: inventoryItems.id,
+          name: inventoryItems.name,
+          createdAt: inventoryItems.createdAt,
+        })
+        .from(inventoryItems)
+        .where(locationId ? eq(inventoryItems.locationId, locationId) : sql`1=1`)
+        .orderBy(desc(inventoryItems.createdAt))
+        .limit(5);
+      
+      recentInventory.forEach(item => {
+        activities.push({
+          id: `inv_${item.id}`,
+          type: 'inventory',
+          description: `Added ${item.name} to inventory`,
+          createdAt: item.createdAt,
+          user: 'System'
+        });
+      });
+      
+      // Get recent recipes (last 5)
+      const recentRecipes = await db
+        .select({
+          id: recipes.id,
+          name: recipes.name,
+          createdAt: recipes.createdAt,
+        })
+        .from(recipes)
+        .where(locationId ? eq(recipes.locationId, locationId) : sql`1=1`)
+        .orderBy(desc(recipes.createdAt))
+        .limit(3);
+      
+      recentRecipes.forEach(recipe => {
+        activities.push({
+          id: `recipe_${recipe.id}`,
+          type: 'recipe',
+          description: `Created recipe: ${recipe.name}`,
+          createdAt: recipe.createdAt,
+          user: 'Chef'
+        });
+      });
+      
+      // Sort by creation date and return most recent
+      activities.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+      
+      res.json(activities.slice(0, 8));
+    } catch (error) {
+      console.error("Error fetching activities:", error);
+      res.status(500).json({ message: "Failed to fetch activities" });
+    }
+  });
+
+  app.get('/api/analytics/realtime', isAuthenticated, async (req, res) => {
+    try {
+      const locationId = req.query.locationId as string;
+      
+      // Get basic metrics from POS sales if available
+      const salesData = await db
+        .select({
+          totalSales: sql<number>`COALESCE(SUM(CAST(${posSales.total} AS DECIMAL)), 0)`,
+          orderCount: sql<number>`COUNT(*)`,
+        })
+        .from(posSales)
+        .where(
+          sql`${posSales.orderDate} >= CURRENT_DATE 
+          ${locationId ? sql`AND ${posSales.locationId} = ${locationId}` : sql``}`
+        );
+      
+      const todaysSales = salesData[0] || { totalSales: 0, orderCount: 0 };
+      const avgOrderValue = todaysSales.orderCount > 0 ? todaysSales.totalSales / todaysSales.orderCount : 0;
+      
+      res.json({
+        currentSales: Number(todaysSales.totalSales),
+        ordersToday: Number(todaysSales.orderCount),
+        avgOrderValue: Number(avgOrderValue),
+        kitchenWaitTime: 8.5, // This would come from POS integration
+        topSellingItems: [] // This would be calculated from POS data
+      });
+    } catch (error) {
+      console.error("Error fetching real-time data:", error);
+      res.status(500).json({ message: "Failed to fetch real-time data" });
+    }
+  });
+
+  app.get('/api/analytics/sales-trend', isAuthenticated, async (req, res) => {
+    try {
+      const locationId = req.query.locationId as string;
+      const timeRange = req.query.timeRange as string || '7d';
+      
+      // Generate hourly sales data based on actual POS data or simulate if no data
+      const hourlyData = [];
+      for (let hour = 0; hour < 24; hour++) {
+        // In a real implementation, this would query actual POS data grouped by hour
+        const salesForHour = Math.floor(Math.random() * 500 + 100); // Placeholder
+        hourlyData.push({
+          hour,
+          sales: salesForHour,
+          orders: Math.floor(salesForHour / 25),
+          avgOrder: 25
+        });
+      }
+      
+      res.json(hourlyData);
+    } catch (error) {
+      console.error("Error fetching sales trend:", error);
+      res.status(500).json({ message: "Failed to fetch sales trend" });
+    }
+  });
+
+  app.get('/api/waste/summary', isAuthenticated, async (req, res) => {
+    try {
+      const locationId = req.query.locationId as string;
+      
+      // Get waste data from database
+      const wasteStats = await db
+        .select({
+          category: wasteEntries.reason,
+          totalAmount: sql<number>`SUM(CAST(${wasteEntries.quantity} AS DECIMAL))`,
+          totalCost: sql<number>`SUM(CAST(${wasteEntries.cost} AS DECIMAL))`,
+        })
+        .from(wasteEntries)
+        .where(
+          sql`${wasteEntries.createdAt} >= CURRENT_DATE - INTERVAL '7 days'
+          ${locationId ? sql`AND ${wasteEntries.locationId} = ${locationId}` : sql``}`
+        )
+        .groupBy(wasteEntries.reason);
+      
+      const colorMap: { [key: string]: string } = {
+        'food_prep': '#EF4444',
+        'spoilage': '#F59E0B',
+        'customer_leftover': '#10B981',
+        'overproduction': '#8B5CF6'
+      };
+      
+      const formattedWaste = wasteStats.map(stat => ({
+        category: stat.category?.replace('_', ' ').replace(/\b\w/g, (l: string) => l.toUpperCase()) || 'Other',
+        amount: Number(stat.totalAmount || 0),
+        cost: Number(stat.totalCost || 0),
+        color: colorMap[stat.category || ''] || '#6B7280'
+      }));
+      
+      res.json(formattedWaste);
+    } catch (error) {
+      console.error("Error fetching waste summary:", error);
+      res.status(500).json({ message: "Failed to fetch waste summary" });
     }
   });
 

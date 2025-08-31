@@ -105,58 +105,43 @@ export default function Analytics() {
     return () => clearInterval(interval);
   }, []);
 
-  // Real-time data (would come from WebSocket/SSE in production)
-  const [realTimeData, setRealTimeData] = useState({
-    currentSales: 2847.50,
-    ordersToday: 127,
-    avgOrderValue: 22.43,
-    activeTables: 18,
-    kitchenWaitTime: 8.5,
-    topSellingItems: [
-      { name: 'Chicken Caesar Salad', sold: 23, revenue: 437 },
-      { name: 'Craft Beer Flight', sold: 19, revenue: 285 },
-      { name: 'Fish & Chips', sold: 17, revenue: 289 }
-    ]
+  // Fetch real-time sales data from POS integrations
+  const { data: realTimeData, isLoading: realTimeLoading } = useQuery({
+    queryKey: ['/api/analytics/realtime', currentLocation?.id],
+    enabled: !!currentLocation,
+    refetchInterval: 30000, // Refresh every 30 seconds
   });
 
-  const salesTrendData = Array.from({ length: 24 }, (_, i) => ({
-    hour: i,
-    sales: Math.random() * 500 + 100,
-    orders: Math.floor(Math.random() * 20 + 5),
-    avgOrder: Math.random() * 15 + 20
+  // Fetch sales trend data
+  const { data: salesTrendData = [], isLoading: salesTrendLoading } = useQuery({
+    queryKey: ['/api/analytics/sales-trend', currentLocation?.id, timeRange],
+    enabled: !!currentLocation,
+  });
+
+  // Fetch inventory alerts (low stock items)
+  const { data: lowStockItems = [], isLoading: inventoryAlertsLoading } = useQuery({
+    queryKey: ['/api/inventory/low-stock', currentLocation?.id],
+    enabled: !!currentLocation,
+  });
+
+  // Transform inventory alerts to match expected format
+  const inventoryAlerts = lowStockItems.map((item: any) => ({
+    item: item.name,
+    current: parseFloat(item.quantity),
+    min: parseFloat(item.reorderLevel || '0'),
+    severity: parseFloat(item.quantity) <= parseFloat(item.reorderLevel || '0') * 0.5 ? 'high' : 
+              parseFloat(item.quantity) <= parseFloat(item.reorderLevel || '0') ? 'medium' : 'low',
+    location: currentLocation?.name || 'Unknown'
   }));
 
-  const inventoryAlerts = [
-    { item: 'Salmon Fillets', current: 3, min: 8, severity: 'high', location: 'Main Kitchen' },
-    { item: 'Draft Beer - IPA', current: 15, min: 20, severity: 'medium', location: 'Bar' },
-    { item: 'Romaine Lettuce', current: 8, min: 12, severity: 'low', location: 'Prep Station' }
-  ];
+  // Fetch waste data
+  const { data: wasteData = [], isLoading: wasteLoading } = useQuery({
+    queryKey: ['/api/waste/summary', currentLocation?.id, timeRange],
+    enabled: !!currentLocation,
+  });
 
-  const wasteData = [
-    { category: 'Food Prep', amount: 12.5, cost: 47, color: '#EF4444' },
-    { category: 'Plate Waste', amount: 8.3, cost: 31, color: '#F59E0B' },
-    { category: 'Spoilage', amount: 4.7, cost: 18, color: '#10B981' },
-    { category: 'Overproduction', amount: 6.2, cost: 24, color: '#8B5CF6' }
-  ];
-
-  const costAlerts = [
-    {
-      type: 'price_increase',
-      item: 'Ground Beef',
-      change: '+12%',
-      impact: '$127/week',
-      vendor: 'Sysco Foods',
-      severity: 'high'
-    },
-    {
-      type: 'waste_spike',
-      item: 'Mixed Greens',
-      change: '+34%',
-      impact: '$45/week',
-      cause: 'Overordering',
-      severity: 'medium'
-    }
-  ];
+  // Fetch cost alerts data - this is already real from the database
+  // No need to replace as alerts query below fetches real data
 
   // Fetch cost alerts
   const { data: alerts = [], isLoading: alertsLoading } = useQuery<Alert[]>({
@@ -430,7 +415,7 @@ export default function Analytics() {
               <CardContent className="p-4 text-center">
                 <DollarSign className="h-6 w-6 text-green-400 mx-auto mb-2" />
                 <div className="text-xl font-bold text-green-400">
-                  ${realTimeData.currentSales.toLocaleString()}
+                  ${realTimeData?.currentSales?.toLocaleString() || '0'}
                 </div>
                 <div className="text-xs text-slate-400">Sales Today</div>
                 <div className="text-xs text-green-400 mt-1">↑ 15% vs yesterday</div>
@@ -440,7 +425,7 @@ export default function Analytics() {
             <Card className="bg-slate-800/50 border-slate-700">
               <CardContent className="p-4 text-center">
                 <ShoppingCart className="h-6 w-6 text-blue-400 mx-auto mb-2" />
-                <div className="text-xl font-bold text-white">{realTimeData.ordersToday}</div>
+                <div className="text-xl font-bold text-white">{realTimeData?.ordersToday || 0}</div>
                 <div className="text-xs text-slate-400">Orders Today</div>
                 <div className="text-xs text-blue-400 mt-1">↑ 8% vs avg</div>
               </CardContent>
@@ -449,7 +434,7 @@ export default function Analytics() {
             <Card className="bg-slate-800/50 border-slate-700">
               <CardContent className="p-4 text-center">
                 <Target className="h-6 w-6 text-purple-400 mx-auto mb-2" />
-                <div className="text-xl font-bold text-white">${realTimeData.avgOrderValue}</div>
+                <div className="text-xl font-bold text-white">${realTimeData?.avgOrderValue?.toFixed(2) || '0.00'}</div>
                 <div className="text-xs text-slate-400">Avg Order</div>
                 <div className="text-xs text-green-400 mt-1">↑ $2.15</div>
               </CardContent>
@@ -458,7 +443,7 @@ export default function Analytics() {
             <Card className="bg-slate-800/50 border-slate-700">
               <CardContent className="p-4 text-center">
                 <Users className="h-6 w-6 text-orange-400 mx-auto mb-2" />
-                <div className="text-xl font-bold text-white">{realTimeData.activeTables}</div>
+                <div className="text-xl font-bold text-white">{realTimeData?.activeTables || 0}</div>
                 <div className="text-xs text-slate-400">Active Tables</div>
                 <div className="text-xs text-orange-400 mt-1">78% capacity</div>
               </CardContent>
@@ -467,7 +452,7 @@ export default function Analytics() {
             <Card className="bg-slate-800/50 border-slate-700">
               <CardContent className="p-4 text-center">
                 <Clock className="h-6 w-6 text-yellow-400 mx-auto mb-2" />
-                <div className="text-xl font-bold text-white">{realTimeData.kitchenWaitTime}m</div>
+                <div className="text-xl font-bold text-white">{realTimeData?.kitchenWaitTime?.toFixed(1) || '0.0'}m</div>
                 <div className="text-xs text-slate-400">Kitchen Time</div>
                 <div className="text-xs text-green-400 mt-1">↓ 2m faster</div>
               </CardContent>
