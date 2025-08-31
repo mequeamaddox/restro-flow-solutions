@@ -30,10 +30,12 @@ import {
   FileImage,
   Scan,
   Trash2,
-  Package
+  Package,
+  Edit3
 } from "lucide-react";
 import { format } from "date-fns";
 import { SubscriptionBanner } from "@/components/subscription/subscription-banner";
+import { InvoiceReviewDialog } from "@/components/invoice-review-dialog";
 
 const invoiceSchema = z.object({
   vendorId: z.string().min(1, "Vendor is required"),
@@ -50,6 +52,8 @@ type InvoiceFormData = z.infer<typeof invoiceSchema>;
 export default function InvoiceProcessing() {
   const { toast } = useToast();
   const [selectedInvoice, setSelectedInvoice] = useState<any>(null);
+  const [reviewInvoice, setReviewInvoice] = useState<any>(null);
+  const [isReviewOpen, setIsReviewOpen] = useState(false);
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [uploadProgress, setUploadProgress] = useState<number>(0);
   const [isUploading, setIsUploading] = useState(false);
@@ -447,12 +451,38 @@ export default function InvoiceProcessing() {
                     <TableCell>{getStatusBadge(invoice.status)}</TableCell>
                     <TableCell>
                       <div className="flex space-x-2">
+                        {/* Review Button - Opens editable dialog */}
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => {
+                            setReviewInvoice({
+                              id: invoice.id,
+                              vendor: invoice.vendor?.name || invoice.vendorName || '',
+                              invoiceNumber: invoice.invoiceNumber,
+                              invoiceDate: invoice.invoiceDate,
+                              total: invoice.totalAmount || invoice.total || 0,
+                              subtotal: invoice.subtotal || 0,
+                              lineItems: invoice.lineItems || [],
+                              fees: invoice.fees || [],
+                              ocrConfidence: invoice.ocrConfidence || 0,
+                              attachmentPath: invoice.attachmentPath
+                            });
+                            setIsReviewOpen(true);
+                          }}
+                          className="text-blue-400 hover:text-blue-300"
+                          title="Review & Edit Invoice"
+                        >
+                          <Edit3 className="h-4 w-4" />
+                        </Button>
+
                         <Dialog>
                           <DialogTrigger asChild>
                             <Button
                               variant="ghost"
                               size="sm"
                               onClick={() => setSelectedInvoice(invoice)}
+                              title="View Invoice Details"
                             >
                               <Eye className="h-4 w-4" />
                             </Button>
@@ -752,6 +782,13 @@ export default function InvoiceProcessing() {
           </Table>
         </CardContent>
       </Card>
+
+      {/* Invoice Review Dialog */}
+      <InvoiceReviewDialog
+        isOpen={isReviewOpen}
+        onClose={() => setIsReviewOpen(false)}
+        invoiceData={reviewInvoice}
+      />
     </div>
   );
 }
