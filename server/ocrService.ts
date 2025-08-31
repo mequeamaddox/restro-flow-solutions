@@ -606,100 +606,97 @@ The OCR system works best with image files rather than scanned PDFs.`,
       }
     }
     
-    // Extract line items (products with prices)
-    console.log('Starting line item extraction...');
+    // Extract line items using intelligent pattern detection
+    console.log('Starting intelligent line item extraction...');
     console.log('Total lines to process:', lines.length);
+    
+    // First, identify potential product names and prices in the text
+    const productCandidates = [];
+    const priceLines = [];
     
     for (let i = 0; i < lines.length; i++) {
       const line = lines[i].trim();
       
-      // Debug: Log each line being processed
-      if (line.length > 2) {
-        console.log(`Line ${i}: "${line}"`);
+      if (line.length < 2) continue;
+      
+      // Look for product names: lines with letters, spaces, and some numbers/symbols
+      const isProductCandidate = /^[A-Za-z][A-Za-z\s&\/\-0-9',\.]{3,60}$/.test(line) && 
+                                 !line.match(/^(CUSTOMER|ORDER|DEPARTMENT|DATE|NAME|ADDRESS|CITY|STATE|ZIP|CASH|COD|CHARGE|SOLD|ACCT|RETD|PAID|QUANTITY|DESCRIPTION|PRICE|AMOUNT|TOTAL|THANK|RECEIVED|SLIP|REFERENCE)$/i);
+      
+      // Look for price patterns: 4-6 digit numbers (could be prices without decimals like "1199" = $11.99)
+      const isPriceCandidate = /^\d{3,6}$/.test(line) && parseInt(line) > 50 && parseInt(line) < 100000;
+      
+      // Also look for decimal prices
+      const isDecimalPrice = /^\$?(\d+\.\d{2})/.test(line);
+      
+      if (isProductCandidate) {
+        productCandidates.push({ index: i, text: line });
+        console.log(`📦 Product candidate at line ${i}: "${line}"`);
       }
       
-      // Universal line item patterns - work for multiple invoice formats
-      const universalLinePatterns = [
-        // Pattern 1: "PRODUCT NAME" followed by "PRICE" on next line (Food Lion style)
-        {
-          productPattern: /^([A-Z][A-Z\s&\/\-0-9]{3,})\s*$/,
-          pricePattern: /^(\d+\.\d{2})\s*[A-Z*\s]*$/,
-          nextLine: true
-        },
-        // Pattern 2: Single line with product and price: "Product Name 12.50" or "Product Name $12.50"
-        {
-          productPattern: /^(.+?)\s+\$?(\d+\.\d{2})\s*$/,
-          pricePattern: null,
-          nextLine: false
-        },
-        // Pattern 3: "Item Description  Qty  Price  Total" table format
-        {
-          productPattern: /^(.+?)\s+(\d+(?:\.\d+)?)\s+(\d+\.\d{2})\s+(\d+\.\d{2})\s*$/,
-          pricePattern: null,
-          nextLine: false
-        },
-        // Pattern 4: Lines with clear quantity and price indicators
-        {
-          productPattern: /^(.+?)\s+(\d+)\s*x\s*\$?(\d+\.\d{2})\s*=?\s*\$?(\d+\.\d{2})\s*$/i,
-          pricePattern: null,
-          nextLine: false
-        }
-      ];
+      if (isPriceCandidate || isDecimalPrice) {
+        priceLines.push({ index: i, text: line, value: isPriceCandidate ? parseInt(line) / 100 : parseFloat(line.replace('$', '')) });
+        console.log(`💰 Price candidate at line ${i}: "${line}" -> $${(isPriceCandidate ? parseInt(line) / 100 : parseFloat(line.replace('$', ''))).toFixed(2)}`);
+      }
+    }
+    
+    // Try to match products with nearby prices
+    for (const product of productCandidates) {
+      if (!OCRService.isValidProduct(product.text, 10)) continue; // Quick validation
       
-      for (const pattern of universalLinePatterns) {
-        const match = line.match(pattern.productPattern);
+      // Look for prices within 5 lines after the product
+      const nearbyPrices = priceLines.filter(price => 
+        price.index > product.index && 
+        price.index <= product.index + 5 &&
+        price.value > 0 && 
+        price.value < 1000
+      );
+      
+      if (nearbyPrices.length > 0) {
+        // Use the first reasonable price found
+        const price = nearbyPrices[0];
         
-        if (match) {
-          if (pattern.nextLine && i + 1 < lines.length) {
-            // Two-line pattern (like Food Lion)
-            const description = match[1].trim();
-            const nextLine = lines[i + 1].trim();
-            const priceMatch = nextLine.match(pattern.pricePattern!);
+        if (OCRService.isValidProduct(product.text, price.value)) {
+          lineItems.push({
+            description: product.text.substring(0, 100),
+            quantity: 1,
+            unitPrice: price.value,
+            totalPrice: price.value
+          });
+          
+          console.log(`✅ Matched product: "${product.text}" with price $${price.value.toFixed(2)} (from line ${price.index})`);
+        }
+      }
+    }
+    
+    // Also try traditional patterns for Food Lion style invoices
+    for (let i = 0; i < lines.length; i++) {
+      const line = lines[i].trim();
+      
+      // Food Lion pattern: ALL CAPS product name followed by price with decimal
+      const foodLionMatch = line.match(/^([A-Z][A-Z\s&\/\-0-9]{3,})\s*$/);
+      
+      if (foodLionMatch && i + 1 < lines.length) {
+        const nextLine = lines[i + 1].trim();
+        const priceMatch = nextLine.match(/^(\d+\.\d{2})\s*[A-Z*\s]*$/);
+        
+        if (priceMatch) {
+          const description = foodLionMatch[1].trim();
+          const totalPrice = parseFloat(priceMatch[1]);
+          
+          // Check if we already added this item
+          const alreadyAdded = lineItems.some(item => item.description === description);
+          
+          if (!alreadyAdded && OCRService.isValidProduct(description, totalPrice)) {
+            lineItems.push({
+              description,
+              quantity: 1,
+              unitPrice: totalPrice,
+              totalPrice
+            });
             
-            if (priceMatch) {
-              const totalPrice = parseFloat(priceMatch[1]);
-              
-              if (OCRService.isValidProduct(description, totalPrice)) {
-                lineItems.push({
-                  description,
-                  quantity: 1,
-                  unitPrice: totalPrice,
-                  totalPrice
-                });
-                
-                console.log(`✅ Found line item (2-line): ${description} - $${totalPrice.toFixed(2)}`);
-                i++; // Skip the price line since we just processed it
-                break;
-              }
-            }
-          } else if (!pattern.nextLine) {
-            // Single-line patterns
-            let description: string | undefined, quantity = 1, unitPrice: number | undefined, totalPrice: number | undefined;
-            
-            if (match.length === 3) {
-              // Simple "Product Name 12.50" format
-              description = match[1].trim();
-              totalPrice = parseFloat(match[2]);
-              unitPrice = totalPrice;
-            } else if (match.length === 5) {
-              // Full table format "Product Qty Price Total"
-              description = match[1].trim();
-              quantity = parseFloat(match[2]) || 1;
-              unitPrice = parseFloat(match[3]);
-              totalPrice = parseFloat(match[4]);
-            }
-            
-            if (description && unitPrice && totalPrice && OCRService.isValidProduct(description, totalPrice)) {
-              lineItems.push({
-                description: description.substring(0, 100),
-                quantity,
-                unitPrice: Math.round(unitPrice * 100) / 100,
-                totalPrice
-              });
-              
-              console.log(`✅ Found line item (1-line): ${description} - Qty: ${quantity} @ $${unitPrice.toFixed(2)} = $${totalPrice.toFixed(2)}`);
-              break;
-            }
+            console.log(`✅ Food Lion pattern: ${description} - $${totalPrice.toFixed(2)}`);
+            i++; // Skip the price line
           }
         }
       }
