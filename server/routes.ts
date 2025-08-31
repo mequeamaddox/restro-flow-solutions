@@ -809,7 +809,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
       let importedCount = 0;
       for (const item of items) {
         try {
-          await storage.createInventoryItem({
+          console.log('💾 Attempting to save item:', {
+            name: item.name,
+            description: `Imported from invoice`,
+            locationId: defaultLocation.id,
+            quantity: item.quantity.toString(),
+            unit: item.unit,
+            costPerUnit: item.costPerUnit.toString(),
+            reorderLevel: item.reorderLevel.toString(),
+          });
+          
+          const savedItem = await storage.createInventoryItem({
             name: item.name,
             description: `Imported from invoice`,
             categoryId: null, // Will need to map to actual category
@@ -820,9 +830,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
             reorderLevel: item.reorderLevel.toString(),
             vendorId: null, // No vendor mapping yet
           });
+          
+          console.log('✅ Item saved with ID:', savedItem.id);
           importedCount++;
         } catch (error) {
-          console.error('Error importing item:', item.name, error);
+          console.error('❌ Error importing item:', item.name, error);
           // Continue with other items even if one fails
         }
       }
