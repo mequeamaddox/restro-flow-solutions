@@ -30,8 +30,11 @@ interface Employee {
 export default function HREmployees() {
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
+  const [departmentFilter, setDepartmentFilter] = useState<string>("all");
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [editingEmployee, setEditingEmployee] = useState<Employee | null>(null);
+  const [selectedEmployees, setSelectedEmployees] = useState<Set<string>>(new Set());
+  const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
@@ -76,14 +79,16 @@ export default function HREmployees() {
   });
 
   const filteredEmployees = employees.filter((employee: Employee) => {
-    const matchesSearch = 
+    const matchesSearch = searchTerm === "" ||
       employee.firstName.toLowerCase().includes(searchTerm.toLowerCase()) ||
       employee.lastName.toLowerCase().includes(searchTerm.toLowerCase()) ||
       employee.email.toLowerCase().includes(searchTerm.toLowerCase());
     
     const matchesStatus = statusFilter === "all" || employee.status === statusFilter;
+    const matchesDepartment = departmentFilter === "all" || 
+      employee.department?.name?.toLowerCase() === departmentFilter.toLowerCase();
     
-    return matchesSearch && matchesStatus;
+    return matchesSearch && matchesStatus && matchesDepartment;
   });
 
   const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {

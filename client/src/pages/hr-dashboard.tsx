@@ -6,49 +6,49 @@ import { Link } from "wouter";
 import { useQuery } from "@tanstack/react-query";
 
 export default function HRDashboard() {
-  const { data: employees = [] } = useQuery({
+  const { data: employees = [], isLoading: loadingEmployees } = useQuery({
     queryKey: ['/api/hr/employees'],
   });
 
-  const { data: shifts = [] } = useQuery({
+  const { data: shifts = [], isLoading: loadingShifts } = useQuery({
     queryKey: ['/api/hr/shifts'],
   });
 
-  const { data: tasks = [] } = useQuery({
+  const { data: tasks = [], isLoading: loadingTasks } = useQuery({
     queryKey: ['/api/hr/tasks'],
   });
 
-  const { data: messages = [] } = useQuery({
+  const { data: messages = [], isLoading: loadingMessages } = useQuery({
     queryKey: ['/api/hr/messages'],
   });
 
-  const { data: timeEntries = [] } = useQuery({
+  const { data: timeEntries = [], isLoading: loadingTimeEntries } = useQuery({
     queryKey: ['/api/hr/time-entries'],
   });
 
-  const { data: timeOffRequests = [] } = useQuery({
+  const { data: timeOffRequests = [], isLoading: loadingTimeOff } = useQuery({
     queryKey: ['/api/hr/time-off-requests'],
   });
 
-  const { data: analytics } = useQuery({
+  const { data: analytics, isLoading: loadingAnalytics } = useQuery({
     queryKey: ['/api/hr/analytics'],
   });
 
-  // Analytics calculations
-  const pendingTasks = tasks.filter((task: any) => task.status !== 'completed').length;
-  const todayShifts = shifts.filter((shift: any) => {
+  const isLoading = loadingEmployees || loadingShifts || loadingTasks || loadingMessages || 
+                   loadingTimeEntries || loadingTimeOff || loadingAnalytics;
+
+  // Use analytics data when available, fallback to calculated values
+  const currentlyWorking = analytics?.currentlyWorking ?? timeEntries.filter((entry: any) => entry.status === 'clocked-in').length;
+  const pendingTasks = analytics?.pendingTasks ?? tasks.filter((task: any) => task.status !== 'completed').length;
+  const todayShifts = analytics?.todayShifts ?? shifts.filter((shift: any) => {
     const today = new Date().toDateString();
     const shiftDate = new Date(shift.date).toDateString();
     return shiftDate === today;
   }).length;
-  const unreadMessages = messages.filter((msg: any) => !msg.readBy?.length).length;
-  
-  // Advanced analytics - use from API if available, otherwise calculate locally
-  const currentlyWorking = analytics?.currentlyWorking ?? timeEntries.filter((entry: any) => entry.status === 'clocked-in').length;
+  const unreadMessages = analytics?.unreadMessages ?? messages.filter((msg: any) => !msg.readBy?.length).length;
   const pendingTimeOff = analytics?.pendingTimeOff ?? timeOffRequests.filter((request: any) => request.status === 'pending').length;
   
-  // Weekly hours calculation
-  const weeklyHours = shifts.reduce((total: number, shift: any) => {
+  const weeklyHours = analytics?.totalWeeklyHours ?? shifts.reduce((total: number, shift: any) => {
     const start = new Date(`2000-01-01T${shift.startTime}`);
     const end = new Date(`2000-01-01T${shift.endTime}`);
     const hours = (end.getTime() - start.getTime()) / (1000 * 60 * 60);
@@ -56,12 +56,8 @@ export default function HRDashboard() {
     return total + actualHours;
   }, 0);
 
-  // Calculate average hourly rate (example calculation)
-  const avgHourlyRate = employees.reduce((total: number, emp: any) => {
-    return total + (emp.hourlyRate || 15);
-  }, 0) / Math.max(employees.length, 1);
-
-  const estimatedWeeklyLabor = analytics?.totalWeeklyHours ? (analytics.totalWeeklyHours * avgHourlyRate) : (weeklyHours * avgHourlyRate);
+  const avgHourlyRate = analytics?.avgHourlyRate ?? 15.50;
+  const estimatedWeeklyLabor = weeklyHours * avgHourlyRate;
 
   return (
     <div className="max-w-7xl mx-auto p-6">
@@ -69,12 +65,24 @@ export default function HRDashboard() {
         <h1 className="text-3xl font-bold mb-2">Employee Management</h1>
         <p className="text-gray-600">Comprehensive HR system for managing your restaurant team</p>
         <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-lg p-4 mt-4">
-          <div className="flex items-center gap-2">
-            <div className="bg-blue-500 text-white px-2 py-1 rounded text-xs font-semibold">ADD-ON</div>
-            <span className="text-blue-700 font-medium">Employee Management System Active</span>
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <div className="bg-blue-500 text-white px-2 py-1 rounded text-xs font-semibold">ADD-ON</div>
+              <span className="text-blue-700 font-medium">Employee Management System Active</span>
+            </div>
+            <div className="flex items-center gap-4 text-sm">
+              <div className="flex items-center gap-1">
+                <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+                <span className="text-green-700">{analytics?.activeEmployees || employees.filter((emp: any) => emp.status === 'active').length} Active Staff</span>
+              </div>
+              <div className="flex items-center gap-1">
+                <div className="w-2 h-2 bg-blue-500 rounded-full animate-pulse"></div>
+                <span className="text-blue-700">{currentlyWorking} Working Now</span>
+              </div>
+            </div>
           </div>
           <p className="text-blue-600 text-sm mt-1">
-            Additional $79/month - Save 22% vs competitors like MarginEdge
+            Includes: Employee Directory, Scheduling, Time Clock, Task Management, Team Messaging & Payroll
           </p>
         </div>
       </div>

@@ -1840,14 +1840,41 @@ export class DatabaseStorage implements IStorage {
     await db.delete(positions).where(eq(positions.id, id));
   }
 
-  // HR Employee operations
-  async getEmployees(): Promise<Employee[]> {
-    return await db.select().from(employees).orderBy(employees.lastName, employees.firstName);
+  // HR Employee operations  
+  async getEmployees(): Promise<(Employee & { department?: Department; position?: Position })[]> {
+    const result = await db.select({
+      employee: employees,
+      department: departments,
+      position: positions,
+    })
+    .from(employees)
+    .leftJoin(departments, eq(employees.departmentId, departments.id))
+    .leftJoin(positions, eq(employees.positionId, positions.id))
+    .orderBy(employees.lastName, employees.firstName);
+    
+    return result.map(r => ({ 
+      ...r.employee, 
+      department: r.department || undefined, 
+      position: r.position || undefined 
+    }));
   }
 
-  async getEmployee(id: string): Promise<Employee | undefined> {
-    const [result] = await db.select().from(employees).where(eq(employees.id, id));
-    return result;
+  async getEmployee(id: string): Promise<(Employee & { department?: Department; position?: Position }) | undefined> {
+    const [result] = await db.select({
+      employee: employees,
+      department: departments,
+      position: positions,
+    })
+    .from(employees)
+    .leftJoin(departments, eq(employees.departmentId, departments.id))
+    .leftJoin(positions, eq(employees.positionId, positions.id))
+    .where(eq(employees.id, id));
+    
+    return result ? { 
+      ...result.employee, 
+      department: result.department || undefined, 
+      position: result.position || undefined 
+    } : undefined;
   }
 
   async createEmployee(employee: InsertEmployee): Promise<Employee> {
