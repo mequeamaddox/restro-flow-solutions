@@ -1393,7 +1393,7 @@ export class DatabaseStorage implements IStorage {
         subtotal: data.subtotal ? data.subtotal.toString() : null,
         lineItems: data.lineItems ? JSON.stringify(data.lineItems) : null,
         fees: data.fees ? JSON.stringify(data.fees) : null,
-        status: data.status || 'pending'
+        status: (data.status as any) || 'pending'
       };
       
       const [result] = await db
