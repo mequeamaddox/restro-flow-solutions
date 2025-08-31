@@ -509,7 +509,7 @@ export default function PurchaseOrders() {
                           Inventory Item
                         </label>
                         <Select value={selectedInventoryItem} onValueChange={setSelectedInventoryItem}>
-                          <SelectTrigger className="h-10">
+                          <SelectTrigger className="h-10 bg-white text-gray-900">
                             <SelectValue placeholder="Select item..." />
                           </SelectTrigger>
                           <SelectContent>
@@ -562,7 +562,7 @@ export default function PurchaseOrders() {
                           placeholder="0"
                           value={itemQuantity}
                           onChange={(e) => setItemQuantity(e.target.value)}
-                          className="h-10 text-center"
+                          className="h-10 text-center bg-white text-gray-900"
                           data-testid="input-quantity"
                         />
                         {getSelectedItemInfo()?.unit && (
@@ -586,7 +586,7 @@ export default function PurchaseOrders() {
                             placeholder="0.00"
                             value={itemUnitCost}
                             onChange={(e) => setItemUnitCost(e.target.value)}
-                            className="h-10 pl-8 text-center"
+                            className="h-10 pl-8 text-center bg-white text-gray-900"
                             data-testid="input-unit-cost"
                           />
                         </div>
@@ -597,8 +597,8 @@ export default function PurchaseOrders() {
                         <label className="block text-xs font-medium text-gray-700 mb-1">
                           Line Total
                         </label>
-                        <div className="h-10 px-3 py-2 bg-primary-50 border border-primary-200 rounded-md flex items-center justify-center">
-                          <span className="text-sm font-bold text-primary-700">
+                        <div className="h-10 px-3 py-2 bg-green-50 border border-green-200 rounded-md flex items-center justify-center">
+                          <span className="text-sm font-bold text-green-700">
                             ${getCurrentItemTotal().toFixed(2)}
                           </span>
                         </div>
