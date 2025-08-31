@@ -6,6 +6,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { useAuth } from "@/hooks/useAuth";
 import { LocationProvider } from "@/contexts/LocationContext";
+import { PermissionProvider } from "@/contexts/PermissionContext";
 import NotFound from "@/pages/not-found";
 import Landing from "@/pages/landing";
 import Pricing from "@/pages/pricing";
@@ -50,7 +51,8 @@ function Router() {
 
   return (
     <LocationProvider>
-      <div className="flex h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 relative overflow-hidden">
+      <PermissionProvider>
+        <div className="flex h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 relative overflow-hidden">
         {/* Background Pattern */}
         <div className="absolute inset-0 opacity-5">
           <div className="absolute top-20 left-20 w-32 h-32 rounded-full bg-orange-400 blur-3xl"></div>
@@ -97,6 +99,7 @@ function Router() {
           </div>
         </div>
       </div>
+      </PermissionProvider>
     </LocationProvider>
   );
 }

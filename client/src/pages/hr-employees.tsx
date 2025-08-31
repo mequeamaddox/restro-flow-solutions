@@ -12,6 +12,7 @@ import { Users, UserPlus, Search, Filter, Mail, Phone, MapPin } from "lucide-rea
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
+import { usePermissions, Permission } from "@/contexts/PermissionContext";
 
 interface Employee {
   id: string;
@@ -37,6 +38,7 @@ export default function HREmployees() {
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const { hasPermission, userRole, canManageUser } = usePermissions();
 
   const { data: employees = [], isLoading } = useQuery({
     queryKey: ['/api/hr/employees'],

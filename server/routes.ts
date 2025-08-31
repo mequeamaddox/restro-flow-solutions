@@ -2,6 +2,7 @@ import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { setupAuth, isAuthenticated } from "./replitAuth";
+import { requirePermission, requireAnyPermission, Permission } from "./permissions";
 import multer from "multer";
 import { db } from "./db";
 import { sql, eq, desc } from "drizzle-orm";
@@ -1649,7 +1650,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // HR Employees
-  app.get('/api/hr/employees', isAuthenticated, async (req, res) => {
+  app.get('/api/hr/employees', isAuthenticated, requireAnyPermission([Permission.VIEW_ALL_EMPLOYEES, Permission.VIEW_EMPLOYEE_DETAILS]), async (req, res) => {
     try {
       const employees = await storage.getEmployees();
       res.json(employees);
@@ -1659,7 +1660,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post('/api/hr/employees', isAuthenticated, async (req, res) => {
+  app.post('/api/hr/employees', isAuthenticated, requirePermission(Permission.MANAGE_EMPLOYEES), async (req, res) => {
     try {
       const employee = await storage.createEmployee(req.body);
       res.status(201).json(employee);
@@ -1669,7 +1670,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.put('/api/hr/employees/:id', isAuthenticated, async (req, res) => {
+  app.put('/api/hr/employees/:id', isAuthenticated, requirePermission(Permission.MANAGE_EMPLOYEES), async (req, res) => {
     try {
       const employee = await storage.updateEmployee(req.params.id, req.body);
       res.json(employee);
@@ -1753,7 +1754,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // HR Analytics and Reports
-  app.get('/api/hr/analytics', isAuthenticated, async (req, res) => {
+  app.get('/api/hr/analytics', isAuthenticated, requirePermission(Permission.VIEW_ANALYTICS), async (req, res) => {
     try {
       const analytics = await storage.getHRAnalytics();
       res.json(analytics);

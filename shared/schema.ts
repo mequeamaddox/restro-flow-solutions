@@ -50,7 +50,7 @@ export const users = pgTable("users", {
   firstName: varchar("first_name"),
   lastName: varchar("last_name"),
   profileImageUrl: varchar("profile_image_url"),
-  role: varchar("role").default("staff"), // admin, manager, staff
+  role: varchar("role").default("employee"), // owner, gm, foh_manager, boh_manager, team_lead, employee
   defaultLocationId: uuid("default_location_id").references(() => locations.id),
   // Subscription fields
   subscriptionPlan: subscriptionPlanEnum("subscription_plan").default("free"),
