@@ -798,20 +798,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       console.log('🔄 Importing items to inventory:', items);
 
+      // Get the first location as default
+      const locations = await storage.getLocations();
+      const defaultLocation = locations[0];
+      
+      if (!defaultLocation) {
+        return res.status(400).json({ message: "No locations found. Please create a location first." });
+      }
+
       let importedCount = 0;
       for (const item of items) {
         try {
           await storage.createInventoryItem({
             name: item.name,
+            description: `Imported from invoice`,
             categoryId: null, // Will need to map to actual category
-            quantity: item.quantity,
+            locationId: defaultLocation.id,
+            quantity: item.quantity.toString(),
             unit: item.unit,
-            costPerUnit: item.costPerUnit,
-            reorderLevel: item.reorderLevel,
-            reorderQuantity: item.reorderQuantity,
-            supplier: item.supplier,
-            locationId: null, // Default location
-            createdBy: userId,
+            costPerUnit: item.costPerUnit.toString(),
+            reorderLevel: item.reorderLevel.toString(),
+            vendorId: null, // No vendor mapping yet
           });
           importedCount++;
         } catch (error) {
