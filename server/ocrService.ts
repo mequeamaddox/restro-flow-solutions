@@ -393,31 +393,7 @@ The OCR system works best with image files rather than scanned PDFs.`,
     const line = scoredLine.text;
     const index = scoredLine.index;
     
-    // Strategy 1: Complex invoice format (Inland Foods style)
-    // Pattern: "12051.LB FILLET, FARMED CHILEAN. v 1000 LB. 5 rm 128008 $8.87AB $113.54 SALMON FILLET PBO 34"
-    const complexMatch = line.match(/(\d+)\.?LB\s+([^$]+?)\s+.*?\$(\d+\.\d{2})[^$]*\$(\d+\.\d{2})/i);
-    if (complexMatch) {
-      const unitPrice = parseFloat(complexMatch[3]); // $8.87
-      const totalPrice = parseFloat(complexMatch[4]); // $113.54
-      
-      // Calculate actual delivered quantity (don't round - use precise weight)
-      const actualQuantity = Math.round((totalPrice / unitPrice) * 10) / 10; // Round to 1 decimal: 12.8 lbs
-      
-      const description = complexMatch[2].trim(); // "FILLET, FARMED CHILEAN"
-      
-      console.log(`🎯 Complex pattern extracted: "${description}" - Actual delivered qty: ${actualQuantity} lbs, Unit: $${unitPrice}, Total: $${totalPrice}`);
-      
-      if (OCRService.isValidProduct(description, totalPrice)) {
-        return {
-          description: description.substring(0, 100),
-          quantity: actualQuantity,
-          unitPrice,
-          totalPrice
-        };
-      }
-    }
-    
-    // Strategy 2: Standard line contains both product and price
+    // Strategy 1: Line contains both product and price  
     const singleLineMatch = line.match(/^(.+?)\s+\$?(\d+\.\d{2})\s*$/);
     if (singleLineMatch) {
       const description = singleLineMatch[1].trim();
@@ -433,7 +409,7 @@ The OCR system works best with image files rather than scanned PDFs.`,
       }
     }
     
-    // Strategy 3: Look for quantity before and price after (C&C Seafood style)
+    // Strategy 2: Look for quantity before and price after (C&C Seafood style)
     let quantity = 1;
     let foundPrice = 0;
     
@@ -511,38 +487,8 @@ The OCR system works best with image files rather than scanned PDFs.`,
     );
     if (alreadyExists) return null;
     
-    // Try wider price search
-    for (let offset = 1; offset <= 5; offset++) {
-      if (index + offset < allLines.length) {
-        const checkLine = allLines[index + offset].trim();
-        
-        // Look for any reasonable price
-        const priceMatch = checkLine.match(/(\d{2,6})/);
-        if (priceMatch) {
-          const num = parseInt(priceMatch[1]);
-          let price;
-          
-          // Smart price conversion
-          if (num >= 100 && num <= 99999) {
-            price = num / 100; // Convert "1199" to 11.99
-          } else if (num >= 1 && num <= 99) {
-            price = num; // Keep small numbers as is
-          } else {
-            continue;
-          }
-          
-          if (price > 0.50 && price < 500 && OCRService.isValidProduct(line, price)) {
-            return {
-              description: line.substring(0, 100),
-              quantity: 1,
-              unitPrice: price,
-              totalPrice: price
-            };
-          }
-        }
-      }
-    }
-    
+    // DISABLED: Fallback extraction picks up too much garbage (addresses, phone numbers, etc.)
+    // For now, only use high-confidence extraction to prevent false positives
     return null;
   }
 
