@@ -39,6 +39,8 @@ export default function Recipes() {
   const [isDetailsDialogOpen, setIsDetailsDialogOpen] = useState(false);
   const [ingredients, setIngredients] = useState([{ inventoryItemId: '', quantity: 0, unit: '' }]);
   const [targetFoodCost, setTargetFoodCost] = useState(30); // 30% default food cost
+  const [previewContent, setPreviewContent] = useState<string>('');
+  const [isPreviewDialogOpen, setIsPreviewDialogOpen] = useState(false);
   const { toast } = useToast();
   const { currentLocation } = useLocation();
   const queryClient = useQueryClient();
@@ -228,6 +230,10 @@ Generated on: ${new Date().toLocaleDateString()} ${new Date().toLocaleTimeString
     document.body.removeChild(a);
     setTimeout(() => window.URL.revokeObjectURL(url), 100);
 
+    // Also show preview for development testing
+    setPreviewContent(buildSheetContent);
+    setIsPreviewDialogOpen(true);
+
     toast({
       title: "Build Sheet Generated",
       description: `Downloaded ${recipe.name} build sheet for kitchen use`,
@@ -295,6 +301,10 @@ Generated on: ${new Date().toLocaleDateString()} ${new Date().toLocaleTimeString
     
     document.body.removeChild(a);
     setTimeout(() => window.URL.revokeObjectURL(url), 100);
+
+    // Also show preview for development testing
+    setPreviewContent(costSheetContent);
+    setIsPreviewDialogOpen(true);
 
     toast({
       title: "Cost Sheet Generated",
@@ -1119,6 +1129,28 @@ Generated on: ${new Date().toLocaleDateString()} ${new Date().toLocaleTimeString
               </Button>
             </div>
           )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Sheet Preview Dialog for Development Testing */}
+      <Dialog open={isPreviewDialogOpen} onOpenChange={setIsPreviewDialogOpen}>
+        <DialogContent className="sm:max-w-[800px] max-h-[90vh]">
+          <DialogHeader>
+            <DialogTitle>Recipe Sheet Preview</DialogTitle>
+            <DialogDescription>
+              This is how the sheet will look when downloaded or printed
+            </DialogDescription>
+          </DialogHeader>
+          <div className="mt-4 max-h-[70vh] overflow-y-auto">
+            <pre className="whitespace-pre-wrap text-sm font-mono bg-gray-50 p-4 rounded border">
+              {previewContent}
+            </pre>
+          </div>
+          <div className="flex justify-end pt-4 border-t">
+            <Button onClick={() => setIsPreviewDialogOpen(false)}>
+              Close Preview
+            </Button>
+          </div>
         </DialogContent>
       </Dialog>
     </div>
