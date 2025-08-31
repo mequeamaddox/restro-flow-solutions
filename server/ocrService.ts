@@ -390,7 +390,24 @@ The OCR system works best with image files rather than scanned PDFs.`,
       }
     }
     
-    // Strategy 2: Look for price in nearby lines
+    // Strategy 2: Look for quantity before and price after (C&C Seafood style)
+    let quantity = 1;
+    let foundPrice = 0;
+    
+    // Check lines before for quantity (1-3 lines back)
+    for (let qtyOffset = -3; qtyOffset <= -1; qtyOffset++) {
+      if (index + qtyOffset >= 0) {
+        const checkLine = allLines[index + qtyOffset].trim();
+        const qtyMatch = checkLine.match(/^(\d{1,4})$/);
+        if (qtyMatch && parseInt(qtyMatch[1]) >= 1 && parseInt(qtyMatch[1]) <= 9999) {
+          quantity = parseInt(qtyMatch[1]);
+          console.log(`🔢 Found quantity ${quantity} for "${line}"`);
+          break;
+        }
+      }
+    }
+    
+    // Look for price in nearby lines (1-3 lines after)
     for (let offset = 1; offset <= 3; offset++) {
       if (index + offset < allLines.length) {
         const nextLine = allLines[index + offset].trim();
@@ -401,18 +418,40 @@ The OCR system works best with image files rather than scanned PDFs.`,
         const integerMatch = nextLine.match(/^(\d{3,6})$/) && parseInt(nextLine) > 50 && parseInt(nextLine) < 100000;
         
         if (decimalMatch || integerMatch) {
-          const price = decimalMatch ? parseFloat(decimalMatch[1]) : parseInt(nextLine) / 100;
-          
-          if (OCRService.isValidProduct(line, price)) {
-            return {
-              description: line.substring(0, 100),
-              quantity: 1,
-              unitPrice: price,
-              totalPrice: price
-            };
-          }
+          foundPrice = decimalMatch ? parseFloat(decimalMatch[1]) : parseInt(nextLine) / 100;
+          console.log(`💰 Found price $${foundPrice} for "${line}"`);
+          break;
         }
       }
+    }
+    
+    if (foundPrice > 0 && OCRService.isValidProduct(line, foundPrice)) {
+      // Calculate unit price if we have quantity > 1
+      let unitPrice = foundPrice;
+      let totalPrice = foundPrice;
+      
+      if (quantity > 1) {
+        // Check if foundPrice might be total price or unit price
+        const possibleUnitPrice = foundPrice / quantity;
+        if (possibleUnitPrice >= 0.50 && possibleUnitPrice <= 200) {
+          // Price seems reasonable as total, calculate unit price
+          unitPrice = Math.round(possibleUnitPrice * 100) / 100;
+          totalPrice = foundPrice;
+        } else {
+          // Price seems like unit price, calculate total
+          unitPrice = foundPrice;
+          totalPrice = Math.round(quantity * foundPrice * 100) / 100;
+        }
+      }
+      
+      console.log(`📊 Final calculation: "${line}" - Qty: ${quantity}, Unit: $${unitPrice}, Total: $${totalPrice}`);
+      
+      return {
+        description: line.substring(0, 100),
+        quantity,
+        unitPrice,
+        totalPrice
+      };
     }
     
     return null;
@@ -466,17 +505,22 @@ The OCR system works best with image files rather than scanned PDFs.`,
 
   // Helper function to validate if a line represents a valid product
   private static isValidProduct(description: string, totalPrice: number): boolean {
-    // Filter out obvious non-products
+    // Filter out obvious non-products - enhanced list
     const excludePatterns = [
       /^(MEAT|DAIRY|PRODUCE|SUBTOTAL|TOTAL|TAX|SAVINGS?|CHANGE|CASH|BALANCE|TICKET|STORE|REGISTER|CASHIER|CUSTOMER|SERVICE|DEPARTMENT)$/i,
       /^(THANK|PLEASE|VISIT|WEBSITE|PHONE|EMAIL|ADDRESS|CITY|STATE|ZIP|DATE|TIME|RECEIPT|TRANSACTION)$/i,
       /^(CREDIT|DEBIT|PAYMENT|REFUND|DISCOUNT|COUPON|LOYALTY|REWARDS|POINTS)$/i,
+      /^(NAME|PRICE|AMOUNT|QUANTITY|DESCRIPTION|ORDER|SOLD|ACCT|RETD|PAID|CASH|COD|CHARGE)$/i, // Invoice headers
+      /^(CUSTOMER|VENDOR|INVOICE|NUMBER|DELIVERY|SHIPPING|BILLING|CONTACT)$/i, // More headers
       /^\d+$/, // Just numbers
       /^[A-Z]{1,3}$/, // Short codes like "A", "B", "TX"
+      /^(A-\d+|T-\d+|\d+-\d+)$/, // Reference codes like "A-5805", "T-46320"
       /saving/i,
       /discount/i,
       /promotion/i,
-      /special/i
+      /special/i,
+      /slip/i,
+      /reference/i
     ];
     
     // Check if description matches any exclude pattern
@@ -495,6 +539,12 @@ The OCR system works best with image files rather than scanned PDFs.`,
     
     if (totalPrice <= 0 || totalPrice >= 1000) {
       console.log(`❌ Skipped "${description}" - invalid price: $${totalPrice}`);
+      return false;
+    }
+    
+    // Must contain at least one letter (not just numbers/symbols)
+    if (!/[a-zA-Z]/.test(description)) {
+      console.log(`❌ Skipped "${description}" - no letters found`);
       return false;
     }
     
