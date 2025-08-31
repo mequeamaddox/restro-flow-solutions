@@ -177,6 +177,7 @@ export default function Recipes() {
   });
 
   const generateBuildSheet = (recipe: any) => {
+    console.log('Generating build sheet for recipe:', recipe);
     const ingredients = recipe.ingredients || [];
     let totalCost = 0;
     
@@ -194,9 +195,11 @@ ${recipe.sellingPrice ? `Selling Price: $${recipe.sellingPrice}` : ''}
 
 INGREDIENTS:
 ${ingredients.map((ing: any, index: number) => {
-  const cost = ing.inventoryItem?.costPerUnit ? (ing.quantity * parseFloat(ing.inventoryItem.costPerUnit)) : 0;
+  // Find the inventory item from the inventoryItems array
+  const inventoryItem = inventoryItems.find(item => item.id === ing.inventoryItemId);
+  const cost = inventoryItem?.costPerUnit ? (ing.quantity * parseFloat(inventoryItem.costPerUnit)) : 0;
   totalCost += cost;
-  return `${index + 1}. ${ing.inventoryItem?.name || 'Unknown Item'} - ${ing.quantity} ${ing.unit} ($${cost.toFixed(2)})`;
+  return `${index + 1}. ${inventoryItem?.name || 'Unknown Item'} - ${ing.quantity} ${ing.unit} ($${cost.toFixed(2)})`;
 }).join('\n')}
 
 Total Recipe Cost: $${totalCost.toFixed(2)}
@@ -219,6 +222,11 @@ Generated on: ${new Date().toLocaleDateString()} ${new Date().toLocaleTimeString
     a.click();
     document.body.removeChild(a);
     window.URL.revokeObjectURL(url);
+
+    toast({
+      title: "Build Sheet Generated",
+      description: `Downloaded ${recipe.name} build sheet successfully`,
+    });
   };
 
   const onSubmit = (data: RecipeFormData) => {
@@ -852,18 +860,37 @@ Generated on: ${new Date().toLocaleDateString()} ${new Date().toLocaleTimeString
                         maxNumberOfFiles={1}
                         maxFileSize={10485760} // 10MB
                         onGetUploadParameters={async () => {
-                          const response = await apiRequest('POST', '/api/objects/upload');
-                          const data = await response.json();
-                          return {
-                            method: 'PUT' as const,
-                            url: data.uploadURL,
-                          };
+                          try {
+                            console.log('Getting upload parameters...');
+                            const response = await apiRequest('POST', '/api/objects/upload');
+                            const data = await response.json();
+                            console.log('Upload parameters received:', data);
+                            return {
+                              method: 'PUT' as const,
+                              url: data.uploadURL,
+                            };
+                          } catch (error) {
+                            console.error('Error getting upload parameters:', error);
+                            toast({
+                              title: "Upload Error",
+                              description: "Failed to get upload parameters",
+                              variant: "destructive",
+                            });
+                            throw error;
+                          }
                         }}
                         onComplete={(result) => {
+                          console.log('Upload completed:', result);
                           if (result.successful?.[0]?.uploadURL) {
                             uploadPhotoMutation.mutate({
                               recipeId: recipe.id,
                               imageUrl: result.successful[0].uploadURL,
+                            });
+                          } else {
+                            toast({
+                              title: "Upload Error",
+                              description: "Photo upload failed",
+                              variant: "destructive",
                             });
                           }
                         }}
