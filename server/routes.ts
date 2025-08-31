@@ -915,6 +915,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const { id } = req.params;
       
+      // Get current order to check status change
+      const currentOrder = await storage.getPurchaseOrder(id);
+      if (!currentOrder) {
+        return res.status(404).json({ message: "Purchase order not found" });
+      }
+      
       // Convert string dates to Date objects and prepare data
       const orderData = {
         vendorId: req.body.vendorId,
@@ -925,7 +931,46 @@ export async function registerRoutes(app: Express): Promise<Server> {
         notes: req.body.notes || null,
       };
       
+      // Update the purchase order
       const order = await storage.updatePurchaseOrder(id, orderData);
+      
+      // If status changed to "delivered", automatically receive inventory
+      if (req.body.status === 'delivered' && currentOrder.status !== 'delivered') {
+        console.log(`Purchase order ${id} marked as delivered - processing inventory receiving...`);
+        
+        // Get purchase order items and update inventory
+        const orderWithItems = await storage.getPurchaseOrder(id);
+        if (orderWithItems && orderWithItems.items.length > 0) {
+          for (const item of orderWithItems.items) {
+            try {
+              // Create inventory transaction for receiving
+              await storage.createInventoryTransaction({
+                inventoryItemId: item.inventoryItemId,
+                locationId: currentOrder.locationId,
+                type: 'in',
+                quantity: item.quantity.toString(),
+                reference: `PO-${currentOrder.orderNumber}`,
+                notes: `Received from purchase order ${currentOrder.orderNumber}`,
+                createdBy: (req.user as any)?.claims?.sub
+              });
+              
+              // Update inventory quantity
+              const inventoryItem = await storage.getInventoryItem(item.inventoryItemId);
+              if (inventoryItem) {
+                const newQuantity = parseFloat(inventoryItem.quantity) + parseFloat(item.quantity.toString());
+                await storage.updateInventoryItem(item.inventoryItemId, {
+                  quantity: newQuantity.toString()
+                });
+                console.log(`Updated inventory ${inventoryItem.name}: +${item.quantity} (new total: ${newQuantity})`);
+              }
+            } catch (error) {
+              console.error(`Error receiving item ${item.inventoryItemId}:`, error);
+            }
+          }
+          console.log(`Successfully received ${orderWithItems.items.length} items into inventory`);
+        }
+      }
+      
       res.json(order);
     } catch (error) {
       console.error("Error updating purchase order:", error);
@@ -941,6 +986,66 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error deleting purchase order:", error);
       res.status(400).json({ message: "Failed to delete purchase order" });
+    }
+  });
+
+  // Create purchase order from low stock items
+  app.post('/api/purchase-orders/from-low-stock', isAuthenticated, async (req, res) => {
+    try {
+      const { vendorId, locationId, lowStockItems } = req.body;
+      
+      if (!vendorId || !locationId || !lowStockItems || lowStockItems.length === 0) {
+        return res.status(400).json({ message: "Missing required fields: vendorId, locationId, or lowStockItems" });
+      }
+      
+      // Generate order number
+      const orderNumber = `PO-${Date.now()}`;
+      
+      // Calculate total amount from items
+      let totalAmount = 0;
+      const orderItems = lowStockItems.map((item: any) => {
+        const itemTotal = parseFloat(item.unitCost || item.cost || 0) * parseFloat(item.quantity || 1);
+        totalAmount += itemTotal;
+        return {
+          inventoryItemId: item.id,
+          quantity: item.quantity || (parseFloat(item.reorderLevel) * 2).toString(), // Order 2x reorder level if no quantity specified
+          unitCost: item.unitCost || item.cost || "0",
+          totalCost: itemTotal.toString()
+        };
+      });
+      
+      // Create purchase order
+      const orderData = {
+        orderNumber,
+        vendorId,
+        locationId,
+        status: "draft",
+        orderDate: new Date(),
+        expectedDeliveryDate: null,
+        totalAmount: totalAmount.toString(),
+        notes: `Auto-generated from ${lowStockItems.length} low stock items`,
+        createdBy: (req.user as any)?.claims?.sub,
+      };
+      
+      const order = await storage.createPurchaseOrder(orderData);
+      
+      // Add items to purchase order
+      for (const itemData of orderItems) {
+        await storage.addPurchaseOrderItem({
+          ...itemData,
+          purchaseOrderId: order.id
+        });
+      }
+      
+      console.log(`Created purchase order ${orderNumber} for ${orderItems.length} low stock items`);
+      res.status(201).json({
+        ...order,
+        items: orderItems,
+        message: `Purchase order created with ${orderItems.length} items`
+      });
+    } catch (error) {
+      console.error("Error creating purchase order from low stock:", error);
+      res.status(400).json({ message: "Failed to create purchase order from low stock items" });
     }
   });
 

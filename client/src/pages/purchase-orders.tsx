@@ -9,7 +9,25 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Textarea } from "@/components/ui/textarea";
-import { Plus, Search, FileText, Calendar, DollarSign, Building2, Eye, Edit, Trash2, MoreVertical } from "lucide-react";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { 
+  Plus, 
+  Search, 
+  FileText, 
+  Calendar, 
+  DollarSign, 
+  Building2, 
+  Eye, 
+  Edit, 
+  Trash2, 
+  MoreVertical,
+  Package,
+  ShoppingCart,
+  AlertTriangle,
+  CheckCircle,
+  Clock,
+  X
+} from "lucide-react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { insertPurchaseOrderSchema } from "@shared/schema";
@@ -20,17 +38,24 @@ import { apiRequest } from "@/lib/queryClient";
 import { format } from "date-fns";
 import { useLocation } from "@/contexts/LocationContext";
 
-// Create a form-specific schema for purchase orders
+// Create a form-specific schema for purchase orders with line items
 const purchaseOrderFormSchema = z.object({
   vendorId: z.string().min(1, "Vendor is required"),
   status: z.enum(["draft", "sent", "confirmed", "delivered", "cancelled"]).default("draft"),
   orderDate: z.string().min(1, "Order date is required"),
   expectedDeliveryDate: z.string().optional(),
-  totalAmount: z.string().min(1, "Total amount is required"),
   notes: z.string().optional(),
 });
 
 type PurchaseOrderFormData = z.infer<typeof purchaseOrderFormSchema>;
+
+interface LineItem {
+  inventoryItemId: string;
+  inventoryItemName: string;
+  quantity: number;
+  unitCost: number;
+  totalCost: number;
+}
 
 export default function PurchaseOrders() {
   const [searchTerm, setSearchTerm] = useState("");
@@ -39,6 +64,10 @@ export default function PurchaseOrders() {
   const [selectedOrder, setSelectedOrder] = useState<any>(null);
   const [isDetailsDialogOpen, setIsDetailsDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+  const [lineItems, setLineItems] = useState<LineItem[]>([]);
+  const [selectedInventoryItem, setSelectedInventoryItem] = useState("");
+  const [itemQuantity, setItemQuantity] = useState("");
+  const [itemUnitCost, setItemUnitCost] = useState("");
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const { currentLocation } = useLocation();
@@ -65,6 +94,28 @@ export default function PurchaseOrders() {
     enabled: !!currentLocation,
   });
 
+  const { data: inventoryItems = [] } = useQuery({
+    queryKey: ['/api/inventory', currentLocation?.id],
+    queryFn: async () => {
+      const params = currentLocation?.id ? `?locationId=${currentLocation.id}` : '';
+      const response = await fetch(`/api/inventory${params}`);
+      if (!response.ok) return [];
+      return response.json();
+    },
+    enabled: !!currentLocation,
+  });
+
+  const { data: lowStockItems = [] } = useQuery({
+    queryKey: ['/api/inventory/low-stock', currentLocation?.id],
+    queryFn: async () => {
+      const params = currentLocation?.id ? `?locationId=${currentLocation.id}` : '';
+      const response = await fetch(`/api/inventory/low-stock${params}`);
+      if (!response.ok) return [];
+      return response.json();
+    },
+    enabled: !!currentLocation,
+  });
+
   const form = useForm<PurchaseOrderFormData>({
     resolver: zodResolver(purchaseOrderFormSchema),
     defaultValues: {
@@ -72,31 +123,97 @@ export default function PurchaseOrders() {
       orderDate: new Date().toISOString().split('T')[0],
       expectedDeliveryDate: "",
       status: "draft",
-      totalAmount: "0",
       notes: "",
     },
   });
 
+  // Helper functions for line item management
+  const addLineItem = () => {
+    if (!selectedInventoryItem || !itemQuantity || !itemUnitCost) {
+      toast({
+        title: "Missing Information",
+        description: "Please select an item and enter quantity and unit cost",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    const inventoryItem = inventoryItems.find(item => item.id === selectedInventoryItem);
+    if (!inventoryItem) return;
+
+    const quantity = parseFloat(itemQuantity);
+    const unitCost = parseFloat(itemUnitCost);
+    const totalCost = quantity * unitCost;
+
+    const newItem: LineItem = {
+      inventoryItemId: selectedInventoryItem,
+      inventoryItemName: inventoryItem.name,
+      quantity,
+      unitCost,
+      totalCost
+    };
+
+    setLineItems(prev => [...prev, newItem]);
+    setSelectedInventoryItem("");
+    setItemQuantity("");
+    setItemUnitCost("");
+  };
+
+  const removeLineItem = (index: number) => {
+    setLineItems(prev => prev.filter((_, i) => i !== index));
+  };
+
+  const getTotalAmount = () => {
+    return lineItems.reduce((sum, item) => sum + item.totalCost, 0);
+  };
+
+  const clearForm = () => {
+    form.reset();
+    setLineItems([]);
+    setSelectedInventoryItem("");
+    setItemQuantity("");
+    setItemUnitCost("");
+  };
+
   const createPOMutation = useMutation({
     mutationFn: async (data: PurchaseOrderFormData) => {
+      if (lineItems.length === 0) {
+        throw new Error("Please add at least one line item to the purchase order");
+      }
+
       const poData = {
         vendorId: data.vendorId,
         locationId: currentLocation?.id,
         status: data.status,
         orderDate: data.orderDate,
         expectedDeliveryDate: data.expectedDeliveryDate || null,
-        totalAmount: data.totalAmount,
+        totalAmount: getTotalAmount().toString(),
         notes: data.notes || null,
       };
-      await apiRequest('POST', '/api/purchase-orders', poData);
+      
+      // Create purchase order first
+      const orderResponse = await apiRequest('POST', '/api/purchase-orders', poData);
+      const order = await orderResponse.json();
+      
+      // Add line items
+      for (const item of lineItems) {
+        await apiRequest('POST', `/api/purchase-orders/${order.id}/items`, {
+          inventoryItemId: item.inventoryItemId,
+          quantity: item.quantity.toString(),
+          unitCost: item.unitCost.toString(),
+          totalCost: item.totalCost.toString()
+        });
+      }
+      
+      return order;
     },
-    onSuccess: () => {
+    onSuccess: (order) => {
       queryClient.invalidateQueries({ queryKey: ['/api/purchase-orders'] });
       setIsCreateDialogOpen(false);
-      form.reset();
+      clearForm();
       toast({
         title: "Success",
-        description: "Purchase order created successfully",
+        description: `Purchase order ${order.orderNumber} created with ${lineItems.length} items`,
       });
     },
     onError: (error) => {
@@ -113,7 +230,7 @@ export default function PurchaseOrders() {
       }
       toast({
         title: "Error",
-        description: "Failed to create purchase order",
+        description: error.message || "Failed to create purchase order",
         variant: "destructive",
       });
     },
@@ -197,14 +314,56 @@ export default function PurchaseOrders() {
     setIsEditDialogOpen(true);
   };
 
+  // Mutation for creating PO from low stock items
+  const createFromLowStockMutation = useMutation({
+    mutationFn: async (data: { vendorId: string; lowStockItems: any[] }) => {
+      const response = await apiRequest('POST', '/api/purchase-orders/from-low-stock', {
+        vendorId: data.vendorId,
+        locationId: currentLocation?.id,
+        lowStockItems: data.lowStockItems
+      });
+      return response.json();
+    },
+    onSuccess: (order) => {
+      queryClient.invalidateQueries({ queryKey: ['/api/purchase-orders'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/inventory/low-stock'] });
+      toast({
+        title: "Success",
+        description: `Purchase order ${order.orderNumber} created from ${order.items?.length || 0} low stock items`,
+      });
+    },
+    onError: (error) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to create purchase order from low stock",
+        variant: "destructive",
+      });
+    },
+  });
+
   const handleDeleteOrder = (order: any) => {
-    // TODO: Implement delete functionality
-    toast({
-      title: "Delete Order",
-      description: "Delete functionality coming soon",
-      variant: "destructive",
-    });
+    if (confirm(`Are you sure you want to delete purchase order ${order.orderNumber}?`)) {
+      deleteOrderMutation.mutate(order.id);
+    }
   };
+
+  const deleteOrderMutation = useMutation({
+    mutationFn: (id: string) => apiRequest('DELETE', `/api/purchase-orders/${id}`),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/purchase-orders'] });
+      toast({
+        title: "Success",
+        description: "Purchase order deleted successfully",
+      });
+    },
+    onError: () => {
+      toast({
+        title: "Error",
+        description: "Failed to delete purchase order",
+        variant: "destructive",
+      });
+    },
+  });
 
   const getStatusColor = (status: string) => {
     switch (status) {
