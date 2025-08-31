@@ -24,6 +24,7 @@ import AutomatedOrdering from "@/pages/automated-ordering";
 import Forecasting from "@/pages/forecasting";
 import HRDashboard from "@/pages/hr-dashboard";
 import HREmployees from "@/pages/hr-employees";
+import HRAnalytics from "@/pages/hr-analytics";
 import HRTimeClock from "@/pages/hr-time-clock";
 import HRTasks from "@/pages/hr-tasks";
 import HRMessaging from "@/pages/hr-messaging";
@@ -83,6 +84,7 @@ function Router() {
                 {/* HR Employee Management Add-on Routes */}
                 <Route path="/hr/dashboard" component={HRDashboard} />
                 <Route path="/hr/employees" component={HREmployees} />
+                <Route path="/hr/analytics" component={HRAnalytics} />
                 <Route path="/hr/time-clock" component={HRTimeClock} />
                 <Route path="/hr/tasks" component={HRTasks} />
                 <Route path="/hr/messaging" component={HRMessaging} />
