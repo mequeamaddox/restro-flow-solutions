@@ -494,22 +494,30 @@ The OCR system works best with image files rather than scanned PDFs.`,
 
   // Helper function to validate if a line represents a valid product
   private static isValidProduct(description: string, totalPrice: number): boolean {
-    // Filter out obvious non-products - enhanced list
+    // Filter out obvious non-products - MUCH MORE STRICT
     const excludePatterns = [
       /^(MEAT|DAIRY|PRODUCE|SUBTOTAL|TOTAL|TAX|SAVINGS?|CHANGE|CASH|BALANCE|TICKET|STORE|REGISTER|CASHIER|CUSTOMER|SERVICE|DEPARTMENT)$/i,
       /^(THANK|PLEASE|VISIT|WEBSITE|PHONE|EMAIL|ADDRESS|CITY|STATE|ZIP|DATE|TIME|RECEIPT|TRANSACTION)$/i,
       /^(CREDIT|DEBIT|PAYMENT|REFUND|DISCOUNT|COUPON|LOYALTY|REWARDS|POINTS)$/i,
-      /^(NAME|PRICE|AMOUNT|QUANTITY|DESCRIPTION|ORDER|SOLD|ACCT|RETD|PAID|CASH|COD|CHARGE)$/i, // Invoice headers
-      /^(CUSTOMER|VENDOR|INVOICE|NUMBER|DELIVERY|SHIPPING|BILLING|CONTACT)$/i, // More headers
+      /^(NAME|PRICE|AMOUNT|QUANTITY|DESCRIPTION|ORDER|SOLD|ACCT|RETD|PAID|CASH|COD|CHARGE)$/i,
+      /^(CUSTOMER|VENDOR|INVOICE|NUMBER|DELIVERY|SHIPPING|BILLING|CONTACT)$/i,
+      /^(EXT|EXTENDED|UNIT|EACH|PER|LB|OZ|KG|NOTES|PRODUCT|PRODUCTS|FARMED|FRESH|FROZEN)$/i, // Single words
+      /^(DELIVERY|CHARGE|FEE|SHIPPING|HANDLING|FREIGHT)$/i, // Fees/charges
       /^\d+$/, // Just numbers
-      /^[A-Z]{1,3}$/, // Short codes like "A", "B", "TX"
-      /^(A-\d+|T-\d+|\d+-\d+)$/, // Reference codes like "A-5805", "T-46320"
+      /^[A-Z]{1,3}$/, // Short codes
+      /^(A-\d+|T-\d+|\d+-\d+)$/, // Reference codes
+      /^\$\d+\.\d{2}$/, // Just prices like "$86.77"
+      /^[\d\.\s]+(LB|OZ|KG|EA)$/i, // Just weights like "12.00 LB"
       /saving/i,
       /discount/i,
       /promotion/i,
       /special/i,
       /slip/i,
-      /reference/i
+      /reference/i,
+      /charge/i,
+      /delivery/i,
+      /from:/i,
+      /notes:/i
     ];
     
     // Check if description matches any exclude pattern
@@ -520,20 +528,30 @@ The OCR system works best with image files rather than scanned PDFs.`,
       }
     }
     
-    // Basic validation
-    if (description.length < 3 || description.length > 100) {
+    // Basic validation - MORE STRICT
+    if (description.length < 5 || description.length > 100) { // Minimum 5 chars now
       console.log(`❌ Skipped "${description}" - invalid length`);
       return false;
     }
     
-    if (totalPrice <= 0 || totalPrice >= 1000) {
+    if (totalPrice <= 0 || totalPrice >= 500) { // Lower max price
       console.log(`❌ Skipped "${description}" - invalid price: $${totalPrice}`);
       return false;
     }
     
-    // Must contain at least one letter (not just numbers/symbols)
+    // Must contain at least one letter
     if (!/[a-zA-Z]/.test(description)) {
       console.log(`❌ Skipped "${description}" - no letters found`);
+      return false;
+    }
+    
+    // Must look like an actual product (not just random words)
+    // Require at least 2 words OR contain clear food indicators
+    const wordCount = description.trim().split(/\s+/).length;
+    const hasFoodIndicators = /(salmon|fish|beef|pork|chicken|cheese|bread|oil|sauce|fillet|shrimp|crab|clam)/i.test(description);
+    
+    if (wordCount < 2 && !hasFoodIndicators) {
+      console.log(`❌ Skipped "${description}" - too short or not food-related`);
       return false;
     }
     
