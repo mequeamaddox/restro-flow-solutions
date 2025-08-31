@@ -397,25 +397,20 @@ The OCR system works best with image files rather than scanned PDFs.`,
     // Pattern: "12051.LB FILLET, FARMED CHILEAN. v 1000 LB. 5 rm 128008 $8.87AB $113.54 SALMON FILLET PBO 34"
     const complexMatch = line.match(/(\d+)\.?LB\s+([^$]+?)\s+.*?\$(\d+\.\d{2})[^$]*\$(\d+\.\d{2})/i);
     if (complexMatch) {
-      // Calculate reasonable quantity based on unit and total price
       const unitPrice = parseFloat(complexMatch[3]); // $8.87
       const totalPrice = parseFloat(complexMatch[4]); // $113.54
-      const calculatedQty = Math.round(totalPrice / unitPrice); // 113.54 / 8.87 ≈ 13, but likely 10
       
-      // For restaurant invoices, round to reasonable quantities
-      let quantity = calculatedQty;
-      if (calculatedQty >= 9 && calculatedQty <= 11) quantity = 10; // Round 9-11 to 10
-      else if (calculatedQty >= 4 && calculatedQty <= 6) quantity = 5; // Round 4-6 to 5
-      else if (calculatedQty >= 19 && calculatedQty <= 21) quantity = 20; // Round 19-21 to 20
+      // Calculate actual delivered quantity (don't round - use precise weight)
+      const actualQuantity = Math.round((totalPrice / unitPrice) * 10) / 10; // Round to 1 decimal: 12.8 lbs
       
       const description = complexMatch[2].trim(); // "FILLET, FARMED CHILEAN"
       
-      console.log(`🎯 Complex pattern extracted: "${description}" - Calculated Qty: ${calculatedQty} → ${quantity}, Unit: $${unitPrice}, Total: $${totalPrice}`);
+      console.log(`🎯 Complex pattern extracted: "${description}" - Actual delivered qty: ${actualQuantity} lbs, Unit: $${unitPrice}, Total: $${totalPrice}`);
       
       if (OCRService.isValidProduct(description, totalPrice)) {
         return {
           description: description.substring(0, 100),
-          quantity,
+          quantity: actualQuantity,
           unitPrice,
           totalPrice
         };
