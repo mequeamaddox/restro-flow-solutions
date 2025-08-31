@@ -68,7 +68,9 @@ export function InvoiceReviewDialog({ isOpen, onClose, invoiceData }: InvoiceRev
       return await apiRequest('PUT', `/api/invoices/${invoiceData?.id}/approve`, data);
     },
     onSuccess: () => {
+      // Invalidate all invoice queries regardless of status filter
       queryClient.invalidateQueries({ queryKey: ['/api/invoices'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/invoices/stats'] });
       toast({
         title: "Success",
         description: "Invoice approved and saved successfully",
