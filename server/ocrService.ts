@@ -318,6 +318,152 @@ The OCR system works best with image files rather than scanned PDFs.`,
     }
   }
   
+  // Line scoring system following ChatGPT's recommendations
+  private static calculateLineScore(line: string, index: number, allLines: string[]): number {
+    let score = 0;
+    
+    // 1. Has price pattern (decimal or integer) - strong indicator
+    const hasDecimalPrice = /\$?(\d+\.\d{2})/.test(line);
+    const hasIntegerPrice = /^\d{3,6}$/.test(line) && parseInt(line) > 50 && parseInt(line) < 100000;
+    if (hasDecimalPrice || hasIntegerPrice) score += 1.0;
+    
+    // 2. Food-related keywords - strong indicator for restaurants
+    const foodKeywords = ['beef', 'pork', 'chicken', 'fish', 'salmon', 'shrimp', 'clam', 'crab', 'crawfish', 'cheese', 'milk', 'bread', 'rice', 'oil', 'sauce', 'spice'];
+    const hasFoodKeyword = foodKeywords.some(keyword => line.toLowerCase().includes(keyword));
+    if (hasFoodKeyword) score += 0.8;
+    
+    // 3. Near other potential item lines - clustering indicator
+    const nearbyProductLines = OCRService.countNearbyProductLines(index, allLines);
+    if (nearbyProductLines >= 2) score += 0.5;
+    
+    // 4. Not blacklisted headers/footers - negative indicator
+    const blacklist = ['subtotal', 'total', 'tax', 'invoice', 'thank', 'customer', 'address', 'phone', 'email', 'date', 'order', 'quantity', 'description', 'price', 'amount'];
+    const isBlacklisted = blacklist.some(word => line.toLowerCase().includes(word));
+    if (isBlacklisted) score -= 1.5;
+    
+    // 5. Looks like product description - positive indicator
+    const looksLikeProduct = /^[A-Za-z][A-Za-z\s&\/\-0-9',\.]{3,50}$/.test(line) && line.length >= 5;
+    if (looksLikeProduct) score += 0.4;
+    
+    // 6. Position-based scoring - items usually in middle section
+    const middleSection = index > allLines.length * 0.2 && index < allLines.length * 0.8;
+    if (middleSection) score += 0.2;
+    
+    return Math.max(0, score); // Don't allow negative scores
+  }
+  
+  private static countNearbyProductLines(index: number, allLines: string[]): number {
+    let count = 0;
+    const checkRange = 3; // Check 3 lines before and after
+    
+    for (let i = Math.max(0, index - checkRange); i <= Math.min(allLines.length - 1, index + checkRange); i++) {
+      if (i === index) continue;
+      const line = allLines[i].trim();
+      
+      // Count lines that look like products
+      if (/^[A-Za-z][A-Za-z\s&\/\-0-9]{3,}/.test(line) && line.length >= 5) {
+        count++;
+      }
+    }
+    
+    return count;
+  }
+  
+  private static extractLineItemFromScoredLine(scoredLine: any, allLines: string[]): any | null {
+    // Try to extract from high-confidence lines using multiple strategies
+    const line = scoredLine.text;
+    const index = scoredLine.index;
+    
+    // Strategy 1: Line contains both product and price
+    const singleLineMatch = line.match(/^(.+?)\s+\$?(\d+\.\d{2})\s*$/);
+    if (singleLineMatch) {
+      const description = singleLineMatch[1].trim();
+      const price = parseFloat(singleLineMatch[2]);
+      
+      if (OCRService.isValidProduct(description, price)) {
+        return {
+          description: description.substring(0, 100),
+          quantity: 1,
+          unitPrice: price,
+          totalPrice: price
+        };
+      }
+    }
+    
+    // Strategy 2: Look for price in nearby lines
+    for (let offset = 1; offset <= 3; offset++) {
+      if (index + offset < allLines.length) {
+        const nextLine = allLines[index + offset].trim();
+        
+        // Check for decimal price
+        const decimalMatch = nextLine.match(/^\$?(\d+\.\d{2})/);
+        // Check for integer price (like "1199" = $11.99)
+        const integerMatch = nextLine.match(/^(\d{3,6})$/) && parseInt(nextLine) > 50 && parseInt(nextLine) < 100000;
+        
+        if (decimalMatch || integerMatch) {
+          const price = decimalMatch ? parseFloat(decimalMatch[1]) : parseInt(nextLine) / 100;
+          
+          if (OCRService.isValidProduct(line, price)) {
+            return {
+              description: line.substring(0, 100),
+              quantity: 1,
+              unitPrice: price,
+              totalPrice: price
+            };
+          }
+        }
+      }
+    }
+    
+    return null;
+  }
+  
+  private static extractLineItemWithFallbacks(scoredLine: any, allLines: string[], existingItems: any[]): any | null {
+    // More flexible extraction for medium-confidence lines
+    const line = scoredLine.text;
+    const index = scoredLine.index;
+    
+    // Check if we already extracted this item
+    const alreadyExists = existingItems.some(item => 
+      item.description.toLowerCase().includes(line.toLowerCase().substring(0, 10))
+    );
+    if (alreadyExists) return null;
+    
+    // Try wider price search
+    for (let offset = 1; offset <= 5; offset++) {
+      if (index + offset < allLines.length) {
+        const checkLine = allLines[index + offset].trim();
+        
+        // Look for any reasonable price
+        const priceMatch = checkLine.match(/(\d{2,6})/);
+        if (priceMatch) {
+          const num = parseInt(priceMatch[1]);
+          let price;
+          
+          // Smart price conversion
+          if (num >= 100 && num <= 99999) {
+            price = num / 100; // Convert "1199" to 11.99
+          } else if (num >= 1 && num <= 99) {
+            price = num; // Keep small numbers as is
+          } else {
+            continue;
+          }
+          
+          if (price > 0.50 && price < 500 && OCRService.isValidProduct(line, price)) {
+            return {
+              description: line.substring(0, 100),
+              quantity: 1,
+              unitPrice: price,
+              totalPrice: price
+            };
+          }
+        }
+      }
+    }
+    
+    return null;
+  }
+
   // Helper function to validate if a line represents a valid product
   private static isValidProduct(description: string, totalPrice: number): boolean {
     // Filter out obvious non-products
@@ -606,66 +752,44 @@ The OCR system works best with image files rather than scanned PDFs.`,
       }
     }
     
-    // Extract line items using intelligent pattern detection
-    console.log('Starting intelligent line item extraction...');
-    console.log('Total lines to process:', lines.length);
+    // Multi-pass parsing pipeline following ChatGPT suggestions
+    console.log('🔍 Starting multi-pass parsing pipeline...');
     
-    // First, identify potential product names and prices in the text
-    const productCandidates = [];
-    const priceLines = [];
-    
+    // PASS 1: Line Scoring - Score each line for likelihood of being a product
+    const scoredLines = [];
     for (let i = 0; i < lines.length; i++) {
       const line = lines[i].trim();
-      
       if (line.length < 2) continue;
       
-      // Look for product names: lines with letters, spaces, and some numbers/symbols
-      const isProductCandidate = /^[A-Za-z][A-Za-z\s&\/\-0-9',\.]{3,60}$/.test(line) && 
-                                 !line.match(/^(CUSTOMER|ORDER|DEPARTMENT|DATE|NAME|ADDRESS|CITY|STATE|ZIP|CASH|COD|CHARGE|SOLD|ACCT|RETD|PAID|QUANTITY|DESCRIPTION|PRICE|AMOUNT|TOTAL|THANK|RECEIVED|SLIP|REFERENCE)$/i);
+      const score = OCRService.calculateLineScore(line, i, lines);
+      scoredLines.push({ index: i, text: line, score });
       
-      // Look for price patterns: 4-6 digit numbers (could be prices without decimals like "1199" = $11.99)
-      const isPriceCandidate = /^\d{3,6}$/.test(line) && parseInt(line) > 50 && parseInt(line) < 100000;
-      
-      // Also look for decimal prices
-      const isDecimalPrice = /^\$?(\d+\.\d{2})/.test(line);
-      
-      if (isProductCandidate) {
-        productCandidates.push({ index: i, text: line });
-        console.log(`📦 Product candidate at line ${i}: "${line}"`);
-      }
-      
-      if (isPriceCandidate || isDecimalPrice) {
-        priceLines.push({ index: i, text: line, value: isPriceCandidate ? parseInt(line) / 100 : parseFloat(line.replace('$', '')) });
-        console.log(`💰 Price candidate at line ${i}: "${line}" -> $${(isPriceCandidate ? parseInt(line) / 100 : parseFloat(line.replace('$', ''))).toFixed(2)}`);
+      if (score > 0.3) {
+        console.log(`📊 Line ${i} score: ${score.toFixed(2)} - "${line}"`);
       }
     }
     
-    // Try to match products with nearby prices
-    for (const product of productCandidates) {
-      if (!OCRService.isValidProduct(product.text, 10)) continue; // Quick validation
-      
-      // Look for prices within 5 lines after the product
-      const nearbyPrices = priceLines.filter(price => 
-        price.index > product.index && 
-        price.index <= product.index + 5 &&
-        price.value > 0 && 
-        price.value < 1000
-      );
-      
-      if (nearbyPrices.length > 0) {
-        // Use the first reasonable price found
-        const price = nearbyPrices[0];
-        
-        if (OCRService.isValidProduct(product.text, price.value)) {
-          lineItems.push({
-            description: product.text.substring(0, 100),
-            quantity: 1,
-            unitPrice: price.value,
-            totalPrice: price.value
-          });
-          
-          console.log(`✅ Matched product: "${product.text}" with price $${price.value.toFixed(2)} (from line ${price.index})`);
-        }
+    // PASS 2: Extract high-confidence line items
+    const highConfidenceLines = scoredLines.filter(line => line.score >= 0.8);
+    console.log(`🎯 Found ${highConfidenceLines.length} high-confidence product lines`);
+    
+    for (const scoredLine of highConfidenceLines) {
+      const extracted = OCRService.extractLineItemFromScoredLine(scoredLine, lines);
+      if (extracted) {
+        lineItems.push(extracted);
+        console.log(`✅ High-confidence: ${extracted.description} - $${extracted.totalPrice.toFixed(2)}`);
+      }
+    }
+    
+    // PASS 3: Try medium-confidence lines with fallback strategies
+    const mediumConfidenceLines = scoredLines.filter(line => line.score >= 0.4 && line.score < 0.8);
+    console.log(`🔄 Trying ${mediumConfidenceLines.length} medium-confidence lines with fallbacks`);
+    
+    for (const scoredLine of mediumConfidenceLines) {
+      const extracted = OCRService.extractLineItemWithFallbacks(scoredLine, lines, lineItems);
+      if (extracted) {
+        lineItems.push(extracted);
+        console.log(`✅ Fallback success: ${extracted.description} - $${extracted.totalPrice.toFixed(2)}`);
       }
     }
     

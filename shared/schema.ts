@@ -896,7 +896,7 @@ export const invoiceProcessing = pgTable("invoice_processing", {
   subtotal: decimal("subtotal", { precision: 12, scale: 2 }).notNull(),
   tax: decimal("tax", { precision: 10, scale: 2 }).default("0"),
   total: decimal("total", { precision: 12, scale: 2 }).notNull(),
-  status: varchar("status", { enum: ["pending", "approved", "paid", "disputed", "cancelled"] }).default("pending"),
+  status: varchar("status", { enum: ["pending_review", "pending", "approved", "paid", "disputed", "cancelled"] }).default("pending_review"),
   paymentMethod: varchar("payment_method", { enum: ["check", "ach", "wire", "credit_card"] }),
   paymentDate: timestamp("payment_date"),
   uploadMethod: varchar("upload_method", { enum: ["photo", "email", "upload", "edi"] }),

@@ -1009,6 +1009,58 @@ const upload = multer({
     }
   });
 
+  // Invoice approval routes
+  app.put('/api/invoices/:id/approve', isAuthenticated, async (req: any, res) => {
+    try {
+      const invoiceId = req.params.id;
+      const { vendor, invoiceNumber, invoiceDate, total, subtotal, lineItems } = req.body;
+      
+      // Update the invoice with edited data and approve it
+      const result = await db.execute(sql`
+        UPDATE invoice_processing 
+        SET 
+          invoice_number = ${invoiceNumber},
+          invoice_date = ${invoiceDate},
+          total = ${total.toString()},
+          subtotal = ${subtotal.toString()},
+          line_items = ${JSON.stringify(lineItems)},
+          status = 'approved'
+        WHERE id = ${invoiceId}::uuid
+        RETURNING *
+      `);
+      
+      if (result.rows.length === 0) {
+        return res.status(404).json({ message: "Invoice not found" });
+      }
+      
+      res.json({ message: "Invoice approved successfully", invoice: result.rows[0] });
+    } catch (error) {
+      console.error("Error approving invoice:", error);
+      res.status(500).json({ message: "Failed to approve invoice" });
+    }
+  });
+
+  app.delete('/api/invoices/:id', isAuthenticated, async (req: any, res) => {
+    try {
+      const invoiceId = req.params.id;
+      
+      const result = await db.execute(sql`
+        DELETE FROM invoice_processing 
+        WHERE id = ${invoiceId}::uuid
+        RETURNING *
+      `);
+      
+      if (result.rows.length === 0) {
+        return res.status(404).json({ message: "Invoice not found" });
+      }
+      
+      res.json({ message: "Invoice deleted successfully" });
+    } catch (error) {
+      console.error("Error deleting invoice:", error);
+      res.status(500).json({ message: "Failed to delete invoice" });
+    }
+  });
+
   // Analytics routes
   app.get('/api/analytics/alerts', isAuthenticated, async (req: any, res) => {
     try {
