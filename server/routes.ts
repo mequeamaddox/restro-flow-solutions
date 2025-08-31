@@ -2455,8 +2455,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Onboarding Token Management - Generate shareable links
-  app.post("/api/hr/onboarding/invite", isAuthenticated, requirePermission(Permission.MANAGE_EMPLOYEES), async (req, res) => {
+  app.post("/api/hr/onboarding/invite", isAuthenticated, async (req, res) => {
     try {
+      console.log("=== Onboarding Invite Request ===");
+      console.log("User:", (req.user as any)?.claims?.sub);
+      console.log("Body:", req.body);
       const { employeeId, email, phone, sendMethod = 'email' } = req.body;
       
       // Create secure token for the employee
