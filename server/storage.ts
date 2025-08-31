@@ -1274,15 +1274,44 @@ export class DatabaseStorage implements IStorage {
       }
 
       const results = await query;
-      return results.map(row => ({
-        ...row.invoice_processing,
-        vendor: row.vendors || undefined,
-        totalAmount: parseFloat(row.invoice_processing.total || '0'),
-        subtotal: parseFloat(row.invoice_processing.subtotal || '0'),
-        tax: parseFloat(row.invoice_processing.tax || '0'),
-        lineItems: row.invoice_processing.lineItems ? JSON.parse(row.invoice_processing.lineItems) : [],
-        fees: row.invoice_processing.fees ? JSON.parse(row.invoice_processing.fees) : [],
-      }));
+      return results.map(row => {
+        let lineItems = [];
+        let fees = [];
+        
+        // Safe parsing of lineItems
+        try {
+          if (row.invoice_processing.lineItems) {
+            lineItems = typeof row.invoice_processing.lineItems === 'string' 
+              ? JSON.parse(row.invoice_processing.lineItems) 
+              : row.invoice_processing.lineItems;
+          }
+        } catch (error) {
+          console.error('Error parsing lineItems:', error);
+          lineItems = [];
+        }
+        
+        // Safe parsing of fees
+        try {
+          if (row.invoice_processing.fees) {
+            fees = typeof row.invoice_processing.fees === 'string' 
+              ? JSON.parse(row.invoice_processing.fees) 
+              : row.invoice_processing.fees;
+          }
+        } catch (error) {
+          console.error('Error parsing fees:', error);
+          fees = [];
+        }
+        
+        return {
+          ...row.invoice_processing,
+          vendor: row.vendors || undefined,
+          totalAmount: parseFloat(row.invoice_processing.total || '0'),
+          subtotal: parseFloat(row.invoice_processing.subtotal || '0'),
+          tax: parseFloat(row.invoice_processing.tax || '0'),
+          lineItems,
+          fees,
+        };
+      });
     } catch (error) {
       console.error('Error fetching invoices:', error);
       return [];
