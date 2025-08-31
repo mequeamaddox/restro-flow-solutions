@@ -204,16 +204,29 @@ ${recipe.instructions}
 Generated on: ${new Date().toLocaleDateString()} ${new Date().toLocaleTimeString()}
     `.trim();
 
-    // Create and download the build sheet
+    // Create and download the build sheet - mobile-friendly approach
     const blob = new Blob([buildSheetContent], { type: 'text/plain' });
     const url = window.URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
     a.download = `${recipe.name.replace(/[^a-z0-9]/gi, '_')}_build_sheet.txt`;
+    a.style.display = 'none';
     document.body.appendChild(a);
-    a.click();
+    
+    // Force download on mobile
+    if (navigator.userAgent.match(/iPhone|iPad|iPod|Android/i)) {
+      // For mobile, open in new window which allows saving
+      const newWindow = window.open(url, '_blank');
+      if (newWindow) {
+        newWindow.document.write(`<pre>${buildSheetContent}</pre>`);
+        newWindow.document.title = `${recipe.name} Build Sheet`;
+      }
+    } else {
+      a.click();
+    }
+    
     document.body.removeChild(a);
-    window.URL.revokeObjectURL(url);
+    setTimeout(() => window.URL.revokeObjectURL(url), 100);
 
     toast({
       title: "Build Sheet Generated",
@@ -259,16 +272,29 @@ ${recipe.instructions}
 Generated on: ${new Date().toLocaleDateString()} ${new Date().toLocaleTimeString()}
     `.trim();
 
-    // Create and download the cost sheet
+    // Create and download the cost sheet - mobile-friendly approach
     const blob = new Blob([costSheetContent], { type: 'text/plain' });
     const url = window.URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
     a.download = `${recipe.name.replace(/[^a-z0-9]/gi, '_')}_cost_sheet.txt`;
+    a.style.display = 'none';
     document.body.appendChild(a);
-    a.click();
+    
+    // Force download on mobile
+    if (navigator.userAgent.match(/iPhone|iPad|iPod|Android/i)) {
+      // For mobile, open in new window which allows saving
+      const newWindow = window.open(url, '_blank');
+      if (newWindow) {
+        newWindow.document.write(`<pre>${costSheetContent}</pre>`);
+        newWindow.document.title = `${recipe.name} Cost Sheet`;
+      }
+    } else {
+      a.click();
+    }
+    
     document.body.removeChild(a);
-    window.URL.revokeObjectURL(url);
+    setTimeout(() => window.URL.revokeObjectURL(url), 100);
 
     toast({
       title: "Cost Sheet Generated",
