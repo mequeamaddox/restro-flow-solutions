@@ -1953,158 +1953,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Simple in-memory storage for auto-ordering rules
-  let autoOrderingRules: any[] = [];
-
-  // Auto-ordering endpoints
+  // ============================================================================
+  // AUTOMATED ORDERING ROUTES - TEMPORARILY DISABLED (COMING SOON FEATURE)
+  // ============================================================================
+  // Original functionality backed up in: backup/advanced-features/
+  
+  // Temporary placeholder route for coming soon feature
   app.get('/api/auto-ordering/rules', isAuthenticated, async (req: any, res) => {
-    try {
-      const userId = req.user?.claims?.sub || req.user?.id;
-      console.log("Fetching rules for user:", userId, "Rules count:", autoOrderingRules.length);
-      res.json(autoOrderingRules);
-    } catch (error) {
-      console.error("Error fetching auto-ordering rules:", error);
-      res.status(500).json({ message: "Failed to fetch auto-ordering rules" });
-    }
+    res.json([]); // Return empty array for coming soon feature
   });
 
-  app.post('/api/auto-ordering/rules', isAuthenticated, async (req: any, res) => {
-    try {
-      const ruleData = req.body;
-      const userId = req.user?.claims?.sub || req.user?.id;
-      console.log("Creating rule for user:", userId, "with data:", ruleData);
-      
-      // Get item and vendor names from the existing data
-      const inventory = await storage.getInventoryItems();
-      const vendors = await storage.getVendors();
-      
-      const item = inventory.find((i: any) => i.id === ruleData.itemId);
-      const vendor = vendors.find((v: any) => v.id === ruleData.vendorId);
-      
-      // Create new rule with generated ID
-      const newRule = {
-        id: `rule-${Date.now()}`,
-        ...ruleData,
-        itemName: item?.name || 'Unknown Item',
-        vendorName: vendor?.name || 'Unknown Vendor',
-        enabled: true,
-        lastTriggered: null,
-        estimatedSavings: 0, // Real savings would be calculated from actual usage data
-        createdAt: new Date().toISOString()
-      };
-      
-      console.log("Created rule:", newRule);
-      autoOrderingRules.push(newRule);
-      
-      res.status(201).json(newRule);
-    } catch (error) {
-      console.error("Error creating auto-ordering rule:", error);
-      res.status(500).json({ message: "Failed to create auto-ordering rule" });
-    }
-  });
 
-  app.patch('/api/auto-ordering/rules/:id', isAuthenticated, async (req: any, res) => {
-    try {
-      const { id } = req.params;
-      const updateData = req.body;
-      console.log("Updating rule:", id, "with data:", updateData);
-      
-      // Update in memory storage
-      const ruleIndex = autoOrderingRules.findIndex(rule => rule.id === id);
-      if (ruleIndex !== -1) {
-        autoOrderingRules[ruleIndex] = { ...autoOrderingRules[ruleIndex], ...updateData, updatedAt: new Date().toISOString() };
-        console.log("Updated rule:", autoOrderingRules[ruleIndex]);
-        res.json(autoOrderingRules[ruleIndex]);
-      } else {
-        // Rule not found in session storage, return mock response for demo rules
-        res.json({ id, ...updateData, updatedAt: new Date().toISOString() });
-      }
-    } catch (error) {
-      console.error("Error updating auto-ordering rule:", error);
-      res.status(500).json({ message: "Failed to update auto-ordering rule" });
-    }
-  });
-
-  app.delete('/api/auto-ordering/rules/:id', isAuthenticated, async (req: any, res) => {
-    try {
-      const { id } = req.params;
-      console.log("Deleting rule:", id);
-      
-      // Remove from memory storage
-      const ruleIndex = autoOrderingRules.findIndex(rule => rule.id === id);
-      if (ruleIndex !== -1) {
-        autoOrderingRules.splice(ruleIndex, 1);
-        console.log("Deleted rule, remaining rules:", autoOrderingRules.length);
-        res.json({ message: "Rule deleted successfully" });
-      } else {
-        res.status(404).json({ message: "Rule not found" });
-      }
-    } catch (error) {
-      console.error("Error deleting auto-ordering rule:", error);
-      res.status(500).json({ message: "Failed to delete auto-ordering rule" });
-    }
-  });
-
-  // Forecasting endpoints
-  app.get('/api/forecasting/demand', isAuthenticated, async (req: any, res) => {
-    try {
-      const locationId = req.query.locationId as string;
-      
-      // Get real inventory items with low stock for forecasting
-      const lowStockItems = await storage.getLowStockItems(locationId);
-      
-      // Create demand forecast from actual inventory data
-      const demandData = lowStockItems.map(item => ({
-        itemId: item.id,
-        itemName: item.name,
-        currentStock: item.quantity,
-        predictedDemand: Math.max(item.reorderLevel || 0, Math.floor(item.quantity * 1.5)),
-        recommendedOrder: Math.max(item.reorderPoint || 0, Math.floor(item.quantity * 2)),
-        confidence: lowStockItems.length > 3 ? Math.floor(Math.random() * 20) + 70 : 0,
-        factors: item.quantity <= (item.reorderLevel || 0) ? ['low_stock', 'reorder_needed'] : ['stable'],
-        nextOrderDate: new Date(Date.now() + 86400000).toISOString().split('T')[0]
-      }));
-      
-      res.json(demandData);
-    } catch (error) {
-      console.error("Error fetching demand forecast:", error);
-      res.status(500).json({ message: "Failed to fetch demand forecast" });
-    }
-  });
-
-  app.get('/api/forecasting/trends', isAuthenticated, async (req: any, res) => {
-    try {
-      const locationId = req.query.locationId as string;
-      
-      // Get actual sales data for trends
-      const today = new Date();
-      const weekAgo = new Date(today.getTime() - 7 * 24 * 60 * 60 * 1000);
-      const monthAgo = new Date(today.getTime() - 30 * 24 * 60 * 60 * 1000);
-      
-      const salesData = await storage.getPosSalesByDateRange(locationId, monthAgo, today);
-      const recentSales = salesData.filter(sale => new Date(sale.orderDate) >= weekAgo);
-      const olderSales = salesData.filter(sale => new Date(sale.orderDate) < weekAgo);
-      
-      const recentTotal = recentSales.reduce((sum, sale) => sum + parseFloat(sale.total), 0);
-      const olderTotal = olderSales.reduce((sum, sale) => sum + parseFloat(sale.total), 0);
-      
-      const trends = {
-        salesTrend: recentTotal > olderTotal ? 'increasing' : recentTotal < olderTotal ? 'decreasing' : 'stable',
-        demandVariability: salesData.length > 10 ? 'high' : salesData.length > 5 ? 'moderate' : 'low',
-        seasonalFactors: salesData.length > 0 ? ['data_available'] : ['insufficient_data'],
-        accuracyMetrics: {
-          last30Days: salesData.length >= 30 ? Math.min(90, salesData.length * 3) : 0,
-          last7Days: recentSales.length >= 7 ? Math.min(95, recentSales.length * 5) : 0,
-          overall: salesData.length > 0 ? Math.min(85, salesData.length * 2) : 0
-        }
-      };
-      
-      res.json(trends);
-    } catch (error) {
-      console.error("Error fetching trends:", error);
-      res.status(500).json({ message: "Failed to fetch trends" });
-    }
-  });
+  // ============================================================================
+  // DEMAND FORECASTING ROUTES - TEMPORARILY DISABLED (COMING SOON FEATURE)
+  // ============================================================================
+  // Original functionality backed up in: backup/advanced-features/
 
   // Analytics and Activity Routes
   app.get('/api/activities', isAuthenticated, async (req, res) => {

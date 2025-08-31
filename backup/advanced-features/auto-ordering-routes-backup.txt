@@ -1,0 +1,73 @@
+1951-      console.error('Error creating message:', error);
+1952-      res.status(500).json({ message: 'Failed to create message' });
+1953-    }
+1954-  });
+1955-
+1956:  // Simple in-memory storage for auto-ordering rules
+1957-  let autoOrderingRules: any[] = [];
+1958-
+1959-  // Auto-ordering endpoints
+1960:  app.get('/api/auto-ordering/rules', isAuthenticated, async (req: any, res) => {
+1961-    try {
+1962-      const userId = req.user?.claims?.sub || req.user?.id;
+1963-      console.log("Fetching rules for user:", userId, "Rules count:", autoOrderingRules.length);
+1964-      res.json(autoOrderingRules);
+1965-    } catch (error) {
+1966:      console.error("Error fetching auto-ordering rules:", error);
+1967:      res.status(500).json({ message: "Failed to fetch auto-ordering rules" });
+1968-    }
+1969-  });
+1970-
+1971:  app.post('/api/auto-ordering/rules', isAuthenticated, async (req: any, res) => {
+1972-    try {
+1973-      const ruleData = req.body;
+1974-      const userId = req.user?.claims?.sub || req.user?.id;
+1975-      console.log("Creating rule for user:", userId, "with data:", ruleData);
+1976-      
+--
+1996-      console.log("Created rule:", newRule);
+1997-      autoOrderingRules.push(newRule);
+1998-      
+1999-      res.status(201).json(newRule);
+2000-    } catch (error) {
+2001:      console.error("Error creating auto-ordering rule:", error);
+2002:      res.status(500).json({ message: "Failed to create auto-ordering rule" });
+2003-    }
+2004-  });
+2005-
+2006:  app.patch('/api/auto-ordering/rules/:id', isAuthenticated, async (req: any, res) => {
+2007-    try {
+2008-      const { id } = req.params;
+2009-      const updateData = req.body;
+2010-      console.log("Updating rule:", id, "with data:", updateData);
+2011-      
+--
+2018-      } else {
+2019-        // Rule not found in session storage, return mock response for demo rules
+2020-        res.json({ id, ...updateData, updatedAt: new Date().toISOString() });
+2021-      }
+2022-    } catch (error) {
+2023:      console.error("Error updating auto-ordering rule:", error);
+2024:      res.status(500).json({ message: "Failed to update auto-ordering rule" });
+2025-    }
+2026-  });
+2027-
+2028:  app.delete('/api/auto-ordering/rules/:id', isAuthenticated, async (req: any, res) => {
+2029-    try {
+2030-      const { id } = req.params;
+2031-      console.log("Deleting rule:", id);
+2032-      
+2033-      // Remove from memory storage
+--
+2038-        res.json({ message: "Rule deleted successfully" });
+2039-      } else {
+2040-        res.status(404).json({ message: "Rule not found" });
+2041-      }
+2042-    } catch (error) {
+2043:      console.error("Error deleting auto-ordering rule:", error);
+2044:      res.status(500).json({ message: "Failed to delete auto-ordering rule" });
+2045-    }
+2046-  });
+2047-
+2048-  // Forecasting endpoints
+2049-  app.get('/api/forecasting/demand', isAuthenticated, async (req: any, res) => {
