@@ -31,12 +31,12 @@ export default function HRPayroll() {
   const queryClient = useQueryClient();
 
   // Fetch pay periods
-  const { data: payPeriods = [], isLoading: periodsLoading } = useQuery({
+  const { data: payPeriods = [], isLoading: periodsLoading } = useQuery<PayPeriod[]>({
     queryKey: ['/api/hr/payroll/pay-periods'],
   });
 
   // Fetch paystubs for selected period
-  const { data: paystubs = [], isLoading: paystubsLoading } = useQuery({
+  const { data: paystubs = [], isLoading: paystubsLoading } = useQuery<(Paystub & { employee?: Employee })[]>({
     queryKey: ['/api/hr/payroll/paystubs', selectedPayPeriod?.id],
     queryFn: async () => {
       if (!selectedPayPeriod?.id) return [];
@@ -47,17 +47,17 @@ export default function HRPayroll() {
   });
 
   // Fetch employees
-  const { data: employees = [], isLoading: employeesLoading } = useQuery({
+  const { data: employees = [], isLoading: employeesLoading } = useQuery<Employee[]>({
     queryKey: ['/api/hr/employees'],
   });
 
   // Fetch deductions
-  const { data: deductions = [], isLoading: deductionsLoading } = useQuery({
+  const { data: deductions = [], isLoading: deductionsLoading } = useQuery<PayrollDeduction[]>({
     queryKey: ['/api/hr/payroll/deductions'],
   });
 
   // Fetch payroll summary
-  const { data: payrollSummary } = useQuery({
+  const { data: payrollSummary } = useQuery<{ totalEmployees: number; monthlyPayroll: number; avgHourlyRate: number; laborCostPercentage: number }>({
     queryKey: ['/api/hr/payroll/summary'],
   });
 

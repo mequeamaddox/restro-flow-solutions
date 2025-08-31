@@ -312,7 +312,9 @@ export interface IStorage {
   createPayPeriod(payPeriod: InsertPayPeriod): Promise<PayPeriod>;
   updatePayPeriod(id: string, payPeriod: Partial<InsertPayPeriod>): Promise<PayPeriod>;
   calculatePayroll(payPeriodId: string): Promise<Paystub[]>;
+  recalculatePayroll(payPeriodId: string): Promise<Paystub[]>;
   approvePayroll(payPeriodId: string, approvedBy: string): Promise<PayPeriod>;
+  deletePayPeriod(id: string): Promise<void>;
   getPaystubsByPeriod(payPeriodId: string): Promise<(Paystub & { employee?: Employee })[]>;
   getPayrollDeductions(): Promise<PayrollDeduction[]>;
   getPayrollSummary(): Promise<{ totalEmployees: number; monthlyPayroll: number; avgHourlyRate: number; laborCostPercentage: number }>;
@@ -2409,6 +2411,19 @@ export class DatabaseStorage implements IStorage {
 
   async getPayrollDeductions(): Promise<PayrollDeduction[]> {
     return await db.select().from(payrollDeductions).where(eq(payrollDeductions.isActive, true));
+  }
+
+  async deletePayPeriod(id: string): Promise<void> {
+    try {
+      // First delete all paystubs for this pay period
+      await db.delete(paystubs).where(eq(paystubs.payPeriodId, id));
+      
+      // Then delete the pay period
+      await db.delete(payPeriods).where(eq(payPeriods.id, id));
+    } catch (error) {
+      console.error('Error deleting pay period:', error);
+      throw error;
+    }
   }
 
   async getPayrollSummary(): Promise<{ totalEmployees: number; monthlyPayroll: number; avgHourlyRate: number; laborCostPercentage: number }> {
