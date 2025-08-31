@@ -231,6 +231,7 @@ export interface IStorage {
   getInvoices(status?: string): Promise<any[]>;
   createInvoice(invoice: any): Promise<any>;
   updateInvoiceStatus(id: string, status: string): Promise<any>;
+  updateInvoice(id: string, data: any): Promise<any>;
   getInvoiceStats(): Promise<any>;
 
   // Cost Monitoring & Alerts
@@ -1379,6 +1380,36 @@ export class DatabaseStorage implements IStorage {
       };
     } catch (error) {
       console.error('Error updating invoice status:', error);
+      throw error;
+    }
+  }
+
+  async updateInvoice(id: string, data: any): Promise<any> {
+    try {
+      const updateData = {
+        invoiceNumber: data.invoiceNumber,
+        invoiceDate: data.invoiceDate ? new Date(data.invoiceDate) : null,
+        total: data.total ? data.total.toString() : null,
+        subtotal: data.subtotal ? data.subtotal.toString() : null,
+        lineItems: data.lineItems ? JSON.stringify(data.lineItems) : null,
+        fees: data.fees ? JSON.stringify(data.fees) : null,
+        status: data.status || 'pending'
+      };
+      
+      const [result] = await db
+        .update(invoiceProcessing)
+        .set(updateData)
+        .where(eq(invoiceProcessing.id, id))
+        .returning();
+      
+      return {
+        ...result,
+        totalAmount: parseFloat(result.total || '0'),
+        subtotal: parseFloat(result.subtotal || '0'),
+        tax: parseFloat(result.tax || '0'),
+      };
+    } catch (error) {
+      console.error('Error updating invoice:', error);
       throw error;
     }
   }
