@@ -114,6 +114,7 @@ import {
   onboardingSteps,
   employeeOnboarding,
   employeeOnboardingSteps,
+  employeeOnboardingData,
   type EmployeeDocument,
   type InsertEmployeeDocument,
   type DocumentRequirement,
@@ -126,6 +127,8 @@ import {
   type InsertEmployeeOnboarding,
   type EmployeeOnboardingStep,
   type InsertEmployeeOnboardingStep,
+  type EmployeeOnboardingData,
+  type InsertEmployeeOnboardingData,
   type OnboardingToken,
   type InsertOnboardingToken,
 } from "@shared/schema";
@@ -2897,6 +2900,42 @@ export class DatabaseStorage implements IStorage {
       .update(onboardingTokens)
       .set({ isUsed: true, completedAt: new Date() })
       .where(eq(onboardingTokens.token, token));
+  }
+
+  // Employee Onboarding Data Management
+  async saveEmployeeOnboardingData(data: InsertEmployeeOnboardingData): Promise<EmployeeOnboardingData> {
+    const [savedData] = await db
+      .insert(employeeOnboardingData)
+      .values(data)
+      .returning();
+    return savedData;
+  }
+
+  async getEmployeeOnboardingData(employeeId: string): Promise<EmployeeOnboardingData | undefined> {
+    const [data] = await db
+      .select()
+      .from(employeeOnboardingData)
+      .where(eq(employeeOnboardingData.employeeId, employeeId));
+    return data;
+  }
+
+  async updateEmployeeOnboardingData(employeeId: string, data: Partial<InsertEmployeeOnboardingData>): Promise<EmployeeOnboardingData> {
+    const [updatedData] = await db
+      .update(employeeOnboardingData)
+      .set({ ...data, updatedAt: new Date() })
+      .where(eq(employeeOnboardingData.employeeId, employeeId))
+      .returning();
+    return updatedData;
+  }
+
+  async getEmployeeWithOnboardingData(employeeId: string): Promise<{ employee?: Employee; onboardingData?: EmployeeOnboardingData }> {
+    const employee = await this.getEmployee(employeeId);
+    const onboardingData = await this.getEmployeeOnboardingData(employeeId);
+    
+    return {
+      employee,
+      onboardingData
+    };
   }
 }
 

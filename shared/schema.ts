@@ -1125,6 +1125,42 @@ export const onboardingTokens = pgTable("onboarding_tokens", {
   completedAt: timestamp("completed_at"),
 });
 
+// Secure storage for detailed employee onboarding form data
+export const employeeOnboardingData = pgTable("employee_onboarding_data", {
+  id: uuid("id").primaryKey().default(sql`gen_random_uuid()`),
+  employeeId: uuid("employee_id").references(() => employees.id).notNull(),
+  tokenId: uuid("token_id").references(() => onboardingTokens.id),
+  
+  // Personal Information
+  phone: varchar("phone", { length: 20 }),
+  address: text("address"),
+  city: varchar("city", { length: 100 }),
+  state: varchar("state", { length: 50 }),
+  zipCode: varchar("zip_code", { length: 10 }),
+  dateOfBirth: date("date_of_birth"),
+  socialSecurityNumber: varchar("social_security_number", { length: 11 }), // Encrypted
+  
+  // Emergency Contact
+  emergencyContactName: varchar("emergency_contact_name", { length: 100 }),
+  emergencyContactPhone: varchar("emergency_contact_phone", { length: 20 }),
+  emergencyContactRelationship: varchar("emergency_contact_relationship", { length: 50 }),
+  
+  // Banking Information (for direct deposit)
+  bankName: varchar("bank_name", { length: 100 }),
+  accountNumber: varchar("account_number", { length: 50 }), // Encrypted
+  routingNumber: varchar("routing_number", { length: 20 }), // Encrypted
+  accountType: varchar("account_type", { length: 20 }), // checking, savings
+  
+  // Form metadata
+  completedAt: timestamp("completed_at").defaultNow(),
+  ipAddress: varchar("ip_address", { length: 45 }),
+  userAgent: text("user_agent"),
+  
+  // Audit fields
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
 export type SecurityLog = typeof securityLogs.$inferSelect;
 export type AuditLog = typeof auditLogs.$inferSelect;
 export type CostAlert = typeof costAlerts.$inferSelect;
@@ -1195,6 +1231,14 @@ export type EmployeeOnboarding = typeof employeeOnboarding.$inferSelect;
 export type InsertEmployeeOnboarding = typeof employeeOnboarding.$inferInsert;
 export type EmployeeOnboardingStep = typeof employeeOnboardingSteps.$inferSelect;
 export type InsertEmployeeOnboardingStep = typeof employeeOnboardingSteps.$inferInsert;
+export type EmployeeOnboardingData = typeof employeeOnboardingData.$inferSelect;
+export type InsertEmployeeOnboardingData = typeof employeeOnboardingData.$inferInsert;
+
+export const insertEmployeeOnboardingDataSchema = createInsertSchema(employeeOnboardingData).omit({ 
+  id: true, 
+  createdAt: true, 
+  updatedAt: true 
+});
 
 export const insertAutoOrderRuleSchema = createInsertSchema(autoOrderRules);
 export const insertEmployeeDocumentSchema = createInsertSchema(employeeDocuments).omit({ id: true, createdAt: true, updatedAt: true });

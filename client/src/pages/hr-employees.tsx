@@ -8,7 +8,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Users, UserPlus, Search, Filter, Mail, Phone, MapPin } from "lucide-react";
+import { Users, UserPlus, Search, Filter, Mail, Phone, MapPin, User, Edit } from "lucide-react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
@@ -383,20 +383,34 @@ export default function HREmployees() {
                 )}
               </div>
               
-              {hasPermission(Permission.MANAGE_EMPLOYEES) && (
+              <div className="flex gap-2 mt-3">
                 <Button
                   variant="outline"
                   size="sm"
-                  className="w-full mt-3"
-                  onClick={() => {
-                    setEditingEmployee(employee);
-                    setIsCreateDialogOpen(true);
-                  }}
-                  data-testid={`edit-employee-${employee.id}`}
+                  className="flex-1"
+                  onClick={() => window.location.href = `/employees/${employee.id}`}
+                  data-testid={`view-employee-${employee.id}`}
                 >
-                  Edit Employee
+                  <User className="w-4 h-4 mr-2" />
+                  View Profile
                 </Button>
-              )}
+                
+                {hasPermission(Permission.MANAGE_EMPLOYEES) && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="flex-1"
+                    onClick={() => {
+                      setEditingEmployee(employee);
+                      setIsCreateDialogOpen(true);
+                    }}
+                    data-testid={`edit-employee-${employee.id}`}
+                  >
+                    <Edit className="w-4 h-4 mr-2" />
+                    Edit
+                  </Button>
+                )}
+              </div>
             </CardContent>
           </Card>
         ))}

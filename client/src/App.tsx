@@ -35,6 +35,7 @@ import HRPayroll from "@/pages/hr-payroll";
 import HRDepartments from "@/pages/hr-departments";
 import HRPositions from "@/pages/hr-positions";
 import HRDocuments from "@/pages/hr-documents";
+import EmployeeProfile from "@/pages/employee-profile";
 import PublicOnboarding from "@/pages/public-onboarding";
 import Sidebar from "@/components/layout/sidebar";
 import Header from "@/components/layout/header";
@@ -91,6 +92,7 @@ function Router() {
                 {/* HR Employee Management Add-on Routes */}
                 <Route path="/hr/dashboard" component={HRDashboard} />
                 <Route path="/hr/employees" component={HREmployees} />
+                <Route path="/employees/:id" component={EmployeeProfile} />
                 <Route path="/hr/analytics" component={HRAnalytics} />
                 <Route path="/hr/time-clock" component={HRTimeClock} />
                 <Route path="/hr/tasks" component={HRTasks} />

@@ -2556,16 +2556,43 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Update employee information with submitted data
       const { personalInfo, emergencyContact, bankingInfo, documents } = req.body;
       
-      // Update employee record
+      // Save detailed onboarding data to secure table
       if (validation.employee) {
-        await storage.updateEmployee(validation.employee.id, {
-          ...personalInfo,
+        // Get token record for reference
+        const tokenRecord = await storage.getOnboardingTokenByToken(token);
+        
+        // Save detailed secure data
+        await storage.saveEmployeeOnboardingData({
+          employeeId: validation.employee.id,
+          tokenId: tokenRecord?.id,
+          
+          // Personal information
+          phone: personalInfo?.phone,
+          address: personalInfo?.address,
+          city: personalInfo?.city,
+          state: personalInfo?.state,
+          zipCode: personalInfo?.zipCode,
+          dateOfBirth: personalInfo?.dateOfBirth,
+          socialSecurityNumber: personalInfo?.ssn,
+          
+          // Emergency contact
           emergencyContactName: emergencyContact?.name,
           emergencyContactPhone: emergencyContact?.phone,
           emergencyContactRelationship: emergencyContact?.relationship,
-          bankAccountNumber: bankingInfo?.accountNumber,
-          bankRoutingNumber: bankingInfo?.routingNumber,
+          
+          // Banking information
           bankName: bankingInfo?.bankName,
+          accountNumber: bankingInfo?.accountNumber,
+          routingNumber: bankingInfo?.routingNumber,
+          accountType: bankingInfo?.accountType,
+          
+          // Form metadata
+          ipAddress: req.ip,
+          userAgent: req.get('User-Agent'),
+        });
+
+        // Update employee record with basic info only
+        await storage.updateEmployee(validation.employee.id, {
           status: 'active' // Mark as active after onboarding completion
         });
       }
@@ -2580,6 +2607,50 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error completing onboarding:", error);
       res.status(500).json({ message: "Failed to complete onboarding" });
+    }
+  });
+
+  // Employee profile with onboarding data
+  app.get("/api/employees/:id/profile", isAuthenticated, async (req, res) => {
+    try {
+      const { id } = req.params;
+      const { employee, onboardingData } = await storage.getEmployeeWithOnboardingData(id);
+      
+      if (!employee) {
+        return res.status(404).json({ error: "Employee not found" });
+      }
+
+      res.json({
+        employee,
+        onboardingData: onboardingData ? {
+          ...onboardingData,
+          // Mask sensitive data in API response
+          socialSecurityNumber: onboardingData.socialSecurityNumber ? "***-**-" + onboardingData.socialSecurityNumber.slice(-4) : null,
+          accountNumber: onboardingData.accountNumber ? "*****" + onboardingData.accountNumber.slice(-4) : null,
+          routingNumber: onboardingData.routingNumber ? "*****" + onboardingData.routingNumber.slice(-4) : null,
+        } : null
+      });
+    } catch (error) {
+      console.error("Error fetching employee profile:", error);
+      res.status(500).json({ error: "Failed to fetch employee profile" });
+    }
+  });
+
+  // Employee onboarding data for admin view (full access)
+  app.get("/api/employees/:id/onboarding-data", isAuthenticated, async (req, res) => {
+    try {
+      const { id } = req.params;
+      const onboardingData = await storage.getEmployeeOnboardingData(id);
+      
+      if (!onboardingData) {
+        return res.status(404).json({ error: "Onboarding data not found" });
+      }
+
+      // Only return full data to authorized users
+      res.json(onboardingData);
+    } catch (error) {
+      console.error("Error fetching onboarding data:", error);
+      res.status(500).json({ error: "Failed to fetch onboarding data" });
     }
   });
 
