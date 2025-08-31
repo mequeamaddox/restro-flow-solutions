@@ -771,6 +771,13 @@ export class DatabaseStorage implements IStorage {
   }
 
   async deleteInventoryItem(id: string): Promise<void> {
+    // First delete all related inventory transactions
+    await db.delete(inventoryTransactions).where(eq(inventoryTransactions.inventoryItemId, id));
+    
+    // Then delete all related recipe ingredients
+    await db.delete(recipeIngredients).where(eq(recipeIngredients.inventoryItemId, id));
+    
+    // Finally delete the inventory item
     await db.delete(inventoryItems).where(eq(inventoryItems.id, id));
   }
 
