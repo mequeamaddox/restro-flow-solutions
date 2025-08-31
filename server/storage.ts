@@ -1548,14 +1548,9 @@ export class DatabaseStorage implements IStorage {
 
   async getCostAlerts(locationId?: string): Promise<any[]> {
     try {
-      // Get real cost alerts from database
-      const result = await db.execute(sql`
-        SELECT * FROM cost_alerts 
-        WHERE (${ locationId ? locationId : 'null' } IS NULL OR location_id = ${ locationId ? locationId : 'null' })
-        ORDER BY created_at DESC
-        LIMIT 10
-      `);
-      return result.rows || [];
+      // Return empty array since cost_alerts table doesn't exist yet
+      // This would be populated when actual cost monitoring alerts are implemented
+      return [];
     } catch (error) {
       console.error('Error fetching cost alerts:', error);
       return []; // Return empty array when no real alerts exist
@@ -1603,7 +1598,7 @@ export class DatabaseStorage implements IStorage {
       const startDate = new Date(Date.now() - days * 24 * 60 * 60 * 1000);
       
       // Get sales data for the period
-      const salesData = locationId 
+      const salesData = (locationId && locationId !== 'all')
         ? await this.getPosSalesByDateRange(locationId, startDate, new Date())
         : [];
       

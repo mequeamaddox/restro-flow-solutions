@@ -563,7 +563,7 @@ export default function Analytics() {
               </CardHeader>
               <CardContent>
                 <div className="space-y-3">
-                  {realTimeData.topSellingItems.map((item, index) => (
+                  {realTimeData?.topSellingItems?.map((item, index) => (
                     <div key={index} className="flex items-center justify-between p-3 bg-slate-700/30 rounded-lg">
                       <div>
                         <div className="font-medium text-white">{item.name}</div>
