@@ -1142,7 +1142,7 @@ Generated on: ${new Date().toLocaleDateString()} ${new Date().toLocaleTimeString
             </DialogDescription>
           </DialogHeader>
           <div className="mt-4 max-h-[70vh] overflow-y-auto">
-            <pre className="whitespace-pre-wrap text-sm font-mono bg-gray-50 p-4 rounded border">
+            <pre className="whitespace-pre-wrap text-sm font-mono bg-gray-50 text-gray-900 p-4 rounded border">
               {previewContent}
             </pre>
           </div>
