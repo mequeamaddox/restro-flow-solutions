@@ -55,6 +55,7 @@ interface LineItem {
   quantity: number;
   unitCost: number;
   totalCost: number;
+  unit: string;
 }
 
 export default function PurchaseOrders() {
@@ -161,7 +162,8 @@ export default function PurchaseOrders() {
       inventoryItemName: inventoryItem.name,
       quantity,
       unitCost,
-      totalCost
+      totalCost,
+      unit: inventoryItem.unit || 'units'
     };
 
     setLineItems(prev => [...prev, newItem]);
@@ -499,7 +501,7 @@ export default function PurchaseOrders() {
                   </div>
                   
                   {/* Add Line Item Form with Real-time Calculations */}
-                  <div className="p-4 bg-gray-50 rounded-lg border-2 border-dashed border-gray-200">
+                  <div className="p-4 bg-white rounded-lg border border-gray-200 shadow-sm">
                     <div className="grid grid-cols-12 gap-3 items-end">
                       {/* Item Selection */}
                       <div className="col-span-5">
@@ -551,7 +553,7 @@ export default function PurchaseOrders() {
                       {/* Quantity */}
                       <div className="col-span-2">
                         <label className="block text-xs font-medium text-gray-700 mb-1">
-                          Quantity
+                          Quantity {getSelectedItemInfo()?.unit && `(${getSelectedItemInfo()?.unit})`}
                         </label>
                         <Input
                           type="number"
@@ -563,6 +565,11 @@ export default function PurchaseOrders() {
                           className="h-10 text-center"
                           data-testid="input-quantity"
                         />
+                        {getSelectedItemInfo()?.unit && (
+                          <p className="text-xs text-gray-500 mt-1 text-center">
+                            {getSelectedItemInfo()?.unit}
+                          </p>
+                        )}
                       </div>
 
                       {/* Unit Cost */}
@@ -590,8 +597,8 @@ export default function PurchaseOrders() {
                         <label className="block text-xs font-medium text-gray-700 mb-1">
                           Line Total
                         </label>
-                        <div className="h-10 px-3 py-2 bg-green-50 border border-green-200 rounded-md flex items-center justify-center">
-                          <span className="text-sm font-bold text-green-700">
+                        <div className="h-10 px-3 py-2 bg-primary-50 border border-primary-200 rounded-md flex items-center justify-center">
+                          <span className="text-sm font-bold text-primary-700">
                             ${getCurrentItemTotal().toFixed(2)}
                           </span>
                         </div>
@@ -602,7 +609,7 @@ export default function PurchaseOrders() {
                         <Button 
                           type="button" 
                           onClick={addLineItem} 
-                          className="w-full h-10 bg-green-600 hover:bg-green-700"
+                          className="w-full h-10 bg-primary-600 hover:bg-primary-700"
                           disabled={!selectedInventoryItem || !itemQuantity || !itemUnitCost}
                           data-testid="button-add-line-item"
                         >
@@ -669,20 +676,20 @@ export default function PurchaseOrders() {
                                 <TableCell className="text-center">
                                   <div className="flex flex-col">
                                     <span className="font-medium">{item.quantity}</span>
-                                    <span className="text-xs text-gray-500">units</span>
+                                    <span className="text-xs text-gray-500">{item.unit}</span>
                                   </div>
                                 </TableCell>
                                 <TableCell className="text-center">
                                   <div className="flex flex-col">
                                     <span className="font-medium">${item.unitCost.toFixed(2)}</span>
-                                    <span className="text-xs text-gray-500">per unit</span>
+                                    <span className="text-xs text-gray-500">per {item.unit}</span>
                                   </div>
                                 </TableCell>
                                 <TableCell className="text-center">
                                   <div className="flex flex-col">
                                     <span className="font-bold text-green-700">${item.totalCost.toFixed(2)}</span>
                                     <span className="text-xs text-gray-500">
-                                      {item.quantity} × ${item.unitCost.toFixed(2)}
+                                      {item.quantity} {item.unit} × ${item.unitCost.toFixed(2)}
                                     </span>
                                   </div>
                                 </TableCell>
