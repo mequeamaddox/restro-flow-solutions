@@ -184,7 +184,12 @@ export default function InvoiceProcessing() {
         title: "Items Imported",
         description: `Successfully imported ${data.count} items to inventory`
       });
+      // Force refresh all inventory-related queries
       queryClient.invalidateQueries({ queryKey: ["/api/inventory"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/inventory/low-stock"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/dashboard/metrics"] });
+      // Refetch inventory immediately to see changes
+      queryClient.refetchQueries({ queryKey: ["/api/inventory"] });
     },
     onError: (error) => {
       console.error('Import error:', error);

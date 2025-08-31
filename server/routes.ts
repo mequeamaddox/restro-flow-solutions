@@ -829,6 +829,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       console.log(`✅ Successfully imported ${importedCount} out of ${items.length} items`);
       
+      // Verify the items were actually saved by checking inventory count
+      const allInventory = await storage.getInventoryItems();
+      console.log(`📊 Total inventory items in database: ${allInventory.length}`);
+      
       res.json({ 
         message: "Items imported successfully", 
         count: importedCount,
