@@ -403,10 +403,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.put('/api/invoices/:id/approve', isAuthenticated, async (req: any, res) => {
     try {
       const invoiceId = req.params.id;
+      console.log('🔍 Approve request received for invoice:', invoiceId);
+      console.log('📦 Request body:', JSON.stringify(req.body, null, 2));
+      
       const { vendor, invoiceNumber, invoiceDate, total, subtotal, lineItems, fees } = req.body;
       
-      // Update the invoice with edited data and approve it
-      const result = await storage.updateInvoice(invoiceId, {
+      const updateData = {
         invoiceNumber,
         invoiceDate,
         total: parseFloat(total || '0'),
@@ -414,11 +416,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
         lineItems: lineItems || [],
         fees: fees || [],
         status: 'approved'
-      });
+      };
+      
+      console.log('💾 Update data:', JSON.stringify(updateData, null, 2));
+      
+      // Update the invoice with edited data and approve it
+      const result = await storage.updateInvoice(invoiceId, updateData);
+      
+      console.log('✅ Update result:', JSON.stringify(result, null, 2));
       
       res.json({ message: "Invoice approved successfully", invoice: result });
     } catch (error) {
-      console.error("Error approving invoice:", error);
+      console.error("❌ Error approving invoice:", error);
       res.status(500).json({ message: "Failed to approve invoice" });
     }
   });

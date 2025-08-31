@@ -1388,7 +1388,7 @@ export class DatabaseStorage implements IStorage {
     try {
       const updateData = {
         invoiceNumber: data.invoiceNumber,
-        invoiceDate: data.invoiceDate ? new Date(data.invoiceDate) : null,
+        invoiceDate: data.invoiceDate ? new Date(data.invoiceDate) : undefined,
         total: data.total ? data.total.toString() : null,
         subtotal: data.subtotal ? data.subtotal.toString() : null,
         lineItems: data.lineItems ? JSON.stringify(data.lineItems) : null,
