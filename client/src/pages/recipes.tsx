@@ -178,9 +178,15 @@ export default function Recipes() {
     },
   });
 
-  const generateBuildSheet = (recipe: any) => {
+  const generateBuildSheet = async (recipe: any) => {
     console.log('Generating build sheet for recipe:', recipe);
-    const ingredients = recipe.ingredients || [];
+    
+    // Get full recipe data with ingredients
+    const response = await fetch(`/api/recipes/${recipe.id}`);
+    const fullRecipe = await response.json();
+    console.log('Full recipe with ingredients:', fullRecipe);
+    
+    const ingredients = fullRecipe.ingredients || [];
     
     const buildSheetContent = `
 ═══════════════════════════════════════════════════════════════════════════
@@ -195,8 +201,8 @@ Prep Time: ${recipe.prepTime} min  |  Cook Time: ${recipe.cookTime} min
 
 ▓▓▓ INGREDIENTS ▓▓▓
 ${ingredients.map((ing: any, index: number) => {
-  const inventoryItem = inventoryItems.find(item => item.id === ing.inventoryItemId);
-  return `${String(index + 1).padStart(2, '0')}. ${(inventoryItem?.name || 'Unknown Item').padEnd(25)} → ${ing.quantity} ${ing.unit}`;
+  const itemName = ing.inventoryItem?.name || 'Unknown Item';
+  return `${String(index + 1).padStart(2, '0')}. ${itemName.padEnd(25)} → ${ing.quantity} ${ing.unit}`;
 }).join('\n')}
 
 ▓▓▓ PREPARATION INSTRUCTIONS ▓▓▓
@@ -242,12 +248,15 @@ Kitchen Use Only - Do Not Remove From Station
     });
   };
 
-  const generateCostSheet = (recipe: any) => {
+  const generateCostSheet = async (recipe: any) => {
     console.log('Generating cost sheet for recipe:', recipe);
-    console.log('Recipe ingredients:', recipe.ingredients);
-    console.log('Available inventory items:', inventoryItems);
     
-    const ingredients = recipe.ingredients || [];
+    // Get full recipe data with ingredients
+    const response = await fetch(`/api/recipes/${recipe.id}`);
+    const fullRecipe = await response.json();
+    console.log('Full recipe with ingredients:', fullRecipe);
+    
+    const ingredients = fullRecipe.ingredients || [];
     let totalCost = 0;
     
     const costSheetContent = `
@@ -266,20 +275,20 @@ ${recipe.sellingPrice ? `Menu Price: $${parseFloat(recipe.sellingPrice).toFixed(
 
 🧾 INGREDIENT COSTS
 ${ingredients.map((ing: any, index: number) => {
-  const inventoryItem = inventoryItems.find(item => item.id === ing.inventoryItemId);
-  const unitCost = inventoryItem?.costPerUnit ? parseFloat(inventoryItem.costPerUnit) : 0;
-  const lineCost = ing.quantity * unitCost;
+  const itemName = ing.inventoryItem?.name || 'Unknown Item';
+  const unitCost = ing.inventoryItem?.costPerUnit ? parseFloat(ing.inventoryItem.costPerUnit) : 0;
+  const lineCost = parseFloat(ing.quantity) * unitCost;
   totalCost += lineCost;
   
   console.log(`Ingredient ${index + 1}:`, {
-    name: inventoryItem?.name,
+    name: itemName,
     quantity: ing.quantity,
     unit: ing.unit,
     unitCost,
     lineCost
   });
   
-  return `${String(index + 1).padStart(2, '0')}. ${(inventoryItem?.name || 'Unknown Item').padEnd(25)} ${String(ing.quantity).padStart(6)} ${ing.unit.padEnd(8)} @ $${unitCost.toFixed(4)}  = $${lineCost.toFixed(2)}`;
+  return `${String(index + 1).padStart(2, '0')}. ${itemName.padEnd(25)} ${String(ing.quantity).padStart(6)} ${ing.unit.padEnd(8)} @ $${unitCost.toFixed(4)}  = $${lineCost.toFixed(2)}`;
 }).join('\n')}
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -963,7 +972,7 @@ For Internal Use Only - Keep Secure
                         variant="outline" 
                         size="sm" 
                         className="flex-1 text-blue-600 hover:text-blue-700 hover:bg-blue-50"
-                        onClick={() => generateBuildSheet(recipe)}
+                        onClick={async () => await generateBuildSheet(recipe)}
                         data-testid={`button-build-sheet-${recipe.id}`}
                       >
                         <FileText className="h-4 w-4 mr-1" />
@@ -973,7 +982,7 @@ For Internal Use Only - Keep Secure
                         variant="outline" 
                         size="sm" 
                         className="flex-1 text-purple-600 hover:text-purple-700 hover:bg-purple-50"
-                        onClick={() => generateCostSheet(recipe)}
+                        onClick={async () => await generateCostSheet(recipe)}
                         data-testid={`button-cost-sheet-${recipe.id}`}
                       >
                         <Calculator className="h-4 w-4 mr-1" />
