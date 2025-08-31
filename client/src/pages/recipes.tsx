@@ -11,11 +11,12 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Plus, Search, ChefHat, DollarSign, Clock, Users, Trash2, Eye, AlertTriangle } from "lucide-react";
+import { Plus, Search, ChefHat, DollarSign, Clock, Users, Trash2, Eye, AlertTriangle, Camera, FileText, Printer } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import { isUnauthorizedError } from "@/lib/authUtils";
 import { useLocation } from "@/contexts/LocationContext";
+import { ObjectUploader } from "@/components/ObjectUploader";
 import { z } from "zod";
 
 const recipeFormSchema = z.object({
@@ -143,6 +144,82 @@ export default function Recipes() {
       });
     },
   });
+
+  const uploadPhotoMutation = useMutation({
+    mutationFn: async ({ recipeId, imageUrl }: { recipeId: string; imageUrl: string }) => {
+      await apiRequest('PUT', `/api/recipes/${recipeId}/photo`, { imageUrl });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/recipes', currentLocation?.id] });
+      toast({
+        title: "Success",
+        description: "Recipe photo uploaded successfully",
+      });
+    },
+    onError: (error) => {
+      if (isUnauthorizedError(error)) {
+        toast({
+          title: "Unauthorized",
+          description: "You are logged out. Logging in again...",
+          variant: "destructive",
+        });
+        setTimeout(() => {
+          window.location.href = "/api/login";
+        }, 500);
+        return;
+      }
+      toast({
+        title: "Error",
+        description: "Failed to upload photo",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const generateBuildSheet = (recipe: any) => {
+    const ingredients = recipe.ingredients || [];
+    let totalCost = 0;
+    
+    const buildSheetContent = `
+RECIPE BUILD SHEET
+==================
+
+Recipe: ${recipe.name}
+Location: ${currentLocation?.name}
+Category: ${recipe.category}
+Serving Size: ${recipe.servingSize}
+Prep Time: ${recipe.prepTime} minutes
+Cook Time: ${recipe.cookTime} minutes
+${recipe.sellingPrice ? `Selling Price: $${recipe.sellingPrice}` : ''}
+
+INGREDIENTS:
+${ingredients.map((ing: any, index: number) => {
+  const cost = ing.inventoryItem?.costPerUnit ? (ing.quantity * parseFloat(ing.inventoryItem.costPerUnit)) : 0;
+  totalCost += cost;
+  return `${index + 1}. ${ing.inventoryItem?.name || 'Unknown Item'} - ${ing.quantity} ${ing.unit} ($${cost.toFixed(2)})`;
+}).join('\n')}
+
+Total Recipe Cost: $${totalCost.toFixed(2)}
+Cost Per Serving: $${(totalCost / recipe.servingSize).toFixed(2)}
+${recipe.sellingPrice ? `Food Cost %: ${((totalCost / parseFloat(recipe.sellingPrice)) * 100).toFixed(1)}%` : ''}
+
+INSTRUCTIONS:
+${recipe.instructions}
+
+Generated on: ${new Date().toLocaleDateString()} ${new Date().toLocaleTimeString()}
+    `.trim();
+
+    // Create and download the build sheet
+    const blob = new Blob([buildSheetContent], { type: 'text/plain' });
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `${recipe.name.replace(/[^a-z0-9]/gi, '_')}_build_sheet.txt`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    window.URL.revokeObjectURL(url);
+  };
 
   const onSubmit = (data: RecipeFormData) => {
     console.log("Form submitted successfully!");
@@ -651,7 +728,17 @@ export default function Recipes() {
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {filteredRecipes.map((recipe: any) => (
-            <Card key={recipe.id} className="hover:shadow-lg transition-shadow cursor-pointer">
+            <Card key={recipe.id} className="hover:shadow-lg transition-shadow">
+              {/* Recipe Photo */}
+              {recipe.imageUrl && (
+                <div className="aspect-w-16 aspect-h-9 bg-gray-100">
+                  <img 
+                    src={recipe.imageUrl} 
+                    alt={recipe.name}
+                    className="w-full h-40 object-cover rounded-t-lg"
+                  />
+                </div>
+              )}
               <CardHeader>
                 <div className="flex items-center justify-between">
                   <div className="flex items-center space-x-2">
@@ -706,46 +793,86 @@ export default function Recipes() {
                       {recipe.ingredientCount || 0} items
                     </span>
                   </div>
-                  <div className="pt-2 border-t flex gap-2">
-                    <Button 
-                      variant="outline" 
-                      size="sm" 
-                      className="flex-1"
-                      onClick={() => handleViewDetails(recipe)}
-                      data-testid={`button-view-details-${recipe.id}`}
-                    >
-                      <Eye className="h-4 w-4 mr-1" />
-                      View Details
-                    </Button>
-                    <AlertDialog>
-                      <AlertDialogTrigger asChild>
-                        <Button 
-                          variant="outline" 
-                          size="sm"
-                          className="text-red-600 hover:text-red-700 hover:bg-red-50"
-                          data-testid={`button-delete-${recipe.id}`}
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      </AlertDialogTrigger>
-                      <AlertDialogContent>
-                        <AlertDialogHeader>
-                          <AlertDialogTitle>Delete Recipe</AlertDialogTitle>
-                          <AlertDialogDescription>
-                            Are you sure you want to delete "{recipe.name}"? This action cannot be undone.
-                          </AlertDialogDescription>
-                        </AlertDialogHeader>
-                        <AlertDialogFooter>
-                          <AlertDialogCancel>Cancel</AlertDialogCancel>
-                          <AlertDialogAction
-                            onClick={() => handleDeleteRecipe(recipe.id)}
-                            className="bg-red-600 hover:bg-red-700"
+                  <div className="pt-2 border-t space-y-2">
+                    {/* Primary Actions Row */}
+                    <div className="flex gap-2">
+                      <Button 
+                        variant="outline" 
+                        size="sm" 
+                        className="flex-1"
+                        onClick={() => handleViewDetails(recipe)}
+                        data-testid={`button-view-details-${recipe.id}`}
+                      >
+                        <Eye className="h-4 w-4 mr-1" />
+                        View Details
+                      </Button>
+                      <Button 
+                        variant="outline" 
+                        size="sm" 
+                        className="text-blue-600 hover:text-blue-700 hover:bg-blue-50"
+                        onClick={() => generateBuildSheet(recipe)}
+                        data-testid={`button-build-sheet-${recipe.id}`}
+                      >
+                        <FileText className="h-4 w-4 mr-1" />
+                        Build Sheet
+                      </Button>
+                      <AlertDialog>
+                        <AlertDialogTrigger asChild>
+                          <Button 
+                            variant="outline" 
+                            size="sm"
+                            className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                            data-testid={`button-delete-${recipe.id}`}
                           >
-                            Delete
-                          </AlertDialogAction>
-                        </AlertDialogFooter>
-                      </AlertDialogContent>
-                    </AlertDialog>
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </AlertDialogTrigger>
+                        <AlertDialogContent>
+                          <AlertDialogHeader>
+                            <AlertDialogTitle>Delete Recipe</AlertDialogTitle>
+                            <AlertDialogDescription>
+                              Are you sure you want to delete "{recipe.name}"? This action cannot be undone.
+                            </AlertDialogDescription>
+                          </AlertDialogHeader>
+                          <AlertDialogFooter>
+                            <AlertDialogCancel>Cancel</AlertDialogCancel>
+                            <AlertDialogAction
+                              onClick={() => handleDeleteRecipe(recipe.id)}
+                              className="bg-red-600 hover:bg-red-700"
+                            >
+                              Delete
+                            </AlertDialogAction>
+                          </AlertDialogFooter>
+                        </AlertDialogContent>
+                      </AlertDialog>
+                    </div>
+                    {/* Photo Upload Row */}
+                    <div className="flex gap-2">
+                      <ObjectUploader
+                        maxNumberOfFiles={1}
+                        maxFileSize={10485760} // 10MB
+                        onGetUploadParameters={async () => {
+                          const response = await apiRequest('POST', '/api/objects/upload');
+                          const data = await response.json();
+                          return {
+                            method: 'PUT' as const,
+                            url: data.uploadURL,
+                          };
+                        }}
+                        onComplete={(result) => {
+                          if (result.successful?.[0]?.uploadURL) {
+                            uploadPhotoMutation.mutate({
+                              recipeId: recipe.id,
+                              imageUrl: result.successful[0].uploadURL,
+                            });
+                          }
+                        }}
+                        buttonClassName="flex-1 text-green-600 hover:text-green-700 hover:bg-green-50"
+                      >
+                        <Camera className="h-4 w-4 mr-1" />
+                        {recipe.imageUrl ? 'Update Photo' : 'Add Photo'}
+                      </ObjectUploader>
+                    </div>
                   </div>
                 </div>
               </CardContent>

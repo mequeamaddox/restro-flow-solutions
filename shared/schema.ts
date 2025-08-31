@@ -118,6 +118,7 @@ export const recipes = pgTable("recipes", {
   cookTime: integer("cook_time").notNull().default(0), // minutes
   instructions: text("instructions").notNull(),
   sellingPrice: decimal("selling_price", { precision: 10, scale: 2 }),
+  imageUrl: varchar("image_url", { length: 500 }), // Path to recipe photo
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });

@@ -12,6 +12,7 @@
   },
   "dependencies": {
     "@aws-sdk/client-textract": "^3.864.0",
+    "@google-cloud/storage": "^7.17.0",
     "@hookform/resolvers": "^3.10.0",
     "@jridgewell/trace-mapping": "^0.3.25",
     "@neondatabase/serverless": "^0.10.4",
@@ -49,6 +50,10 @@
     "@types/memoizee": "^0.4.12",
     "@types/multer": "^2.0.0",
     "@types/pdf-parse": "^1.1.5",
+    "@uppy/aws-s3": "^5.0.0",
+    "@uppy/core": "^5.0.1",
+    "@uppy/dashboard": "^5.0.1",
+    "@uppy/react": "^5.0.2",
     "@zxing/library": "^0.21.3",
     "canvas": "^3.1.2",
     "class-variance-authority": "^0.7.1",

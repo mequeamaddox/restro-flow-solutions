@@ -7,6 +7,7 @@ import { db } from "./db";
 import { sql } from "drizzle-orm";
 import { posService } from "./posService";
 import { OCRService } from "./ocrService";
+import { ObjectStorageService, ObjectNotFoundError } from "./objectStorage";
 import fs from 'fs';
 import path from 'path';
 import {
@@ -2087,6 +2088,53 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error fetching trends:", error);
       res.status(500).json({ message: "Failed to fetch trends" });
+    }
+  });
+
+  // Object Storage Routes for Recipe Photos
+  app.post("/api/objects/upload", isAuthenticated, async (req, res) => {
+    try {
+      const objectStorageService = new ObjectStorageService();
+      const uploadURL = await objectStorageService.getObjectEntityUploadURL();
+      res.json({ uploadURL });
+    } catch (error) {
+      console.error("Error getting upload URL:", error);
+      res.status(500).json({ error: "Failed to get upload URL" });
+    }
+  });
+
+  app.get("/objects/:objectPath(*)", async (req, res) => {
+    try {
+      const objectStorageService = new ObjectStorageService();
+      const objectFile = await objectStorageService.getObjectEntityFile(req.path);
+      objectStorageService.downloadObject(objectFile, res);
+    } catch (error) {
+      console.error("Error serving object:", error);
+      if (error instanceof ObjectNotFoundError) {
+        return res.sendStatus(404);
+      }
+      return res.sendStatus(500);
+    }
+  });
+
+  app.put("/api/recipes/:id/photo", isAuthenticated, async (req, res) => {
+    try {
+      const { id } = req.params;
+      const { imageUrl } = req.body;
+      
+      if (!imageUrl) {
+        return res.status(400).json({ error: "imageUrl is required" });
+      }
+
+      const objectStorageService = new ObjectStorageService();
+      const objectPath = objectStorageService.normalizeObjectEntityPath(imageUrl);
+      
+      // Update recipe with the photo URL
+      const updatedRecipe = await storage.updateRecipe(id, { imageUrl: objectPath });
+      res.json(updatedRecipe);
+    } catch (error) {
+      console.error("Error updating recipe photo:", error);
+      res.status(500).json({ error: "Failed to update recipe photo" });
     }
   });
 
