@@ -1796,6 +1796,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.delete('/api/hr/employees/:id', isAuthenticated, requirePermission(Permission.MANAGE_EMPLOYEES), async (req, res) => {
+    try {
+      await storage.deleteEmployee(req.params.id);
+      res.json({ message: 'Employee deleted successfully' });
+    } catch (error) {
+      console.error('Error deleting employee:', error);
+      res.status(500).json({ message: 'Failed to delete employee' });
+    }
+  });
+
   // HR Scheduling
   app.get('/api/hr/shifts', isAuthenticated, async (req, res) => {
     try {
