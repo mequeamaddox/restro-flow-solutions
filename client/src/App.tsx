@@ -81,7 +81,10 @@ function Router() {
             <Header onMobileMenuToggle={() => setIsMobileMenuOpen(!isMobileMenuOpen)} />
             <main className="flex-1 overflow-y-auto">
               <Switch>
-                <Route path="/" component={Dashboard} />
+                <Route path="/" component={() => {
+                  // Route employees to their dashboard, others to admin dashboard
+                  return user?.role === 'employee' ? <EmployeeDashboard /> : <Dashboard />;
+                }} />
                 <Route path="/inventory" component={Inventory} />
                 <Route path="/recipes" component={Recipes} />
                 <Route path="/vendors" component={Vendors} />
