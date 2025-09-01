@@ -29,7 +29,9 @@ import {
   Calendar,
   CheckSquare,
   Clock,
-  MessageSquare
+  MessageSquare,
+  UserCircle,
+  Home
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import logoImg from "@assets/IMG_20250812_004328_1754973838131.png";
@@ -60,6 +62,15 @@ const hrNavigation = [
   { name: 'Payroll', href: '/hr/payroll', icon: DollarSign },
   { name: 'Tasks', href: '/hr/tasks', icon: CheckSquare },
   { name: 'Messaging', href: '/hr/messaging', icon: MessageSquare },
+];
+
+const employeeNavigation = [
+  { name: 'My Dashboard', href: '/employee/dashboard', icon: Home },
+  { name: 'My Documents', href: '/employee/documents', icon: FileText },
+  { name: 'Messages', href: '/employee/messages', icon: MessageSquare },
+  { name: 'My Schedule', href: '/hr/scheduling', icon: Calendar },
+  { name: 'Time Clock', href: '/hr/time-clock', icon: Clock },
+  { name: 'Request Time Off', href: '/hr/time-off', icon: Calendar },
 ];
 
 interface SidebarProps {
@@ -182,6 +193,36 @@ export default function Sidebar({ isMobileMenuOpen = false, setIsMobileMenuOpen 
             </ul>
           </div>
 
+          {/* Employee Self-Service Portal */}
+          <div className="mb-6">
+            <div className="px-6 py-2 text-xs font-semibold text-slate-400 uppercase tracking-wide">
+              Employee Portal
+            </div>
+            <ul className="space-y-1">
+              {employeeNavigation.map((item) => {
+                const isActive = currentPath === item.href;
+                const Icon = item.icon;
+                
+                return (
+                  <li key={item.name}>
+                    <Link href={item.href}>
+                      <div
+                        className={cn(
+                          "flex items-center px-6 py-3 text-slate-300 hover:bg-slate-700/50 hover:text-white transition-all duration-200 cursor-pointer rounded-r-2xl mr-4",
+                          isActive && "bg-gradient-to-r from-green-500/20 to-emerald-500/20 border-r-4 border-green-400 text-white"
+                        )}
+                        onClick={() => setMobileMenuOpen(false)}
+                      >
+                        <Icon className="h-5 w-5 mr-3" />
+                        <span className="flex-1">{item.name}</span>
+                      </div>
+                    </Link>
+                  </li>
+                );
+              })}
+            </ul>
+          </div>
+
           {/* HR Employee Management Add-on */}
           <div>
             <div className="px-6 py-2 text-xs font-semibold text-slate-400 uppercase tracking-wide">
@@ -208,6 +249,7 @@ export default function Sidebar({ isMobileMenuOpen = false, setIsMobileMenuOpen 
                           <span className={cn(
                             "ml-2 px-2 py-0.5 text-xs font-bold rounded-full",
                             (item as any).badge === 'ADD-ON' ? "bg-blue-500/20 text-blue-400" :
+                            (item as any).badge === 'LIVE' ? "bg-green-500/20 text-green-400" :
                             "bg-gray-500/20 text-gray-400"
                           )}>
                             {(item as any).badge}

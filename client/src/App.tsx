@@ -36,6 +36,9 @@ import HRDepartments from "@/pages/hr-departments";
 import HRPositions from "@/pages/hr-positions";
 import HRDocuments from "@/pages/hr-documents";
 import EmployeeProfile from "@/pages/employee-profile";
+import EmployeeDashboard from "@/pages/employee-dashboard";
+import EmployeeDocuments from "@/pages/employee-documents";
+import EmployeeMessages from "@/pages/employee-messages";
 import PublicOnboarding from "@/pages/public-onboarding";
 import Sidebar from "@/components/layout/sidebar";
 import Header from "@/components/layout/header";
@@ -103,6 +106,10 @@ function Router() {
                 <Route path="/hr/departments" component={HRDepartments} />
                 <Route path="/hr/positions" component={HRPositions} />
                 <Route path="/hr/documents" component={HRDocuments} />
+                {/* Employee Self-Service Portal Routes */}
+                <Route path="/employee/dashboard" component={EmployeeDashboard} />
+                <Route path="/employee/documents" component={EmployeeDocuments} />
+                <Route path="/employee/messages" component={EmployeeMessages} />
                 <Route component={NotFound} />
               </Switch>
             </main>
