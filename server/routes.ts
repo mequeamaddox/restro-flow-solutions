@@ -1778,7 +1778,30 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post('/api/hr/employees', isAuthenticated, requirePermission(Permission.MANAGE_EMPLOYEES), async (req, res) => {
     try {
-      const employee = await storage.createEmployee(req.body);
+      const { password, ...employeeData } = req.body;
+      
+      // Create employee in database first
+      const employee = await storage.createEmployee(employeeData);
+      
+      // If password is provided, create Firebase account
+      if (password && employee.email) {
+        try {
+          const firebaseUser = await createFirebaseUser(employee.email, password);
+          console.log(`Firebase account created for employee ${employee.email} with UID: ${firebaseUser.uid}`);
+          
+          // You could store the Firebase UID in the employee record if needed
+          // await storage.updateEmployee(employee.id, { firebaseUid: firebaseUser.uid });
+        } catch (firebaseError) {
+          console.error('Firebase account creation failed:', firebaseError);
+          // Employee was created successfully, but Firebase account failed
+          // We still return success but log the error
+          return res.status(201).json({
+            ...employee,
+            warning: 'Employee created but Firebase account setup failed. You can create their login account later in Settings.'
+          });
+        }
+      }
+      
       res.status(201).json(employee);
     } catch (error) {
       console.error('Error creating employee:', error);

@@ -58,8 +58,19 @@ export default function HREmployees() {
     mutationFn: async (employeeData: any) => {
       return await apiRequest('POST', '/api/hr/employees', employeeData);
     },
-    onSuccess: () => {
-      toast({ title: "Success", description: "Employee created successfully" });
+    onSuccess: (data: any) => {
+      if (data.warning) {
+        toast({ 
+          title: "Employee Created", 
+          description: data.warning,
+          variant: "destructive"
+        });
+      } else {
+        toast({ 
+          title: "Success", 
+          description: "Employee and login account created successfully" 
+        });
+      }
       queryClient.invalidateQueries({ queryKey: ['/api/hr/employees'] });
       setIsDialogOpen(false);
       setEditingEmployee(null);
@@ -113,6 +124,31 @@ export default function HREmployees() {
   const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     const formData = new FormData(e.currentTarget);
+    
+    // Password validation for new employees
+    if (!editingEmployee) {
+      const password = formData.get('password') as string;
+      const confirmPassword = formData.get('confirmPassword') as string;
+      
+      if (password !== confirmPassword) {
+        toast({ 
+          title: "Error", 
+          description: "Passwords do not match", 
+          variant: "destructive" 
+        });
+        return;
+      }
+      
+      if (password.length < 6) {
+        toast({ 
+          title: "Error", 
+          description: "Password must be at least 6 characters long", 
+          variant: "destructive" 
+        });
+        return;
+      }
+    }
+    
     const employeeData = {
       firstName: formData.get('firstName'),
       lastName: formData.get('lastName'),
@@ -124,6 +160,9 @@ export default function HREmployees() {
       hireDate: formData.get('hireDate') as string || new Date().toISOString().split('T')[0],
       status: formData.get('status') || 'active',
       notes: formData.get('notes'),
+      ...((!editingEmployee && formData.get('password')) && { 
+        password: formData.get('password') 
+      })
     };
 
     if (editingEmployee) {
@@ -232,6 +271,32 @@ export default function HREmployees() {
                       defaultValue={editingEmployee?.phone || ''}
                     />
                   </div>
+                  
+                  {!editingEmployee && (
+                    <>
+                      <div className="space-y-2">
+                        <Label htmlFor="password">Password</Label>
+                        <Input
+                          id="password"
+                          name="password"
+                          type="password"
+                          placeholder="Enter temporary password"
+                          required
+                        />
+                      </div>
+                      
+                      <div className="space-y-2">
+                        <Label htmlFor="confirmPassword">Confirm Password</Label>
+                        <Input
+                          id="confirmPassword"
+                          name="confirmPassword"
+                          type="password"
+                          placeholder="Confirm password"
+                          required
+                        />
+                      </div>
+                    </>
+                  )}
                   
                   <div className="space-y-2">
                     <Label htmlFor="departmentId">Department</Label>
