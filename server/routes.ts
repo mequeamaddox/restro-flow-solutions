@@ -1820,6 +1820,96 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Employee Self-Service Time Clock API - Personal time tracking
+  app.get('/api/employees/:employeeId/time-entries', isAuthenticated, async (req, res) => {
+    try {
+      const userId = (req.user as any)?.claims?.sub;
+      // Ensure employees can only access their own time entries
+      if (req.params.employeeId !== userId) {
+        return res.status(403).json({ message: 'Access denied - can only view your own time entries' });
+      }
+      const timeEntries = await storage.getEmployeeTimeEntries(req.params.employeeId);
+      res.json(timeEntries);
+    } catch (error) {
+      console.error('Error fetching employee time entries:', error);
+      res.status(500).json({ message: 'Failed to fetch time entries' });
+    }
+  });
+
+  app.get('/api/employees/:employeeId/shifts', isAuthenticated, async (req, res) => {
+    try {
+      const userId = (req.user as any)?.claims?.sub;
+      // Ensure employees can only access their own shifts
+      if (req.params.employeeId !== userId) {
+        return res.status(403).json({ message: 'Access denied - can only view your own shifts' });
+      }
+      const shifts = await storage.getEmployeeShifts(req.params.employeeId);
+      res.json(shifts);
+    } catch (error) {
+      console.error('Error fetching employee shifts:', error);
+      res.status(500).json({ message: 'Failed to fetch shifts' });
+    }
+  });
+
+  app.post('/api/employees/:employeeId/clock-in', isAuthenticated, async (req, res) => {
+    try {
+      const userId = (req.user as any)?.claims?.sub;
+      // Ensure employees can only clock in for themselves
+      if (req.params.employeeId !== userId) {
+        return res.status(403).json({ message: 'Access denied - can only clock in for yourself' });
+      }
+      const entry = await storage.employeeClockIn(req.params.employeeId);
+      res.status(201).json(entry);
+    } catch (error) {
+      console.error('Error clocking in:', error);
+      res.status(500).json({ message: 'Failed to clock in' });
+    }
+  });
+
+  app.post('/api/employees/:employeeId/clock-out', isAuthenticated, async (req, res) => {
+    try {
+      const userId = (req.user as any)?.claims?.sub;
+      // Ensure employees can only clock out for themselves
+      if (req.params.employeeId !== userId) {
+        return res.status(403).json({ message: 'Access denied - can only clock out for yourself' });
+      }
+      const { notes } = req.body;
+      const entry = await storage.employeeClockOut(req.params.employeeId, notes);
+      res.json(entry);
+    } catch (error) {
+      console.error('Error clocking out:', error);
+      res.status(500).json({ message: 'Failed to clock out' });
+    }
+  });
+
+  app.post('/api/employees/:employeeId/break-start', isAuthenticated, async (req, res) => {
+    try {
+      const userId = (req.user as any)?.claims?.sub;
+      if (req.params.employeeId !== userId) {
+        return res.status(403).json({ message: 'Access denied - can only start break for yourself' });
+      }
+      const entry = await storage.employeeStartBreak(req.params.employeeId);
+      res.json(entry);
+    } catch (error) {
+      console.error('Error starting break:', error);
+      res.status(500).json({ message: 'Failed to start break' });
+    }
+  });
+
+  app.post('/api/employees/:employeeId/break-end', isAuthenticated, async (req, res) => {
+    try {
+      const userId = (req.user as any)?.claims?.sub;
+      if (req.params.employeeId !== userId) {
+        return res.status(403).json({ message: 'Access denied - can only end break for yourself' });
+      }
+      const entry = await storage.employeeEndBreak(req.params.employeeId);
+      res.json(entry);
+    } catch (error) {
+      console.error('Error ending break:', error);
+      res.status(500).json({ message: 'Failed to end break' });
+    }
+  });
+
   // HR Payroll
   app.get('/api/hr/payroll/pay-periods', isAuthenticated, async (req, res) => {
     try {

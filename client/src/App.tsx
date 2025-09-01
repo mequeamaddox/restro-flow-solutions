@@ -39,12 +39,14 @@ import EmployeeProfile from "@/pages/employee-profile";
 import EmployeeDashboard from "@/pages/employee-dashboard";
 import EmployeeDocuments from "@/pages/employee-documents";
 import EmployeeMessages from "@/pages/employee-messages";
+import EmployeeTimeClock from "@/pages/employee-time-clock";
+import EmployeeSchedule from "@/pages/employee-schedule";
 import PublicOnboarding from "@/pages/public-onboarding";
 import Sidebar from "@/components/layout/sidebar";
 import Header from "@/components/layout/header";
 
 function Router() {
-  const { isAuthenticated, isLoading } = useAuth();
+  const { isAuthenticated, isLoading, user } = useAuth();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   if (isLoading || !isAuthenticated) {
@@ -110,6 +112,8 @@ function Router() {
                 <Route path="/employee/dashboard" component={EmployeeDashboard} />
                 <Route path="/employee/documents" component={EmployeeDocuments} />
                 <Route path="/employee/messages" component={EmployeeMessages} />
+                <Route path="/employee/time-clock" component={EmployeeTimeClock} />
+                <Route path="/employee/schedule" component={EmployeeSchedule} />
                 <Route component={NotFound} />
               </Switch>
             </main>

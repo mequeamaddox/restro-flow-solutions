@@ -70,8 +70,8 @@ const employeeNavigation = [
   { name: 'My Dashboard', href: '/employee/dashboard', icon: Home },
   { name: 'My Documents', href: '/employee/documents', icon: FileText },
   { name: 'Messages', href: '/employee/messages', icon: MessageSquare },
-  { name: 'My Schedule', href: '/hr/scheduling', icon: Calendar },
-  { name: 'Time Clock', href: '/hr/time-clock', icon: Clock },
+  { name: 'My Schedule', href: '/employee/schedule', icon: Calendar },
+  { name: 'Time Clock', href: '/employee/time-clock', icon: Clock },
   { name: 'Request Time Off', href: '/hr/time-off', icon: Calendar },
 ];
 
