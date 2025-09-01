@@ -220,18 +220,21 @@ export default function HREmployees() {
                 Add Employee
               </Button>
             </DialogTrigger>
-            <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-              <form onSubmit={handleSubmit}>
-                <DialogHeader>
-                  <DialogTitle>
-                    {editingEmployee ? 'Edit Employee' : 'Add New Employee'}
-                  </DialogTitle>
-                  <DialogDescription>
-                    {editingEmployee ? 'Update employee information' : 'Enter employee details to add them to your team'}
-                  </DialogDescription>
-                </DialogHeader>
+            <DialogContent className="max-w-2xl h-[95vh] flex flex-col p-0">
+              <form onSubmit={handleSubmit} className="flex flex-col h-full">
+                <div className="p-6 border-b">
+                  <DialogHeader>
+                    <DialogTitle>
+                      {editingEmployee ? 'Edit Employee' : 'Add New Employee'}
+                    </DialogTitle>
+                    <DialogDescription>
+                      {editingEmployee ? 'Update employee information' : 'Enter employee details to add them to your team'}
+                    </DialogDescription>
+                  </DialogHeader>
+                </div>
                 
-                <div className="grid grid-cols-2 gap-4 py-4 overflow-y-auto">
+                <div className="flex-1 overflow-y-auto p-6">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <Label htmlFor="firstName">First Name</Label>
                     <Input
@@ -377,12 +380,16 @@ export default function HREmployees() {
                     />
                   </div>
                 </div>
+                  </div>
+                </div>
                 
-                <DialogFooter>
-                  <Button type="submit" disabled={createEmployeeMutation.isPending || updateEmployeeMutation.isPending}>
-                    {editingEmployee ? 'Update Employee' : 'Add Employee'}
-                  </Button>
-                </DialogFooter>
+                <div className="p-6 border-t bg-gray-50">
+                  <DialogFooter>
+                    <Button type="submit" disabled={createEmployeeMutation.isPending || updateEmployeeMutation.isPending}>
+                      {editingEmployee ? 'Update Employee' : 'Add Employee'}
+                    </Button>
+                  </DialogFooter>
+                </div>
               </form>
             </DialogContent>
           </Dialog>
