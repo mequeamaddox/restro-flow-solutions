@@ -13,8 +13,9 @@ import { ObjectUploader } from '@/components/ObjectUploader';
 import { 
   FileText, Upload, CheckCircle, Clock, AlertTriangle, Users, 
   Calendar, BarChart3, Download, Eye, Trash2, Plus, Filter,
-  Award, Target, TrendingUp, User, Settings, Search, Send
+  Award, Target, TrendingUp, User, Settings, Search, Send, Zap
 } from 'lucide-react';
+import { DocumentAssignmentWizard } from '@/components/hr/DocumentAssignmentWizard';
 import { format } from 'date-fns';
 import { apiRequest, queryClient } from '@/lib/queryClient';
 import { useToast } from '@/hooks/use-toast';
@@ -52,6 +53,7 @@ export default function HRDocumentsPage() {
   const [showDocumentDialog, setShowDocumentDialog] = useState(false);
   const [showOnboardingDialog, setShowOnboardingDialog] = useState(false);
   const [showInviteDialog, setShowInviteDialog] = useState(false);
+  const [showAssignmentWizard, setShowAssignmentWizard] = useState(false);
 
   // Fetch data
   const { data: employees } = useQuery<Employee[]>({
@@ -201,6 +203,15 @@ export default function HRDocumentsPage() {
           <p className="text-gray-600 mt-2">Manage employee documents and onboarding processes</p>
         </div>
         <div className="flex gap-2">
+          <Button 
+            onClick={() => setShowAssignmentWizard(true)}
+            className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700"
+            data-testid="button-assignment-wizard"
+          >
+            <Zap className="w-4 h-4 mr-2" />
+            Assignment Wizard
+          </Button>
+          
           <Dialog open={showDocumentDialog} onOpenChange={setShowDocumentDialog}>
             <DialogTrigger asChild>
               <Button data-testid="button-add-document">
@@ -429,6 +440,12 @@ export default function HRDocumentsPage() {
           </Dialog>
         </div>
       </div>
+
+      {/* Document Assignment Wizard */}
+      <DocumentAssignmentWizard 
+        isOpen={showAssignmentWizard} 
+        onClose={() => setShowAssignmentWizard(false)} 
+      />
 
       {/* Analytics Dashboard */}
       {onboardingAnalytics && (
