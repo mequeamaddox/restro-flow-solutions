@@ -57,13 +57,17 @@ function updateUserSession(
 async function upsertUser(
   claims: any,
 ) {
+  // Check if user already exists to preserve their role
+  const existingUser = await storage.getUser(claims["sub"]);
+  
   await storage.upsertUser({
     id: claims["sub"],
     email: claims["email"],
     firstName: claims["first_name"],
     lastName: claims["last_name"],
     profileImageUrl: claims["profile_image_url"],
-    role: "employee", // Set default role as employee for testing role-based access control
+    // Preserve existing role, or default to 'owner' for mequeamaddox@gmail.com, 'employee' for others
+    role: existingUser?.role || (claims["email"] === "mequeamaddox@gmail.com" ? "owner" : "employee"),
   });
 }
 
