@@ -122,12 +122,9 @@ export default function EmployeePage() {
   // Mutation for assigning documents
   const assignDocumentMutation = useMutation({
     mutationFn: async (templateId: string) => {
-      return apiRequest(`/api/employee-documents/assign`, {
-        method: 'POST',
-        body: {
-          employeeId,
-          templateId,
-        },
+      return apiRequest('POST', `/api/employee-documents/assign`, {
+        employeeId,
+        templateId,
       });
     },
     onSuccess: () => {
