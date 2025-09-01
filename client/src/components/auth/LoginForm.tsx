@@ -25,6 +25,7 @@ export function LoginForm({ onToggleMode }: LoginFormProps) {
   const [isLoading, setIsLoading] = useState(false);
   const [isCreatingAdmin, setIsCreatingAdmin] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [emailValue, setEmailValue] = useState("");
   const { signIn } = useFirebaseAuth();
 
   const form = useForm<LoginFormData>({
@@ -49,7 +50,7 @@ export function LoginForm({ onToggleMode }: LoginFormProps) {
   };
 
   const createAdminAccount = async () => {
-    if (form.getValues('email') !== 'mequeamaddox@gmail.com') {
+    if (emailValue !== 'mequeamaddox@gmail.com') {
       setError('Admin account creation is restricted');
       return;
     }
@@ -113,6 +114,10 @@ export function LoginForm({ onToggleMode }: LoginFormProps) {
                         className="pl-10"
                         data-testid="input-email"
                         {...field} 
+                        onChange={(e) => {
+                          field.onChange(e);
+                          setEmailValue(e.target.value);
+                        }}
                       />
                     </div>
                   </FormControl>
@@ -158,7 +163,7 @@ export function LoginForm({ onToggleMode }: LoginFormProps) {
                 Sign In
               </Button>
               
-              {form.getValues('email') === 'mequeamaddox@gmail.com' && (
+              {emailValue === 'mequeamaddox@gmail.com' && (
                 <Button 
                   type="button" 
                   variant="outline"
