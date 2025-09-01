@@ -15,14 +15,7 @@ const app = initializeApp(firebaseConfig);
 // Initialize Firebase Authentication
 export const auth = getAuth(app);
 
-// Connect to emulator in development
-if (import.meta.env.DEV && !auth.config.emulator) {
-  try {
-    connectAuthEmulator(auth, "http://localhost:9099");
-  } catch (error) {
-    // Emulator might not be running, continue without it
-    console.log("Firebase Auth emulator not running, using production");
-  }
-}
+// Use production Firebase (no emulator) for better mobile compatibility
+// The system is now configured to use your actual Firebase project
 
 export default app;

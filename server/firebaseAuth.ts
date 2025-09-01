@@ -4,7 +4,7 @@ import { storage } from './storage';
 
 // Initialize Firebase Admin SDK
 if (!getApps().length) {
-  // For development/Replit, we'll use the project ID without service account
+  // Use production Firebase project
   initializeApp({
     projectId: process.env.VITE_FIREBASE_PROJECT_ID,
   });
