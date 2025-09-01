@@ -13,6 +13,9 @@ import { Clock, Play, Square, Coffee, UserCheck, Timer, Edit, Trash2, Save, Cale
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
+import { useAuth } from "@/hooks/useAuth";
+import { usePermissions, Permission } from "@/contexts/PermissionContext";
+import { useEffect } from "react";
 
 interface Employee {
   id: string;
@@ -37,9 +40,19 @@ interface TimeEntry {
 }
 
 export default function HRTimeClock() {
+  const { user } = useAuth();
+  const { hasPermission } = usePermissions();
   const [selectedEmployeeId, setSelectedEmployeeId] = useState<string>("");
   const [editingEntry, setEditingEntry] = useState<TimeEntry | null>(null);
   const [showEditDialog, setShowEditDialog] = useState(false);
+
+  // Redirect employees to their personal time clock
+  useEffect(() => {
+    const isEmployee = (user as any)?.role === 'employee';
+    if (isEmployee || !hasPermission(Permission.MANAGE_EMPLOYEES)) {
+      window.location.href = '/employee/time-clock';
+    }
+  }, [user, hasPermission]);
   const [dateRange, setDateRange] = useState('7'); // days to look back
   const [selectedEmployee, setSelectedEmployee] = useState<string>('all');
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
