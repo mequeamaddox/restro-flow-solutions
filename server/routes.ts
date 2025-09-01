@@ -1858,7 +1858,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (req.params.employeeId !== userId) {
         return res.status(403).json({ message: 'Access denied - can only clock in for yourself' });
       }
-      const entry = await storage.employeeClockIn(req.params.employeeId);
+      const entry = await storage.clockIn(req.params.employeeId);
       res.status(201).json(entry);
     } catch (error) {
       console.error('Error clocking in:', error);
@@ -1874,7 +1874,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(403).json({ message: 'Access denied - can only clock out for yourself' });
       }
       const { notes } = req.body;
-      const entry = await storage.employeeClockOut(req.params.employeeId, notes);
+      // Get the active time entry for the employee first
+      const activeEntry = await storage.getActiveTimeEntry(req.params.employeeId);
+      if (!activeEntry) {
+        return res.status(400).json({ message: 'No active time entry found' });
+      }
+      const entry = await storage.clockOut(activeEntry.id);
       res.json(entry);
     } catch (error) {
       console.error('Error clocking out:', error);
@@ -1888,7 +1893,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (req.params.employeeId !== userId) {
         return res.status(403).json({ message: 'Access denied - can only start break for yourself' });
       }
-      const entry = await storage.employeeStartBreak(req.params.employeeId);
+      // Get the active time entry for the employee first
+      const activeEntry = await storage.getActiveTimeEntry(req.params.employeeId);
+      if (!activeEntry) {
+        return res.status(400).json({ message: 'No active time entry found' });
+      }
+      const entry = await storage.startBreak(activeEntry.id);
       res.json(entry);
     } catch (error) {
       console.error('Error starting break:', error);
@@ -1902,7 +1912,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (req.params.employeeId !== userId) {
         return res.status(403).json({ message: 'Access denied - can only end break for yourself' });
       }
-      const entry = await storage.employeeEndBreak(req.params.employeeId);
+      // Get the active time entry for the employee first
+      const activeEntry = await storage.getActiveTimeEntry(req.params.employeeId);
+      if (!activeEntry) {
+        return res.status(400).json({ message: 'No active time entry found' });
+      }
+      const entry = await storage.endBreak(activeEntry.id);
       res.json(entry);
     } catch (error) {
       console.error('Error ending break:', error);
