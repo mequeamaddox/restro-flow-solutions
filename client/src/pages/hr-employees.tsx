@@ -8,7 +8,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Users, UserPlus, Search, Filter, Mail, Phone, MapPin, User, Edit } from "lucide-react";
+import { Users, UserPlus, Search, Filter, Mail, Phone, MapPin, User, Edit, Trash2 } from "lucide-react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
@@ -84,6 +84,19 @@ export default function HREmployees() {
     },
   });
 
+  const deleteEmployeeMutation = useMutation({
+    mutationFn: async (id: string) => {
+      return await apiRequest('DELETE', `/api/hr/employees/${id}`);
+    },
+    onSuccess: () => {
+      toast({ title: "Success", description: "Employee deleted successfully" });
+      queryClient.invalidateQueries({ queryKey: ['/api/hr/employees'] });
+    },
+    onError: () => {
+      toast({ title: "Error", description: "Failed to delete employee", variant: "destructive" });
+    },
+  });
+
   const filteredEmployees = employees.filter((employee: Employee) => {
     const matchesSearch = searchTerm === "" ||
       employee.firstName.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -145,7 +158,7 @@ export default function HREmployees() {
   }
 
   return (
-    <div className="max-w-7xl mx-auto p-6">
+    <div className="max-w-7xl mx-auto p-6 overflow-y-auto max-h-screen">
       <div className="mb-6">
         <div className="flex items-center justify-between">
           <div>
@@ -405,19 +418,35 @@ export default function HREmployees() {
                 </Button>
                 
                 {hasPermission(Permission.MANAGE_EMPLOYEES) && (
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="flex-1"
-                    onClick={() => {
-                      setEditingEmployee(employee);
-                      setIsDialogOpen(true);
-                    }}
-                    data-testid={`edit-employee-${employee.id}`}
-                  >
-                    <Edit className="w-4 h-4 mr-2" />
-                    Edit
-                  </Button>
+                  <>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="flex-1"
+                      onClick={() => {
+                        setEditingEmployee(employee);
+                        setIsDialogOpen(true);
+                      }}
+                      data-testid={`edit-employee-${employee.id}`}
+                    >
+                      <Edit className="w-4 h-4 mr-2" />
+                      Edit
+                    </Button>
+                    
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                      onClick={() => {
+                        if (window.confirm(`Are you sure you want to delete ${employee.firstName} ${employee.lastName}? This action cannot be undone.`)) {
+                          deleteEmployeeMutation.mutate(employee.id);
+                        }
+                      }}
+                      data-testid={`delete-employee-${employee.id}`}
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </Button>
+                  </>
                 )}
               </div>
             </CardContent>
