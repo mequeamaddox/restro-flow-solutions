@@ -22,8 +22,16 @@ export default function Auth() {
         
         <LoginForm onToggleMode={() => setIsLogin(!isLogin)} />
         
-        <div className="mt-6 text-center text-sm text-gray-400">
+        <div className="mt-6 text-center text-sm text-gray-400 space-y-3">
           <p>Contact your system administrator for account access</p>
+          <div className="border-t border-gray-600 pt-3">
+            <a 
+              href="/admin" 
+              className="text-blue-400 hover:text-blue-300 text-sm font-medium"
+            >
+              Administrator? Click here to log in with Replit
+            </a>
+          </div>
         </div>
       </div>
     </div>

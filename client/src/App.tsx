@@ -64,6 +64,11 @@ function Router() {
         <Route path="/landing" component={Landing} />
         <Route path="/pricing" component={Pricing} />
         <Route path="/onboarding/:token" component={PublicOnboarding} />
+        <Route path="/admin" component={() => {
+          // Redirect to Replit auth for admin access
+          window.location.href = '/api/login';
+          return <div>Redirecting to admin login...</div>;
+        }} />
         <Route path="/" component={Auth} />
         <Route component={Auth} />
       </Switch>
