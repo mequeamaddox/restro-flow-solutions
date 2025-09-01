@@ -220,7 +220,7 @@ export default function HREmployees() {
                 Add Employee
               </Button>
             </DialogTrigger>
-            <DialogContent className="max-w-2xl">
+            <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
               <form onSubmit={handleSubmit}>
                 <DialogHeader>
                   <DialogTitle>
@@ -231,7 +231,7 @@ export default function HREmployees() {
                   </DialogDescription>
                 </DialogHeader>
                 
-                <div className="grid grid-cols-2 gap-4 py-4">
+                <div className="grid grid-cols-2 gap-4 py-4 overflow-y-auto">
                   <div className="space-y-2">
                     <Label htmlFor="firstName">First Name</Label>
                     <Input
