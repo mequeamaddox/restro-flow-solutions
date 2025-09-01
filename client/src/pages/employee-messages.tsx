@@ -321,7 +321,7 @@ export default function EmployeeMessages() {
             {filter === 'all' ? 'All Messages' : 
              filter === 'unread' ? 'Unread Messages' :
              filter === 'sent' ? 'Sent Messages' :
-             filter.charAt(0).toUpperCase() + filter.slice(1) + ' Messages'}
+             (filter?.charAt(0)?.toUpperCase() || '') + (filter?.slice(1) || '') + ' Messages'}
             {filteredMessages.length > 0 && (
               <Badge variant="outline">({filteredMessages.length})</Badge>
             )}
@@ -369,12 +369,12 @@ export default function EmployeeMessages() {
                             `${message.sender.firstName} ${message.sender.lastName}`
                           )}
                         </p>
-                        {message.sender.position && (
+                        {message.sender?.position?.title && (
                           <span className="text-xs text-gray-500">• {message.sender.position.title}</span>
                         )}
                         {message.priority !== 'normal' && (
                           <Badge className={getPriorityColor(message.priority)} variant="outline">
-                            {message.priority.toUpperCase()}
+                            {message.priority?.toUpperCase() || 'NORMAL'}
                           </Badge>
                         )}
                         {!message.isRead && (
@@ -402,7 +402,7 @@ export default function EmployeeMessages() {
                           )}
                         </div>
                         <Badge variant="outline" className="text-xs">
-                          {message.type.toUpperCase()}
+                          {message.type?.toUpperCase() || 'DIRECT'}
                         </Badge>
                       </div>
                     </div>
@@ -462,7 +462,7 @@ export default function EmployeeMessages() {
                       .map((employee) => (
                       <SelectItem key={employee.id} value={employee.id}>
                         {employee.firstName} {employee.lastName}
-                        {employee.position && ` - ${employee.position.title}`}
+                        {employee.position?.title && ` - ${employee.position.title}`}
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -555,7 +555,7 @@ export default function EmployeeMessages() {
                         {selectedMessage.senderId === userId ? 'You' : 
                          `${selectedMessage.sender.firstName} ${selectedMessage.sender.lastName}`}
                       </span>
-                      {selectedMessage.sender.position && (
+                      {selectedMessage.sender?.position?.title && (
                         <>
                           <span>•</span>
                           <span>{selectedMessage.sender.position.title}</span>
@@ -567,10 +567,10 @@ export default function EmployeeMessages() {
                   </div>
                   <div className="flex items-center gap-2">
                     <Badge className={getPriorityColor(selectedMessage.priority)}>
-                      {selectedMessage.priority.toUpperCase()}
+                      {selectedMessage.priority?.toUpperCase() || 'NORMAL'}
                     </Badge>
                     <Badge variant="outline">
-                      {selectedMessage.type.toUpperCase()}
+                      {selectedMessage.type?.toUpperCase() || 'DIRECT'}
                     </Badge>
                   </div>
                 </div>
