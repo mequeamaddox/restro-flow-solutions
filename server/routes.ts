@@ -2669,7 +2669,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post('/api/document-templates', isAuthenticated, async (req, res) => {
     try {
-      const userId = req.user?.claims?.sub;
+      const userId = (req.user as any)?.claims?.sub;
       const templateData = { ...req.body, createdBy: userId };
       const template = await storage.createDocumentTemplate(templateData);
       res.status(201).json(template);
@@ -2692,7 +2692,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post('/api/employee-documents/assign', isAuthenticated, async (req, res) => {
     try {
-      const userId = req.user?.claims?.sub;
+      const userId = (req.user as any)?.claims?.sub;
       const assignmentData = { 
         ...req.body, 
         sentBy: userId, 
