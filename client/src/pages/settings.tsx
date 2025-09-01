@@ -18,6 +18,7 @@ import { apiRequest } from "@/lib/queryClient";
 import { isUnauthorizedError } from "@/lib/authUtils";
 import { insertLocationSchema, type InsertLocation, type Location } from "@shared/schema";
 import { useAuth } from "@/hooks/useAuth";
+import { EmployeeAccountManager } from "@/components/admin/EmployeeAccountManager";
 
 export default function Settings() {
   const [isAddLocationOpen, setIsAddLocationOpen] = useState(false);
@@ -452,6 +453,21 @@ export default function Settings() {
             )}
           </CardContent>
         </Card>
+
+        {/* Employee Management (Admin Only) */}
+        {user && ['owner', 'admin'].includes((user as any).role) && (
+          <Card className="lg:col-span-3">
+            <CardHeader>
+              <CardTitle className="flex items-center">
+                <User className="h-5 w-5 mr-2" />
+                Employee Account Management
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <EmployeeAccountManager />
+            </CardContent>
+          </Card>
+        )}
 
         {/* System Preferences */}
         <Card className="lg:col-span-3">

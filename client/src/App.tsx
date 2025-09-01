@@ -10,6 +10,7 @@ import { PermissionProvider } from "@/contexts/PermissionContext";
 import NotFound from "@/pages/not-found";
 import Landing from "@/pages/landing";
 import Pricing from "@/pages/pricing";
+import Auth from "@/pages/auth";
 import Dashboard from "@/pages/dashboard";
 import Inventory from "@/pages/inventory";
 import Recipes from "@/pages/recipes";
@@ -49,13 +50,22 @@ function Router() {
   const { isAuthenticated, isLoading, user } = useAuth();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
-  if (isLoading || !isAuthenticated) {
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 flex items-center justify-center">
+        <div className="text-white text-xl">Loading...</div>
+      </div>
+    );
+  }
+
+  if (!isAuthenticated) {
     return (
       <Switch>
-        <Route path="/" component={Landing} />
+        <Route path="/landing" component={Landing} />
         <Route path="/pricing" component={Pricing} />
         <Route path="/onboarding/:token" component={PublicOnboarding} />
-        <Route component={NotFound} />
+        <Route path="/" component={Auth} />
+        <Route component={Auth} />
       </Switch>
     );
   }

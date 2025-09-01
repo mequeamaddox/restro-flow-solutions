@@ -2,6 +2,7 @@ import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { setupAuth, isAuthenticated } from "./replitAuth";
+import { verifyFirebaseToken, syncFirebaseUser, adminAuth } from "./firebaseAuth";
 import { requirePermission, requireAnyPermission, Permission } from "./permissions";
 import multer from "multer";
 import { db } from "./db";
@@ -76,6 +77,76 @@ async function checkOcrAccess(userId: string): Promise<{ hasAccess: boolean; cre
 export async function registerRoutes(app: Express): Promise<Server> {
   // Auth middleware
   await setupAuth(app);
+
+  // Firebase Authentication Route
+  app.post('/api/auth/firebase-user', async (req, res) => {
+    try {
+      const authHeader = req.headers.authorization;
+      if (!authHeader || !authHeader.startsWith('Bearer ')) {
+        return res.status(401).json({ message: 'No token provided' });
+      }
+
+      const idToken = authHeader.split('Bearer ')[1];
+      const decodedToken = await verifyFirebaseToken(idToken);
+      
+      const user = await syncFirebaseUser({
+        uid: decodedToken.uid,
+        email: decodedToken.email || null,
+        displayName: req.body.displayName || null,
+        photoURL: req.body.photoURL || null,
+      });
+
+      res.json(user);
+    } catch (error) {
+      console.error('Firebase auth error:', error);
+      res.status(401).json({ message: 'Authentication failed' });
+    }
+  });
+
+  // Admin route for creating employee accounts
+  app.post('/api/admin/create-employee', isAuthenticated, async (req, res) => {
+    try {
+      const { email, password, displayName } = req.body;
+      
+      // Only allow owners/admins to create employees
+      const currentUserId = (req.user as any)?.claims?.sub;
+      const currentUser = await storage.getUser(currentUserId);
+      
+      if (!currentUser || !['owner', 'admin'].includes(currentUser.role)) {
+        return res.status(403).json({ message: 'Insufficient permissions' });
+      }
+
+      // Create Firebase user account
+      const userRecord = await adminAuth.createUser({
+        email,
+        password,
+        displayName,
+        emailVerified: true,
+      });
+
+      // Create user in our database
+      await storage.upsertUser({
+        id: userRecord.uid,
+        email,
+        firstName: displayName.split(' ')[0] || '',
+        lastName: displayName.split(' ').slice(1).join(' ') || '',
+        role: 'employee',
+      });
+
+      res.json({ 
+        message: 'Employee account created successfully',
+        uid: userRecord.uid,
+        email: userRecord.email 
+      });
+    } catch (error: any) {
+      console.error('Error creating employee account:', error);
+      res.status(500).json({ 
+        message: error.code === 'auth/email-already-exists' 
+          ? 'Email already exists' 
+          : 'Failed to create employee account' 
+      });
+    }
+  });
 
   // Auth routes
   app.get('/api/auth/user', isAuthenticated, async (req: any, res) => {
