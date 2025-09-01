@@ -66,32 +66,33 @@ interface Message {
 
 export default function EmployeeDashboard() {
   const { user } = useAuth();
+  const userId = (user as any)?.claims?.sub;
   const [activeTab, setActiveTab] = useState("overview");
 
   // Fetch employee-specific data
   const { data: assignedDocuments = [] } = useQuery<EmployeeDocument[]>({
-    queryKey: [`/api/employees/${user?.id}/documents`],
-    enabled: !!user?.id,
+    queryKey: [`/api/employees/${userId}/documents`],
+    enabled: !!userId,
   });
 
   const { data: myTasks = [] } = useQuery<Task[]>({
-    queryKey: [`/api/employees/${user?.id}/tasks`],
-    enabled: !!user?.id,
+    queryKey: [`/api/employees/${userId}/tasks`],
+    enabled: !!userId,
   });
 
   const { data: myShifts = [] } = useQuery<Shift[]>({
-    queryKey: [`/api/employees/${user?.id}/shifts`],
-    enabled: !!user?.id,
+    queryKey: [`/api/employees/${userId}/shifts`],
+    enabled: !!userId,
   });
 
   const { data: recentMessages = [] } = useQuery<Message[]>({
-    queryKey: [`/api/employees/${user?.id}/messages`],
-    enabled: !!user?.id,
+    queryKey: [`/api/employees/${userId}/messages`],
+    enabled: !!userId,
   });
 
   const { data: profile } = useQuery({
-    queryKey: [`/api/employees/${user?.id}/profile`],
-    enabled: !!user?.id,
+    queryKey: [`/api/employees/${userId}/profile`],
+    enabled: !!userId,
   });
 
   // Calculate stats
@@ -154,10 +155,10 @@ export default function EmployeeDashboard() {
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-3xl font-bold mb-2" data-testid="welcome-message">
-              Welcome back, {profile?.employee?.firstName || user?.firstName || 'Employee'}!
+              Welcome back, {(user as any)?.firstName || 'Employee'}!
             </h1>
             <p className="text-blue-100">
-              {profile?.employee?.position?.title || 'Team Member'} • {profile?.employee?.department?.name || 'Restaurant Team'}
+              Team Member • Restaurant Team
             </p>
           </div>
           <div className="text-right">

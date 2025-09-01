@@ -21,11 +21,12 @@ interface Shift {
 export default function EmployeeSchedule() {
   const [currentWeek, setCurrentWeek] = useState(new Date());
   const { user } = useAuth();
+  const userId = (user as any)?.claims?.sub;
 
   // Get current user's scheduled shifts
   const { data: myShifts = [], isLoading: shiftsLoading } = useQuery<Shift[]>({
-    queryKey: ['/api/employees', user?.id, 'shifts'],
-    enabled: !!user?.id,
+    queryKey: ['/api/employees', userId, 'shifts'],
+    enabled: !!userId,
   });
 
   const weekStart = startOfWeek(currentWeek, { weekStartsOn: 0 }); // Sunday

@@ -46,6 +46,7 @@ export default function EmployeeTimeClock() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const { user } = useAuth();
+  const userId = (user as any)?.claims?.sub;
 
   // Update current time every second
   useEffect(() => {
@@ -57,14 +58,14 @@ export default function EmployeeTimeClock() {
 
   // Get current user's time entries
   const { data: myTimeEntries = [], isLoading: entriesLoading } = useQuery<TimeEntry[]>({
-    queryKey: ['/api/employees', user?.id, 'time-entries'],
-    enabled: !!user?.id,
+    queryKey: ['/api/employees', userId, 'time-entries'],
+    enabled: !!userId,
   });
 
   // Get current user's scheduled shifts
   const { data: myShifts = [], isLoading: shiftsLoading } = useQuery<Shift[]>({
-    queryKey: ['/api/employees', user?.id, 'shifts'],
-    enabled: !!user?.id,
+    queryKey: ['/api/employees', userId, 'shifts'],
+    enabled: !!userId,
   });
 
   // Get today's time entry if exists
@@ -79,11 +80,11 @@ export default function EmployeeTimeClock() {
 
   const clockInMutation = useMutation({
     mutationFn: async () => {
-      return await apiRequest('POST', `/api/employees/${user?.id}/clock-in`, {});
+      return await apiRequest('POST', `/api/employees/${userId}/clock-in`, {});
     },
     onSuccess: () => {
       toast({ title: "Clocked In", description: "You've successfully clocked in for your shift!" });
-      queryClient.invalidateQueries({ queryKey: ['/api/employees', user?.id, 'time-entries'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/employees', userId, 'time-entries'] });
     },
     onError: () => {
       toast({ title: "Error", description: "Failed to clock in", variant: "destructive" });
@@ -92,13 +93,13 @@ export default function EmployeeTimeClock() {
 
   const clockOutMutation = useMutation({
     mutationFn: async () => {
-      return await apiRequest('POST', `/api/employees/${user?.id}/clock-out`, {
+      return await apiRequest('POST', `/api/employees/${userId}/clock-out`, {
         notes: clockOutNotes
       });
     },
     onSuccess: () => {
       toast({ title: "Clocked Out", description: "You've successfully clocked out. Have a great day!" });
-      queryClient.invalidateQueries({ queryKey: ['/api/employees', user?.id, 'time-entries'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/employees', userId, 'time-entries'] });
       setShowClockOutDialog(false);
       setClockOutNotes("");
     },
@@ -109,11 +110,11 @@ export default function EmployeeTimeClock() {
 
   const startBreakMutation = useMutation({
     mutationFn: async () => {
-      return await apiRequest('POST', `/api/employees/${user?.id}/break-start`, {});
+      return await apiRequest('POST', `/api/employees/${userId}/break-start`, {});
     },
     onSuccess: () => {
       toast({ title: "Break Started", description: "Enjoy your break!" });
-      queryClient.invalidateQueries({ queryKey: ['/api/employees', user?.id, 'time-entries'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/employees', userId, 'time-entries'] });
     },
     onError: () => {
       toast({ title: "Error", description: "Failed to start break", variant: "destructive" });
@@ -122,11 +123,11 @@ export default function EmployeeTimeClock() {
 
   const endBreakMutation = useMutation({
     mutationFn: async () => {
-      return await apiRequest('POST', `/api/employees/${user?.id}/break-end`, {});
+      return await apiRequest('POST', `/api/employees/${userId}/break-end`, {});
     },
     onSuccess: () => {
       toast({ title: "Break Ended", description: "Welcome back!" });
-      queryClient.invalidateQueries({ queryKey: ['/api/employees', user?.id, 'time-entries'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/employees', userId, 'time-entries'] });
     },
     onError: () => {
       toast({ title: "Error", description: "Failed to end break", variant: "destructive" });
