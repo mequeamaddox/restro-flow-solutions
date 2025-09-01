@@ -16,6 +16,9 @@ import {
   invoiceProcessing,
   autoOrderRules,
   onboardingTokens,
+  documentTemplates,
+  employeeDocumentAssignments,
+  employeeSignatures,
   type User,
   type UpsertUser,
   type Location,
@@ -107,6 +110,12 @@ import {
   type InsertPayrollDeduction,
   type EmployeeDeduction,
   type InsertEmployeeDeduction,
+  type DocumentTemplate,
+  type InsertDocumentTemplate,
+  type EmployeeDocumentAssignment,
+  type InsertEmployeeDocumentAssignment,
+  type EmployeeSignature,
+  type InsertEmployeeSignature,
   // Document and onboarding imports
   employeeDocuments,
   documentRequirements,
@@ -368,6 +377,31 @@ export interface IStorage {
     complianceScore: number;
     outstandingViolations: number;
   }>;
+
+  // Employee document and onboarding operations
+  generateOnboardingToken(employeeId: string): Promise<OnboardingToken>;
+  validateOnboardingToken(token: string): Promise<OnboardingToken | undefined>;
+  getEmployeeProfile(employeeId: string): Promise<{ employee: Employee; onboardingData?: any; documents?: any[] } | undefined>;
+  createOnboardingData(data: any): Promise<any>;
+  updateOnboardingData(employeeId: string, data: any): Promise<any>;
+
+  // Document template operations
+  getDocumentTemplates(): Promise<any[]>;
+  getDocumentTemplate(id: string): Promise<any | undefined>;
+  createDocumentTemplate(template: any): Promise<any>;
+  updateDocumentTemplate(id: string, template: Partial<any>): Promise<any>;
+  deleteDocumentTemplate(id: string): Promise<void>;
+
+  // Employee document assignment operations
+  getEmployeeDocuments(employeeId: string): Promise<any[]>;
+  getAllEmployeeDocuments(): Promise<any[]>;
+  createDocumentAssignment(assignment: any): Promise<any>;
+  updateDocumentAssignment(id: string, assignment: Partial<any>): Promise<any>;
+  deleteDocumentAssignment(id: string): Promise<void>;
+
+  // Document signature operations
+  createEmployeeSignature(signature: any): Promise<any>;
+  getEmployeeSignature(documentAssignmentId: string): Promise<any | undefined>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -2935,6 +2969,156 @@ export class DatabaseStorage implements IStorage {
     return {
       employee,
       onboardingData
+    };
+  }
+
+  // Document template operations
+  async getDocumentTemplates(): Promise<DocumentTemplate[]> {
+    const templates = await db.select()
+      .from(documentTemplates)
+      .where(eq(documentTemplates.isActive, true))
+      .orderBy(documentTemplates.sortOrder);
+    return templates;
+  }
+
+  async getDocumentTemplate(id: string): Promise<DocumentTemplate | undefined> {
+    const [template] = await db.select()
+      .from(documentTemplates)
+      .where(eq(documentTemplates.id, id));
+    return template;
+  }
+
+  async createDocumentTemplate(template: InsertDocumentTemplate): Promise<DocumentTemplate> {
+    const [created] = await db.insert(documentTemplates)
+      .values(template)
+      .returning();
+    return created;
+  }
+
+  async updateDocumentTemplate(id: string, template: Partial<InsertDocumentTemplate>): Promise<DocumentTemplate> {
+    const [updated] = await db.update(documentTemplates)
+      .set({ ...template, updatedAt: new Date() })
+      .where(eq(documentTemplates.id, id))
+      .returning();
+    return updated;
+  }
+
+  async deleteDocumentTemplate(id: string): Promise<void> {
+    await db.update(documentTemplates)
+      .set({ isActive: false, updatedAt: new Date() })
+      .where(eq(documentTemplates.id, id));
+  }
+
+  // Employee document assignment operations
+  async getEmployeeDocuments(employeeId: string): Promise<any[]> {
+    const documents = await db.select({
+      id: employeeDocumentAssignments.id,
+      status: employeeDocumentAssignments.status,
+      sentAt: employeeDocumentAssignments.sentAt,
+      viewedAt: employeeDocumentAssignments.viewedAt,
+      completedAt: employeeDocumentAssignments.completedAt,
+      signedAt: employeeDocumentAssignments.signedAt,
+      expiresAt: employeeDocumentAssignments.expiresAt,
+      notes: employeeDocumentAssignments.notes,
+      completedFilePath: employeeDocumentAssignments.completedFilePath,
+      signaturePath: employeeDocumentAssignments.signaturePath,
+      templateName: documentTemplates.name,
+      templateType: documentTemplates.type,
+      requiresSignature: documentTemplates.requiresSignature,
+      isRequired: documentTemplates.isRequired,
+      description: documentTemplates.description,
+    })
+    .from(employeeDocumentAssignments)
+    .innerJoin(documentTemplates, eq(employeeDocumentAssignments.templateId, documentTemplates.id))
+    .where(eq(employeeDocumentAssignments.employeeId, employeeId))
+    .orderBy(documentTemplates.sortOrder);
+    
+    return documents;
+  }
+
+  async getAllEmployeeDocuments(): Promise<any[]> {
+    const documents = await db.select({
+      id: employeeDocumentAssignments.id,
+      employeeId: employeeDocumentAssignments.employeeId,
+      status: employeeDocumentAssignments.status,
+      sentAt: employeeDocumentAssignments.sentAt,
+      completedAt: employeeDocumentAssignments.completedAt,
+      signedAt: employeeDocumentAssignments.signedAt,
+      templateName: documentTemplates.name,
+      templateType: documentTemplates.type,
+      employeeName: sql<string>`CONCAT(${employees.firstName}, ' ', ${employees.lastName})`,
+      employeeEmail: employees.email,
+    })
+    .from(employeeDocumentAssignments)
+    .innerJoin(documentTemplates, eq(employeeDocumentAssignments.templateId, documentTemplates.id))
+    .innerJoin(employees, eq(employeeDocumentAssignments.employeeId, employees.id))
+    .orderBy(desc(employeeDocumentAssignments.createdAt));
+    
+    return documents;
+  }
+
+  async createDocumentAssignment(assignment: InsertEmployeeDocumentAssignment): Promise<EmployeeDocumentAssignment> {
+    const [created] = await db.insert(employeeDocumentAssignments)
+      .values(assignment)
+      .returning();
+    return created;
+  }
+
+  async updateDocumentAssignment(id: string, assignment: Partial<InsertEmployeeDocumentAssignment>): Promise<EmployeeDocumentAssignment> {
+    const [updated] = await db.update(employeeDocumentAssignments)
+      .set({ ...assignment, updatedAt: new Date() })
+      .where(eq(employeeDocumentAssignments.id, id))
+      .returning();
+    return updated;
+  }
+
+  async deleteDocumentAssignment(id: string): Promise<void> {
+    await db.delete(employeeDocumentAssignments)
+      .where(eq(employeeDocumentAssignments.id, id));
+  }
+
+  // Document signature operations
+  async createEmployeeSignature(signature: InsertEmployeeSignature): Promise<EmployeeSignature> {
+    const [created] = await db.insert(employeeSignatures)
+      .values(signature)
+      .returning();
+    return created;
+  }
+
+  async getEmployeeSignature(documentAssignmentId: string): Promise<EmployeeSignature | undefined> {
+    const [signature] = await db.select()
+      .from(employeeSignatures)
+      .where(eq(employeeSignatures.documentAssignmentId, documentAssignmentId));
+    return signature;
+  }
+
+  // Enhanced employee profile to include document status
+  async getEmployeeProfile(employeeId: string): Promise<{ employee: Employee; onboardingData?: any; documents?: any[] } | undefined> {
+    const [employee] = await db.select()
+      .from(employees)
+      .where(eq(employees.id, employeeId));
+      
+    if (!employee) return undefined;
+
+    // Get onboarding data if exists
+    let onboardingData = undefined;
+    try {
+      const [onboarding] = await db.select()
+        .from(employeeOnboardingData)
+        .where(eq(employeeOnboardingData.employeeId, employeeId));
+      onboardingData = onboarding || null;
+    } catch (error) {
+      // Table might not exist yet, ignore error
+      console.log('Onboarding data table not found, skipping...');
+    }
+
+    // Get document assignments
+    const documents = await this.getEmployeeDocuments(employeeId);
+
+    return { 
+      employee, 
+      onboardingData,
+      documents 
     };
   }
 }

@@ -2654,6 +2654,106 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Document Management API Endpoints
+  
+  // Document template management
+  app.get('/api/document-templates', async (req, res) => {
+    try {
+      const templates = await storage.getDocumentTemplates();
+      res.json(templates);
+    } catch (error) {
+      console.error('Error fetching document templates:', error);
+      res.status(500).json({ message: 'Failed to fetch document templates' });
+    }
+  });
+
+  app.post('/api/document-templates', isAuthenticated, async (req, res) => {
+    try {
+      const userId = req.user?.claims?.sub;
+      const templateData = { ...req.body, createdBy: userId };
+      const template = await storage.createDocumentTemplate(templateData);
+      res.status(201).json(template);
+    } catch (error) {
+      console.error('Error creating document template:', error);
+      res.status(500).json({ message: 'Failed to create document template' });
+    }
+  });
+
+  // Employee document assignments
+  app.get('/api/employees/:employeeId/documents', async (req, res) => {
+    try {
+      const documents = await storage.getEmployeeDocuments(req.params.employeeId);
+      res.json(documents);
+    } catch (error) {
+      console.error('Error fetching employee documents:', error);
+      res.status(500).json({ message: 'Failed to fetch employee documents' });
+    }
+  });
+
+  app.post('/api/employee-documents/assign', isAuthenticated, async (req, res) => {
+    try {
+      const userId = req.user?.claims?.sub;
+      const assignmentData = { 
+        ...req.body, 
+        sentBy: userId, 
+        sentAt: new Date(),
+        status: 'sent'
+      };
+      const assignment = await storage.createDocumentAssignment(assignmentData);
+      res.status(201).json(assignment);
+    } catch (error) {
+      console.error('Error assigning document:', error);
+      res.status(500).json({ message: 'Failed to assign document' });
+    }
+  });
+
+  app.put('/api/employee-documents/:id/status', async (req, res) => {
+    try {
+      const { status } = req.body;
+      const updateData: any = { status };
+      
+      // Update timestamps based on status
+      if (status === 'viewed') updateData.viewedAt = new Date();
+      if (status === 'completed') updateData.completedAt = new Date();
+      if (status === 'signed') updateData.signedAt = new Date();
+      
+      const assignment = await storage.updateDocumentAssignment(req.params.id, updateData);
+      res.json(assignment);
+    } catch (error) {
+      console.error('Error updating document status:', error);
+      res.status(500).json({ message: 'Failed to update document status' });
+    }
+  });
+
+  // Digital signature endpoint
+  app.post('/api/employee-documents/:id/signature', async (req, res) => {
+    try {
+      const { signatureData, signedName, employeeId } = req.body;
+      
+      // Create signature record
+      const signature = await storage.createEmployeeSignature({
+        documentAssignmentId: req.params.id,
+        employeeId,
+        signatureData,
+        signedName,
+        ipAddress: req.ip,
+        userAgent: req.get('User-Agent'),
+      });
+      
+      // Update document assignment status
+      await storage.updateDocumentAssignment(req.params.id, {
+        status: 'signed',
+        signedAt: new Date(),
+        signaturePath: `/signatures/${signature.id}`
+      });
+      
+      res.status(201).json(signature);
+    } catch (error) {
+      console.error('Error creating signature:', error);
+      res.status(500).json({ message: 'Failed to create signature' });
+    }
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }

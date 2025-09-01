@@ -1242,6 +1242,94 @@ export const insertEmployeeOnboardingDataSchema = createInsertSchema(employeeOnb
 
 export const insertAutoOrderRuleSchema = createInsertSchema(autoOrderRules);
 export const insertEmployeeDocumentSchema = createInsertSchema(employeeDocuments).omit({ id: true, createdAt: true, updatedAt: true });
+
+// Enhanced Document Management System for W-4, I-9, Handbook, etc.
+export const documentTypeEnumNew = pgEnum("document_type_new", [
+  "w4_federal", "w4_state_sc", "i9", "handbook", "policy", "nda", 
+  "emergency_contact", "direct_deposit", "benefits", "safety_training", 
+  "code_of_conduct", "uniform_policy", "harassment_policy", "other"
+]);
+
+export const documentTemplates = pgTable("document_templates", {
+  id: uuid("id").primaryKey().default(sql`gen_random_uuid()`),
+  name: varchar("name", { length: 255 }).notNull(),
+  type: documentTypeEnumNew("type").notNull(),
+  description: text("description"),
+  filePath: varchar("file_path", { length: 500 }), // Object storage path for template PDF/form
+  isRequired: boolean("is_required").default(false),
+  isActive: boolean("is_active").default(true),
+  requiresSignature: boolean("requires_signature").default(false),
+  sortOrder: integer("sort_order").default(0),
+  createdBy: uuid("created_by").references(() => users.id),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// Employee document assignments and completions
+export const documentStatusEnumNew = pgEnum("document_status_new", [
+  "not_sent", "sent", "viewed", "completed", "signed", "expired", "declined"
+]);
+
+export const employeeDocumentAssignments = pgTable("employee_document_assignments", {
+  id: uuid("id").primaryKey().default(sql`gen_random_uuid()`),
+  employeeId: uuid("employee_id").references(() => employees.id, { onDelete: "cascade" }).notNull(),
+  templateId: uuid("template_id").references(() => documentTemplates.id).notNull(),
+  status: documentStatusEnumNew("status").default("not_sent"),
+  
+  // Document file paths
+  completedFilePath: varchar("completed_file_path", { length: 500 }), // Filled out form
+  signaturePath: varchar("signature_path", { length: 500 }), // Digital signature file
+  
+  // Tracking dates
+  sentAt: timestamp("sent_at"),
+  viewedAt: timestamp("viewed_at"),
+  completedAt: timestamp("completed_at"),
+  signedAt: timestamp("signed_at"),
+  expiresAt: timestamp("expires_at"),
+  
+  // Metadata
+  sentBy: uuid("sent_by").references(() => users.id),
+  notes: text("notes"),
+  reminderSent: timestamp("reminder_sent"),
+  reminderCount: integer("reminder_count").default(0),
+  
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// Digital signatures for document signing
+export const employeeSignatures = pgTable("employee_signatures", {
+  id: uuid("id").primaryKey().default(sql`gen_random_uuid()`),
+  documentAssignmentId: uuid("document_assignment_id").references(() => employeeDocumentAssignments.id, { onDelete: "cascade" }).notNull(),
+  employeeId: uuid("employee_id").references(() => employees.id).notNull(),
+  
+  // Signature data
+  signatureData: text("signature_data"), // Base64 encoded signature image
+  signatureType: varchar("signature_type", { length: 50 }).default("digital"), // digital, drawn, uploaded
+  signedName: varchar("signed_name", { length: 255 }), // Name as signed
+  
+  // Legal verification
+  ipAddress: varchar("ip_address", { length: 45 }),
+  userAgent: text("user_agent"),
+  timestamp: timestamp("timestamp").defaultNow(),
+  
+  // Document verification
+  documentHash: varchar("document_hash", { length: 255 }), // For document integrity
+  
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+// Insert schemas for enhanced document management
+export const insertDocumentTemplateSchema = createInsertSchema(documentTemplates).omit({ id: true, createdAt: true, updatedAt: true });
+export const insertEmployeeDocumentAssignmentSchema = createInsertSchema(employeeDocumentAssignments).omit({ id: true, createdAt: true, updatedAt: true });
+export const insertEmployeeSignatureSchema = createInsertSchema(employeeSignatures).omit({ id: true, createdAt: true });
+
+export type DocumentTemplate = typeof documentTemplates.$inferSelect;
+export type InsertDocumentTemplate = z.infer<typeof insertDocumentTemplateSchema>;
+export type EmployeeDocumentAssignment = typeof employeeDocumentAssignments.$inferSelect;
+export type InsertEmployeeDocumentAssignment = z.infer<typeof insertEmployeeDocumentAssignmentSchema>;
+export type EmployeeSignature = typeof employeeSignatures.$inferSelect;
+export type InsertEmployeeSignature = z.infer<typeof insertEmployeeSignatureSchema>;
 export const insertDocumentRequirementSchema = createInsertSchema(documentRequirements).omit({ id: true, createdAt: true, updatedAt: true });
 export const insertOnboardingTemplateSchema = createInsertSchema(onboardingTemplates).omit({ id: true, createdAt: true, updatedAt: true });
 export const insertOnboardingStepSchema = createInsertSchema(onboardingSteps).omit({ id: true, createdAt: true, updatedAt: true });
