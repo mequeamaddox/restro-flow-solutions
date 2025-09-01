@@ -2,7 +2,7 @@ import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { setupAuth, isAuthenticated } from "./replitAuth";
-import { verifyFirebaseToken, syncFirebaseUser, adminAuth } from "./firebaseAuth";
+import { verifyFirebaseToken, syncFirebaseUser, adminAuth, createFirebaseUser } from "./firebaseAuth";
 import { requirePermission, requireAnyPermission, Permission } from "./permissions";
 import multer from "multer";
 import { db } from "./db";

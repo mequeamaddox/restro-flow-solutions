@@ -22,6 +22,22 @@ export async function verifyFirebaseToken(idToken: string) {
   }
 }
 
+export async function createFirebaseUser(email: string, password: string) {
+  try {
+    const userRecord = await adminAuth.createUser({
+      email: email,
+      password: password,
+      emailVerified: false,
+    });
+    
+    console.log('Firebase user created successfully:', userRecord.uid);
+    return userRecord;
+  } catch (error) {
+    console.error('Error creating Firebase user:', error);
+    throw error;
+  }
+}
+
 export async function syncFirebaseUser(firebaseUser: {
   uid: string;
   email: string | null;
