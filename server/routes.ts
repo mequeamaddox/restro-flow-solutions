@@ -78,6 +78,48 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Auth middleware
   await setupAuth(app);
 
+  // Create initial admin/owner account (for first-time setup)
+  app.post('/api/auth/create-admin', async (req, res) => {
+    try {
+      const { email, password, displayName } = req.body;
+      
+      // Security check - only allow specific email to create admin
+      if (email !== 'mequeamaddox@gmail.com') {
+        return res.status(403).json({ message: 'Unauthorized admin creation' });
+      }
+
+      // Create Firebase user account
+      const userRecord = await adminAuth.createUser({
+        email,
+        password,
+        displayName,
+        emailVerified: true,
+      });
+
+      // Create user in our database as owner
+      await storage.upsertUser({
+        id: userRecord.uid,
+        email,
+        firstName: displayName.split(' ')[0] || '',
+        lastName: displayName.split(' ').slice(1).join(' ') || '',
+        role: 'owner',
+      });
+
+      res.json({ 
+        message: 'Admin account created successfully',
+        uid: userRecord.uid,
+        email: userRecord.email 
+      });
+    } catch (error: any) {
+      console.error('Error creating admin account:', error);
+      res.status(500).json({ 
+        message: error.code === 'auth/email-already-exists' 
+          ? 'Admin account already exists' 
+          : 'Failed to create admin account' 
+      });
+    }
+  });
+
   // Firebase Authentication Route
   app.post('/api/auth/firebase-user', async (req, res) => {
     try {

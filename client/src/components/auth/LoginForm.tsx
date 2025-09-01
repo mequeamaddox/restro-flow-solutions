@@ -23,6 +23,7 @@ interface LoginFormProps {
 
 export function LoginForm({ onToggleMode }: LoginFormProps) {
   const [isLoading, setIsLoading] = useState(false);
+  const [isCreatingAdmin, setIsCreatingAdmin] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const { signIn } = useFirebaseAuth();
 
@@ -45,6 +46,46 @@ export function LoginForm({ onToggleMode }: LoginFormProps) {
     }
     
     setIsLoading(false);
+  };
+
+  const createAdminAccount = async () => {
+    if (form.getValues('email') !== 'mequeamaddox@gmail.com') {
+      setError('Admin account creation is restricted');
+      return;
+    }
+
+    setIsCreatingAdmin(true);
+    setError(null);
+
+    try {
+      const formData = form.getValues();
+      const response = await fetch('/api/auth/create-admin', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          email: formData.email,
+          password: formData.password,
+          displayName: 'Admin User',
+        }),
+      });
+
+      if (response.ok) {
+        // Now try to sign in with the created account
+        const { error: signInError } = await signIn(formData.email, formData.password);
+        if (signInError) {
+          setError(signInError);
+        }
+      } else {
+        const errorData = await response.json();
+        setError(errorData.message || 'Failed to create admin account');
+      }
+    } catch (error) {
+      setError('Failed to create admin account');
+    } finally {
+      setIsCreatingAdmin(false);
+    }
   };
 
   return (
@@ -106,15 +147,31 @@ export function LoginForm({ onToggleMode }: LoginFormProps) {
                 <AlertDescription>{error}</AlertDescription>
               </Alert>
             )}
-            <Button 
-              type="submit" 
-              className="w-full" 
-              disabled={isLoading}
-              data-testid="button-sign-in"
-            >
-              {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              Sign In
-            </Button>
+            <div className="space-y-2">
+              <Button 
+                type="submit" 
+                className="w-full" 
+                disabled={isLoading || isCreatingAdmin}
+                data-testid="button-sign-in"
+              >
+                {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                Sign In
+              </Button>
+              
+              {form.getValues('email') === 'mequeamaddox@gmail.com' && (
+                <Button 
+                  type="button" 
+                  variant="outline"
+                  className="w-full" 
+                  disabled={isLoading || isCreatingAdmin}
+                  onClick={createAdminAccount}
+                  data-testid="button-create-admin"
+                >
+                  {isCreatingAdmin && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                  Create Admin Account & Sign In
+                </Button>
+              )}
+            </div>
           </form>
         </Form>
       </CardContent>
