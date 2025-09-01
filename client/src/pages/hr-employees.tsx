@@ -33,7 +33,7 @@ export default function HREmployees() {
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [departmentFilter, setDepartmentFilter] = useState<string>("all");
-  const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingEmployee, setEditingEmployee] = useState<Employee | null>(null);
   const [selectedEmployees, setSelectedEmployees] = useState<Set<string>>(new Set());
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
@@ -61,7 +61,8 @@ export default function HREmployees() {
     onSuccess: () => {
       toast({ title: "Success", description: "Employee created successfully" });
       queryClient.invalidateQueries({ queryKey: ['/api/hr/employees'] });
-      setIsCreateDialogOpen(false);
+      setIsDialogOpen(false);
+      setEditingEmployee(null);
     },
     onError: () => {
       toast({ title: "Error", description: "Failed to create employee", variant: "destructive" });
@@ -75,6 +76,7 @@ export default function HREmployees() {
     onSuccess: () => {
       toast({ title: "Success", description: "Employee updated successfully" });
       queryClient.invalidateQueries({ queryKey: ['/api/hr/employees'] });
+      setIsDialogOpen(false);
       setEditingEmployee(null);
     },
     onError: () => {
@@ -154,7 +156,12 @@ export default function HREmployees() {
             <p className="text-gray-600">Manage your restaurant team</p>
           </div>
           
-          <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
+          <Dialog open={isDialogOpen} onOpenChange={(open) => {
+            setIsDialogOpen(open);
+            if (!open) {
+              setEditingEmployee(null);
+            }
+          }}>
             <DialogTrigger asChild>
               <Button>
                 <UserPlus className="h-4 w-4 mr-2" />
@@ -404,7 +411,7 @@ export default function HREmployees() {
                     className="flex-1"
                     onClick={() => {
                       setEditingEmployee(employee);
-                      setIsCreateDialogOpen(true);
+                      setIsDialogOpen(true);
                     }}
                     data-testid={`edit-employee-${employee.id}`}
                   >
@@ -429,7 +436,7 @@ export default function HREmployees() {
             }
           </p>
           {!searchTerm && statusFilter === "all" && (
-            <Button onClick={() => setIsCreateDialogOpen(true)}>
+            <Button onClick={() => setIsDialogOpen(true)}>
               <UserPlus className="h-4 w-4 mr-2" />
               Add First Employee
             </Button>
