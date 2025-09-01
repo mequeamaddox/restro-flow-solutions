@@ -115,6 +115,7 @@ function Router() {
                 {/* HR Employee Management Add-on Routes */}
                 <Route path="/hr/dashboard" component={HRDashboard} />
                 <Route path="/hr/employees" component={HREmployees} />
+                <Route path="/employees" component={HREmployees} />
                 <Route path="/employees/:id" component={EmployeeProfile} />
                 <Route path="/hr/analytics" component={HRAnalytics} />
                 <Route path="/hr/time-clock" component={HRTimeClock} />
