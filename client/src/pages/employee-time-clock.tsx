@@ -48,9 +48,6 @@ export default function EmployeeTimeClock() {
   const { user } = useAuth();
   const userId = (user as any)?.claims?.sub || (user as any)?.id;
   
-  // Debug logging
-  console.log('User object:', user);
-  console.log('User ID:', userId);
 
   // Update current time every second
   useEffect(() => {

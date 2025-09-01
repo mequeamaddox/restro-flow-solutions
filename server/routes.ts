@@ -2110,7 +2110,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const messageData = {
         ...req.body,
-        senderId: (req.user as any)?.claims?.sub,
+        senderId: (req.user as any)?.claims?.sub || (req.user as any)?.id,
       };
       const message = await storage.createMessage(messageData);
       res.status(201).json(message);

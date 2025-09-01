@@ -57,17 +57,28 @@ interface Employee {
 export default function EmployeeMessages() {
   const { user } = useAuth();
   const { toast } = useToast();
+  
+  // Fix user ID access - try both patterns for compatibility
+  const userId = user?.id || (user as any)?.claims?.sub;
   const [selectedMessage, setSelectedMessage] = useState<Message | null>(null);
   const [showCompose, setShowCompose] = useState(false);
   const [replyingTo, setReplyingTo] = useState<Message | null>(null);
   const [filter, setFilter] = useState<string>('all');
   const [searchTerm, setSearchTerm] = useState('');
 
-  // Fetch messages
-  const { data: messages = [], isLoading } = useQuery<Message[]>({
-    queryKey: [`/api/employees/${user?.id}/messages`],
-    enabled: !!user?.id,
+  // Fetch messages (use unified HR messages API)
+  const { data: allMessages = [], isLoading } = useQuery<Message[]>({
+    queryKey: ['/api/hr/messages'],
+    enabled: !!userId,
   });
+  
+  // Filter messages relevant to this employee
+  const messages = allMessages.filter(message => 
+    message.senderId === userId || // Messages sent by this user
+    message.recipientId === userId || // Direct messages to this user
+    message.type === 'announcement' || // All announcements
+    message.type === 'team' // All team messages
+  );
 
   // Fetch employees for compose
   const { data: employees = [] } = useQuery<Employee[]>({
@@ -91,7 +102,7 @@ export default function EmployeeMessages() {
         title: "Message Sent",
         description: "Your message has been sent successfully.",
       });
-      queryClient.invalidateQueries({ queryKey: [`/api/employees/${user?.id}/messages`] });
+      queryClient.invalidateQueries({ queryKey: ['/api/hr/messages'] });
       setShowCompose(false);
       setReplyingTo(null);
       setSelectedMessage(null);
@@ -111,7 +122,7 @@ export default function EmployeeMessages() {
       return await apiRequest('PUT', `/api/hr/messages/${messageId}/read`);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: [`/api/employees/${user?.id}/messages`] });
+      queryClient.invalidateQueries({ queryKey: ['/api/hr/messages'] });
     },
   });
 
@@ -151,7 +162,7 @@ export default function EmployeeMessages() {
 
     if (filter === 'all') return matchesSearch;
     if (filter === 'unread') return matchesSearch && !message.isRead;
-    if (filter === 'sent') return matchesSearch && message.senderId === user?.id;
+    if (filter === 'sent') return matchesSearch && message.senderId === userId;
     return matchesSearch && message.type === filter;
   });
 
@@ -184,7 +195,7 @@ export default function EmployeeMessages() {
   const stats = {
     total: messages.length,
     unread: messages.filter(msg => !msg.isRead).length,
-    sent: messages.filter(msg => msg.senderId === user?.id).length,
+    sent: messages.filter(msg => msg.senderId === userId).length,
     announcements: messages.filter(msg => msg.type === 'announcement').length,
   };
 
@@ -352,7 +363,7 @@ export default function EmployeeMessages() {
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2 mb-1">
                         <p className={`font-medium truncate ${!message.isRead ? 'font-semibold' : ''}`}>
-                          {message.senderId === user?.id ? (
+                          {message.senderId === userId ? (
                             <>To: {message.recipient ? `${message.recipient.firstName} ${message.recipient.lastName}` : 'Team'}</>
                           ) : (
                             `${message.sender.firstName} ${message.sender.lastName}`
@@ -447,7 +458,7 @@ export default function EmployeeMessages() {
                   </SelectTrigger>
                   <SelectContent>
                     {employees
-                      .filter(emp => emp.id !== user?.id)
+                      .filter(emp => emp.id !== userId)
                       .map((employee) => (
                       <SelectItem key={employee.id} value={employee.id}>
                         {employee.firstName} {employee.lastName}
@@ -541,7 +552,7 @@ export default function EmployeeMessages() {
                     </DialogTitle>
                     <div className="flex items-center gap-2 text-sm text-gray-600">
                       <span>
-                        {selectedMessage.senderId === user?.id ? 'You' : 
+                        {selectedMessage.senderId === userId ? 'You' : 
                          `${selectedMessage.sender.firstName} ${selectedMessage.sender.lastName}`}
                       </span>
                       {selectedMessage.sender.position && (
@@ -576,7 +587,7 @@ export default function EmployeeMessages() {
                   <Button variant="outline" onClick={() => setSelectedMessage(null)}>
                     Close
                   </Button>
-                  {selectedMessage.senderId !== user?.id && (
+                  {selectedMessage.senderId !== userId && (
                     <Button onClick={() => handleReply(selectedMessage)}>
                       <Reply className="w-4 h-4 mr-2" />
                       Reply
