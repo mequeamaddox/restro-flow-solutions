@@ -58,9 +58,15 @@ export default function EmployeePage() {
   const [showSensitiveData, setShowSensitiveData] = useState(false);
 
   const { data: profileData, isLoading, error } = useQuery<EmployeeProfile>({
-    queryKey: ["/api/employees", employeeId, "profile"],
+    queryKey: [`/api/employees/${employeeId}/profile`],
     enabled: !!employeeId,
   });
+
+  // Debug logging
+  console.log("Employee ID:", employeeId);
+  console.log("Profile Data:", profileData);
+  console.log("Error:", error);
+  console.log("Query URL:", `/api/employees/${employeeId}/profile`);
 
   if (isLoading) {
     return (
