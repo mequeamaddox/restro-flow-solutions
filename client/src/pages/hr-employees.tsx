@@ -13,6 +13,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import { usePermissions, Permission } from "@/contexts/PermissionContext";
+import { useLocation } from "wouter";
 
 interface Employee {
   id: string;
@@ -39,6 +40,7 @@ export default function HREmployees() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const { hasPermission, userRole, canManageUser } = usePermissions();
+  const [, setLocation] = useLocation();
 
   const { data: employees = [], isLoading } = useQuery({
     queryKey: ['/api/hr/employees'],
@@ -388,7 +390,7 @@ export default function HREmployees() {
                   variant="outline"
                   size="sm"
                   className="flex-1"
-                  onClick={() => window.location.href = `/employees/${employee.id}`}
+                  onClick={() => setLocation(`/employees/${employee.id}`)}
                   data-testid={`view-employee-${employee.id}`}
                 >
                   <User className="w-4 h-4 mr-2" />
