@@ -1,5 +1,4 @@
 import { useState, useEffect } from "react";
-import { useQuery } from "@tanstack/react-query";
 import { useFirebaseAuth } from "./useFirebaseAuth";
 
 export function useAuth() {
@@ -7,22 +6,24 @@ export function useAuth() {
   const [user, setUser] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(true);
 
-  // Also check for Replit authentication
-  const { data: replitUser, isLoading: replitLoading } = useQuery({
-    queryKey: ["/api/auth/user"],
-    retry: false,
-  });
-
   useEffect(() => {
     const determineUser = async () => {
-      // If we have a Replit user (admin), use that
-      if (replitUser) {
-        setUser(replitUser);
-        setIsLoading(false);
-        return;
+      setIsLoading(true);
+      
+      try {
+        // First try Replit authentication (for admin)
+        const replitResponse = await fetch('/api/auth/user');
+        if (replitResponse.ok) {
+          const replitUser = await replitResponse.json();
+          setUser(replitUser);
+          setIsLoading(false);
+          return;
+        }
+      } catch (error) {
+        // Replit auth not available, continue to Firebase
       }
 
-      // If we have a Firebase user (employee), sync with backend
+      // If no Replit user, try Firebase authentication (for employees)
       if (firebaseUser && firebaseAuthenticated) {
         try {
           const idToken = await firebaseUser.getIdToken();
@@ -58,14 +59,14 @@ export function useAuth() {
       setIsLoading(false);
     };
 
-    if (!replitLoading && !firebaseLoading) {
+    if (!firebaseLoading) {
       determineUser();
     }
-  }, [replitUser, firebaseUser, firebaseAuthenticated, replitLoading, firebaseLoading]);
+  }, [firebaseUser, firebaseAuthenticated, firebaseLoading]);
 
   return {
     user,
-    isLoading: replitLoading || firebaseLoading || isLoading,
+    isLoading: firebaseLoading || isLoading,
     isAuthenticated: !!user,
   };
 }
