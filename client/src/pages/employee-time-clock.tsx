@@ -152,30 +152,33 @@ export default function EmployeeTimeClock() {
   };
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold text-gray-900 dark:text-white">My Time Clock</h1>
-          <p className="text-gray-600 dark:text-gray-300">
-            Clock in and out, manage breaks, and view your work hours
-          </p>
-        </div>
-        <div className="text-right">
-          <div className="text-2xl font-mono font-bold text-blue-600">
-            {format(currentTime, 'h:mm:ss a')}
+    <div className="max-w-7xl mx-auto p-6 space-y-6">
+      {/* Header with live clock */}
+      <div className="bg-gradient-to-r from-blue-600 to-purple-600 rounded-xl p-6 text-white">
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-3xl font-bold mb-2">My Time Clock</h1>
+            <p className="text-blue-100">
+              Clock in and out, manage breaks, and view your work hours
+            </p>
           </div>
-          <div className="text-sm text-gray-500">
-            {format(currentTime, 'EEEE, MMMM d, yyyy')}
+          <div className="text-right">
+            <div className="text-3xl font-mono font-bold text-white">
+              {format(currentTime, 'h:mm:ss a')}
+            </div>
+            <div className="text-sm text-blue-200">
+              {format(currentTime, 'EEEE, MMMM d, yyyy')}
+            </div>
           </div>
         </div>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         {/* Clock In/Out Card */}
-        <Card>
+        <Card className="bg-gradient-to-br from-green-50 to-emerald-50 border-green-200 dark:from-green-900/20 dark:to-emerald-900/20">
           <CardHeader className="pb-4">
-            <CardTitle className="flex items-center">
-              <Clock className="h-5 w-5 mr-2 text-blue-600" />
+            <CardTitle className="flex items-center text-green-800 dark:text-green-300">
+              <Clock className="h-5 w-5 mr-2" />
               Today's Time
             </CardTitle>
             <CardDescription>
@@ -261,7 +264,7 @@ export default function EmployeeTimeClock() {
               </div>
             ) : (
               <div className="text-center space-y-4">
-                <div className="p-4 rounded-lg bg-gray-50 dark:bg-gray-800">
+                <div className="p-6 rounded-xl bg-white dark:bg-gray-800 border-2 border-dashed border-gray-300 dark:border-gray-600">
                   <Clock className="h-8 w-8 mx-auto text-gray-400 mb-2" />
                   <p className="text-gray-600 dark:text-gray-300">
                     You haven't clocked in today
@@ -281,10 +284,10 @@ export default function EmployeeTimeClock() {
         </Card>
 
         {/* Today's Schedule Card */}
-        <Card>
+        <Card className="bg-gradient-to-br from-purple-50 to-indigo-50 border-purple-200 dark:from-purple-900/20 dark:to-indigo-900/20">
           <CardHeader className="pb-4">
-            <CardTitle className="flex items-center">
-              <Calendar className="h-5 w-5 mr-2 text-purple-600" />
+            <CardTitle className="flex items-center text-purple-800 dark:text-purple-300">
+              <Calendar className="h-5 w-5 mr-2" />
               Today's Schedule
             </CardTitle>
             <CardDescription>
@@ -326,9 +329,12 @@ export default function EmployeeTimeClock() {
       </div>
 
       {/* Recent Time Entries */}
-      <Card>
+      <Card className="bg-gradient-to-br from-slate-50 to-gray-50 border-slate-200 dark:from-slate-900/50 dark:to-gray-900/50">
         <CardHeader>
-          <CardTitle>My Recent Hours</CardTitle>
+          <CardTitle className="flex items-center text-slate-800 dark:text-slate-300">
+            <Timer className="h-5 w-5 mr-2" />
+            My Recent Hours
+          </CardTitle>
           <CardDescription>
             Your time entries for the past 7 days
           </CardDescription>
@@ -343,7 +349,7 @@ export default function EmployeeTimeClock() {
               {myTimeEntries.slice(0, 7).map((entry) => (
                 <div
                   key={entry.id}
-                  className="flex items-center justify-between p-3 rounded-lg border bg-gray-50 dark:bg-gray-800"
+                  className="flex items-center justify-between p-4 rounded-lg border bg-white dark:bg-gray-800 shadow-sm hover:shadow-md transition-shadow"
                 >
                   <div>
                     <div className="font-medium">
