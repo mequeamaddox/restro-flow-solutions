@@ -46,7 +46,11 @@ export default function EmployeeTimeClock() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const { user } = useAuth();
-  const userId = (user as any)?.claims?.sub;
+  const userId = (user as any)?.claims?.sub || (user as any)?.id;
+  
+  // Debug logging
+  console.log('User object:', user);
+  console.log('User ID:', userId);
 
   // Update current time every second
   useEffect(() => {
@@ -80,14 +84,26 @@ export default function EmployeeTimeClock() {
 
   const clockInMutation = useMutation({
     mutationFn: async () => {
+      if (!userId) {
+        throw new Error('User not authenticated');
+      }
       return await apiRequest('POST', `/api/employees/${userId}/clock-in`, {});
     },
     onSuccess: () => {
       toast({ title: "Clocked In", description: "You've successfully clocked in for your shift!" });
       queryClient.invalidateQueries({ queryKey: ['/api/employees', userId, 'time-entries'] });
     },
-    onError: () => {
-      toast({ title: "Error", description: "Failed to clock in", variant: "destructive" });
+    onError: (error) => {
+      console.error('Clock in error:', error);
+      if (error.message.includes('401') || error.message.includes('Unauthorized')) {
+        toast({ 
+          title: "Authentication Error", 
+          description: "Please refresh the page and log in again", 
+          variant: "destructive" 
+        });
+      } else {
+        toast({ title: "Error", description: "Failed to clock in", variant: "destructive" });
+      }
     },
   });
 
@@ -272,12 +288,17 @@ export default function EmployeeTimeClock() {
                 </div>
                 <Button 
                   onClick={() => clockInMutation.mutate()}
-                  disabled={clockInMutation.isPending}
+                  disabled={clockInMutation.isPending || !userId}
                   className="w-full bg-green-600 hover:bg-green-700"
                 >
                   <Play className="h-4 w-4 mr-2" />
-                  Clock In
+                  {!userId ? 'Authentication Required' : 'Clock In'}
                 </Button>
+                {!userId && (
+                  <p className="text-sm text-red-600">
+                    Please refresh the page and log in again
+                  </p>
+                )}
               </div>
             )}
           </CardContent>
