@@ -2,39 +2,15 @@ import { initializeApp, cert, getApps } from 'firebase-admin/app';
 import { getAuth } from 'firebase-admin/auth';
 import { storage } from './storage';
 
-// Initialize Firebase Admin SDK
+// Initialize Firebase Admin SDK (simplified - no service account needed for basic auth)
 if (!getApps().length) {
-  const projectId = process.env.VITE_FIREBASE_PROJECT_ID;
-  const privateKey = process.env.FIREBASE_PRIVATE_KEY;
-  const clientEmail = process.env.FIREBASE_CLIENT_EMAIL;
-
-  if (!projectId || !privateKey || !clientEmail) {
-    console.log('Firebase credentials not available, initializing with project ID only');
-    initializeApp({
-      projectId: projectId || 'restroflowsoftware',
-    });
-  } else {
-    try {
-      // Properly format the private key
-      const formattedPrivateKey = privateKey.replace(/\\n/g, '\n');
-      
-      initializeApp({
-        credential: cert({
-          projectId: projectId,
-          clientEmail: clientEmail,
-          privateKey: formattedPrivateKey,
-        }),
-        projectId: projectId,
-      });
-      console.log('Firebase Admin SDK initialized with service account credentials');
-    } catch (error) {
-      console.error('Failed to initialize Firebase with service account:', error);
-      // Fallback to project ID only
-      initializeApp({
-        projectId: projectId,
-      });
-    }
-  }
+  const projectId = process.env.VITE_FIREBASE_PROJECT_ID || 'restroflowsoftware';
+  
+  initializeApp({
+    projectId: projectId,
+  });
+  
+  console.log(`Firebase Admin SDK initialized with project: ${projectId}`);
 }
 
 export const adminAuth = getAuth();

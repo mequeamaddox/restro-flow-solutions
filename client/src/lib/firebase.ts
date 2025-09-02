@@ -15,7 +15,8 @@ console.log('Firebase Config Status:', {
   hasProjectId: !!firebaseConfig.projectId,
   hasAppId: !!firebaseConfig.appId,
   authDomain: firebaseConfig.authDomain,
-  projectId: firebaseConfig.projectId
+  projectId: firebaseConfig.projectId,
+  envProjectId: import.meta.env.VITE_FIREBASE_PROJECT_ID
 });
 
 // Initialize Firebase
