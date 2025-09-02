@@ -42,15 +42,15 @@ export default function HREmployees() {
   const { hasPermission, userRole, canManageUser } = usePermissions();
   const [, setLocation] = useLocation();
 
-  const { data: employees = [], isLoading } = useQuery({
+  const { data: employees = [], isLoading } = useQuery<Employee[]>({
     queryKey: ['/api/hr/employees'],
   });
 
-  const { data: departments = [] } = useQuery({
+  const { data: departments = [] } = useQuery<Array<{ id: string; name: string }>>({
     queryKey: ['/api/hr/departments'],
   });
 
-  const { data: positions = [] } = useQuery({
+  const { data: positions = [] } = useQuery<Array<{ id: string; title: string }>>({
     queryKey: ['/api/hr/positions'],
   });
 
@@ -380,7 +380,6 @@ export default function HREmployees() {
                     />
                   </div>
                 </div>
-                  </div>
                 </div>
                 
                 <div className="p-6 border-t bg-gray-50">
