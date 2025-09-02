@@ -17,10 +17,12 @@ export const adminAuth = getAuth();
 
 export async function verifyFirebaseToken(idToken: string) {
   try {
+    console.log('🔍 Verifying Firebase token...');
     const decodedToken = await adminAuth.verifyIdToken(idToken);
+    console.log('✅ Token verified successfully for user:', decodedToken.email);
     return decodedToken;
   } catch (error) {
-    console.error('Error verifying Firebase token:', error);
+    console.error('❌ Error verifying Firebase token:', error);
     throw new Error('Invalid token');
   }
 }
@@ -48,12 +50,14 @@ export async function syncFirebaseUser(firebaseUser: {
   photoURL: string | null;
 }) {
   try {
+    console.log('🔄 Syncing Firebase user:', firebaseUser.email);
     // Check if user exists in our database
     let user = await storage.getUser(firebaseUser.uid);
     
     if (!user) {
       // Create new user with appropriate role
       const role = firebaseUser.email === 'mequeamaddox@gmail.com' ? 'owner' : 'employee';
+      console.log('👤 Creating new user with role:', role);
       
       user = await storage.upsertUser({
         id: firebaseUser.uid,
@@ -63,11 +67,13 @@ export async function syncFirebaseUser(firebaseUser: {
         profileImageUrl: firebaseUser.photoURL || '',
         role,
       });
+    } else {
+      console.log('✅ Existing user found:', user.email);
     }
     
     return user;
   } catch (error) {
-    console.error('Error syncing Firebase user:', error);
+    console.error('❌ Error syncing Firebase user:', error);
     throw error;
   }
 }
