@@ -153,20 +153,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       console.log('✅ Password accepted');
 
-      // Create/update user record for this employee
-      const user = await storage.upsertUser({
-        id: employee.id,
-        email: employee.email || '',
-        firstName: employee.first_name || employee.firstName || '',
-        lastName: employee.last_name || employee.lastName || '',
-        role: 'employee',
-      });
-
-      // Set session
-      (req.session as any).user = user;
+      // Get existing user record for this employee
+      const existingUser = await storage.getUser(employee.id);
       
-      console.log('✅ Login successful for:', user.email);
-      res.json(user);
+      if (!existingUser) {
+        console.log('❌ User record not found for employee:', employee.id);
+        return res.status(401).json({ message: 'Invalid credentials' });
+      }
+
+      // Set session with existing user data
+      (req.session as any).user = existingUser;
+      
+      console.log('✅ Login successful for:', existingUser.email);
+      res.json(existingUser);
     } catch (error) {
       console.error('❌ Login error:', error);
       res.status(500).json({ message: 'Login failed' });
