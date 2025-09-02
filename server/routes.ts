@@ -228,8 +228,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Check for Replit admin authentication
       if (req.user) {
+        console.log('🔍 Replit user detected:', {
+          id: req.user.id,
+          email: req.user.email,
+          name: req.user.name,
+          firstName: req.user.firstName,
+          lastName: req.user.lastName
+        });
+
         // Special handling for the owner account
         if (req.user.email === 'mequeamaddox@gmail.com') {
+          console.log('✅ Owner account detected, using existing ID 46308728');
           // Always use the existing owner account ID
           const ownerUser = await storage.upsertUser({
             id: '46308728', // Use the existing owner ID
