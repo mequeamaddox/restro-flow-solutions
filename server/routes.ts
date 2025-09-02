@@ -228,12 +228,38 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Check for Replit admin authentication
       if (req.user) {
+        // Special handling for the owner account
+        if (req.user.email === 'mequeamaddox@gmail.com') {
+          // Always use the existing owner account ID
+          const ownerUser = await storage.upsertUser({
+            id: '46308728', // Use the existing owner ID
+            email: req.user.email,
+            firstName: req.user.firstName || req.user.name || '',
+            lastName: req.user.lastName || '',
+            role: 'owner',
+          });
+          return res.json(ownerUser);
+        }
+
+        // For other users, check if they exist first
+        let existingUser = null;
+        try {
+          existingUser = await storage.getUser(req.user.id);
+        } catch (error) {
+          // User doesn't exist yet
+        }
+
+        if (existingUser) {
+          return res.json(existingUser);
+        }
+
+        // Create new admin user
         const user = await storage.upsertUser({
           id: req.user.id,
           email: req.user.email,
           firstName: req.user.firstName || req.user.name || '',
           lastName: req.user.lastName || '',
-          role: req.user.email === 'mequeamaddox@gmail.com' ? 'owner' : 'admin',
+          role: 'admin',
         });
         return res.json(user);
       }
