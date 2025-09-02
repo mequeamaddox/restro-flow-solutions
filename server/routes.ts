@@ -120,43 +120,45 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Firebase Authentication Route
-  app.post('/api/auth/firebase-user', async (req, res) => {
+  // Simple Employee Login Route
+  app.post('/api/auth/login', async (req, res) => {
     try {
-      const authHeader = req.headers.authorization;
-      if (!authHeader || !authHeader.startsWith('Bearer ')) {
-        return res.status(401).json({ message: 'No token provided' });
-      }
-
-      const idToken = authHeader.split('Bearer ')[1];
+      const { email, password } = req.body;
       
-      try {
-        const decodedToken = await verifyFirebaseToken(idToken);
-        
-        const user = await syncFirebaseUser({
-          uid: decodedToken.uid,
-          email: decodedToken.email || null,
-          displayName: req.body.displayName || null,
-          photoURL: req.body.photoURL || null,
-        });
-
-        res.json(user);
-      } catch (tokenError) {
-        console.log('🔧 Token verification failed, using fallback for development');
-        
-        // Development fallback - sync user based on request body
-        const user = await syncFirebaseUser({
-          uid: req.body.uid,
-          email: req.body.email,
-          displayName: req.body.displayName,
-          photoURL: req.body.photoURL,
-        });
-
-        res.json(user);
+      if (!email || !password) {
+        return res.status(400).json({ message: 'Email and password required' });
       }
+
+      // Check if employee exists
+      const employees = await storage.getEmployees();
+      const employee = employees.find(emp => emp.email?.toLowerCase() === email.toLowerCase());
+      
+      if (!employee) {
+        return res.status(401).json({ message: 'Invalid credentials' });
+      }
+
+      // For now, accept a simple password. In production, this should be hashed
+      const validPasswords = ['TEMP1234!', 'employee123', 'password123'];
+      if (!validPasswords.includes(password)) {
+        return res.status(401).json({ message: 'Invalid credentials' });
+      }
+
+      // Create/update user record for this employee
+      const user = await storage.upsertUser({
+        id: employee.id,
+        email: employee.email || '',
+        firstName: employee.first_name,
+        lastName: employee.last_name,
+        role: 'employee',
+      });
+
+      // Set session
+      (req.session as any).user = user;
+      
+      res.json(user);
     } catch (error) {
-      console.error('Firebase auth error:', error);
-      res.status(401).json({ message: 'Authentication failed' });
+      console.error('Login error:', error);
+      res.status(500).json({ message: 'Login failed' });
     }
   });
 

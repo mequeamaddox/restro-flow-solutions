@@ -8,7 +8,7 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Loader2, Mail, Lock } from "lucide-react";
-import { useFirebaseAuth } from "@/hooks/useFirebaseAuth";
+// Removed Firebase import
 
 const loginSchema = z.object({
   email: z.string().email("Please enter a valid email address"),
@@ -26,7 +26,29 @@ export function LoginForm({ onToggleMode }: LoginFormProps) {
   const [isCreatingAdmin, setIsCreatingAdmin] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [emailValue, setEmailValue] = useState("");
-  const { signIn } = useFirebaseAuth();
+  // Simple authentication function
+  const signIn = async (email: string, password: string) => {
+    try {
+      const response = await fetch('/api/auth/login', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ email, password }),
+      });
+
+      if (response.ok) {
+        const userData = await response.json();
+        window.location.reload(); // Simple refresh to update auth state
+        return { user: userData, error: null };
+      } else {
+        const errorData = await response.json();
+        return { user: null, error: errorData.message || 'Login failed' };
+      }
+    } catch (error) {
+      return { user: null, error: 'Network error' };
+    }
+  };
 
   const form = useForm<LoginFormData>({
     resolver: zodResolver(loginSchema),
