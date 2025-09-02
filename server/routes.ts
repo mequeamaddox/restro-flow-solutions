@@ -2047,12 +2047,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Employee Self-Service Time Clock API - Personal time tracking
   app.get('/api/employees/:employeeId/time-entries', isAuthenticated, async (req, res) => {
     try {
-      const userId = (req.user as any)?.claims?.sub;
+      // Get user ID from either employee session or Replit auth
+      const userId = (req.session as any)?.user?.id || (req.user as any)?.claims?.sub;
+      console.log('🕐 Time entries request - userId:', userId, 'employeeId:', req.params.employeeId);
+      
       // Ensure employees can only access their own time entries
       if (req.params.employeeId !== userId) {
         return res.status(403).json({ message: 'Access denied - can only view your own time entries' });
       }
       const timeEntries = await storage.getEmployeeTimeEntries(req.params.employeeId);
+      console.log('🕐 Found time entries:', timeEntries.length);
       res.json(timeEntries);
     } catch (error) {
       console.error('Error fetching employee time entries:', error);
@@ -2062,7 +2066,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.get('/api/employees/:employeeId/shifts', isAuthenticated, async (req, res) => {
     try {
-      const userId = (req.user as any)?.claims?.sub;
+      // Get user ID from either employee session or Replit auth
+      const userId = (req.session as any)?.user?.id || (req.user as any)?.claims?.sub;
       // Ensure employees can only access their own shifts
       if (req.params.employeeId !== userId) {
         return res.status(403).json({ message: 'Access denied - can only view your own shifts' });

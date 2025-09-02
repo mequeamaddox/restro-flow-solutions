@@ -167,11 +167,11 @@ export default function EmployeeTimeClock() {
   return (
     <div className="max-w-7xl mx-auto p-6 space-y-6">
       {/* Header with live clock */}
-      <div className="bg-gradient-to-r from-blue-600 to-purple-600 rounded-xl p-6 text-white">
+      <div className="bg-gradient-to-r from-slate-900 to-gray-900 dark:from-slate-800 dark:to-gray-800 rounded-xl p-6 text-white border border-slate-800 dark:border-slate-700">
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-3xl font-bold mb-2">My Time Clock</h1>
-            <p className="text-blue-100">
+            <h1 className="text-3xl font-bold mb-2 text-white">My Time Clock</h1>
+            <p className="text-slate-300 dark:text-slate-400">
               Clock in and out, manage breaks, and view your work hours
             </p>
           </div>
@@ -179,7 +179,7 @@ export default function EmployeeTimeClock() {
             <div className="text-3xl font-mono font-bold text-white">
               {format(currentTime, 'h:mm:ss a')}
             </div>
-            <div className="text-sm text-blue-200">
+            <div className="text-sm text-slate-300 dark:text-slate-400">
               {format(currentTime, 'EEEE, MMMM d, yyyy')}
             </div>
           </div>
@@ -188,9 +188,9 @@ export default function EmployeeTimeClock() {
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         {/* Clock In/Out Card */}
-        <Card className="bg-gradient-to-br from-green-50 to-emerald-50 border-green-200 dark:from-green-900/20 dark:to-emerald-900/20">
+        <Card className="bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 shadow-lg">
           <CardHeader className="pb-4">
-            <CardTitle className="flex items-center text-green-800 dark:text-green-300">
+            <CardTitle className="flex items-center text-slate-900 dark:text-white">
               <Clock className="h-5 w-5 mr-2" />
               Today's Time
             </CardTitle>
@@ -238,7 +238,7 @@ export default function EmployeeTimeClock() {
                     <Button 
                       onClick={() => clockInMutation.mutate()}
                       disabled={clockInMutation.isPending}
-                      className="w-full bg-green-600 hover:bg-green-700"
+                      className="w-full bg-emerald-600 hover:bg-emerald-700 dark:bg-emerald-500 dark:hover:bg-emerald-600"
                     >
                       <Play className="h-4 w-4 mr-2" />
                       Clock In
@@ -302,9 +302,9 @@ export default function EmployeeTimeClock() {
         </Card>
 
         {/* Today's Schedule Card */}
-        <Card className="bg-gradient-to-br from-purple-50 to-indigo-50 border-purple-200 dark:from-purple-900/20 dark:to-indigo-900/20">
+        <Card className="bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 shadow-lg">
           <CardHeader className="pb-4">
-            <CardTitle className="flex items-center text-purple-800 dark:text-purple-300">
+            <CardTitle className="flex items-center text-slate-900 dark:text-white">
               <Calendar className="h-5 w-5 mr-2" />
               Today's Schedule
             </CardTitle>
@@ -347,9 +347,9 @@ export default function EmployeeTimeClock() {
       </div>
 
       {/* Recent Time Entries */}
-      <Card className="bg-gradient-to-br from-slate-50 to-gray-50 border-slate-200 dark:from-slate-900/50 dark:to-gray-900/50">
+      <Card className="bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 shadow-lg">
         <CardHeader>
-          <CardTitle className="flex items-center text-slate-800 dark:text-slate-300">
+          <CardTitle className="flex items-center text-slate-900 dark:text-white">
             <Timer className="h-5 w-5 mr-2" />
             My Recent Hours
           </CardTitle>
