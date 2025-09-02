@@ -25,9 +25,12 @@ export function useFirebaseAuth() {
 
   const signIn = async (email: string, password: string) => {
     try {
+      console.log('🔑 Attempting Firebase login for:', email);
       const result = await signInWithEmailAndPassword(auth, email, password);
+      console.log('✅ Firebase login successful!', result.user.uid);
       return { user: result.user, error: null };
     } catch (error: any) {
+      console.error('❌ Firebase login failed:', error.code, error.message);
       return { user: null, error: error.message };
     }
   };

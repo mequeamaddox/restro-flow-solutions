@@ -26,6 +26,7 @@ export function useAuth() {
       // If no Replit user, try Firebase authentication (for employees)
       if (firebaseUser && firebaseAuthenticated) {
         try {
+          console.log('🔄 Syncing Firebase user with backend:', firebaseUser.email);
           const idToken = await firebaseUser.getIdToken();
           
           const response = await fetch('/api/auth/firebase-user', {
@@ -44,12 +45,15 @@ export function useAuth() {
 
           if (response.ok) {
             const userData = await response.json();
+            console.log('✅ Backend sync successful:', userData.email);
             setUser(userData);
           } else {
+            const errorText = await response.text();
+            console.error('❌ Backend sync failed:', response.status, errorText);
             setUser(null);
           }
         } catch (error) {
-          console.error('Error syncing Firebase user:', error);
+          console.error('❌ Error syncing Firebase user:', error);
           setUser(null);
         }
       } else {
