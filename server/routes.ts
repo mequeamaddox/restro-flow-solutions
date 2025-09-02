@@ -207,12 +207,28 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Auth routes
-  app.get('/api/auth/user', isAuthenticated, async (req: any, res) => {
+  // Auth routes - supports both admin (Replit) and employee (session) authentication
+  app.get('/api/auth/user', async (req: any, res) => {
     try {
-      const userId = (req.user as any).claims.sub;
-      const user = await storage.getUser(userId);
-      res.json(user);
+      // Check for employee session first
+      if ((req.session as any)?.user) {
+        return res.json((req.session as any).user);
+      }
+
+      // Check for Replit admin authentication
+      if (req.user) {
+        const user = await storage.upsertUser({
+          id: req.user.id,
+          email: req.user.email,
+          firstName: req.user.firstName || req.user.name || '',
+          lastName: req.user.lastName || '',
+          role: req.user.email === 'mequeamaddox@gmail.com' ? 'owner' : 'admin',
+        });
+        return res.json(user);
+      }
+
+      // No authentication found
+      res.status(401).json({ message: 'Unauthorized' });
     } catch (error) {
       console.error("Error fetching user:", error);
       res.status(500).json({ message: "Failed to fetch user" });
