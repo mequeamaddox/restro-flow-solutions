@@ -4,10 +4,37 @@ import { storage } from './storage';
 
 // Initialize Firebase Admin SDK
 if (!getApps().length) {
-  // Use production Firebase project
-  initializeApp({
-    projectId: process.env.VITE_FIREBASE_PROJECT_ID,
-  });
+  const privateKey = process.env.FIREBASE_PRIVATE_KEY;
+  const clientEmail = process.env.FIREBASE_CLIENT_EMAIL;
+  const projectId = process.env.VITE_FIREBASE_PROJECT_ID;
+
+  if (!privateKey || !clientEmail || !projectId) {
+    console.error('Missing Firebase credentials. Falling back to default credentials.');
+    initializeApp({
+      projectId: projectId,
+    });
+  } else {
+    // Properly format the private key
+    const formattedPrivateKey = privateKey.replace(/\\n/g, '\n');
+    
+    try {
+      initializeApp({
+        credential: cert({
+          projectId: projectId,
+          clientEmail: clientEmail,
+          privateKey: formattedPrivateKey,
+        }),
+        projectId: projectId,
+      });
+      console.log('Firebase Admin SDK initialized with service account credentials');
+    } catch (error) {
+      console.error('Failed to initialize Firebase with service account:', error);
+      // Fallback to default credentials
+      initializeApp({
+        projectId: projectId,
+      });
+    }
+  }
 }
 
 export const adminAuth = getAuth();
