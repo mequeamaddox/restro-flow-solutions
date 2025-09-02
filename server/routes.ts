@@ -147,8 +147,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const user = await storage.upsertUser({
         id: employee.id,
         email: employee.email || '',
-        firstName: employee.first_name,
-        lastName: employee.last_name,
+        firstName: employee.first_name || employee.firstName || '',
+        lastName: employee.last_name || employee.lastName || '',
         role: 'employee',
       });
 
