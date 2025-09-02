@@ -59,13 +59,13 @@ export default function EmployeeTimeClock() {
 
   // Get current user's time entries
   const { data: myTimeEntries = [], isLoading: entriesLoading } = useQuery<TimeEntry[]>({
-    queryKey: ['/api/employees', userId, 'time-entries'],
+    queryKey: [`/api/employees/${userId}/time-entries`],
     enabled: !!userId,
   });
 
   // Get current user's scheduled shifts
   const { data: myShifts = [], isLoading: shiftsLoading } = useQuery<Shift[]>({
-    queryKey: ['/api/employees', userId, 'shifts'],
+    queryKey: [`/api/employees/${userId}/shifts`],
     enabled: !!userId,
   });
 
@@ -88,7 +88,7 @@ export default function EmployeeTimeClock() {
     },
     onSuccess: () => {
       toast({ title: "Clocked In", description: "You've successfully clocked in for your shift!" });
-      queryClient.invalidateQueries({ queryKey: ['/api/employees', userId, 'time-entries'] });
+      queryClient.invalidateQueries({ queryKey: [`/api/employees/${userId}/time-entries`] });
     },
     onError: (error) => {
       console.error('Clock in error:', error);
@@ -112,7 +112,7 @@ export default function EmployeeTimeClock() {
     },
     onSuccess: () => {
       toast({ title: "Clocked Out", description: "You've successfully clocked out. Have a great day!" });
-      queryClient.invalidateQueries({ queryKey: ['/api/employees', userId, 'time-entries'] });
+      queryClient.invalidateQueries({ queryKey: [`/api/employees/${userId}/time-entries`] });
       setShowClockOutDialog(false);
       setClockOutNotes("");
     },
@@ -127,7 +127,7 @@ export default function EmployeeTimeClock() {
     },
     onSuccess: () => {
       toast({ title: "Break Started", description: "Enjoy your break!" });
-      queryClient.invalidateQueries({ queryKey: ['/api/employees', userId, 'time-entries'] });
+      queryClient.invalidateQueries({ queryKey: [`/api/employees/${userId}/time-entries`] });
     },
     onError: () => {
       toast({ title: "Error", description: "Failed to start break", variant: "destructive" });
@@ -140,7 +140,7 @@ export default function EmployeeTimeClock() {
     },
     onSuccess: () => {
       toast({ title: "Break Ended", description: "Welcome back!" });
-      queryClient.invalidateQueries({ queryKey: ['/api/employees', userId, 'time-entries'] });
+      queryClient.invalidateQueries({ queryKey: [`/api/employees/${userId}/time-entries`] });
     },
     onError: () => {
       toast({ title: "Error", description: "Failed to end break", variant: "destructive" });
@@ -286,7 +286,7 @@ export default function EmployeeTimeClock() {
                 <Button 
                   onClick={() => clockInMutation.mutate()}
                   disabled={clockInMutation.isPending || !userId}
-                  className="w-full bg-green-600 hover:bg-green-700"
+                  className="w-full bg-slate-900 hover:bg-slate-800 dark:bg-slate-700 dark:hover:bg-slate-600 text-white"
                 >
                   <Play className="h-4 w-4 mr-2" />
                   {!userId ? 'Authentication Required' : 'Clock In'}
