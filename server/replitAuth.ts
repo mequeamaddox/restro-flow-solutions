@@ -141,18 +141,25 @@ export async function setupAuth(app: Express) {
 }
 
 export const isAuthenticated: RequestHandler = async (req, res, next) => {
-  const user = req.user as any;
+  const sessionUser = (req.session as any)?.user;
+  const passportUser = req.user as any;
 
-  if (!req.isAuthenticated() || !user.expires_at) {
+  // Check for employee session first (simple email/password login)
+  if (sessionUser && sessionUser.email) {
+    return next();
+  }
+
+  // Check for Replit OIDC authentication
+  if (!req.isAuthenticated() || !passportUser || !passportUser.expires_at) {
     return res.status(401).json({ message: "Unauthorized" });
   }
 
   const now = Math.floor(Date.now() / 1000);
-  if (now <= user.expires_at) {
+  if (now <= passportUser.expires_at) {
     return next();
   }
 
-  const refreshToken = user.refresh_token;
+  const refreshToken = passportUser.refresh_token;
   if (!refreshToken) {
     res.status(401).json({ message: "Unauthorized" });
     return;
@@ -161,7 +168,7 @@ export const isAuthenticated: RequestHandler = async (req, res, next) => {
   try {
     const config = await getOidcConfig();
     const tokenResponse = await client.refreshTokenGrant(config, refreshToken);
-    updateUserSession(user, tokenResponse);
+    updateUserSession(passportUser, tokenResponse);
     return next();
   } catch (error) {
     res.status(401).json({ message: "Unauthorized" });
