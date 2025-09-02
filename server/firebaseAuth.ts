@@ -4,7 +4,7 @@ import { storage } from './storage';
 
 // Initialize Firebase Admin SDK (simplified - no service account needed for basic auth)
 if (!getApps().length) {
-  const projectId = process.env.VITE_FIREBASE_PROJECT_ID || 'restroflowsoftware';
+  const projectId = 'restroflowsoftware';
   
   initializeApp({
     projectId: projectId,
