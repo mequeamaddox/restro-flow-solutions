@@ -129,19 +129,29 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: 'Email and password required' });
       }
 
+      console.log('🔑 Login attempt for:', email);
+
       // Check if employee exists
       const employees = await storage.getEmployees();
+      console.log('📋 Found employees:', employees.map(e => ({ id: e.id.substring(0, 8), email: e.email })));
+      
       const employee = employees.find(emp => emp.email?.toLowerCase() === email.toLowerCase());
       
       if (!employee) {
+        console.log('❌ Employee not found for email:', email);
         return res.status(401).json({ message: 'Invalid credentials' });
       }
+
+      console.log('✅ Found employee:', { id: employee.id.substring(0, 8), email: employee.email });
 
       // For now, accept a simple password. In production, this should be hashed
       const validPasswords = ['TEMP1234!', 'employee123', 'password123'];
       if (!validPasswords.includes(password)) {
+        console.log('❌ Invalid password:', password);
         return res.status(401).json({ message: 'Invalid credentials' });
       }
+
+      console.log('✅ Password accepted');
 
       // Create/update user record for this employee
       const user = await storage.upsertUser({
@@ -155,9 +165,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Set session
       (req.session as any).user = user;
       
+      console.log('✅ Login successful for:', user.email);
       res.json(user);
     } catch (error) {
-      console.error('Login error:', error);
+      console.error('❌ Login error:', error);
       res.status(500).json({ message: 'Login failed' });
     }
   });
