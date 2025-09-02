@@ -46,7 +46,7 @@ export default function EmployeeTimeClock() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const { user } = useAuth();
-  const userId = (user as any)?.claims?.sub || (user as any)?.id;
+  const userId = (user as any)?.id || (user as any)?.claims?.sub;
   
 
   // Update current time every second

@@ -66,7 +66,7 @@ interface Message {
 
 export default function EmployeeDashboard() {
   const { user } = useAuth();
-  const userId = (user as any)?.claims?.sub;
+  const userId = (user as any)?.id || (user as any)?.claims?.sub;
   const [activeTab, setActiveTab] = useState("overview");
 
   // Fetch employee-specific data

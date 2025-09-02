@@ -2077,7 +2077,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post('/api/employees/:employeeId/clock-in', isAuthenticated, async (req, res) => {
     try {
-      const userId = (req.user as any)?.claims?.sub;
+      // Get user ID from either employee session or Replit auth
+      const userId = (req.session as any)?.user?.id || (req.user as any)?.claims?.sub;
       // Ensure employees can only clock in for themselves
       if (req.params.employeeId !== userId) {
         return res.status(403).json({ message: 'Access denied - can only clock in for yourself' });
@@ -2092,7 +2093,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post('/api/employees/:employeeId/clock-out', isAuthenticated, async (req, res) => {
     try {
-      const userId = (req.user as any)?.claims?.sub;
+      // Get user ID from either employee session or Replit auth
+      const userId = (req.session as any)?.user?.id || (req.user as any)?.claims?.sub;
       // Ensure employees can only clock out for themselves
       if (req.params.employeeId !== userId) {
         return res.status(403).json({ message: 'Access denied - can only clock out for yourself' });
@@ -2113,7 +2115,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post('/api/employees/:employeeId/break-start', isAuthenticated, async (req, res) => {
     try {
-      const userId = (req.user as any)?.claims?.sub;
+      // Get user ID from either employee session or Replit auth
+      const userId = (req.session as any)?.user?.id || (req.user as any)?.claims?.sub;
       if (req.params.employeeId !== userId) {
         return res.status(403).json({ message: 'Access denied - can only start break for yourself' });
       }
@@ -2132,7 +2135,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post('/api/employees/:employeeId/break-end', isAuthenticated, async (req, res) => {
     try {
-      const userId = (req.user as any)?.claims?.sub;
+      // Get user ID from either employee session or Replit auth
+      const userId = (req.session as any)?.user?.id || (req.user as any)?.claims?.sub;
       if (req.params.employeeId !== userId) {
         return res.status(403).json({ message: 'Access denied - can only end break for yourself' });
       }
