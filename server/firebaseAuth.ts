@@ -4,36 +4,29 @@ import { storage } from './storage';
 
 // Initialize Firebase Admin SDK
 if (!getApps().length) {
-  const privateKey = process.env.FIREBASE_PRIVATE_KEY;
-  const clientEmail = process.env.FIREBASE_CLIENT_EMAIL;
   const projectId = process.env.VITE_FIREBASE_PROJECT_ID;
+  
+  // Use the service account credentials directly (exactly as provided in JSON)
+  const privateKey = "-----BEGIN PRIVATE KEY-----\nMIIEvQIBADANBgkqhkiG9w0BAQEFAASCBKcwggSjAgEAAoIBAQDMusOJonKa9Kua\nAjLwRi9D1zvtX4BJiF0KjGErNZwpz7EMrAeTK/gLdKfGSW9MwHtx2YwUgfaksCwJ\n2m9kYOtWbKp4GifHEOKKTyooI2I0L9fC8q4sbtwT446ReNqTf3N2M7nI0HbXlMZM\nZWECmcwB13l23WgLIyhmPcGj+FSM+5OmAJwFWiCzihQaE5yJKTklaZ8xAnAS/8J5\nNw7D7oZmXy+Y6UEvn3VZ7lFire+trV7dIMeeFKDfRp8BQydS1JMe9qme/xT6UemX\nrtjOJtcW9GtYlwucAjXwMok2hq+CqUaIWgxa83YzdNKOWbkf20VYMl9A6Ki22Cxk\n7oCfmICTAgMBAAECggEAEmBPLdr1c4AzqPK6lMOP+YRnviI81xzU0R4RmLnKpxwb\n1bnZQjYHoSua5Zrw0RBT5D+1KaASveyMP2QqbHWgmhTN5lLesCkNVIHPlGO8rFeB\nA+AZjyZyPZzGzrrsz6F4gSsaaXKAwE/7zp6o6v1YCPBI2Ej+TkWdGjQ/3dJr8G15\nPXI4LZKDLJdQUW7HDBO/AufaovQ8fAoGUweJNJrxZx3pQwZAgOFWtZUMf0GtlP9d\nNxAw0YvtnKJp03i/QIUeEfwv2CAbNoe6W1Eug/7n4Knep43d/+lPS7umbhcKulAK\nhffwJgJJfOZZGHdt+P7XNLqngB1+ZS4C35eXblbVUQ==\n-----END PRIVATE KEY-----\n";
 
-  if (!privateKey || !clientEmail || !projectId) {
-    console.error('Missing Firebase credentials. Falling back to default credentials.');
+  const clientEmail = 'firebase-adminsdk-fbsvc@restroflowsoftware.iam.gserviceaccount.com';
+  
+  try {
+    initializeApp({
+      credential: cert({
+        projectId: projectId,
+        clientEmail: clientEmail,
+        privateKey: privateKey,
+      }),
+      projectId: projectId,
+    });
+    console.log('Firebase Admin SDK initialized with service account credentials');
+  } catch (error) {
+    console.error('Failed to initialize Firebase with service account:', error);
+    // Fallback to default credentials
     initializeApp({
       projectId: projectId,
     });
-  } else {
-    // Properly format the private key
-    const formattedPrivateKey = privateKey.replace(/\\n/g, '\n');
-    
-    try {
-      initializeApp({
-        credential: cert({
-          projectId: projectId,
-          clientEmail: clientEmail,
-          privateKey: formattedPrivateKey,
-        }),
-        projectId: projectId,
-      });
-      console.log('Firebase Admin SDK initialized with service account credentials');
-    } catch (error) {
-      console.error('Failed to initialize Firebase with service account:', error);
-      // Fallback to default credentials
-      initializeApp({
-        projectId: projectId,
-      });
-    }
   }
 }
 
