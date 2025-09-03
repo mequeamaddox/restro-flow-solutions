@@ -19,6 +19,8 @@ import {
   documentTemplates,
   employeeDocumentAssignments,
   employeeSignatures,
+  documentFormFields,
+  employeeDocumentResponses,
   type User,
   type UpsertUser,
   type Location,
@@ -116,6 +118,10 @@ import {
   type InsertEmployeeDocumentAssignment,
   type EmployeeSignature,
   type InsertEmployeeSignature,
+  type DocumentFormField,
+  type InsertDocumentFormField,
+  type EmployeeDocumentResponse,
+  type InsertEmployeeDocumentResponse,
   // Document and onboarding imports
   employeeDocuments,
   documentRequirements,
@@ -404,6 +410,13 @@ export interface IStorage {
   // Document signature operations
   createEmployeeSignature(signature: any): Promise<any>;
   getEmployeeSignature(documentAssignmentId: string): Promise<any | undefined>;
+  
+  // Digital form methods
+  getDocumentFormFields(templateId: string): Promise<DocumentFormField[]>;
+  createDocumentFormField(field: InsertDocumentFormField): Promise<DocumentFormField>;
+  getDocumentFormResponses(assignmentId: string): Promise<EmployeeDocumentResponse[]>;
+  saveDocumentFormResponse(response: InsertEmployeeDocumentResponse): Promise<EmployeeDocumentResponse>;
+  updateDocumentFormResponse(assignmentId: string, fieldId: string, fieldValue: string): Promise<EmployeeDocumentResponse>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -3104,6 +3117,52 @@ export class DatabaseStorage implements IStorage {
       .from(employeeSignatures)
       .where(eq(employeeSignatures.documentAssignmentId, documentAssignmentId));
     return signature;
+  }
+
+  // Digital form methods
+  async getDocumentFormFields(templateId: string): Promise<DocumentFormField[]> {
+    return await db.select()
+      .from(documentFormFields)
+      .where(eq(documentFormFields.templateId, templateId))
+      .orderBy(documentFormFields.sortOrder);
+  }
+
+  async createDocumentFormField(field: InsertDocumentFormField): Promise<DocumentFormField> {
+    const [created] = await db.insert(documentFormFields)
+      .values(field)
+      .returning();
+    return created;
+  }
+
+  async getDocumentFormResponses(assignmentId: string): Promise<EmployeeDocumentResponse[]> {
+    return await db.select()
+      .from(employeeDocumentResponses)
+      .where(eq(employeeDocumentResponses.assignmentId, assignmentId));
+  }
+
+  async saveDocumentFormResponse(response: InsertEmployeeDocumentResponse): Promise<EmployeeDocumentResponse> {
+    const [existing] = await db.select()
+      .from(employeeDocumentResponses)
+      .where(eq(employeeDocumentResponses.assignmentId, response.assignmentId))
+      .where(eq(employeeDocumentResponses.fieldId, response.fieldId));
+    
+    if (existing) {
+      const [updated] = await db.update(employeeDocumentResponses)
+        .set({ fieldValue: response.fieldValue, updatedAt: new Date() })
+        .where(eq(employeeDocumentResponses.id, existing.id))
+        .returning();
+      return updated;
+    } else {
+      const [created] = await db.insert(employeeDocumentResponses)
+        .values(response)
+        .returning();
+      return created;
+    }
+  }
+
+  async updateDocumentFormResponse(assignmentId: string, fieldId: string, fieldValue: string): Promise<EmployeeDocumentResponse> {
+    const response = { assignmentId, fieldId, fieldValue };
+    return await this.saveDocumentFormResponse(response);
   }
 
   // Enhanced employee profile to include document status

@@ -3271,6 +3271,58 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Get form fields for a document template
+  app.get('/api/document-templates/:id/fields', async (req, res) => {
+    try {
+      const fields = await storage.getDocumentFormFields(req.params.id);
+      res.json(fields);
+    } catch (error) {
+      console.error('Error fetching form fields:', error);
+      res.status(500).json({ message: 'Failed to fetch form fields' });
+    }
+  });
+
+  // Get employee's responses for a document assignment
+  app.get('/api/employee-documents/:id/responses', async (req, res) => {
+    try {
+      const responses = await storage.getDocumentFormResponses(req.params.id);
+      res.json(responses);
+    } catch (error) {
+      console.error('Error fetching form responses:', error);
+      res.status(500).json({ message: 'Failed to fetch form responses' });
+    }
+  });
+
+  // Save employee response for a form field
+  app.post('/api/employee-documents/:id/responses', async (req, res) => {
+    try {
+      const { fieldId, fieldValue } = req.body;
+      const response = await storage.saveDocumentFormResponse({
+        assignmentId: req.params.id,
+        fieldId,
+        fieldValue,
+      });
+      res.json(response);
+    } catch (error) {
+      console.error('Error saving form response:', error);
+      res.status(500).json({ message: 'Failed to save form response' });
+    }
+  });
+
+  // Complete digital document (mark as completed after all required fields filled)
+  app.post('/api/employee-documents/:id/complete', async (req, res) => {
+    try {
+      const assignment = await storage.updateDocumentAssignment(req.params.id, {
+        status: 'completed',
+        completedAt: new Date(),
+      });
+      res.json(assignment);
+    } catch (error) {
+      console.error('Error completing document:', error);
+      res.status(500).json({ message: 'Failed to complete document' });
+    }
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }

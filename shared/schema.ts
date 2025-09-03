@@ -1319,6 +1319,36 @@ export const employeeSignatures = pgTable("employee_signatures", {
   createdAt: timestamp("created_at").defaultNow(),
 });
 
+// Document form fields for digital forms
+export const documentFormFieldTypeEnum = pgEnum("document_form_field_type", [
+  "text", "textarea", "email", "phone", "number", "date", "select", "checkbox", "radio", "signature"
+]);
+
+export const documentFormFields = pgTable("document_form_fields", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  templateId: varchar("template_id").references(() => documentTemplates.id, { onDelete: "cascade" }).notNull(),
+  fieldName: varchar("field_name", { length: 100 }).notNull(), // e.g., "fullName", "ssn", "address"
+  fieldLabel: varchar("field_label", { length: 255 }).notNull(), // e.g., "Full Legal Name"
+  fieldType: documentFormFieldTypeEnum("field_type").notNull(),
+  isRequired: boolean("is_required").default(false),
+  placeholder: varchar("placeholder", { length: 255 }),
+  helpText: text("help_text"),
+  options: jsonb("options"), // For select/radio options: ["Option 1", "Option 2"]
+  validation: jsonb("validation"), // For validation rules: {"minLength": 2, "pattern": "regex"}
+  sortOrder: integer("sort_order").default(0),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+// Employee form responses for digital completion
+export const employeeDocumentResponses = pgTable("employee_document_responses", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  assignmentId: varchar("assignment_id").references(() => employeeDocumentAssignments.id, { onDelete: "cascade" }).notNull(),
+  fieldId: varchar("field_id").references(() => documentFormFields.id).notNull(),
+  fieldValue: text("field_value"), // The employee's response
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
 // Insert schemas for enhanced document management
 export const insertDocumentTemplateSchema = createInsertSchema(documentTemplates).omit({ id: true, createdAt: true, updatedAt: true });
 export const insertEmployeeDocumentAssignmentSchema = createInsertSchema(employeeDocumentAssignments).omit({ id: true, createdAt: true, updatedAt: true });
@@ -1335,4 +1365,14 @@ export const insertOnboardingTemplateSchema = createInsertSchema(onboardingTempl
 export const insertOnboardingStepSchema = createInsertSchema(onboardingSteps).omit({ id: true, createdAt: true, updatedAt: true });
 export const insertEmployeeOnboardingSchema = createInsertSchema(employeeOnboarding).omit({ id: true, createdAt: true, updatedAt: true });
 export const insertEmployeeOnboardingStepSchema = createInsertSchema(employeeOnboardingSteps).omit({ id: true, createdAt: true, updatedAt: true });
+
+// Insert schemas for digital document forms
+export const insertDocumentFormFieldSchema = createInsertSchema(documentFormFields).omit({ id: true, createdAt: true });
+export const insertEmployeeDocumentResponseSchema = createInsertSchema(employeeDocumentResponses).omit({ id: true, createdAt: true, updatedAt: true });
+
+// Types for digital document forms
+export type DocumentFormField = typeof documentFormFields.$inferSelect;
+export type InsertDocumentFormField = z.infer<typeof insertDocumentFormFieldSchema>;
+export type EmployeeDocumentResponse = typeof employeeDocumentResponses.$inferSelect;
+export type InsertEmployeeDocumentResponse = z.infer<typeof insertEmployeeDocumentResponseSchema>;
 

@@ -10,6 +10,7 @@ import { ObjectUploader } from "@/components/ObjectUploader";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useAuth } from "@/hooks/useAuth";
+import { DigitalDocumentForm } from '@/components/employee/DigitalDocumentForm';
 import { 
   FileText, Download, Upload, CheckCircle, Clock, AlertTriangle,
   Eye, ArrowLeft, Calendar, User, Target, Award, Star
@@ -39,6 +40,7 @@ export default function EmployeeDocuments() {
   const { toast } = useToast();
   const [selectedDocument, setSelectedDocument] = useState<EmployeeDocument | null>(null);
   const [showUploadDialog, setShowUploadDialog] = useState(false);
+  const [showDigitalForm, setShowDigitalForm] = useState(false);
   const [filter, setFilter] = useState<string>('all');
 
   // Fetch employee documents
@@ -350,7 +352,11 @@ export default function EmployeeDocuments() {
                           <div className="flex flex-col gap-2 ml-4">
                             {doc.status === 'assigned' && (
                               <Button
-                                onClick={() => startDocumentMutation.mutate(doc.id)}
+                                onClick={() => {
+                                  setSelectedDocument(doc);
+                                  setShowDigitalForm(true);
+                                  startDocumentMutation.mutate(doc.id);
+                                }}
                                 disabled={startDocumentMutation.isPending}
                                 data-testid={`button-start-${doc.id}`}
                               >
@@ -442,8 +448,34 @@ export default function EmployeeDocuments() {
         </DialogContent>
       </Dialog>
 
+      {/* Digital Document Form Dialog */}
+      <Dialog open={showDigitalForm} onOpenChange={() => {
+        setShowDigitalForm(false);
+        setSelectedDocument(null);
+      }}>
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <FileText className="h-5 w-5" />
+              Digital Form Completion
+            </DialogTitle>
+          </DialogHeader>
+          {selectedDocument && (
+            <DigitalDocumentForm
+              assignmentId={selectedDocument.id}
+              templateId={selectedDocument.templateId}
+              templateName={selectedDocument.template?.name || 'Document'}
+              onComplete={() => {
+                setShowDigitalForm(false);
+                setSelectedDocument(null);
+              }}
+            />
+          )}
+        </DialogContent>
+      </Dialog>
+
       {/* Document Details Dialog */}
-      <Dialog open={!!selectedDocument && !showUploadDialog} onOpenChange={() => setSelectedDocument(null)}>
+      <Dialog open={!!selectedDocument && !showUploadDialog && !showDigitalForm} onOpenChange={() => setSelectedDocument(null)}>
         <DialogContent className="max-w-2xl">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
