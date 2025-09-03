@@ -40,7 +40,7 @@ export default function Settings() {
   });
 
   const { toast } = useToast();
-  const { user, isLoading: userLoading } = useAuth();
+  const { isLoading: userLoading } = useAuth();
   const queryClient = useQueryClient();
 
   // Fetch locations

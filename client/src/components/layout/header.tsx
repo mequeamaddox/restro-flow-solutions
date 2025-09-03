@@ -31,8 +31,8 @@ export default function Header({ onMobileMenuToggle }: HeaderProps = {}) {
   });
 
   // Filter locations for employees - they should only see their assigned location
-  const availableLocations = isEmployee && employeeProfile?.employee?.department?.location 
-    ? [employeeProfile.employee.department.location] 
+  const availableLocations = isEmployee && (employeeProfile as any)?.employee?.department?.location 
+    ? [(employeeProfile as any).employee.department.location] 
     : locations;
 
   const lowStockCount = (lowStockItems as any[])?.length || 0;
