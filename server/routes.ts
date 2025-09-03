@@ -3434,6 +3434,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const userId = (req.user as any)?.claims?.sub || req.session?.user?.id;
       
+      console.log('Received payroll period request body:', JSON.stringify(req.body, null, 2));
+      
       // Generate period name based on Patriot Software approach
       const { frequency, startDate, endDate } = req.body;
       const startDateObj = new Date(startDate);
