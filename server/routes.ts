@@ -153,28 +153,44 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       console.log('✅ Password accepted');
 
+      // Helper function to map position titles to user roles
+      const mapPositionToRole = (positionTitle: string | null | undefined): string => {
+        if (!positionTitle) return 'employee';
+        
+        const title = positionTitle.toLowerCase();
+        if (title.includes('manager') || title.includes('supervisor')) return 'manager';
+        if (title.includes('lead') || title.includes('team lead')) return 'team_lead';
+        if (title.includes('host') || title.includes('server') || title.includes('bartender') || title.includes('cook')) return 'employee';
+        
+        return 'employee'; // default fallback
+      };
+
+      // Get employee with position details
+      const employeeWithPosition = await storage.getEmployee(employee.id);
+      const userRole = mapPositionToRole(employeeWithPosition?.position?.title);
+
       // Get existing user record for this employee
       let existingUser = await storage.getUser(employee.id);
       
       if (!existingUser) {
         // Create user record for this employee using their employee data
-        console.log('✅ Creating user record for employee:', employee.id);
+        console.log('✅ Creating user record for employee:', employee.id, 'with role:', userRole);
         existingUser = await storage.upsertUser({
           id: employee.id,
           email: employee.email,
           firstName: employee.firstName,
           lastName: employee.lastName,
-          role: 'employee',
+          role: userRole,
         });
-      } else if (!existingUser.firstName || !existingUser.lastName) {
-        // Update existing user record with employee names if missing
-        console.log('✅ Updating user record with employee names:', employee.id);
+      } else if (!existingUser.firstName || !existingUser.lastName || existingUser.role === 'employee') {
+        // Update existing user record with employee names and correct role if missing
+        console.log('✅ Updating user record with employee names and role:', employee.id, 'role:', userRole);
         existingUser = await storage.upsertUser({
           id: employee.id,
           email: existingUser.email,
           firstName: employee.firstName,
           lastName: employee.lastName,
-          role: existingUser.role,
+          role: userRole,
         });
       }
 
