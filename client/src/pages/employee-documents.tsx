@@ -411,8 +411,8 @@ export default function EmployeeDocuments() {
           {selectedDocument && (
             <div className="space-y-4">
               <div className="p-4 bg-blue-50 border border-blue-200 rounded">
-                <p className="font-medium text-blue-900">{selectedDocument.template.name}</p>
-                <p className="text-sm text-blue-700">{selectedDocument.template.description}</p>
+                <p className="font-medium text-blue-900">{selectedDocument.template?.name || 'Document'}</p>
+                <p className="text-sm text-blue-700">{selectedDocument.template?.description || 'No description available'}</p>
               </div>
               
               <ObjectUploader
