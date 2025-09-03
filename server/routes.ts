@@ -3441,8 +3441,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Generate period name based on Patriot Software approach
       const { frequency, startDate, endDate, locationId, payDate } = requestData;
-      const startDateObj = new Date(startDate);
-      const endDateObj = new Date(endDate);
+      
+      // Convert date strings to proper Date objects
+      const startDateObj = new Date(startDate + 'T00:00:00');
+      const endDateObj = new Date(endDate + 'T00:00:00');
+      const payDateObj = payDate ? new Date(payDate + 'T00:00:00') : endDateObj;
+      
+      console.log('Parsed dates:', { startDateObj, endDateObj, payDateObj });
       
       const formatDate = (date: Date) => {
         return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
@@ -3455,11 +3460,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Ensure we have all required fields
       const periodData = {
         name: name || `${safeFrequency} Period`,
-        startDate: startDate,
-        endDate: endDate,
-        payDate: payDate || endDate,
+        startDate: startDateObj,
+        endDate: endDateObj,
+        payDate: payDateObj,
         frequency: safeFrequency,
-        locationId: locationId,
+        locationId: locationId || null,
         status: 'draft',
         totalGrossPay: '0.00',
         totalNetPay: '0.00', 
