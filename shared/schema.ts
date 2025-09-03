@@ -1370,11 +1370,11 @@ export const insertEmployeeOnboardingStepSchema = createInsertSchema(employeeOnb
 export const insertDocumentFormFieldSchema = createInsertSchema(documentFormFields).omit({ id: true, createdAt: true });
 export const insertEmployeeDocumentResponseSchema = createInsertSchema(employeeDocumentResponses).omit({ id: true, createdAt: true, updatedAt: true });
 
-// Recipe assignments for employee training and daily prep
+// Recipe assignments for department training and daily prep
 export const recipeAssignments = pgTable("recipe_assignments", {
   id: uuid("id").primaryKey().default(sql`gen_random_uuid()`),
   recipeId: uuid("recipe_id").references(() => recipes.id, { onDelete: "cascade" }).notNull(),
-  employeeId: uuid("employee_id").references(() => employees.id, { onDelete: "cascade" }).notNull(),
+  departmentId: uuid("department_id").references(() => departments.id, { onDelete: "cascade" }).notNull(),
   assignedBy: varchar("assigned_by").references(() => users.id).notNull(),
   assignmentType: varchar("assignment_type").default("training"), // training, daily_prep, specialty
   priority: varchar("priority").default("normal"), // low, normal, high

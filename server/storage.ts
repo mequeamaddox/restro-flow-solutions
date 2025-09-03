@@ -422,7 +422,8 @@ export interface IStorage {
   updateDocumentFormResponse(assignmentId: string, fieldId: string, fieldValue: string): Promise<EmployeeDocumentResponse>;
   
   // Recipe assignment operations
-  getRecipeAssignments(employeeId: string): Promise<RecipeAssignment[]>;
+  getRecipeAssignmentsByDepartment(departmentId: string): Promise<RecipeAssignment[]>;
+  getRecipeAssignmentsForEmployee(employeeId: string): Promise<RecipeAssignment[]>;
   createRecipeAssignment(assignment: InsertRecipeAssignment): Promise<RecipeAssignment>;
   updateRecipeAssignmentStatus(id: string, status: string): Promise<RecipeAssignment>;
 }
@@ -3205,17 +3206,31 @@ export class DatabaseStorage implements IStorage {
   }
 
   // Recipe assignment operations
-  async getRecipeAssignments(employeeId: string): Promise<RecipeAssignment[]> {
+  async getRecipeAssignmentsByDepartment(departmentId: string): Promise<RecipeAssignment[]> {
     const result = await db.select({
       assignment: recipeAssignments,
       recipe: recipes,
     })
     .from(recipeAssignments)
     .innerJoin(recipes, eq(recipeAssignments.recipeId, recipes.id))
-    .where(eq(recipeAssignments.employeeId, employeeId))
+    .where(eq(recipeAssignments.departmentId, departmentId))
     .orderBy(desc(recipeAssignments.createdAt));
     
     return result.map(r => ({ ...r.assignment, recipe: r.recipe })) as any;
+  }
+
+  async getRecipeAssignmentsForEmployee(employeeId: string): Promise<RecipeAssignment[]> {
+    // Get employee's department first
+    const [employee] = await db.select({ departmentId: employees.departmentId })
+      .from(employees)
+      .where(eq(employees.id, employeeId));
+    
+    if (!employee?.departmentId) {
+      return [];
+    }
+    
+    // Get assignments for employee's department
+    return this.getRecipeAssignmentsByDepartment(employee.departmentId);
   }
 
   async createRecipeAssignment(assignment: InsertRecipeAssignment): Promise<RecipeAssignment> {

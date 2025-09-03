@@ -3125,7 +3125,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/employees/:employeeId/recipe-assignments", isAuthenticated, async (req, res) => {
     try {
       const { employeeId } = req.params;
-      const assignments = await storage.getRecipeAssignments(employeeId);
+      const assignments = await storage.getRecipeAssignmentsForEmployee(employeeId);
       res.json(assignments);
     } catch (error) {
       console.error("Error fetching recipe assignments:", error);

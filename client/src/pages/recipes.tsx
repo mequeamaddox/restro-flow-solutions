@@ -43,7 +43,7 @@ export default function Recipes() {
   const [previewContent, setPreviewContent] = useState<string>('');
   const [isPreviewDialogOpen, setIsPreviewDialogOpen] = useState(false);
   const [isAssignDialogOpen, setIsAssignDialogOpen] = useState(false);
-  const [selectedEmployeeId, setSelectedEmployeeId] = useState<string>('');
+  const [selectedDepartmentId, setSelectedDepartmentId] = useState<string>('');
   const [assignmentPriority, setAssignmentPriority] = useState<'low' | 'medium' | 'high'>('medium');
   const [assignmentDueDate, setAssignmentDueDate] = useState<string>('');
   const [assignmentNotes, setAssignmentNotes] = useState<string>('');
@@ -64,9 +64,9 @@ export default function Recipes() {
     enabled: !!currentLocation,
   });
 
-  // Fetch employees for assignment
-  const { data: employees = [] } = useQuery<any[]>({
-    queryKey: ['/api/employees'],
+  // Fetch departments for assignment
+  const { data: departments = [] } = useQuery<any[]>({
+    queryKey: ['/api/departments'],
     enabled: !!currentLocation,
   });
 
@@ -193,7 +193,7 @@ export default function Recipes() {
 
   const assignRecipeMutation = useMutation({
     mutationFn: async (assignmentData: {
-      employeeId: string;
+      departmentId: string;
       recipeId: string;
       priority: 'low' | 'medium' | 'high';
       dueDate?: string;
@@ -210,13 +210,13 @@ export default function Recipes() {
     },
     onSuccess: () => {
       setIsAssignDialogOpen(false);
-      setSelectedEmployeeId('');
+      setSelectedDepartmentId('');
       setAssignmentDueDate('');
       setAssignmentNotes('');
       setAssignmentPriority('medium');
       toast({
         title: "Recipe assigned",
-        description: "The recipe has been assigned to the employee for training.",
+        description: "The recipe has been assigned to the department for training.",
       });
     },
     onError: (error) => {
@@ -1053,7 +1053,7 @@ For Internal Use Only - Keep Secure
                         data-testid={`button-assign-recipe-${recipe.id}`}
                       >
                         <Users className="h-4 w-4 mr-1" />
-                        Assign to Employee
+                        Assign to Department
                       </Button>
                     </div>
                     {/* Photo Upload Row */}
@@ -1266,24 +1266,24 @@ For Internal Use Only - Keep Secure
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <Users className="h-5 w-5" />
-              Assign Recipe to Employee
+              Assign Recipe to Department
             </DialogTitle>
             <DialogDescription>
-              Assign {selectedRecipe?.name} to an employee for training or daily prep
+              Assign {selectedRecipe?.name} to a department for training or daily prep
             </DialogDescription>
           </DialogHeader>
           
           <div className="space-y-4">
             <div>
-              <label className="text-sm font-medium">Employee</label>
-              <Select value={selectedEmployeeId} onValueChange={setSelectedEmployeeId}>
+              <label className="text-sm font-medium">Department</label>
+              <Select value={selectedDepartmentId} onValueChange={setSelectedDepartmentId}>
                 <SelectTrigger>
-                  <SelectValue placeholder="Select an employee" />
+                  <SelectValue placeholder="Select a department" />
                 </SelectTrigger>
                 <SelectContent>
-                  {employees.map(employee => (
-                    <SelectItem key={employee.id} value={employee.id}>
-                      {employee.firstName} {employee.lastName} - {employee.email}
+                  {departments.map(department => (
+                    <SelectItem key={department.id} value={department.id}>
+                      {department.name}
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -1334,9 +1334,9 @@ For Internal Use Only - Keep Secure
               </Button>
               <Button
                 onClick={() => {
-                  if (selectedRecipe && selectedEmployeeId) {
+                  if (selectedRecipe && selectedDepartmentId) {
                     assignRecipeMutation.mutate({
-                      employeeId: selectedEmployeeId,
+                      departmentId: selectedDepartmentId,
                       recipeId: selectedRecipe.id,
                       priority: assignmentPriority,
                       dueDate: assignmentDueDate || undefined,
@@ -1344,7 +1344,7 @@ For Internal Use Only - Keep Secure
                     });
                   }
                 }}
-                disabled={!selectedRecipe || !selectedEmployeeId || assignRecipeMutation.isPending}
+                disabled={!selectedRecipe || !selectedDepartmentId || assignRecipeMutation.isPending}
                 className="flex-1"
               >
                 {assignRecipeMutation.isPending ? "Assigning..." : "Assign Recipe"}
