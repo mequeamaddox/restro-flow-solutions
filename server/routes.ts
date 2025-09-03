@@ -3444,7 +3444,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       };
       
       // Create descriptive name like "Biweekly - Dec 16 to Dec 29, 2024"
-      const name = `${frequency.charAt(0).toUpperCase() + frequency.slice(1)} - ${formatDate(startDateObj)} to ${formatDate(endDateObj)}, ${startDateObj.getFullYear()}`;
+      const safeFrequency = frequency || 'biweekly';
+      const name = `${safeFrequency.charAt(0).toUpperCase() + safeFrequency.slice(1)} - ${formatDate(startDateObj)} to ${formatDate(endDateObj)}, ${startDateObj.getFullYear()}`;
       
       // Ensure we have all required fields
       const periodData = {
@@ -3452,7 +3453,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         startDate: startDate || req.body.startDate,
         endDate: endDate || req.body.endDate,
         payDate: req.body.payDate || endDate || req.body.endDate,
-        frequency: frequency || req.body.frequency || 'biweekly',
+        frequency: safeFrequency,
         locationId: req.body.locationId,
         status: 'draft',
         totalGrossPay: '0.00',
