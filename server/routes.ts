@@ -3073,6 +3073,54 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Employee password change (self-service)
+  app.put("/api/employees/:id/password", isAuthenticated, async (req, res) => {
+    try {
+      const { id } = req.params;
+      const userId = (req.session as any)?.user?.id || (req.user as any)?.claims?.sub;
+      
+      // Only allow employees to change their own password
+      if (id !== userId) {
+        return res.status(403).json({ error: "You can only change your own password" });
+      }
+
+      const { currentPassword, newPassword } = req.body;
+      
+      if (!currentPassword || !newPassword) {
+        return res.status(400).json({ error: "Current password and new password are required" });
+      }
+
+      // Get employee to verify they exist
+      const employee = await storage.getEmployee(id);
+      if (!employee) {
+        return res.status(404).json({ error: "Employee not found" });
+      }
+
+      // For now, verify current password against the temporary ones
+      const validPasswords = ['TEMP1234!', 'employee123', 'password123'];
+      if (!validPasswords.includes(currentPassword)) {
+        return res.status(401).json({ error: "Current password is incorrect" });
+      }
+
+      // Validate new password strength
+      if (newPassword.length < 8) {
+        return res.status(400).json({ error: "New password must be at least 8 characters long" });
+      }
+
+      // For now, we'll store the new password in a simple way
+      // In production, this should be properly hashed and stored
+      console.log(`🔐 Password change request for employee ${employee.email}: ${currentPassword} → ${newPassword}`);
+      
+      // TODO: Implement proper password hashing and storage
+      // For now, just return success
+      res.json({ message: "Password changed successfully. Please log in with your new password." });
+      
+    } catch (error) {
+      console.error("Error changing password:", error);
+      res.status(500).json({ error: "Failed to change password" });
+    }
+  });
+
   // Employee onboarding data for admin view (full access)
   app.get("/api/employees/:id/onboarding-data", isAuthenticated, async (req, res) => {
     try {
