@@ -3436,8 +3436,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       console.log('Received payroll period request body:', JSON.stringify(req.body, null, 2));
       
+      // Handle nested body structure from frontend
+      const requestData = req.body.body || req.body;
+      
       // Generate period name based on Patriot Software approach
-      const { frequency, startDate, endDate } = req.body;
+      const { frequency, startDate, endDate, locationId, payDate } = requestData;
       const startDateObj = new Date(startDate);
       const endDateObj = new Date(endDate);
       
@@ -3451,12 +3454,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Ensure we have all required fields
       const periodData = {
-        name: name || `${frequency || 'biweekly'} Period`,
-        startDate: startDate || req.body.startDate,
-        endDate: endDate || req.body.endDate,
-        payDate: req.body.payDate || endDate || req.body.endDate,
+        name: name || `${safeFrequency} Period`,
+        startDate: startDate,
+        endDate: endDate,
+        payDate: payDate || endDate,
         frequency: safeFrequency,
-        locationId: req.body.locationId,
+        locationId: locationId,
         status: 'draft',
         totalGrossPay: '0.00',
         totalNetPay: '0.00', 
