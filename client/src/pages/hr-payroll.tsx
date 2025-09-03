@@ -188,11 +188,11 @@ export default function HRPayroll() {
           grossPay = regularPay + overtimePay;
         }
 
-        // Calculate deductions (simplified tax calculation)
-        const federalTax = grossPay * 0.12; // 12% federal tax
-        const stateTax = grossPay * 0.05; // 5% state tax
-        const socialSecurity = grossPay * 0.062; // 6.2% social security
-        const medicare = grossPay * 0.0145; // 1.45% medicare
+        // Calculate deductions using realistic tax rates for restaurant workers
+        const federalTax = grossPay * 0.08; // 8% federal (more realistic for restaurant workers)
+        const stateTax = grossPay * 0.02; // 2% state (varies by state)
+        const socialSecurity = grossPay * 0.062; // 6.2% (mandatory)
+        const medicare = grossPay * 0.0145; // 1.45% (mandatory)
         const totalDeductions = federalTax + stateTax + socialSecurity + medicare;
         const netPay = grossPay - totalDeductions;
 
