@@ -294,6 +294,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
           return res.json(existingUser);
         }
 
+        // Only create admin user if they have valid email and name
+        if (!req.user.email || req.user.email.trim() === '') {
+          console.log('❌ Rejecting admin creation - no email provided');
+          return res.status(401).json({ message: 'Unauthorized - incomplete profile' });
+        }
+
         // Create new admin user
         const user = await storage.upsertUser({
           id: req.user.id,
@@ -310,6 +316,31 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error fetching user:", error);
       res.status(500).json({ message: "Failed to fetch user" });
+    }
+  });
+
+  // Logout route to clear session
+  app.post('/api/auth/logout', (req, res) => {
+    try {
+      // Clear employee session
+      if ((req.session as any)?.user) {
+        (req.session as any).user = null;
+      }
+      
+      // Destroy the entire session
+      req.session.destroy((err: any) => {
+        if (err) {
+          console.error('Error destroying session:', err);
+          return res.status(500).json({ message: 'Logout failed' });
+        }
+        
+        // Clear the session cookie
+        res.clearCookie('connect.sid');
+        res.json({ message: 'Logout successful' });
+      });
+    } catch (error) {
+      console.error('Error during logout:', error);
+      res.status(500).json({ message: 'Logout failed' });
     }
   });
 
