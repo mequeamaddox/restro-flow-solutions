@@ -3040,6 +3040,7 @@ export class DatabaseStorage implements IStorage {
   async getEmployeeDocuments(employeeId: string): Promise<any[]> {
     const documents = await db.select({
       id: employeeDocumentAssignments.id,
+      templateId: employeeDocumentAssignments.templateId,
       status: employeeDocumentAssignments.status,
       sentAt: employeeDocumentAssignments.sentAt,
       viewedAt: employeeDocumentAssignments.viewedAt,

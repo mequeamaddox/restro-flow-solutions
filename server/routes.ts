@@ -3168,7 +3168,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get('/api/employees/:employeeId/documents', async (req, res) => {
     try {
       const documents = await storage.getEmployeeDocuments(req.params.employeeId);
-      res.json(documents);
+      // Transform the flat response to match frontend expectations
+      const transformedDocuments = documents.map(doc => ({
+        id: doc.id,
+        templateId: doc.templateId,
+        status: doc.status,
+        deadline: doc.expiresAt,
+        notes: doc.notes,
+        assignedAt: doc.sentAt,
+        completedAt: doc.completedAt,
+        filePath: doc.completedFilePath,
+        template: {
+          name: doc.templateName,
+          type: doc.templateType,
+          description: doc.description,
+          requirements: doc.isRequired ? 'This document is required for employment' : undefined,
+        }
+      }));
+      res.json(transformedDocuments);
     } catch (error) {
       console.error('Error fetching employee documents:', error);
       res.status(500).json({ message: 'Failed to fetch employee documents' });
