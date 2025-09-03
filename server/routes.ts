@@ -2401,6 +2401,47 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Create manual time entry (for supervisors to add missed clock-ins)
+  app.post('/api/hr/time-entries/manual', isAuthenticated, async (req, res) => {
+    try {
+      const userId = (req.user as any)?.id || (req.user as any)?.claims?.sub;
+      const { employeeId, clockInTime, clockOutTime, breakStartTime, breakEndTime, notes } = req.body;
+
+      // Validate required fields
+      if (!employeeId || !clockInTime) {
+        return res.status(400).json({ message: 'Employee ID and clock in time are required' });
+      }
+
+      // Calculate total hours if clock out time is provided
+      let totalHours = null;
+      if (clockOutTime) {
+        const start = new Date(clockInTime);
+        const end = new Date(clockOutTime);
+        const diffMs = end.getTime() - start.getTime();
+        totalHours = diffMs / (1000 * 60 * 60); // Convert to hours
+      }
+
+      const manualEntry = {
+        employeeId,
+        clockInTime: new Date(clockInTime),
+        clockOutTime: clockOutTime ? new Date(clockOutTime) : null,
+        breakStartTime: breakStartTime ? new Date(breakStartTime) : null,
+        breakEndTime: breakEndTime ? new Date(breakEndTime) : null,
+        totalHours: totalHours ? totalHours.toString() : null,
+        status: clockOutTime ? 'clocked-out' : 'clocked-in',
+        notes: notes || 'Manual entry added by supervisor',
+        isManual: true,
+        addedBy: userId
+      };
+
+      const timeEntry = await storage.createTimeEntry(manualEntry);
+      res.status(201).json(timeEntry);
+    } catch (error) {
+      console.error('Error creating manual time entry:', error);
+      res.status(500).json({ message: 'Failed to create manual time entry' });
+    }
+  });
+
   // HR Messaging
   app.get('/api/hr/messages', isAuthenticated, async (req, res) => {
     try {

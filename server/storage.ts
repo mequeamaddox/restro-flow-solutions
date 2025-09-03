@@ -3267,75 +3267,75 @@ export class DatabaseStorage implements IStorage {
 
   // Payroll operations
   async getPayrollPeriods(locationId?: string): Promise<PayrollPeriod[]> {
-    let query = db.select().from(payrollPeriods).orderBy(desc(payrollPeriods.createdAt));
+    let query = db.select().from(payPeriods).orderBy(desc(payPeriods.createdAt));
     
     if (locationId) {
-      query = query.where(eq(payrollPeriods.locationId, locationId)) as any;
+      query = query.where(eq(payPeriods.locationId, locationId)) as any;
     }
     
     return await query;
   }
 
   async createPayrollPeriod(period: InsertPayrollPeriod): Promise<PayrollPeriod> {
-    const [created] = await db.insert(payrollPeriods).values(period).returning();
+    const [created] = await db.insert(payPeriods).values(period).returning();
     return created;
   }
 
   async getPayrollPeriod(id: string): Promise<PayrollPeriod | undefined> {
-    const [period] = await db.select().from(payrollPeriods).where(eq(payrollPeriods.id, id));
+    const [period] = await db.select().from(payPeriods).where(eq(payPeriods.id, id));
     return period;
   }
 
   async updatePayrollPeriod(id: string, period: Partial<PayrollPeriod>): Promise<PayrollPeriod> {
-    const [updated] = await db.update(payrollPeriods)
+    const [updated] = await db.update(payPeriods)
       .set({ ...period, updatedAt: new Date() })
-      .where(eq(payrollPeriods.id, id))
+      .where(eq(payPeriods.id, id))
       .returning();
     return updated;
   }
 
   async getPaychecks(payrollPeriodId: string): Promise<(Paycheck & { employee: Employee })[]> {
     const result = await db.select({
-      paycheck: paychecks,
+      paycheck: paystubs,
       employee: employees,
     })
-    .from(paychecks)
-    .innerJoin(employees, eq(paychecks.employeeId, employees.id))
-    .where(eq(paychecks.payrollPeriodId, payrollPeriodId))
+    .from(paystubs)
+    .innerJoin(employees, eq(paystubs.employeeId, employees.id))
+    .where(eq(paystubs.payPeriodId, payrollPeriodId))
     .orderBy(employees.lastName, employees.firstName);
     
     return result.map(r => ({ ...r.paycheck, employee: r.employee })) as any;
   }
 
   async createPaycheck(paycheck: InsertPaycheck): Promise<Paycheck> {
-    const [created] = await db.insert(paychecks).values(paycheck).returning();
+    const [created] = await db.insert(paystubs).values(paycheck).returning();
     return created;
   }
 
   async updatePaycheck(id: string, paycheck: Partial<Paycheck>): Promise<Paycheck> {
-    const [updated] = await db.update(paychecks)
+    const [updated] = await db.update(paystubs)
       .set({ ...paycheck, updatedAt: new Date() })
-      .where(eq(paychecks.id, id))
+      .where(eq(paystubs.id, id))
       .returning();
     return updated;
   }
 
   async getEmployeePayStubs(employeeId: string): Promise<PayStub[]> {
     return await db.select()
-      .from(payStubs)
-      .where(eq(payStubs.employeeId, employeeId))
-      .orderBy(desc(payStubs.createdAt));
+      .from(paystubs)
+      .where(eq(paystubs.employeeId, employeeId))
+      .orderBy(desc(paystubs.createdAt));
   }
 
   async createPayStub(payStub: InsertPayStub): Promise<PayStub> {
-    const [created] = await db.insert(payStubs).values(payStub).returning();
+    const [created] = await db.insert(paystubs).values(payStub).returning();
     return created;
   }
 
   async markPayStubViewed(payStubId: string): Promise<void> {
-    await db.update(payStubs)
+    await db.update(paystubs)
       .set({ viewedAt: new Date() })
-      .where(eq(payStubs.id, payStubId));
+      .where(eq(paystubs.id, payStubId));
   }
 
   async getTimeEntries(employeeId: string, startDate: string, endDate: string): Promise<TimeEntry[]> {

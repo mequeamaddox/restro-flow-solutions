@@ -436,6 +436,7 @@ export const employees = pgTable("employees", {
   positionId: uuid("position_id").references(() => positions.id),
   hourlyRate: decimal("hourly_rate", { precision: 10, scale: 2 }),
   salary: decimal("salary", { precision: 12, scale: 2 }),
+  payFrequency: varchar("pay_frequency").default("biweekly"), // weekly, biweekly, monthly, salary
   profilePhoto: varchar("profile_photo"),
   notes: text("notes"),
   createdAt: timestamp("created_at").defaultNow(),
@@ -576,6 +577,8 @@ export const timeEntries = pgTable("time_entries", {
   breakEndTime: timestamp("break_end_time"),
   totalHours: decimal("total_hours", { precision: 5, scale: 2 }),
   status: varchar("status").default("clocked-in"),
+  isManual: boolean("is_manual").default(false), // true if added manually by supervisor
+  addedBy: varchar("added_by"), // supervisor who added manual entry
   notes: text("notes"),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
@@ -618,6 +621,8 @@ export const payPeriods = pgTable("pay_periods", {
   startDate: date("start_date").notNull(),
   endDate: date("end_date").notNull(),
   payDate: date("pay_date").notNull(),
+  frequency: varchar("frequency").notNull(), // weekly, biweekly, monthly, salary
+  locationId: uuid("location_id").references(() => locations.id).notNull(),
   status: varchar("status").default("draft"), // draft, calculating, approved, paid
   totalGrossPay: decimal("total_gross_pay", { precision: 12, scale: 2 }).default("0"),
   totalDeductions: decimal("total_deductions", { precision: 12, scale: 2 }).default("0"),

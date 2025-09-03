@@ -9,7 +9,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Clock, Play, Square, Coffee, UserCheck, Timer, Edit, Trash2, Save, Calendar, Filter, CalendarDays, List } from "lucide-react";
+import { Clock, Play, Square, Coffee, UserCheck, Timer, Edit, Trash2, Save, Calendar, Filter, CalendarDays, List, Plus } from "lucide-react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
@@ -45,6 +45,15 @@ export default function HRTimeClock() {
   const [selectedEmployeeId, setSelectedEmployeeId] = useState<string>("");
   const [editingEntry, setEditingEntry] = useState<TimeEntry | null>(null);
   const [showEditDialog, setShowEditDialog] = useState(false);
+  const [showManualEntryDialog, setShowManualEntryDialog] = useState(false);
+  const [manualEntryForm, setManualEntryForm] = useState({
+    employeeId: '',
+    clockInTime: '',
+    clockOutTime: '',
+    breakStartTime: '',
+    breakEndTime: '',
+    notes: ''
+  });
 
   // Redirect employees to their personal time clock
   useEffect(() => {
@@ -126,6 +135,28 @@ export default function HRTimeClock() {
     },
     onError: () => {
       toast({ title: "Error", description: "Failed to delete time entry", variant: "destructive" });
+    },
+  });
+
+  const createManualEntryMutation = useMutation({
+    mutationFn: async (entryData: any) => {
+      return await apiRequest('POST', '/api/hr/time-entries/manual', { body: entryData });
+    },
+    onSuccess: () => {
+      toast({ title: "Success", description: "Manual time entry created successfully" });
+      queryClient.invalidateQueries({ queryKey: ['/api/hr/time-entries'] });
+      setShowManualEntryDialog(false);
+      setManualEntryForm({
+        employeeId: '',
+        clockInTime: '',
+        clockOutTime: '',
+        breakStartTime: '',
+        breakEndTime: '',
+        notes: ''
+      });
+    },
+    onError: () => {
+      toast({ title: "Error", description: "Failed to create manual time entry", variant: "destructive" });
     },
   });
 
@@ -426,11 +457,19 @@ export default function HRTimeClock() {
       {/* Time Entry Management */}
       <Card className="mt-8">
         <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Timer className="h-5 w-5 text-gray-600" />
-            Time Entry Management
-          </CardTitle>
-          <CardDescription>View and edit employee time punches from any date range</CardDescription>
+          <div className="flex items-center justify-between">
+            <div>
+              <CardTitle className="flex items-center gap-2">
+                <Timer className="h-5 w-5 text-gray-600" />
+                Time Entry Management
+              </CardTitle>
+              <CardDescription>View and edit employee time punches from any date range</CardDescription>
+            </div>
+            <Button onClick={() => setShowManualEntryDialog(true)} data-testid="button-add-manual-entry">
+              <Plus className="h-4 w-4 mr-2" />
+              Add Manual Entry
+            </Button>
+          </div>
           
           {/* View Toggle */}
           <div className="flex items-center gap-2 mt-4">
@@ -878,6 +917,105 @@ export default function HRTimeClock() {
             >
               <Save className="h-4 w-4 mr-2" />
               Save Changes
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Manual Time Entry Dialog */}
+      <Dialog open={showManualEntryDialog} onOpenChange={setShowManualEntryDialog}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Add Manual Time Entry</DialogTitle>
+            <DialogDescription>
+              Create a time entry for an employee who missed clocking in/out.
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="space-y-4">
+            <div>
+              <Label htmlFor="manualEmployee">Employee</Label>
+              <Select value={manualEntryForm.employeeId} onValueChange={(value) => setManualEntryForm({...manualEntryForm, employeeId: value})}>
+                <SelectTrigger data-testid="select-manual-employee">
+                  <SelectValue placeholder="Select employee" />
+                </SelectTrigger>
+                <SelectContent>
+                  {employees.map((employee: Employee) => (
+                    <SelectItem key={employee.id} value={employee.id}>
+                      {employee.firstName} {employee.lastName}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            
+            <div>
+              <Label htmlFor="manualClockIn">Clock In Time *</Label>
+              <Input
+                id="manualClockIn"
+                type="datetime-local"
+                value={manualEntryForm.clockInTime}
+                onChange={(e) => setManualEntryForm({...manualEntryForm, clockInTime: e.target.value})}
+                data-testid="input-manual-clock-in"
+                required
+              />
+            </div>
+            
+            <div>
+              <Label htmlFor="manualClockOut">Clock Out Time</Label>
+              <Input
+                id="manualClockOut"
+                type="datetime-local"
+                value={manualEntryForm.clockOutTime}
+                onChange={(e) => setManualEntryForm({...manualEntryForm, clockOutTime: e.target.value})}
+                data-testid="input-manual-clock-out"
+              />
+            </div>
+            
+            <div>
+              <Label htmlFor="manualBreakStart">Break Start</Label>
+              <Input
+                id="manualBreakStart"
+                type="datetime-local"
+                value={manualEntryForm.breakStartTime}
+                onChange={(e) => setManualEntryForm({...manualEntryForm, breakStartTime: e.target.value})}
+                data-testid="input-manual-break-start"
+              />
+            </div>
+            
+            <div>
+              <Label htmlFor="manualBreakEnd">Break End</Label>
+              <Input
+                id="manualBreakEnd"
+                type="datetime-local"
+                value={manualEntryForm.breakEndTime}
+                onChange={(e) => setManualEntryForm({...manualEntryForm, breakEndTime: e.target.value})}
+                data-testid="input-manual-break-end"
+              />
+            </div>
+            
+            <div>
+              <Label htmlFor="manualNotes">Notes</Label>
+              <Textarea
+                id="manualNotes"
+                value={manualEntryForm.notes}
+                onChange={(e) => setManualEntryForm({...manualEntryForm, notes: e.target.value})}
+                placeholder="Reason for manual entry (e.g., forgot to clock in)..."
+                data-testid="textarea-manual-notes"
+              />
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowManualEntryDialog(false)}>
+              Cancel
+            </Button>
+            <Button 
+              onClick={() => createManualEntryMutation.mutate(manualEntryForm)}
+              disabled={createManualEntryMutation.isPending || !manualEntryForm.employeeId || !manualEntryForm.clockInTime}
+              data-testid="button-create-manual-entry"
+            >
+              {createManualEntryMutation.isPending ? "Creating..." : "Create Entry"}
             </Button>
           </DialogFooter>
         </DialogContent>

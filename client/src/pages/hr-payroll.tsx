@@ -68,7 +68,8 @@ export default function HRPayroll() {
   const [payPeriodForm, setPayPeriodForm] = useState({
     startDate: format(startOfWeek(new Date(), { weekStartsOn: 1 }), 'yyyy-MM-dd'),
     endDate: format(endOfWeek(new Date(), { weekStartsOn: 1 }), 'yyyy-MM-dd'),
-    payDate: format(addDays(endOfWeek(new Date(), { weekStartsOn: 1 }), 3), 'yyyy-MM-dd')
+    payDate: format(addDays(endOfWeek(new Date(), { weekStartsOn: 1 }), 3), 'yyyy-MM-dd'),
+    frequency: 'biweekly'
   });
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -118,7 +119,8 @@ export default function HRPayroll() {
       setPayPeriodForm({
         startDate: format(startOfWeek(new Date(), { weekStartsOn: 1 }), 'yyyy-MM-dd'),
         endDate: format(endOfWeek(new Date(), { weekStartsOn: 1 }), 'yyyy-MM-dd'),
-        payDate: format(addDays(endOfWeek(new Date(), { weekStartsOn: 1 }), 3), 'yyyy-MM-dd')
+        payDate: format(addDays(endOfWeek(new Date(), { weekStartsOn: 1 }), 3), 'yyyy-MM-dd'),
+        frequency: 'biweekly'
       });
       toast({
         title: "Pay Period Created",
@@ -145,18 +147,46 @@ export default function HRPayroll() {
         );
         const timeEntries = await timeResponse.json();
 
-        // Calculate total hours
-        const totalHours = timeEntries.reduce((sum: number, entry: any) => 
-          sum + parseFloat(entry.regularHours || '0') + parseFloat(entry.overtimeHours || '0'), 0
-        );
-        const regularHours = Math.min(totalHours, 40);
-        const overtimeHours = Math.max(totalHours - 40, 0);
+        // Calculate total hours from time entries
+        const totalHours = timeEntries.reduce((sum: number, entry: any) => {
+          const hours = parseFloat(entry.totalHours || '0');
+          return sum + hours;
+        }, 0);
+        
+        // Determine overtime threshold based on pay frequency
+        let overtimeThreshold = 40; // Default weekly/biweekly threshold
+        if (selectedPayPeriod?.frequency === 'monthly') {
+          overtimeThreshold = 173; // ~40 hours/week * 4.33 weeks/month
+        } else if (selectedPayPeriod?.frequency === 'weekly') {
+          overtimeThreshold = 40;
+        }
+        
+        let regularHours = totalHours;
+        let overtimeHours = 0;
+        let regularPay = 0;
+        let overtimePay = 0;
+        let grossPay = 0;
 
-        // Calculate pay
-        const hourlyRate = parseFloat(employee.hourlyWage || '15.00');
-        const regularPay = regularHours * hourlyRate;
-        const overtimePay = overtimeHours * hourlyRate * 1.5;
-        const grossPay = regularPay + overtimePay;
+        // Handle salary vs hourly employees
+        if (employee.salary && selectedPayPeriod?.frequency === 'salary') {
+          // Salaried employee - calculate based on annual salary
+          const annualSalary = parseFloat(employee.salary);
+          grossPay = annualSalary / 26; // Biweekly salary amount
+          regularPay = grossPay;
+          regularHours = 80; // Standard biweekly hours for salary
+        } else {
+          // Hourly employee - calculate based on hours worked
+          const hourlyRate = parseFloat(employee.hourlyRate || '15.00');
+          
+          if (totalHours > overtimeThreshold) {
+            regularHours = overtimeThreshold;
+            overtimeHours = totalHours - overtimeThreshold;
+          }
+          
+          regularPay = regularHours * hourlyRate;
+          overtimePay = overtimeHours * hourlyRate * 1.5;
+          grossPay = regularPay + overtimePay;
+        }
 
         // Calculate deductions (simplified tax calculation)
         const federalTax = grossPay * 0.12; // 12% federal tax
@@ -625,6 +655,21 @@ export default function HRPayroll() {
                 onChange={(e) => setPayPeriodForm(prev => ({ ...prev, payDate: e.target.value }))}
                 data-testid="input-pay-date"
               />
+            </div>
+            
+            <div>
+              <Label htmlFor="frequency">Pay Frequency</Label>
+              <Select value={payPeriodForm.frequency} onValueChange={(value) => setPayPeriodForm(prev => ({ ...prev, frequency: value }))}>
+                <SelectTrigger data-testid="select-frequency">
+                  <SelectValue placeholder="Select pay frequency" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="weekly">Weekly</SelectItem>
+                  <SelectItem value="biweekly">Bi-Weekly</SelectItem>
+                  <SelectItem value="monthly">Monthly</SelectItem>
+                  <SelectItem value="salary">Salary (Annual)</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
           </div>
 
