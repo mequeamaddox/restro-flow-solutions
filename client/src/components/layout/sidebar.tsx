@@ -293,7 +293,7 @@ export default function Sidebar({ isMobileMenuOpen = false, setIsMobileMenuOpen 
                 {(user as any)?.role || 'Staff'} {isEmployee && '• Employee Portal'}
               </p>
             </div>
-            <Link href="/settings">
+            <Link href={isEmployee ? "/employee/settings" : "/settings"}>
               <Button
                 variant="ghost"
                 size="sm"
