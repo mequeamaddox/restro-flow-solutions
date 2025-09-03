@@ -77,7 +77,7 @@ export function DocumentAssignmentWizard({ isOpen, onClose }: DocumentAssignment
       `${employee.firstName} ${employee.lastName}`.toLowerCase().includes(searchTerm.toLowerCase()) ||
       employee.email.toLowerCase().includes(searchTerm.toLowerCase());
     
-    const matchesDepartment = filterDepartment === "" || employee.department?.name === filterDepartment;
+    const matchesDepartment = filterDepartment === "all" || filterDepartment === "" || employee.department?.name === filterDepartment;
     
     return matchesSearch && matchesDepartment;
   });
@@ -208,7 +208,7 @@ export function DocumentAssignmentWizard({ isOpen, onClose }: DocumentAssignment
                     <SelectValue placeholder="Filter by department" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">All Departments</SelectItem>
+                    <SelectItem value="all">All Departments</SelectItem>
                     {departments.map((dept) => (
                       <SelectItem key={dept.id} value={dept.name}>{dept.name}</SelectItem>
                     ))}
