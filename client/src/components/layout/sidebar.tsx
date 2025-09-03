@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Link, useLocation as useWouterLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/useAuth";
+import { useQuery } from "@tanstack/react-query";
 import { useLocation } from "@/contexts/LocationContext";
 import { usePermissions } from "@/contexts/PermissionContext";
 import { Permission } from "@/contexts/PermissionContext";
@@ -87,8 +88,13 @@ export default function Sidebar({ isMobileMenuOpen = false, setIsMobileMenuOpen 
   const { currentLocation, setCurrentLocation, locations, isLoading } = useLocation();
   const { hasPermission } = usePermissions();
   
-  // Check if user is an employee (only has basic permissions)
+  // Get employee profile data for position title
+  const userId = (user as any)?.id || (user as any)?.claims?.sub;
   const isEmployee = (user as any)?.role === 'employee';
+  const { data: employeeProfile } = useQuery({
+    queryKey: [`/api/employees/${userId}/profile`],
+    enabled: !!userId && isEmployee,
+  });
   const isHREnabled = hasPermission(Permission.VIEW_ALL_EMPLOYEES) || hasPermission(Permission.MANAGE_EMPLOYEES);
   
   // Use external state if provided, otherwise use internal state
@@ -290,7 +296,7 @@ export default function Sidebar({ isMobileMenuOpen = false, setIsMobileMenuOpen 
                 {(user as any)?.firstName || (user as any)?.email || 'User'}
               </p>
               <p className="text-xs text-slate-400 truncate">
-                {(user as any)?.role || 'Staff'} {isEmployee && '• Employee Portal'}
+                {isEmployee ? ((employeeProfile as any)?.position?.title || 'Staff') : ((user as any)?.role || 'Staff')} {isEmployee && '• Employee Portal'}
               </p>
             </div>
             <Link href={isEmployee ? "/employee/settings" : "/settings"}>

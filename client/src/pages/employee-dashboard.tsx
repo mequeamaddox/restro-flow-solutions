@@ -158,7 +158,7 @@ export default function EmployeeDashboard() {
               Welcome back, {(user as any)?.firstName || 'Employee'}!
             </h1>
             <p className="text-blue-100">
-              {(profile as any)?.position?.title || 'Team Member'} • {(profile as any)?.department?.name || 'Restaurant Team'}
+              Team Member • Restaurant Team
             </p>
           </div>
           <div className="text-right">
