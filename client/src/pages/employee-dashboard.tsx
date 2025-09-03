@@ -557,7 +557,7 @@ export default function EmployeeDashboard() {
           </Card>
         </Link>
 
-        <Link href="/hr/time-off">
+        <Link href="/employee/time-off">
           <Card className="hover:shadow-md transition-shadow cursor-pointer">
             <CardContent className="p-6 text-center">
               <Calendar className="h-8 w-8 mx-auto mb-2 text-green-600" />

@@ -61,28 +61,30 @@ export default function Header({ onMobileMenuToggle }: HeaderProps = {}) {
         </div>
         
         <div className="flex items-center space-x-2 lg:space-x-4">
-          {/* Location Selector - Hidden on mobile, shown in sidebar */}
-          <div className="hidden lg:flex items-center space-x-2">
-            <MapPin className="h-4 w-4 text-slate-400" />
-            <Select 
-              value={currentLocation?.id} 
-              onValueChange={(value) => {
-                const location = locations.find(l => l.id === value);
-                if (location) setCurrentLocation(location);
-              }}
-            >
-              <SelectTrigger className="w-40 bg-slate-800/50 border-slate-600 text-slate-200">
-                <SelectValue placeholder="Select location" />
-              </SelectTrigger>
-              <SelectContent>
-                {availableLocations.map((location) => (
-                  <SelectItem key={location.id} value={location.id}>
-                    {location.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
+          {/* Location Selector - Hidden for employees */}
+          {!isEmployee && (
+            <div className="hidden lg:flex items-center space-x-2">
+              <MapPin className="h-4 w-4 text-slate-400" />
+              <Select 
+                value={currentLocation?.id} 
+                onValueChange={(value) => {
+                  const location = locations.find(l => l.id === value);
+                  if (location) setCurrentLocation(location);
+                }}
+              >
+                <SelectTrigger className="w-40 bg-slate-800/50 border-slate-600 text-slate-200">
+                  <SelectValue placeholder="Select location" />
+                </SelectTrigger>
+                <SelectContent>
+                  {availableLocations.map((location) => (
+                    <SelectItem key={location.id} value={location.id}>
+                      {location.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
 
           {/* Search - Hidden on mobile, shown on md+ */}
           <div className="relative hidden md:block">

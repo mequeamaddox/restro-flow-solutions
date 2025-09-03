@@ -72,7 +72,7 @@ const employeeNavigation = [
   { name: 'Messages', href: '/employee/messages', icon: MessageSquare },
   { name: 'My Schedule', href: '/employee/schedule', icon: Calendar },
   { name: 'Time Clock', href: '/employee/time-clock', icon: Clock },
-  { name: 'Request Time Off', href: '/hr/time-off', icon: Calendar },
+  { name: 'Request Time Off', href: '/employee/time-off', icon: Calendar },
 ];
 
 interface SidebarProps {
@@ -122,39 +122,41 @@ export default function Sidebar({ isMobileMenuOpen = false, setIsMobileMenuOpen 
             </div>
           </div>
           
-          {/* Location Switcher */}
-          <div className="space-y-2">
-            <div className="flex items-center text-xs font-medium text-slate-400 uppercase tracking-wide">
-              <MapPin className="h-3 w-3 mr-1" />
-              Current Location
+          {/* Location Switcher - Hidden for employees */}
+          {!isEmployee && (
+            <div className="space-y-2">
+              <div className="flex items-center text-xs font-medium text-slate-400 uppercase tracking-wide">
+                <MapPin className="h-3 w-3 mr-1" />
+                Current Location
+              </div>
+              <Select 
+                value={currentLocation?.id || ""} 
+                onValueChange={(value) => {
+                  const location = locations.find(loc => loc.id === value);
+                  if (location) setCurrentLocation(location);
+                }}
+                disabled={isLoading}
+              >
+                <SelectTrigger className="w-full">
+                  <SelectValue placeholder="Select location..." />
+                </SelectTrigger>
+                <SelectContent>
+                  {locations.map((location) => (
+                    <SelectItem key={location.id} value={location.id}>
+                      <div className="flex items-center">
+                        <div className={cn(
+                          "w-2 h-2 rounded-full mr-2",
+                          location.type === 'restaurant' ? 'bg-blue-500' : 
+                          location.type === 'bar' ? 'bg-purple-500' : 'bg-gray-500'
+                        )}></div>
+                        {location.name}
+                      </div>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
-            <Select 
-              value={currentLocation?.id || ""} 
-              onValueChange={(value) => {
-                const location = locations.find(loc => loc.id === value);
-                if (location) setCurrentLocation(location);
-              }}
-              disabled={isLoading}
-            >
-              <SelectTrigger className="w-full">
-                <SelectValue placeholder="Select location..." />
-              </SelectTrigger>
-              <SelectContent>
-                {locations.map((location) => (
-                  <SelectItem key={location.id} value={location.id}>
-                    <div className="flex items-center">
-                      <div className={cn(
-                        "w-2 h-2 rounded-full mr-2",
-                        location.type === 'restaurant' ? 'bg-blue-500' : 
-                        location.type === 'bar' ? 'bg-purple-500' : 'bg-gray-500'
-                      )}></div>
-                      {location.name}
-                    </div>
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
+          )}
         </div>
 
         {/* Navigation */}
