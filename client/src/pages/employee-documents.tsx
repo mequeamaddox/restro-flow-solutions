@@ -302,18 +302,18 @@ export default function EmployeeDocuments() {
                             <div className="flex flex-wrap gap-4 text-sm text-gray-500">
                               <div className="flex items-center gap-1">
                                 <Calendar className="h-4 w-4" />
-                                <span>Assigned: {format(new Date(doc.assignedAt), 'MMM d, yyyy')}</span>
+                                <span>Assigned: {doc.assignedAt ? format(new Date(doc.assignedAt), 'MMM d, yyyy') : 'Unknown'}</span>
                               </div>
                               {doc.deadline && (
                                 <div className={`flex items-center gap-1 ${isOverdue ? 'text-red-600 font-medium' : ''}`}>
                                   <Clock className="h-4 w-4" />
-                                  <span>Due: {format(new Date(doc.deadline), 'MMM d, yyyy')}</span>
+                                  <span>Due: {doc.deadline ? format(new Date(doc.deadline), 'MMM d, yyyy') : 'No deadline'}</span>
                                 </div>
                               )}
                               {doc.completedAt && (
                                 <div className="flex items-center gap-1 text-green-600">
                                   <CheckCircle className="h-4 w-4" />
-                                  <span>Completed: {format(new Date(doc.completedAt), 'MMM d, yyyy')}</span>
+                                  <span>Completed: {doc.completedAt ? format(new Date(doc.completedAt), 'MMM d, yyyy') : 'Not completed'}</span>
                                 </div>
                               )}
                             </div>
@@ -338,7 +338,7 @@ export default function EmployeeDocuments() {
                               </div>
                             )}
 
-                            {doc.template.requirements && (
+                            {doc.template?.requirements && (
                               <div className="mt-3 p-3 bg-gray-50 border border-gray-200 rounded">
                                 <p className="text-sm text-gray-700">
                                   <strong>Requirements:</strong> {doc.template.requirements}
