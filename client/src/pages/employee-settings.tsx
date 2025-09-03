@@ -1,22 +1,70 @@
 import { useState } from "react";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Separator } from "@/components/ui/separator";
-import { User, Bell, Shield, Save } from "lucide-react";
+import { User, Bell, Shield, Save, Edit3 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
+import { apiRequest } from "@/lib/queryClient";
 
 export default function EmployeeSettings() {
   const { user } = useAuth();
   const { toast } = useToast();
+  const queryClient = useQueryClient();
+  const [isEditingProfile, setIsEditingProfile] = useState(false);
+  const [profileData, setProfileData] = useState({
+    firstName: (user as any)?.firstName || '',
+    lastName: (user as any)?.lastName || '',
+    phone: '',
+    emergencyContact: ''
+  });
   const [preferences, setPreferences] = useState({
     emailNotifications: true,
     breakReminders: true,
     scheduleAlerts: true,
   });
+
+  const updateProfileMutation = useMutation({
+    mutationFn: async (data: { firstName: string; lastName: string; phone: string; emergencyContact: string }) => {
+      return apiRequest(`/api/employees/${(user as any)?.id}/profile`, {
+        method: 'PUT',
+        body: JSON.stringify(data)
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/auth/user'] });
+      setIsEditingProfile(false);
+      toast({
+        title: "Profile Updated",
+        description: "Your profile has been updated successfully",
+      });
+    },
+    onError: () => {
+      toast({
+        title: "Error",
+        description: "Failed to update profile. Please try again.",
+        variant: "destructive"
+      });
+    }
+  });
+
+  const handleSaveProfile = () => {
+    updateProfileMutation.mutate(profileData);
+  };
+
+  const handleCancelEdit = () => {
+    setProfileData({
+      firstName: (user as any)?.firstName || '',
+      lastName: (user as any)?.lastName || '',
+      phone: '',
+      emergencyContact: ''
+    });
+    setIsEditingProfile(false);
+  };
 
   const handleSavePreferences = () => {
     toast({
@@ -39,9 +87,45 @@ export default function EmployeeSettings() {
         {/* Profile Information */}
         <Card className="bg-slate-800/50 border-slate-700/50 backdrop-blur-sm">
           <CardHeader>
-            <CardTitle className="flex items-center text-white">
-              <User className="h-5 w-5 mr-2" />
-              Profile Information
+            <CardTitle className="flex items-center justify-between text-white">
+              <div className="flex items-center">
+                <User className="h-5 w-5 mr-2" />
+                Profile Information
+              </div>
+              {!isEditingProfile ? (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setIsEditingProfile(true)}
+                  className="border-slate-600 hover:bg-slate-700"
+                  data-testid="button-edit-profile"
+                >
+                  <Edit3 className="h-4 w-4 mr-2" />
+                  Edit
+                </Button>
+              ) : (
+                <div className="flex gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={handleCancelEdit}
+                    className="border-slate-600 hover:bg-slate-700"
+                    data-testid="button-cancel-edit"
+                  >
+                    Cancel
+                  </Button>
+                  <Button
+                    size="sm"
+                    onClick={handleSaveProfile}
+                    disabled={updateProfileMutation.isPending}
+                    className="bg-gradient-to-r from-orange-500 to-red-600 hover:from-orange-600 hover:to-red-700"
+                    data-testid="button-save-profile"
+                  >
+                    <Save className="h-4 w-4 mr-2" />
+                    {updateProfileMutation.isPending ? 'Saving...' : 'Save'}
+                  </Button>
+                </div>
+              )}
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
@@ -49,18 +133,46 @@ export default function EmployeeSettings() {
               <Label htmlFor="firstName">First Name</Label>
               <Input
                 id="firstName"
-                value={(user as any)?.firstName || ''}
-                disabled
-                className="bg-slate-700/50 border-slate-600 text-slate-300"
+                value={isEditingProfile ? profileData.firstName : ((user as any)?.firstName || '')}
+                onChange={(e) => setProfileData(prev => ({ ...prev, firstName: e.target.value }))}
+                disabled={!isEditingProfile}
+                className={isEditingProfile ? "bg-slate-700 border-slate-600 text-white" : "bg-slate-700/50 border-slate-600 text-slate-300"}
+                data-testid="input-firstName"
               />
             </div>
             <div className="space-y-2">
               <Label htmlFor="lastName">Last Name</Label>
               <Input
                 id="lastName"
-                value={(user as any)?.lastName || ''}
-                disabled
-                className="bg-slate-700/50 border-slate-600 text-slate-300"
+                value={isEditingProfile ? profileData.lastName : ((user as any)?.lastName || '')}
+                onChange={(e) => setProfileData(prev => ({ ...prev, lastName: e.target.value }))}
+                disabled={!isEditingProfile}
+                className={isEditingProfile ? "bg-slate-700 border-slate-600 text-white" : "bg-slate-700/50 border-slate-600 text-slate-300"}
+                data-testid="input-lastName"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="phone">Phone Number</Label>
+              <Input
+                id="phone"
+                value={profileData.phone}
+                onChange={(e) => setProfileData(prev => ({ ...prev, phone: e.target.value }))}
+                disabled={!isEditingProfile}
+                placeholder="(555) 123-4567"
+                className={isEditingProfile ? "bg-slate-700 border-slate-600 text-white" : "bg-slate-700/50 border-slate-600 text-slate-300"}
+                data-testid="input-phone"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="emergencyContact">Emergency Contact</Label>
+              <Input
+                id="emergencyContact"
+                value={profileData.emergencyContact}
+                onChange={(e) => setProfileData(prev => ({ ...prev, emergencyContact: e.target.value }))}
+                disabled={!isEditingProfile}
+                placeholder="Name and phone number"
+                className={isEditingProfile ? "bg-slate-700 border-slate-600 text-white" : "bg-slate-700/50 border-slate-600 text-slate-300"}
+                data-testid="input-emergencyContact"
               />
             </div>
             <div className="space-y-2">
@@ -70,11 +182,12 @@ export default function EmployeeSettings() {
                 value={(user as any)?.email || ''}
                 disabled
                 className="bg-slate-700/50 border-slate-600 text-slate-300"
+                data-testid="input-email"
               />
+              <p className="text-sm text-slate-400">
+                Contact your manager to update email address
+              </p>
             </div>
-            <p className="text-sm text-slate-400">
-              Contact your manager to update profile information
-            </p>
           </CardContent>
         </Card>
 

@@ -2991,6 +2991,43 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Employee profile update (self-service)
+  app.put("/api/employees/:id/profile", isAuthenticated, async (req, res) => {
+    try {
+      const { id } = req.params;
+      const userId = (req.session as any)?.user?.id || (req.user as any)?.claims?.sub;
+      
+      // Only allow employees to update their own profile
+      if (id !== userId) {
+        return res.status(403).json({ error: "You can only update your own profile" });
+      }
+
+      const { firstName, lastName, phone, emergencyContact } = req.body;
+      
+      // Update both employee and user records to keep them synchronized
+      await Promise.all([
+        storage.updateEmployee(id, {
+          firstName,
+          lastName,
+          phone,
+          emergencyContact
+        }),
+        storage.upsertUser({
+          id,
+          email: (req.session as any)?.user?.email || (req.user as any)?.email,
+          firstName,
+          lastName,
+          role: (req.session as any)?.user?.role || 'employee'
+        })
+      ]);
+
+      res.json({ message: "Profile updated successfully" });
+    } catch (error) {
+      console.error("Error updating employee profile:", error);
+      res.status(500).json({ error: "Failed to update profile" });
+    }
+  });
+
   // Employee onboarding data for admin view (full access)
   app.get("/api/employees/:id/onboarding-data", isAuthenticated, async (req, res) => {
     try {
