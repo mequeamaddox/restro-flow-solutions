@@ -244,7 +244,7 @@ export default function EmployeeTimeClock() {
                     <Button 
                       onClick={() => clockInMutation.mutate()}
                       disabled={clockInMutation.isPending}
-                      className="w-full bg-emerald-600 hover:bg-emerald-700 dark:bg-emerald-500 dark:hover:bg-emerald-600"
+                      className="w-full bg-gradient-to-r from-orange-500 to-red-600 hover:from-orange-600 hover:to-red-700 text-white"
                     >
                       <Play className="h-4 w-4 mr-2" />
                       Clock In
@@ -254,7 +254,7 @@ export default function EmployeeTimeClock() {
                       <Button 
                         onClick={() => setShowClockOutDialog(true)}
                         disabled={clockOutMutation.isPending}
-                        className="w-full bg-red-600 hover:bg-red-700"
+                        className="w-full bg-gradient-to-r from-orange-500 to-red-600 hover:from-orange-600 hover:to-red-700 text-white"
                       >
                         <Square className="h-4 w-4 mr-2" />
                         Clock Out
@@ -273,7 +273,7 @@ export default function EmployeeTimeClock() {
                     <Button 
                       onClick={() => endBreakMutation.mutate()}
                       disabled={endBreakMutation.isPending}
-                      className="w-full bg-blue-600 hover:bg-blue-700"
+                      className="w-full bg-gradient-to-r from-orange-500 to-red-600 hover:from-orange-600 hover:to-red-700 text-white"
                     >
                       <Timer className="h-4 w-4 mr-2" />
                       End Break
@@ -292,7 +292,7 @@ export default function EmployeeTimeClock() {
                 <Button 
                   onClick={() => clockInMutation.mutate()}
                   disabled={clockInMutation.isPending || !userId}
-                  className="w-full bg-slate-900 hover:bg-slate-800 dark:bg-slate-700 dark:hover:bg-slate-600 text-white"
+                  className="w-full bg-gradient-to-r from-orange-500 to-red-600 hover:from-orange-600 hover:to-red-700 text-white"
                 >
                   <Play className="h-4 w-4 mr-2" />
                   {!userId ? 'Authentication Required' : 'Clock In'}
@@ -434,7 +434,7 @@ export default function EmployeeTimeClock() {
             <Button 
               onClick={() => clockOutMutation.mutate()}
               disabled={clockOutMutation.isPending}
-              className="bg-red-600 hover:bg-red-700"
+              className="bg-gradient-to-r from-orange-500 to-red-600 hover:from-orange-600 hover:to-red-700 text-white"
             >
               <Square className="h-4 w-4 mr-2" />
               Clock Out
