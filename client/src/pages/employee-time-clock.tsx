@@ -155,10 +155,10 @@ export default function EmployeeTimeClock() {
 
   const getStatusColor = (status?: string) => {
     switch (status) {
-      case 'clocked-in': return 'bg-green-100 text-green-800';
-      case 'on-break': return 'bg-yellow-100 text-yellow-800';
-      case 'clocked-out': return 'bg-gray-100 text-gray-800';
-      default: return 'bg-gray-100 text-gray-800';
+      case 'clocked-in': return 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200';
+      case 'on-break': return 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200';
+      case 'clocked-out': return 'bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-200';
+      default: return 'bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-200';
     }
   };
 
@@ -208,7 +208,7 @@ export default function EmployeeTimeClock() {
             {todayEntry ? (
               <div className="space-y-3">
                 <div className="flex items-center justify-between">
-                  <span className="text-sm text-gray-600">Status:</span>
+                  <span className="text-sm text-gray-600 dark:text-gray-300">Status:</span>
                   <Badge className={getStatusColor(todayEntry.status)}>
                     {todayEntry.status === 'clocked-in' ? 'Working' :
                      todayEntry.status === 'on-break' ? 'On Break' : 'Finished'}
@@ -322,15 +322,15 @@ export default function EmployeeTimeClock() {
             {todayShift ? (
               <div className="space-y-3">
                 <div className="flex items-center justify-between">
-                  <span className="text-sm text-gray-600">Scheduled:</span>
-                  <span className="font-medium">
+                  <span className="text-sm text-gray-600 dark:text-gray-300">Scheduled:</span>
+                  <span className="font-medium dark:text-gray-100">
                     {format(parseISO(todayShift.startTime), 'h:mm a')} - {format(parseISO(todayShift.endTime), 'h:mm a')}
                   </span>
                 </div>
                 {todayShift.position && (
                   <div className="flex items-center justify-between">
-                    <span className="text-sm text-gray-600">Position:</span>
-                    <span className="font-medium">{todayShift.position}</span>
+                    <span className="text-sm text-gray-600 dark:text-gray-300">Position:</span>
+                    <span className="font-medium dark:text-gray-100">{todayShift.position}</span>
                   </div>
                 )}
                 {todayShift.notes && (
@@ -376,10 +376,10 @@ export default function EmployeeTimeClock() {
                   className="flex items-center justify-between p-4 rounded-lg border bg-white dark:bg-gray-800 shadow-sm hover:shadow-md transition-shadow"
                 >
                   <div>
-                    <div className="font-medium">
+                    <div className="font-medium dark:text-gray-100">
                       {format(parseISO(entry.clockInTime), 'EEEE, MMM d')}
                     </div>
-                    <div className="text-sm text-gray-600">
+                    <div className="text-sm text-gray-600 dark:text-gray-300">
                       {format(parseISO(entry.clockInTime), 'h:mm a')} - {' '}
                       {entry.clockOutTime ? format(parseISO(entry.clockOutTime), 'h:mm a') : 'In progress'}
                     </div>
@@ -389,7 +389,7 @@ export default function EmployeeTimeClock() {
                       {entry.status === 'clocked-in' ? 'Working' :
                        entry.status === 'on-break' ? 'On Break' : 'Completed'}
                     </Badge>
-                    <div className="text-sm text-gray-600 mt-1">
+                    <div className="text-sm text-gray-600 dark:text-gray-300 mt-1">
                       {calculateHours(entry.clockInTime, entry.clockOutTime)}
                     </div>
                   </div>

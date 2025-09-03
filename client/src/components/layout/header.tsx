@@ -6,6 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useQuery } from "@tanstack/react-query";
 import { useLocation } from "@/contexts/LocationContext";
+import { useAuth } from "@/hooks/useAuth";
 import logoImg from "@assets/IMG_20250812_004328_1754973838131.png";
 
 interface HeaderProps {
@@ -15,10 +16,24 @@ interface HeaderProps {
 export default function Header({ onMobileMenuToggle }: HeaderProps = {}) {
   const [searchQuery, setSearchQuery] = useState("");
   const { currentLocation, setCurrentLocation, locations } = useLocation();
+  const { user } = useAuth();
 
   const { data: lowStockItems } = useQuery({
     queryKey: ['/api/inventory/low-stock'],
   });
+
+  // Get employee profile for location filtering
+  const userId = (user as any)?.id || (user as any)?.claims?.sub;
+  const isEmployee = (user as any)?.role === 'employee';
+  const { data: employeeProfile } = useQuery({
+    queryKey: [`/api/employees/${userId}/profile`],
+    enabled: !!userId && isEmployee,
+  });
+
+  // Filter locations for employees - they should only see their assigned location
+  const availableLocations = isEmployee && employeeProfile?.employee?.department?.location 
+    ? [employeeProfile.employee.department.location] 
+    : locations;
 
   const lowStockCount = (lowStockItems as any[])?.length || 0;
 
@@ -60,7 +75,7 @@ export default function Header({ onMobileMenuToggle }: HeaderProps = {}) {
                 <SelectValue placeholder="Select location" />
               </SelectTrigger>
               <SelectContent>
-                {locations.map((location) => (
+                {availableLocations.map((location) => (
                   <SelectItem key={location.id} value={location.id}>
                     {location.name}
                   </SelectItem>
