@@ -26,25 +26,20 @@ export default function EmployeeSettings() {
   };
 
   return (
-    <div className="max-w-4xl mx-auto p-6 space-y-6">
+    <div className="p-4 lg:p-6 space-y-6">
       {/* Header */}
-      <div className="bg-gradient-to-r from-slate-900 to-gray-900 rounded-xl p-6 text-white">
-        <div className="flex items-center">
-          <div className="p-3 bg-gradient-to-br from-orange-400 to-red-500 rounded-lg mr-4">
-            <User className="h-6 w-6 text-white" />
-          </div>
-          <div>
-            <h1 className="text-3xl font-bold">My Settings</h1>
-            <p className="text-slate-300">Manage your account preferences and notifications</p>
-          </div>
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-semibold text-white">My Settings</h1>
+          <p className="text-slate-300">Manage your account preferences and notifications</p>
         </div>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Profile Information */}
-        <Card className="bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800">
+        <Card className="bg-slate-800/50 border-slate-700/50 backdrop-blur-sm">
           <CardHeader>
-            <CardTitle className="flex items-center text-slate-900 dark:text-white">
+            <CardTitle className="flex items-center text-white">
               <User className="h-5 w-5 mr-2" />
               Profile Information
             </CardTitle>
@@ -56,7 +51,7 @@ export default function EmployeeSettings() {
                 id="firstName"
                 value={(user as any)?.firstName || ''}
                 disabled
-                className="bg-gray-50 dark:bg-gray-800"
+                className="bg-slate-700/50 border-slate-600 text-slate-300"
               />
             </div>
             <div className="space-y-2">
@@ -65,7 +60,7 @@ export default function EmployeeSettings() {
                 id="lastName"
                 value={(user as any)?.lastName || ''}
                 disabled
-                className="bg-gray-50 dark:bg-gray-800"
+                className="bg-slate-700/50 border-slate-600 text-slate-300"
               />
             </div>
             <div className="space-y-2">
@@ -74,19 +69,19 @@ export default function EmployeeSettings() {
                 id="email"
                 value={(user as any)?.email || ''}
                 disabled
-                className="bg-gray-50 dark:bg-gray-800"
+                className="bg-slate-700/50 border-slate-600 text-slate-300"
               />
             </div>
-            <p className="text-sm text-gray-600 dark:text-gray-400">
+            <p className="text-sm text-slate-400">
               Contact your manager to update profile information
             </p>
           </CardContent>
         </Card>
 
         {/* Notification Preferences */}
-        <Card className="bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800">
+        <Card className="bg-slate-800/50 border-slate-700/50 backdrop-blur-sm">
           <CardHeader>
-            <CardTitle className="flex items-center text-slate-900 dark:text-white">
+            <CardTitle className="flex items-center text-white">
               <Bell className="h-5 w-5 mr-2" />
               Notifications
             </CardTitle>
@@ -95,7 +90,7 @@ export default function EmployeeSettings() {
             <div className="flex items-center justify-between">
               <div className="space-y-0.5">
                 <Label className="text-base">Email Notifications</Label>
-                <p className="text-sm text-gray-600 dark:text-gray-400">
+                <p className="text-sm text-slate-400">
                   Receive schedule updates and announcements
                 </p>
               </div>
@@ -153,24 +148,24 @@ export default function EmployeeSettings() {
       </div>
 
       {/* Privacy & Security */}
-      <Card className="bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800">
+      <Card className="bg-slate-800/50 border-slate-700/50 backdrop-blur-sm">
         <CardHeader>
-          <CardTitle className="flex items-center text-slate-900 dark:text-white">
+          <CardTitle className="flex items-center text-white">
             <Shield className="h-5 w-5 mr-2" />
             Privacy & Security
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div className="bg-blue-50 dark:bg-blue-900/20 p-4 rounded-lg">
-            <h4 className="font-medium text-blue-900 dark:text-blue-100 mb-2">Account Security</h4>
-            <p className="text-sm text-blue-800 dark:text-blue-200">
+          <div className="bg-blue-500/20 p-4 rounded-lg border border-blue-500/30">
+            <h4 className="font-medium text-blue-300 mb-2">Account Security</h4>
+            <p className="text-sm text-blue-200">
               Your account is managed by your employer. Contact your manager for password changes or security concerns.
             </p>
           </div>
           
-          <div className="bg-gray-50 dark:bg-gray-800/50 p-4 rounded-lg">
-            <h4 className="font-medium text-gray-900 dark:text-gray-100 mb-2">Data Privacy</h4>
-            <p className="text-sm text-gray-700 dark:text-gray-300">
+          <div className="bg-slate-700/50 p-4 rounded-lg border border-slate-600/50">
+            <h4 className="font-medium text-slate-200 mb-2">Data Privacy</h4>
+            <p className="text-sm text-slate-300">
               Your time clock data, messages, and work information are securely stored and only accessible to authorized personnel.
             </p>
           </div>
