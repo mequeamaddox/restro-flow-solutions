@@ -216,25 +216,25 @@ export default function EmployeeTimeClock() {
                 </div>
                 
                 <div className="flex items-center justify-between">
-                  <span className="text-sm text-gray-600">Clock In:</span>
-                  <span className="font-medium">
-                    {format(parseISO(todayEntry.clockInTime), 'h:mm a')}
+                  <span className="text-sm text-gray-600 dark:text-gray-300">Clock In:</span>
+                  <span className="font-medium dark:text-gray-100">
+                    {todayEntry.clockInTime ? format(parseISO(todayEntry.clockInTime), 'h:mm a') : 'N/A'}
                   </span>
                 </div>
                 
                 {todayEntry.clockOutTime && (
                   <div className="flex items-center justify-between">
-                    <span className="text-sm text-gray-600">Clock Out:</span>
-                    <span className="font-medium">
+                    <span className="text-sm text-gray-600 dark:text-gray-300">Clock Out:</span>
+                    <span className="font-medium dark:text-gray-100">
                       {format(parseISO(todayEntry.clockOutTime), 'h:mm a')}
                     </span>
                   </div>
                 )}
                 
                 <div className="flex items-center justify-between">
-                  <span className="text-sm text-gray-600">Total Hours:</span>
-                  <span className="font-medium">
-                    {calculateHours(todayEntry.clockInTime, todayEntry.clockOutTime)}
+                  <span className="text-sm text-gray-600 dark:text-gray-300">Total Hours:</span>
+                  <span className="font-medium dark:text-gray-100">
+                    {todayEntry.clockInTime ? calculateHours(todayEntry.clockInTime, todayEntry.clockOutTime) : 'N/A'}
                   </span>
                 </div>
 
@@ -263,7 +263,7 @@ export default function EmployeeTimeClock() {
                         onClick={() => startBreakMutation.mutate()}
                         disabled={startBreakMutation.isPending}
                         variant="outline"
-                        className="w-full"
+                        className="w-full border-slate-700 text-slate-700 hover:bg-slate-100 dark:border-slate-300 dark:text-slate-300 dark:hover:bg-slate-800"
                       >
                         <Coffee className="h-4 w-4 mr-2" />
                         Start Break
