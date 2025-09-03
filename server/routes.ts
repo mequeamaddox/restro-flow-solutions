@@ -3182,7 +3182,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         ...req.body, 
         sentBy: userId, 
         sentAt: new Date(),
-        status: 'sent'
+        status: 'assigned'
       };
       const assignment = await storage.createDocumentAssignment(assignmentData);
       res.status(201).json(assignment);
@@ -3236,6 +3236,38 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error('Error creating signature:', error);
       res.status(500).json({ message: 'Failed to create signature' });
+    }
+  });
+
+  // Start document endpoint
+  app.put('/api/employee-documents/:id/start', async (req, res) => {
+    try {
+      const assignment = await storage.updateDocumentAssignment(req.params.id, {
+        status: 'in_progress',
+        startedAt: new Date(),
+      });
+      res.json(assignment);
+    } catch (error) {
+      console.error('Error starting document:', error);
+      res.status(500).json({ message: 'Failed to start document' });
+    }
+  });
+
+  // Upload document endpoint
+  app.post('/api/employee-documents/:id/upload', async (req, res) => {
+    try {
+      const { filePath, fileSize, mimeType } = req.body;
+      const assignment = await storage.updateDocumentAssignment(req.params.id, {
+        status: 'completed',
+        completedAt: new Date(),
+        filePath,
+        fileSize,
+        mimeType,
+      });
+      res.json(assignment);
+    } catch (error) {
+      console.error('Error uploading document:', error);
+      res.status(500).json({ message: 'Failed to upload document' });
     }
   });
 
