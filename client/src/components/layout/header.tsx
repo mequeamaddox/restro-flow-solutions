@@ -86,17 +86,19 @@ export default function Header({ onMobileMenuToggle }: HeaderProps = {}) {
             </div>
           )}
 
-          {/* Search - Hidden on mobile, shown on md+ */}
-          <div className="relative hidden md:block">
-            <Search className="absolute left-3 top-3 h-4 w-4 text-slate-400" />
-            <Input
-              type="search"
-              placeholder="Search inventory..."
-              className="pl-10 pr-4 py-2 w-64 bg-slate-800/50 border-slate-600 text-slate-200 placeholder-slate-400"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-            />
-          </div>
+          {/* Search - Hidden for employees */}
+          {!isEmployee && (
+            <div className="relative hidden md:block">
+              <Search className="absolute left-3 top-3 h-4 w-4 text-slate-400" />
+              <Input
+                type="search"
+                placeholder="Search inventory..."
+                className="pl-10 pr-4 py-2 w-64 bg-slate-800/50 border-slate-600 text-slate-200 placeholder-slate-400"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+              />
+            </div>
+          )}
           
           {/* Notifications */}
           <div className="relative">
@@ -113,10 +115,12 @@ export default function Header({ onMobileMenuToggle }: HeaderProps = {}) {
             </Button>
           </div>
           
-          {/* Mobile search button */}
-          <Button variant="ghost" size="sm" className="md:hidden text-slate-300 hover:text-white hover:bg-slate-700/50">
-            <Search className="h-5 w-5" />
-          </Button>
+          {/* Mobile search button - Hidden for employees */}
+          {!isEmployee && (
+            <Button variant="ghost" size="sm" className="md:hidden text-slate-300 hover:text-white hover:bg-slate-700/50">
+              <Search className="h-5 w-5" />
+            </Button>
+          )}
         </div>
       </div>
     </header>
