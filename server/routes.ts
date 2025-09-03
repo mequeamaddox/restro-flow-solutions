@@ -3446,10 +3446,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Create descriptive name like "Biweekly - Dec 16 to Dec 29, 2024"
       const name = `${frequency.charAt(0).toUpperCase() + frequency.slice(1)} - ${formatDate(startDateObj)} to ${formatDate(endDateObj)}, ${startDateObj.getFullYear()}`;
       
-      const periodData = { 
-        ...req.body, 
-        name,
-        createdBy: userId 
+      // Ensure we have all required fields
+      const periodData = {
+        name: name || `${frequency || 'biweekly'} Period`,
+        startDate: startDate || req.body.startDate,
+        endDate: endDate || req.body.endDate,
+        payDate: req.body.payDate || endDate || req.body.endDate,
+        frequency: frequency || req.body.frequency || 'biweekly',
+        locationId: req.body.locationId,
+        status: 'draft',
+        totalGrossPay: '0.00',
+        totalNetPay: '0.00', 
+        totalDeductions: '0.00',
+        createdBy: userId
       };
       
       const period = await storage.createPayrollPeriod(periodData);
