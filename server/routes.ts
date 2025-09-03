@@ -3433,7 +3433,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/payroll-periods", isAuthenticated, requirePermission(Permission.MANAGE_EMPLOYEES), async (req, res) => {
     try {
       const userId = (req.user as any)?.claims?.sub || req.session?.user?.id;
-      const periodData = { ...req.body, createdBy: userId };
+      
+      // Generate period name based on Patriot Software approach
+      const { frequency, startDate, endDate } = req.body;
+      const startDateObj = new Date(startDate);
+      const endDateObj = new Date(endDate);
+      
+      const formatDate = (date: Date) => {
+        return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+      };
+      
+      // Create descriptive name like "Biweekly - Dec 16 to Dec 29, 2024"
+      const name = `${frequency.charAt(0).toUpperCase() + frequency.slice(1)} - ${formatDate(startDateObj)} to ${formatDate(endDateObj)}, ${startDateObj.getFullYear()}`;
+      
+      const periodData = { 
+        ...req.body, 
+        name,
+        createdBy: userId 
+      };
+      
       const period = await storage.createPayrollPeriod(periodData);
       res.status(201).json(period);
     } catch (error) {
