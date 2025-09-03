@@ -105,8 +105,12 @@ export default function HRPayroll() {
   });
 
   // Fetch employees
-  const { data: employees = [] } = useQuery<any[]>({
+  const { data: employees = [], isLoading: employeesLoading } = useQuery<any[]>({
     queryKey: ['/api/employees'],
+    queryFn: async () => {
+      const response = await apiRequest('GET', '/api/employees');
+      return response.json();
+    },
   });
 
   // Create pay period mutation
@@ -354,6 +358,51 @@ export default function HRPayroll() {
       style: 'currency',
       currency: 'USD'
     }).format(Number(amount));
+  };
+
+  // Helper calculation functions for Patriot-style payroll
+  const calculateGrossPay = (employee: any, data: any = {}) => {
+    const regularHours = parseFloat(data.regularHours || '0');
+    const overtimeHours = parseFloat(data.overtimeHours || '0');
+    const bonus = parseFloat(data.bonus || '0');
+    const hourlyRate = parseFloat(employee.hourlyRate || employee.hourlyWage || '15.00');
+    
+    const regularPay = regularHours * hourlyRate;
+    const overtimePay = overtimeHours * hourlyRate * 1.5;
+    
+    return regularPay + overtimePay + bonus;
+  };
+
+  const calculateDeductions = (grossPay: number) => {
+    const federalTax = grossPay * 0.12;
+    const stateTax = grossPay * 0.05;
+    const socialSecurity = grossPay * 0.062;
+    const medicare = grossPay * 0.0145;
+    
+    return {
+      federalTax,
+      stateTax,
+      socialSecurity,
+      medicare,
+      total: federalTax + stateTax + socialSecurity + medicare
+    };
+  };
+
+  const getTotalGrossPay = () => {
+    return employees.reduce((total, employee) => {
+      return total + calculateGrossPay(employee, payrollData[employee.id] || {});
+    }, 0);
+  };
+
+  const getTotalDeductions = () => {
+    return employees.reduce((total, employee) => {
+      const grossPay = calculateGrossPay(employee, payrollData[employee.id] || {});
+      return total + calculateDeductions(grossPay).total;
+    }, 0);
+  };
+
+  const getTotalNetPay = () => {
+    return getTotalGrossPay() - getTotalDeductions();
   };
 
   if (periodsLoading) {
