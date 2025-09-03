@@ -289,7 +289,7 @@ export default function EmployeeDocuments() {
                           <div className="flex-1">
                             <div className="flex items-center gap-3 mb-2">
                               {getStatusIcon(doc.status)}
-                              <h3 className="text-lg font-semibold">{doc.template.name}</h3>
+                              <h3 className="text-lg font-semibold">{doc.template?.name || 'Document'}</h3>
                               <Badge className={getStatusColor(doc.status)}>
                                 {doc.status.replace('_', ' ').toUpperCase()}
                               </Badge>
@@ -297,7 +297,7 @@ export default function EmployeeDocuments() {
                                 <Badge variant="destructive">OVERDUE</Badge>
                               )}
                             </div>
-                            <p className="text-gray-600 mb-2">{doc.template.description}</p>
+                            <p className="text-gray-600 mb-2">{doc.template?.description || 'No description available'}</p>
                             
                             <div className="flex flex-wrap gap-4 text-sm text-gray-500">
                               <div className="flex items-center gap-1">
