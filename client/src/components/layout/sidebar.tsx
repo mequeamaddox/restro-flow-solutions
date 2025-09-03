@@ -296,7 +296,7 @@ export default function Sidebar({ isMobileMenuOpen = false, setIsMobileMenuOpen 
                 {(user as any)?.firstName || (user as any)?.email || 'User'}
               </p>
               <p className="text-xs text-slate-400 truncate">
-                {isEmployee ? ((employeeProfile as any)?.position?.title || 'Staff') : ((user as any)?.role || 'Staff')} {isEmployee && '• Employee Portal'}
+                {isEmployee ? ((employeeProfile as any)?.employee?.position?.title || 'Staff') : ((user as any)?.role || 'Staff')} {isEmployee && '• Employee Portal'}
               </p>
             </div>
             <Link href={isEmployee ? "/employee/settings" : "/settings"}>
