@@ -465,6 +465,7 @@ export default function EmployeeDocuments() {
               assignmentId={selectedDocument.id}
               templateId={selectedDocument.templateId}
               templateName={selectedDocument.template?.name || 'Document'}
+              userId={user?.id || ''}
               onComplete={() => {
                 setShowDigitalForm(false);
                 setSelectedDocument(null);

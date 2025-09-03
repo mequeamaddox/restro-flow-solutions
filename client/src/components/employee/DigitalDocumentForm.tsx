@@ -122,10 +122,11 @@ interface DigitalDocumentFormProps {
   assignmentId: string;
   templateId: string;
   templateName: string;
+  userId: string;
   onComplete: () => void;
 }
 
-export function DigitalDocumentForm({ assignmentId, templateId, templateName, onComplete }: DigitalDocumentFormProps) {
+export function DigitalDocumentForm({ assignmentId, templateId, templateName, userId, onComplete }: DigitalDocumentFormProps) {
   const { toast } = useToast();
 
   // Fetch form fields for this template
@@ -204,7 +205,8 @@ export function DigitalDocumentForm({ assignmentId, templateId, templateName, on
         title: "Document Completed",
         description: "Your document has been completed successfully!",
       });
-      queryClient.invalidateQueries({ queryKey: [`/api/employees`] });
+      // Invalidate the specific employee documents query to refresh the UI
+      queryClient.invalidateQueries({ queryKey: [`/api/employees/${userId}/documents`] });
       onComplete();
     },
     onError: () => {
