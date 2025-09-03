@@ -405,6 +405,44 @@ export default function HRPayroll() {
     return getTotalGrossPay() - getTotalDeductions();
   };
 
+  // Import hours from time clock mutation
+  const importHoursMutation = useMutation({
+    mutationFn: async () => {
+      if (!selectedPayPeriod) throw new Error('No pay period selected');
+      const response = await apiRequest('GET', `/api/payroll-periods/${selectedPayPeriod.id}/calculated-hours`);
+      return response.json();
+    },
+    onSuccess: (calculatedHours: any[]) => {
+      const newPayrollData: { [key: string]: any } = {};
+      
+      calculatedHours.forEach((emp) => {
+        newPayrollData[emp.employeeId] = {
+          regularHours: emp.regularHours.toString(),
+          overtimeHours: emp.overtimeHours.toString(),
+          bonus: '0'
+        };
+      });
+      
+      setPayrollData(newPayrollData);
+      toast({
+        title: "Hours Imported Successfully",
+        description: `Imported timesheet data for ${calculatedHours.length} employees from time clock system.`,
+      });
+    },
+    onError: (error: any) => {
+      console.error('Error importing hours:', error);
+      toast({
+        title: "Import Failed",
+        description: "Could not import hours from time clock. Please check if employees have time entries for this pay period.",
+        variant: "destructive"
+      });
+    }
+  });
+
+  const handleImportHoursFromTimeClock = () => {
+    importHoursMutation.mutate();
+  };
+
   if (periodsLoading) {
     return (
       <div className="h-screen flex items-center justify-center">
@@ -506,6 +544,15 @@ export default function HRPayroll() {
         <div className="flex gap-2">
           <Button variant="outline" onClick={() => setCurrentStep('setup')}>
             Back
+          </Button>
+          <Button 
+            variant="outline" 
+            onClick={handleImportHoursFromTimeClock}
+            disabled={!selectedPayPeriod}
+            data-testid="button-import-hours"
+          >
+            <Clock className="h-4 w-4 mr-2" />
+            Import Hours from Time Clock
           </Button>
           <Button onClick={() => setCurrentStep('review')} data-testid="button-proceed-review">
             Review & Approve

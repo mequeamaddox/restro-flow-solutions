@@ -439,6 +439,7 @@ export interface IStorage {
   createPayStub(payStub: InsertPayStub): Promise<PayStub>;
   markPayStubViewed(payStubId: string): Promise<void>;
   getTimeEntries(employeeId: string, startDate: string, endDate: string): Promise<TimeEntry[]>;
+  calculatePayrollHoursFromTimeEntries(payrollPeriodId: string): Promise<{ employeeId: string; regularHours: number; overtimeHours: number; totalHours: number; employee?: Employee }[]>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -3344,11 +3345,117 @@ export class DatabaseStorage implements IStorage {
       .where(
         and(
           eq(timeEntries.employeeId, employeeId),
-          gte(timeEntries.date, startDate),
-          lte(timeEntries.date, endDate)
+          gte(timeEntries.clockInTime, startDate),
+          lte(timeEntries.clockInTime, endDate)
         )
       )
-      .orderBy(timeEntries.date);
+      .orderBy(timeEntries.clockInTime);
+  }
+
+  async calculatePayrollHoursFromTimeEntries(payrollPeriodId: string): Promise<{ employeeId: string; regularHours: number; overtimeHours: number; totalHours: number; employee?: Employee }[]> {
+    try {
+      // First get the payroll period to know the date range
+      const payrollPeriod = await this.getPayrollPeriod(payrollPeriodId);
+      if (!payrollPeriod) {
+        throw new Error('Payroll period not found');
+      }
+
+      // Get all time entries for the period
+      const allTimeEntries = await db.select({
+        employeeId: timeEntries.employeeId,
+        clockInTime: timeEntries.clockInTime,
+        clockOutTime: timeEntries.clockOutTime,
+        breakStartTime: timeEntries.breakStartTime,
+        breakEndTime: timeEntries.breakEndTime,
+        totalHours: timeEntries.totalHours,
+        status: timeEntries.status,
+        employeeFirstName: employees.firstName,
+        employeeLastName: employees.lastName,
+        employeeHourlyWage: employees.hourlyWage
+      })
+      .from(timeEntries)
+      .leftJoin(employees, eq(timeEntries.employeeId, employees.id))
+      .where(
+        and(
+          gte(timeEntries.clockInTime, payrollPeriod.startDate),
+          lte(timeEntries.clockInTime, payrollPeriod.endDate),
+          eq(timeEntries.status, 'clocked-out') // Only count completed shifts
+        )
+      );
+
+      // Group by employee and calculate hours
+      const employeeHours = new Map<string, {
+        employeeId: string;
+        regularHours: number;
+        overtimeHours: number;
+        totalHours: number;
+        employee?: Employee;
+      }>();
+
+      for (const entry of allTimeEntries) {
+        if (!entry.clockOutTime) continue; // Skip incomplete entries
+
+        let workedHours = 0;
+        
+        // Calculate total worked hours
+        if (entry.totalHours) {
+          workedHours = parseFloat(entry.totalHours);
+        } else if (entry.clockInTime && entry.clockOutTime) {
+          const clockIn = new Date(entry.clockInTime);
+          const clockOut = new Date(entry.clockOutTime);
+          let totalMs = clockOut.getTime() - clockIn.getTime();
+          
+          // Subtract break time if recorded
+          if (entry.breakStartTime && entry.breakEndTime) {
+            const breakStart = new Date(entry.breakStartTime);
+            const breakEnd = new Date(entry.breakEndTime);
+            const breakMs = breakEnd.getTime() - breakStart.getTime();
+            totalMs -= breakMs;
+          }
+          
+          workedHours = totalMs / (1000 * 60 * 60); // Convert to hours
+        }
+
+        if (workedHours <= 0) continue;
+
+        // Get or create employee entry
+        if (!employeeHours.has(entry.employeeId)) {
+          employeeHours.set(entry.employeeId, {
+            employeeId: entry.employeeId,
+            regularHours: 0,
+            overtimeHours: 0,
+            totalHours: 0,
+            employee: {
+              id: entry.employeeId,
+              firstName: entry.employeeFirstName || '',
+              lastName: entry.employeeLastName || '',
+              hourlyWage: entry.employeeHourlyWage || '15.00'
+            } as Employee
+          });
+        }
+
+        const empData = employeeHours.get(entry.employeeId)!;
+        empData.totalHours += workedHours;
+      }
+
+      // Calculate regular vs overtime hours (40+ hours = overtime)
+      const result = Array.from(employeeHours.values()).map(emp => {
+        if (emp.totalHours <= 40) {
+          emp.regularHours = emp.totalHours;
+          emp.overtimeHours = 0;
+        } else {
+          emp.regularHours = 40;
+          emp.overtimeHours = emp.totalHours - 40;
+        }
+        return emp;
+      });
+
+      console.log('📊 Calculated hours:', result);
+      return result;
+    } catch (error) {
+      console.error('Error calculating payroll hours:', error);
+      throw error;
+    }
   }
 }
 

@@ -3565,6 +3565,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Calculate payroll hours from time entries for a pay period
+  app.get('/api/payroll-periods/:periodId/calculated-hours', isAuthenticated, async (req, res) => {
+    try {
+      const { periodId } = req.params;
+      console.log('🕒 Calculating hours for pay period:', periodId);
+      
+      const calculatedHours = await storage.calculatePayrollHoursFromTimeEntries(periodId);
+      console.log('✅ Calculated hours for', calculatedHours.length, 'employees');
+      
+      res.json(calculatedHours);
+    } catch (error) {
+      console.error("Error calculating payroll hours:", error);
+      res.status(500).json({ message: "Failed to calculate payroll hours" });
+    }
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }
