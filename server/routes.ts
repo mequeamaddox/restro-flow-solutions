@@ -3121,6 +3121,40 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Recipe assignment routes for build sheets
+  app.get("/api/employees/:employeeId/recipe-assignments", isAuthenticated, async (req, res) => {
+    try {
+      const { employeeId } = req.params;
+      const assignments = await storage.getRecipeAssignments(employeeId);
+      res.json(assignments);
+    } catch (error) {
+      console.error("Error fetching recipe assignments:", error);
+      res.status(500).json({ error: "Failed to fetch recipe assignments" });
+    }
+  });
+
+  app.post("/api/recipe-assignments", isAuthenticated, requirePermission(Permission.MANAGE_EMPLOYEES), async (req, res) => {
+    try {
+      const assignment = await storage.createRecipeAssignment(req.body);
+      res.json(assignment);
+    } catch (error) {
+      console.error("Error creating recipe assignment:", error);
+      res.status(500).json({ error: "Failed to create recipe assignment" });
+    }
+  });
+
+  app.put("/api/recipe-assignments/:id/status", isAuthenticated, async (req, res) => {
+    try {
+      const { id } = req.params;
+      const { status } = req.body;
+      const assignment = await storage.updateRecipeAssignmentStatus(id, status);
+      res.json(assignment);
+    } catch (error) {
+      console.error("Error updating recipe assignment status:", error);
+      res.status(500).json({ error: "Failed to update assignment status" });
+    }
+  });
+
   // Employee onboarding data for admin view (full access)
   app.get("/api/employees/:id/onboarding-data", isAuthenticated, async (req, res) => {
     try {

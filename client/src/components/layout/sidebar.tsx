@@ -34,7 +34,8 @@ import {
   Clock,
   MessageSquare,
   UserCircle,
-  Home
+  Home,
+  BookOpen
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import logoImg from "@assets/IMG_20250812_004328_1754973838131.png";
@@ -70,6 +71,8 @@ const hrNavigation = [
 const employeeNavigation = [
   { name: 'My Dashboard', href: '/employee/dashboard', icon: Home },
   { name: 'My Documents', href: '/employee/documents', icon: FileText },
+  { name: 'Company Handbook', href: '/employee/handbook', icon: BookOpen },
+  { name: 'Build Sheets', href: '/employee/build-sheets', icon: ChefHat },
   { name: 'Messages', href: '/employee/messages', icon: MessageSquare },
   { name: 'My Schedule', href: '/employee/schedule', icon: Calendar },
   { name: 'Time Clock', href: '/employee/time-clock', icon: Clock },

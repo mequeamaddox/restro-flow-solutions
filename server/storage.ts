@@ -21,6 +21,7 @@ import {
   employeeSignatures,
   documentFormFields,
   employeeDocumentResponses,
+  recipeAssignments,
   type User,
   type UpsertUser,
   type Location,
@@ -122,6 +123,8 @@ import {
   type InsertDocumentFormField,
   type EmployeeDocumentResponse,
   type InsertEmployeeDocumentResponse,
+  type RecipeAssignment,
+  type InsertRecipeAssignment,
   // Document and onboarding imports
   employeeDocuments,
   documentRequirements,
@@ -417,6 +420,11 @@ export interface IStorage {
   getDocumentFormResponses(assignmentId: string): Promise<EmployeeDocumentResponse[]>;
   saveDocumentFormResponse(response: InsertEmployeeDocumentResponse): Promise<EmployeeDocumentResponse>;
   updateDocumentFormResponse(assignmentId: string, fieldId: string, fieldValue: string): Promise<EmployeeDocumentResponse>;
+  
+  // Recipe assignment operations
+  getRecipeAssignments(employeeId: string): Promise<RecipeAssignment[]>;
+  createRecipeAssignment(assignment: InsertRecipeAssignment): Promise<RecipeAssignment>;
+  updateRecipeAssignmentStatus(id: string, status: string): Promise<RecipeAssignment>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -3194,6 +3202,39 @@ export class DatabaseStorage implements IStorage {
       onboardingData,
       documents 
     };
+  }
+
+  // Recipe assignment operations
+  async getRecipeAssignments(employeeId: string): Promise<RecipeAssignment[]> {
+    const result = await db.select({
+      assignment: recipeAssignments,
+      recipe: recipes,
+    })
+    .from(recipeAssignments)
+    .innerJoin(recipes, eq(recipeAssignments.recipeId, recipes.id))
+    .where(eq(recipeAssignments.employeeId, employeeId))
+    .orderBy(desc(recipeAssignments.createdAt));
+    
+    return result.map(r => ({ ...r.assignment, recipe: r.recipe })) as any;
+  }
+
+  async createRecipeAssignment(assignment: InsertRecipeAssignment): Promise<RecipeAssignment> {
+    const [created] = await db.insert(recipeAssignments).values(assignment).returning();
+    return created;
+  }
+
+  async updateRecipeAssignmentStatus(id: string, status: string): Promise<RecipeAssignment> {
+    const updateData: any = { status, updatedAt: new Date() };
+    if (status === 'completed') {
+      updateData.completedAt = new Date();
+    }
+    
+    const [updated] = await db.update(recipeAssignments)
+      .set(updateData)
+      .where(eq(recipeAssignments.id, id))
+      .returning();
+    
+    return updated;
   }
 }
 

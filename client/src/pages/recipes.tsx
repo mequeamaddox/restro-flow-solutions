@@ -16,6 +16,7 @@ import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import { isUnauthorizedError } from "@/lib/authUtils";
 import { useLocation } from "@/contexts/LocationContext";
+import { useAuth } from "@/hooks/useAuth";
 import { ObjectUploader } from "@/components/ObjectUploader";
 import { z } from "zod";
 
@@ -41,8 +42,14 @@ export default function Recipes() {
   const [targetFoodCost, setTargetFoodCost] = useState(30); // 30% default food cost
   const [previewContent, setPreviewContent] = useState<string>('');
   const [isPreviewDialogOpen, setIsPreviewDialogOpen] = useState(false);
+  const [isAssignDialogOpen, setIsAssignDialogOpen] = useState(false);
+  const [selectedEmployeeId, setSelectedEmployeeId] = useState<string>('');
+  const [assignmentPriority, setAssignmentPriority] = useState<'low' | 'medium' | 'high'>('medium');
+  const [assignmentDueDate, setAssignmentDueDate] = useState<string>('');
+  const [assignmentNotes, setAssignmentNotes] = useState<string>('');
   const { toast } = useToast();
   const { currentLocation } = useLocation();
+  const { user } = useAuth();
   const queryClient = useQueryClient();
 
   const { data: recipes = [], isLoading } = useQuery<any[]>({
@@ -54,6 +61,12 @@ export default function Recipes() {
   const { data: inventoryItems = [] } = useQuery<any[]>({
     queryKey: ['/api/inventory', currentLocation?.id],
     queryFn: () => apiRequest('GET', `/api/inventory?locationId=${currentLocation?.id}`).then(r => r.json()),
+    enabled: !!currentLocation,
+  });
+
+  // Fetch employees for assignment
+  const { data: employees = [] } = useQuery<any[]>({
+    queryKey: ['/api/employees'],
     enabled: !!currentLocation,
   });
 
@@ -173,6 +186,44 @@ export default function Recipes() {
       toast({
         title: "Error",
         description: "Failed to upload photo",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const assignRecipeMutation = useMutation({
+    mutationFn: async (assignmentData: {
+      employeeId: string;
+      recipeId: string;
+      priority: 'low' | 'medium' | 'high';
+      dueDate?: string;
+      notes?: string;
+    }) => {
+      const response = await apiRequest('POST', '/api/recipe-assignments', {
+        body: {
+          ...assignmentData,
+          assignedBy: user?.id, // Current user as assigner
+          dueDate: assignmentData.dueDate ? new Date(assignmentData.dueDate) : null,
+        },
+      });
+      return response.json();
+    },
+    onSuccess: () => {
+      setIsAssignDialogOpen(false);
+      setSelectedEmployeeId('');
+      setAssignmentDueDate('');
+      setAssignmentNotes('');
+      setAssignmentPriority('medium');
+      toast({
+        title: "Recipe assigned",
+        description: "The recipe has been assigned to the employee for training.",
+      });
+    },
+    onError: (error) => {
+      console.error('Assign recipe error:', error);
+      toast({
+        title: "Error",
+        description: "Failed to assign recipe. Please try again.",
         variant: "destructive",
       });
     },
@@ -989,6 +1040,22 @@ For Internal Use Only - Keep Secure
                         Cost Sheet
                       </Button>
                     </div>
+                    {/* Assignment Row */}
+                    <div className="flex gap-2">
+                      <Button 
+                        variant="outline" 
+                        size="sm" 
+                        className="flex-1 text-green-600 hover:text-green-700 hover:bg-green-50"
+                        onClick={() => {
+                          setSelectedRecipe(recipe);
+                          setIsAssignDialogOpen(true);
+                        }}
+                        data-testid={`button-assign-recipe-${recipe.id}`}
+                      >
+                        <Users className="h-4 w-4 mr-1" />
+                        Assign to Employee
+                      </Button>
+                    </div>
                     {/* Photo Upload Row */}
                     <div className="flex gap-2">
                       <ObjectUploader
@@ -1189,6 +1256,100 @@ For Internal Use Only - Keep Secure
             <Button onClick={() => setIsPreviewDialogOpen(false)}>
               Close Preview
             </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Recipe Assignment Dialog */}
+      <Dialog open={isAssignDialogOpen} onOpenChange={setIsAssignDialogOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Users className="h-5 w-5" />
+              Assign Recipe to Employee
+            </DialogTitle>
+            <DialogDescription>
+              Assign {selectedRecipe?.name} to an employee for training or daily prep
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="space-y-4">
+            <div>
+              <label className="text-sm font-medium">Employee</label>
+              <Select value={selectedEmployeeId} onValueChange={setSelectedEmployeeId}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select an employee" />
+                </SelectTrigger>
+                <SelectContent>
+                  {employees.map(employee => (
+                    <SelectItem key={employee.id} value={employee.id}>
+                      {employee.firstName} {employee.lastName} - {employee.email}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div>
+              <label className="text-sm font-medium">Priority</label>
+              <Select value={assignmentPriority} onValueChange={(value: 'low' | 'medium' | 'high') => setAssignmentPriority(value)}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="low">Low</SelectItem>
+                  <SelectItem value="medium">Medium</SelectItem>
+                  <SelectItem value="high">High</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div>
+              <label className="text-sm font-medium">Due Date (Optional)</label>
+              <Input
+                type="date"
+                value={assignmentDueDate}
+                onChange={(e) => setAssignmentDueDate(e.target.value)}
+                min={new Date().toISOString().split('T')[0]}
+              />
+            </div>
+
+            <div>
+              <label className="text-sm font-medium">Notes (Optional)</label>
+              <Textarea
+                value={assignmentNotes}
+                onChange={(e) => setAssignmentNotes(e.target.value)}
+                placeholder="Training notes, prep instructions, or special requirements..."
+                rows={3}
+              />
+            </div>
+
+            <div className="flex gap-2 pt-4">
+              <Button 
+                variant="outline" 
+                onClick={() => setIsAssignDialogOpen(false)}
+                className="flex-1"
+              >
+                Cancel
+              </Button>
+              <Button
+                onClick={() => {
+                  if (selectedRecipe && selectedEmployeeId) {
+                    assignRecipeMutation.mutate({
+                      employeeId: selectedEmployeeId,
+                      recipeId: selectedRecipe.id,
+                      priority: assignmentPriority,
+                      dueDate: assignmentDueDate || undefined,
+                      notes: assignmentNotes || undefined,
+                    });
+                  }
+                }}
+                disabled={!selectedRecipe || !selectedEmployeeId || assignRecipeMutation.isPending}
+                className="flex-1"
+              >
+                {assignRecipeMutation.isPending ? "Assigning..." : "Assign Recipe"}
+              </Button>
+            </div>
           </div>
         </DialogContent>
       </Dialog>

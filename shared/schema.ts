@@ -1370,9 +1370,30 @@ export const insertEmployeeOnboardingStepSchema = createInsertSchema(employeeOnb
 export const insertDocumentFormFieldSchema = createInsertSchema(documentFormFields).omit({ id: true, createdAt: true });
 export const insertEmployeeDocumentResponseSchema = createInsertSchema(employeeDocumentResponses).omit({ id: true, createdAt: true, updatedAt: true });
 
+// Recipe assignments for employee training and daily prep
+export const recipeAssignments = pgTable("recipe_assignments", {
+  id: uuid("id").primaryKey().default(sql`gen_random_uuid()`),
+  recipeId: uuid("recipe_id").references(() => recipes.id, { onDelete: "cascade" }).notNull(),
+  employeeId: uuid("employee_id").references(() => employees.id, { onDelete: "cascade" }).notNull(),
+  assignedBy: varchar("assigned_by").references(() => users.id).notNull(),
+  assignmentType: varchar("assignment_type").default("training"), // training, daily_prep, specialty
+  priority: varchar("priority").default("normal"), // low, normal, high
+  notes: text("notes"),
+  dueDate: timestamp("due_date"),
+  status: varchar("status").default("assigned"), // assigned, in_progress, completed
+  completedAt: timestamp("completed_at"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
 // Types for digital document forms
 export type DocumentFormField = typeof documentFormFields.$inferSelect;
 export type InsertDocumentFormField = z.infer<typeof insertDocumentFormFieldSchema>;
 export type EmployeeDocumentResponse = typeof employeeDocumentResponses.$inferSelect;
 export type InsertEmployeeDocumentResponse = z.infer<typeof insertEmployeeDocumentResponseSchema>;
+
+// Recipe assignment types
+export const insertRecipeAssignmentSchema = createInsertSchema(recipeAssignments).omit({ id: true, createdAt: true, updatedAt: true });
+export type RecipeAssignment = typeof recipeAssignments.$inferSelect;
+export type InsertRecipeAssignment = z.infer<typeof insertRecipeAssignmentSchema>;
 

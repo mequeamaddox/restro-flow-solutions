@@ -43,6 +43,8 @@ import EmployeeMessages from "@/pages/employee-messages";
 import EmployeeTimeClock from "@/pages/employee-time-clock";
 import EmployeeSchedule from "@/pages/employee-schedule";
 import EmployeeSettings from "@/pages/employee-settings";
+import EmployeeHandbook from "@/pages/employee-handbook";
+import EmployeeBuildSheets from "@/pages/employee-build-sheets";
 import PublicOnboarding from "@/pages/public-onboarding";
 import Sidebar from "@/components/layout/sidebar";
 import Header from "@/components/layout/header";
@@ -131,6 +133,8 @@ function Router() {
                 {/* Employee Self-Service Portal Routes */}
                 <Route path="/employee/dashboard" component={EmployeeDashboard} />
                 <Route path="/employee/documents" component={EmployeeDocuments} />
+                <Route path="/employee/handbook" component={EmployeeHandbook} />
+                <Route path="/employee/build-sheets" component={EmployeeBuildSheets} />
                 <Route path="/employee/messages" component={EmployeeMessages} />
                 <Route path="/employee/time-clock" component={EmployeeTimeClock} />
                 <Route path="/employee/timeclock" component={EmployeeTimeClock} />
