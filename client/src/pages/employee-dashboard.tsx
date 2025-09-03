@@ -411,7 +411,7 @@ export default function EmployeeDashboard() {
                     <div key={doc.id} className="flex items-center justify-between p-4 border rounded-lg hover:bg-gray-50">
                       <div className="flex-1">
                         <div className="flex items-center gap-2 mb-1">
-                          <h3 className="font-medium">{doc.template.name}</h3>
+                          <h3 className="font-medium">{doc.template?.name || 'Document'}</h3>
                           <Badge className={getDocumentStatusColor(doc.status)}>
                             {doc.status.replace('_', ' ').toUpperCase()}
                           </Badge>
@@ -419,7 +419,7 @@ export default function EmployeeDashboard() {
                             <Badge variant="destructive">Overdue</Badge>
                           )}
                         </div>
-                        <p className="text-sm text-gray-600">{doc.template.description}</p>
+                        <p className="text-sm text-gray-600">{doc.template?.description || 'No description available'}</p>
                         {doc.deadline && (
                           <p className="text-xs text-gray-500 mt-1">
                             Due: {format(new Date(doc.deadline), 'MMM d, yyyy')}
