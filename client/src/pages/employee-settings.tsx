@@ -20,7 +20,8 @@ export default function EmployeeSettings() {
     firstName: (user as any)?.firstName || '',
     lastName: (user as any)?.lastName || '',
     phone: '',
-    emergencyContact: ''
+    emergencyContactName: '',
+    emergencyContactPhone: ''
   });
   const [preferences, setPreferences] = useState({
     emailNotifications: true,
@@ -29,7 +30,7 @@ export default function EmployeeSettings() {
   });
 
   const updateProfileMutation = useMutation({
-    mutationFn: async (data: { firstName: string; lastName: string; phone: string; emergencyContact: string }) => {
+    mutationFn: async (data: { firstName: string; lastName: string; phone: string; emergencyContactName: string; emergencyContactPhone: string }) => {
       return apiRequest(`/api/employees/${(user as any)?.id}/profile`, {
         method: 'PUT',
         body: JSON.stringify(data)
@@ -61,7 +62,8 @@ export default function EmployeeSettings() {
       firstName: (user as any)?.firstName || '',
       lastName: (user as any)?.lastName || '',
       phone: '',
-      emergencyContact: ''
+      emergencyContactName: '',
+      emergencyContactPhone: ''
     });
     setIsEditingProfile(false);
   };
@@ -164,15 +166,27 @@ export default function EmployeeSettings() {
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="emergencyContact">Emergency Contact</Label>
+              <Label htmlFor="emergencyContactName">Emergency Contact Name</Label>
               <Input
-                id="emergencyContact"
-                value={profileData.emergencyContact}
-                onChange={(e) => setProfileData(prev => ({ ...prev, emergencyContact: e.target.value }))}
+                id="emergencyContactName"
+                value={profileData.emergencyContactName}
+                onChange={(e) => setProfileData(prev => ({ ...prev, emergencyContactName: e.target.value }))}
                 disabled={!isEditingProfile}
-                placeholder="Name and phone number"
+                placeholder="Full name"
                 className={isEditingProfile ? "bg-slate-700 border-slate-600 text-white" : "bg-slate-700/50 border-slate-600 text-slate-300"}
-                data-testid="input-emergencyContact"
+                data-testid="input-emergencyContactName"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="emergencyContactPhone">Emergency Contact Phone</Label>
+              <Input
+                id="emergencyContactPhone"
+                value={profileData.emergencyContactPhone}
+                onChange={(e) => setProfileData(prev => ({ ...prev, emergencyContactPhone: e.target.value }))}
+                disabled={!isEditingProfile}
+                placeholder="(555) 123-4567"
+                className={isEditingProfile ? "bg-slate-700 border-slate-600 text-white" : "bg-slate-700/50 border-slate-600 text-slate-300"}
+                data-testid="input-emergencyContactPhone"
               />
             </div>
             <div className="space-y-2">

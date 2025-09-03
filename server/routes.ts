@@ -3002,7 +3002,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(403).json({ error: "You can only update your own profile" });
       }
 
-      const { firstName, lastName, phone, emergencyContact } = req.body;
+      const { firstName, lastName, phone, emergencyContactName, emergencyContactPhone } = req.body;
       
       // Update both employee and user records to keep them synchronized
       await Promise.all([
@@ -3010,7 +3010,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
           firstName,
           lastName,
           phone,
-          emergencyContact
+          emergencyContactName,
+          emergencyContactPhone
         }),
         storage.upsertUser({
           id,
