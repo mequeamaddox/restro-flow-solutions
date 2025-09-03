@@ -31,10 +31,7 @@ export default function EmployeeSettings() {
 
   const updateProfileMutation = useMutation({
     mutationFn: async (data: { firstName: string; lastName: string; phone: string; emergencyContactName: string; emergencyContactPhone: string }) => {
-      return apiRequest(`/api/employees/${(user as any)?.id}/profile`, {
-        method: 'PUT',
-        body: JSON.stringify(data)
-      });
+      return apiRequest('PUT', `/api/employees/${(user as any)?.id}/profile`, data);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/auth/user'] });
