@@ -74,6 +74,18 @@ async function checkOcrAccess(userId: string): Promise<{ hasAccess: boolean; cre
   return { hasAccess: creditsRemaining > 0, creditsRemaining, plan };
 }
 
+// Helper function to map position titles to user roles (shared across login and creation)
+function mapPositionToRole(positionTitle: string | null | undefined): string {
+  if (!positionTitle) return 'employee';
+  
+  const title = positionTitle.toLowerCase();
+  if (title.includes('manager') || title.includes('supervisor')) return 'manager';
+  if (title.includes('lead') || title.includes('team lead')) return 'team_lead';
+  if (title.includes('host') || title.includes('server') || title.includes('bartender') || title.includes('cook')) return 'employee';
+  
+  return 'employee'; // default fallback
+}
+
 export async function registerRoutes(app: Express): Promise<Server> {
   // Auth middleware
   await setupAuth(app);
@@ -153,17 +165,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       console.log('✅ Password accepted');
 
-      // Helper function to map position titles to user roles
-      const mapPositionToRole = (positionTitle: string | null | undefined): string => {
-        if (!positionTitle) return 'employee';
-        
-        const title = positionTitle.toLowerCase();
-        if (title.includes('manager') || title.includes('supervisor')) return 'manager';
-        if (title.includes('lead') || title.includes('team lead')) return 'team_lead';
-        if (title.includes('host') || title.includes('server') || title.includes('bartender') || title.includes('cook')) return 'employee';
-        
-        return 'employee'; // default fallback
-      };
 
       // Get employee with position details
       const employeeWithPosition = await storage.getEmployee(employee.id);
@@ -205,49 +206,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Admin route for creating employee accounts
+  // Legacy admin employee creation route - now redirects to unified HR system
   app.post('/api/admin/create-employee', isAuthenticated, async (req, res) => {
-    try {
-      const { email, password, displayName } = req.body;
-      
-      // Only allow owners/admins to create employees
-      const currentUserId = (req.user as any)?.claims?.sub;
-      const currentUser = await storage.getUser(currentUserId);
-      
-      if (!currentUser || !['owner', 'admin'].includes(currentUser.role)) {
-        return res.status(403).json({ message: 'Insufficient permissions' });
-      }
-
-      // Create Firebase user account
-      const userRecord = await adminAuth.createUser({
-        email,
-        password,
-        displayName,
-        emailVerified: true,
-      });
-
-      // Create user in our database
-      await storage.upsertUser({
-        id: userRecord.uid,
-        email,
-        firstName: displayName.split(' ')[0] || '',
-        lastName: displayName.split(' ').slice(1).join(' ') || '',
-        role: 'employee',
-      });
-
-      res.json({ 
-        message: 'Employee account created successfully',
-        uid: userRecord.uid,
-        email: userRecord.email 
-      });
-    } catch (error: any) {
-      console.error('Error creating employee account:', error);
-      res.status(500).json({ 
-        message: error.code === 'auth/email-already-exists' 
-          ? 'Email already exists' 
-          : 'Failed to create employee account' 
-      });
-    }
+    res.status(410).json({ 
+      message: 'This endpoint is deprecated. Please use /api/hr/employees for employee creation.',
+      redirectTo: '/api/hr/employees'
+    });
   });
 
   // Auth routes - supports both admin (Replit) and employee (session) authentication
@@ -1920,33 +1884,63 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post('/api/hr/employees', isAuthenticated, requirePermission(Permission.MANAGE_EMPLOYEES), async (req, res) => {
     try {
-      const { password, ...employeeData } = req.body;
+      const employeeData = req.body;
+      
+      console.log('🏢 Creating new employee:', { email: employeeData.email, name: `${employeeData.firstName} ${employeeData.lastName}` });
       
       // Create employee in database first
       const employee = await storage.createEmployee(employeeData);
+      console.log('✅ Employee created in database:', employee.id);
       
-      // If password is provided, create Firebase account
-      if (password && employee.email) {
+      // Always create a user account for the employee (required for login)
+      if (employee.email) {
         try {
-          const firebaseUser = await createFirebaseUser(employee.email, password);
-          console.log(`Firebase account created for employee ${employee.email} with UID: ${firebaseUser.uid}`);
+          // Generate a temporary password for the employee
+          const tempPassword = 'TEMP1234!';
           
-          // You could store the Firebase UID in the employee record if needed
-          // await storage.updateEmployee(employee.id, { firebaseUid: firebaseUser.uid });
-        } catch (firebaseError) {
-          console.error('Firebase account creation failed:', firebaseError);
-          // Employee was created successfully, but Firebase account failed
-          // We still return success but log the error
+          // Create user record in our database with proper role mapping
+          const employeeWithPosition = await storage.getEmployee(employee.id);
+          const userRole = mapPositionToRole(employeeWithPosition?.position?.title);
+          
+          console.log('👤 Creating user account with role:', userRole);
+          await storage.upsertUser({
+            id: employee.id,
+            email: employee.email,
+            firstName: employee.firstName,
+            lastName: employee.lastName,
+            role: userRole,
+          });
+          
+          console.log('✅ User account created successfully');
+          
+          // Return success with login instructions
           return res.status(201).json({
             ...employee,
-            warning: 'Employee created but Firebase account setup failed. You can create their login account later in Settings.'
+            loginInstructions: {
+              email: employee.email,
+              tempPassword: tempPassword,
+              message: 'Employee can log in with temporary password: TEMP1234!'
+            }
+          });
+          
+        } catch (userCreationError) {
+          console.error('❌ User account creation failed:', userCreationError);
+          // Employee was created but user account failed - still return success with warning
+          return res.status(201).json({
+            ...employee,
+            warning: 'Employee created but login account setup failed. Employee will need manual account setup.'
           });
         }
+      } else {
+        console.log('⚠️ No email provided, skipping user account creation');
+        return res.status(201).json({
+          ...employee,
+          warning: 'Employee created without email. Login account cannot be created without email address.'
+        });
       }
       
-      res.status(201).json(employee);
     } catch (error) {
-      console.error('Error creating employee:', error);
+      console.error('❌ Error creating employee:', error);
       res.status(500).json({ message: 'Failed to create employee' });
     }
   });
