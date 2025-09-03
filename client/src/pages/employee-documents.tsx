@@ -368,12 +368,12 @@ export default function EmployeeDocuments() {
                               <Button
                                 onClick={() => {
                                   setSelectedDocument(doc);
-                                  setShowUploadDialog(true);
+                                  setShowDigitalForm(true);
                                 }}
-                                data-testid={`button-upload-${doc.id}`}
+                                data-testid={`button-continue-${doc.id}`}
                               >
-                                <Upload className="h-4 w-4 mr-2" />
-                                Upload File
+                                <FileText className="h-4 w-4 mr-2" />
+                                Continue Form
                               </Button>
                             )}
 
