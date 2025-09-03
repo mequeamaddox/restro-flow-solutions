@@ -188,11 +188,12 @@ export default function HRPayroll() {
           grossPay = regularPay + overtimePay;
         }
 
-        // Calculate deductions using realistic tax rates for restaurant workers
-        const federalTax = grossPay * 0.08; // 8% federal (more realistic for restaurant workers)
-        const stateTax = grossPay * 0.02; // 2% state (varies by state)
-        const socialSecurity = grossPay * 0.062; // 6.2% (mandatory)
-        const medicare = grossPay * 0.0145; // 1.45% (mandatory)
+        // Calculate deductions using South Carolina 2025 tax rates
+        const federalTax = grossPay * 0.12; // 12% federal (standard bracket for most restaurant workers)
+        const stateTax = grossPay * 0.05; // 5% SC state tax (average of 3% and 6.2% brackets)
+        const socialSecurity = grossPay * 0.062; // 6.2% Social Security (mandatory)
+        const medicare = grossPay * 0.0145; // 1.45% Medicare (mandatory)
+        const scUnemployment = grossPay * 0.006; // 0.6% SC unemployment (employer portion estimated)
         const totalDeductions = federalTax + stateTax + socialSecurity + medicare;
         const netPay = grossPay - totalDeductions;
 
