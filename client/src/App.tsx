@@ -132,6 +132,7 @@ function Router() {
                 <Route path="/employee/documents" component={EmployeeDocuments} />
                 <Route path="/employee/messages" component={EmployeeMessages} />
                 <Route path="/employee/time-clock" component={EmployeeTimeClock} />
+                <Route path="/employee/timeclock" component={EmployeeTimeClock} />
                 <Route path="/employee/schedule" component={EmployeeSchedule} />
                 <Route component={NotFound} />
               </Switch>
