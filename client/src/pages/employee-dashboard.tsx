@@ -315,8 +315,8 @@ export default function EmployeeDashboard() {
                     <p className="text-sm text-orange-700 mb-3">
                       {todayTasks.length} task(s) due today
                     </p>
-                    <Link href="/hr/tasks">
-                      <Button size="sm" className="bg-orange-600 hover:bg-orange-700">View Tasks</Button>
+                    <Link href="/employee/tasks">
+                      <Button size="sm" className="bg-gradient-to-r from-orange-500 to-red-600 hover:from-orange-600 hover:to-red-700 text-white">View Tasks</Button>
                     </Link>
                   </div>
                 )}
@@ -547,7 +547,7 @@ export default function EmployeeDashboard() {
 
       {/* Quick Actions */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <Link href="/hr/time-clock">
+        <Link href="/employee/timeclock">
           <Card className="hover:shadow-md transition-shadow cursor-pointer">
             <CardContent className="p-6 text-center">
               <Clock className="h-8 w-8 mx-auto mb-2 text-blue-600" />
