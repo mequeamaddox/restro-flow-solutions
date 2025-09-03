@@ -313,6 +313,7 @@ export interface IStorage {
 
   // HR Shift operations
   getShifts(): Promise<(Shift & { employee?: Employee })[]>;
+  getEmployeeShifts(employeeId: string): Promise<Shift[]>;
   getShift(id: string): Promise<(Shift & { employee?: Employee }) | undefined>;
   createShift(shift: InsertShift): Promise<Shift>;
   updateShift(id: string, shift: Partial<InsertShift>): Promise<Shift>;
@@ -327,6 +328,7 @@ export interface IStorage {
 
   // HR Time Entry operations (for time clock)
   getTimeEntries(): Promise<(TimeEntry & { employee?: Employee })[]>;
+  getEmployeeTimeEntries(employeeId: string): Promise<TimeEntry[]>;
   getActiveTimeEntry(employeeId: string): Promise<TimeEntry | undefined>;
   clockIn(employeeId: string, shiftId?: string): Promise<TimeEntry>;
   clockOut(entryId: string): Promise<TimeEntry>;
@@ -2022,6 +2024,12 @@ export class DatabaseStorage implements IStorage {
     await db.delete(shifts).where(eq(shifts.id, id));
   }
 
+  async getEmployeeShifts(employeeId: string): Promise<Shift[]> {
+    return await db.select().from(shifts)
+      .where(eq(shifts.employeeId, employeeId))
+      .orderBy(desc(shifts.startTime));
+  }
+
   // HR Task operations
   async getTasks(): Promise<(Task & { assignedEmployee?: Employee })[]> {
     const result = await db.select({
@@ -2180,6 +2188,12 @@ export class DatabaseStorage implements IStorage {
 
   async deleteTimeEntry(entryId: string): Promise<void> {
     await db.delete(timeEntries).where(eq(timeEntries.id, entryId));
+  }
+
+  async getEmployeeTimeEntries(employeeId: string): Promise<TimeEntry[]> {
+    return await db.select().from(timeEntries)
+      .where(eq(timeEntries.employeeId, employeeId))
+      .orderBy(desc(timeEntries.clockInTime));
   }
 
   // HR Message operations
