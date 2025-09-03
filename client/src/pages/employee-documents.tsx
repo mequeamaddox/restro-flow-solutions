@@ -448,7 +448,7 @@ export default function EmployeeDocuments() {
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               {selectedDocument && getStatusIcon(selectedDocument.status)}
-              {selectedDocument?.template.name}
+              {selectedDocument?.template?.name || 'Document'}
             </DialogTitle>
           </DialogHeader>
           {selectedDocument && (
@@ -466,17 +466,17 @@ export default function EmployeeDocuments() {
               <div className="grid grid-cols-2 gap-4 text-sm">
                 <div>
                   <p className="font-medium text-gray-600">Document Type</p>
-                  <p className="capitalize">{selectedDocument.template.type.replace('_', ' ')}</p>
+                  <p className="capitalize">{selectedDocument.template?.type?.replace('_', ' ') || 'Unknown'}</p>
                 </div>
                 <div>
                   <p className="font-medium text-gray-600">Assigned Date</p>
-                  <p>{format(new Date(selectedDocument.assignedAt), 'MMM d, yyyy h:mm a')}</p>
+                  <p>{selectedDocument.assignedAt ? format(new Date(selectedDocument.assignedAt), 'MMM d, yyyy h:mm a') : 'Unknown'}</p>
                 </div>
                 {selectedDocument.deadline && (
                   <div>
                     <p className="font-medium text-gray-600">Deadline</p>
                     <p className={new Date(selectedDocument.deadline) < new Date() && !['completed', 'approved'].includes(selectedDocument.status) ? 'text-red-600 font-medium' : ''}>
-                      {format(new Date(selectedDocument.deadline), 'MMM d, yyyy h:mm a')}
+                      {selectedDocument.deadline ? format(new Date(selectedDocument.deadline), 'MMM d, yyyy h:mm a') : 'No deadline'}
                     </p>
                   </div>
                 )}
@@ -490,10 +490,10 @@ export default function EmployeeDocuments() {
 
               <div>
                 <p className="font-medium text-gray-600 mb-2">Description</p>
-                <p className="text-gray-700">{selectedDocument.template.description}</p>
+                <p className="text-gray-700">{selectedDocument.template?.description || 'No description available'}</p>
               </div>
 
-              {selectedDocument.template.requirements && (
+              {selectedDocument.template?.requirements && (
                 <div>
                   <p className="font-medium text-gray-600 mb-2">Requirements</p>
                   <p className="text-gray-700">{selectedDocument.template.requirements}</p>
