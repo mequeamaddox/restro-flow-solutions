@@ -3021,6 +3021,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const { firstName, lastName, phone, emergencyContactName, emergencyContactPhone } = req.body;
       
       // Update both employee and user records to keep them synchronized
+      const existingUser = await storage.getUser(id);
+      
       await Promise.all([
         storage.updateEmployee(id, {
           firstName,
@@ -3029,13 +3031,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
           emergencyContactName,
           emergencyContactPhone
         }),
-        storage.upsertUser({
+        // Only update user if it exists, don't try to upsert
+        existingUser ? storage.upsertUser({
           id,
-          email: (req.session as any)?.user?.email || (req.user as any)?.email,
+          email: existingUser.email,
           firstName,
           lastName,
-          role: (req.session as any)?.user?.role || 'employee'
-        })
+          role: existingUser.role
+        }) : Promise.resolve()
       ]);
 
       res.json({ message: "Profile updated successfully" });
