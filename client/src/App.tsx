@@ -45,6 +45,7 @@ import EmployeeSchedule from "@/pages/employee-schedule";
 import EmployeeSettings from "@/pages/employee-settings";
 import EmployeeHandbook from "@/pages/employee-handbook";
 import EmployeeBuildSheets from "@/pages/employee-build-sheets";
+import EmployeePayStubs from "@/pages/employee-pay-stubs";
 import PublicOnboarding from "@/pages/public-onboarding";
 import Sidebar from "@/components/layout/sidebar";
 import Header from "@/components/layout/header";
@@ -135,6 +136,7 @@ function Router() {
                 <Route path="/employee/documents" component={EmployeeDocuments} />
                 <Route path="/employee/handbook" component={EmployeeHandbook} />
                 <Route path="/employee/build-sheets" component={EmployeeBuildSheets} />
+                <Route path="/employee/pay-stubs" component={EmployeePayStubs} />
                 <Route path="/employee/messages" component={EmployeeMessages} />
                 <Route path="/employee/time-clock" component={EmployeeTimeClock} />
                 <Route path="/employee/timeclock" component={EmployeeTimeClock} />

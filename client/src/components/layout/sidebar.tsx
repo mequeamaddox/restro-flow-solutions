@@ -73,6 +73,7 @@ const employeeNavigation = [
   { name: 'My Documents', href: '/employee/documents', icon: FileText },
   { name: 'Company Handbook', href: '/employee/handbook', icon: BookOpen },
   { name: 'Build Sheets', href: '/employee/build-sheets', icon: ChefHat },
+  { name: 'Pay Stubs', href: '/employee/pay-stubs', icon: DollarSign },
   { name: 'Messages', href: '/employee/messages', icon: MessageSquare },
   { name: 'My Schedule', href: '/employee/schedule', icon: Calendar },
   { name: 'Time Clock', href: '/employee/time-clock', icon: Clock },

@@ -1397,3 +1397,65 @@ export const insertRecipeAssignmentSchema = createInsertSchema(recipeAssignments
 export type RecipeAssignment = typeof recipeAssignments.$inferSelect;
 export type InsertRecipeAssignment = z.infer<typeof insertRecipeAssignmentSchema>;
 
+// Payroll system tables
+export const payrollPeriods = pgTable("payroll_periods", {
+  id: uuid("id").primaryKey().default(sql`gen_random_uuid()`),
+  locationId: uuid("location_id").references(() => locations.id, { onDelete: "cascade" }).notNull(),
+  startDate: date("start_date").notNull(),
+  endDate: date("end_date").notNull(),
+  payDate: date("pay_date").notNull(),
+  status: varchar("status").default("draft"), // draft, processed, paid
+  totalGrossPay: decimal("total_gross_pay", { precision: 10, scale: 2 }).default("0.00"),
+  totalNetPay: decimal("total_net_pay", { precision: 10, scale: 2 }).default("0.00"),
+  totalDeductions: decimal("total_deductions", { precision: 10, scale: 2 }).default("0.00"),
+  createdBy: varchar("created_by").references(() => users.id).notNull(),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const paychecks = pgTable("paychecks", {
+  id: uuid("id").primaryKey().default(sql`gen_random_uuid()`),
+  payrollPeriodId: uuid("payroll_period_id").references(() => payrollPeriods.id, { onDelete: "cascade" }).notNull(),
+  employeeId: uuid("employee_id").references(() => employees.id, { onDelete: "cascade" }).notNull(),
+  checkNumber: varchar("check_number"),
+  regularHours: decimal("regular_hours", { precision: 5, scale: 2 }).default("0.00"),
+  overtimeHours: decimal("overtime_hours", { precision: 5, scale: 2 }).default("0.00"),
+  hourlyRate: decimal("hourly_rate", { precision: 10, scale: 2 }).default("0.00"),
+  regularPay: decimal("regular_pay", { precision: 10, scale: 2 }).default("0.00"),
+  overtimePay: decimal("overtime_pay", { precision: 10, scale: 2 }).default("0.00"),
+  grossPay: decimal("gross_pay", { precision: 10, scale: 2 }).default("0.00"),
+  federalTax: decimal("federal_tax", { precision: 10, scale: 2 }).default("0.00"),
+  stateTax: decimal("state_tax", { precision: 10, scale: 2 }).default("0.00"),
+  socialSecurity: decimal("social_security", { precision: 10, scale: 2 }).default("0.00"),
+  medicare: decimal("medicare", { precision: 10, scale: 2 }).default("0.00"),
+  otherDeductions: decimal("other_deductions", { precision: 10, scale: 2 }).default("0.00"),
+  totalDeductions: decimal("total_deductions", { precision: 10, scale: 2 }).default("0.00"),
+  netPay: decimal("net_pay", { precision: 10, scale: 2 }).default("0.00"),
+  status: varchar("status").default("pending"), // pending, issued, voided
+  issuedAt: timestamp("issued_at"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const payStubs = pgTable("pay_stubs", {
+  id: uuid("id").primaryKey().default(sql`gen_random_uuid()`),
+  paycheckId: uuid("paycheck_id").references(() => paychecks.id, { onDelete: "cascade" }).notNull(),
+  employeeId: uuid("employee_id").references(() => employees.id, { onDelete: "cascade" }).notNull(),
+  stubData: text("stub_data").notNull(), // JSON string with all pay stub details
+  viewedAt: timestamp("viewed_at"),
+  downloadedAt: timestamp("downloaded_at"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+// Insert schemas and types for payroll system
+export const insertPayrollPeriodSchema = createInsertSchema(payrollPeriods).omit({ id: true, createdAt: true, updatedAt: true });
+export const insertPaycheckSchema = createInsertSchema(paychecks).omit({ id: true, createdAt: true, updatedAt: true });
+export const insertPayStubSchema = createInsertSchema(payStubs).omit({ id: true, createdAt: true });
+
+export type PayrollPeriod = typeof payrollPeriods.$inferSelect;
+export type InsertPayrollPeriod = z.infer<typeof insertPayrollPeriodSchema>;
+export type Paycheck = typeof paychecks.$inferSelect;
+export type InsertPaycheck = z.infer<typeof insertPaycheckSchema>;
+export type PayStub = typeof payStubs.$inferSelect;
+export type InsertPayStub = z.infer<typeof insertPayStubSchema>;
+

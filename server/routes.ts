@@ -3374,6 +3374,118 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Payroll API Routes
+  
+  // Get payroll periods
+  app.get("/api/payroll-periods", isAuthenticated, requirePermission(Permission.MANAGE_EMPLOYEES), async (req, res) => {
+    try {
+      const { locationId } = req.query;
+      const periods = await storage.getPayrollPeriods(locationId as string);
+      res.json(periods);
+    } catch (error) {
+      console.error("Error fetching payroll periods:", error);
+      res.status(500).json({ error: "Failed to fetch payroll periods" });
+    }
+  });
+
+  // Create payroll period
+  app.post("/api/payroll-periods", isAuthenticated, requirePermission(Permission.MANAGE_EMPLOYEES), async (req, res) => {
+    try {
+      const userId = (req.user as any)?.claims?.sub || req.session?.user?.id;
+      const periodData = { ...req.body, createdBy: userId };
+      const period = await storage.createPayrollPeriod(periodData);
+      res.status(201).json(period);
+    } catch (error) {
+      console.error("Error creating payroll period:", error);
+      res.status(500).json({ error: "Failed to create payroll period" });
+    }
+  });
+
+  // Get payroll period details
+  app.get("/api/payroll-periods/:id", isAuthenticated, requirePermission(Permission.MANAGE_EMPLOYEES), async (req, res) => {
+    try {
+      const period = await storage.getPayrollPeriod(req.params.id);
+      if (!period) {
+        return res.status(404).json({ error: "Payroll period not found" });
+      }
+      res.json(period);
+    } catch (error) {
+      console.error("Error fetching payroll period:", error);
+      res.status(500).json({ error: "Failed to fetch payroll period" });
+    }
+  });
+
+  // Get paychecks for a payroll period
+  app.get("/api/payroll-periods/:id/paychecks", isAuthenticated, requirePermission(Permission.MANAGE_EMPLOYEES), async (req, res) => {
+    try {
+      const paychecks = await storage.getPaychecks(req.params.id);
+      res.json(paychecks);
+    } catch (error) {
+      console.error("Error fetching paychecks:", error);
+      res.status(500).json({ error: "Failed to fetch paychecks" });
+    }
+  });
+
+  // Create paycheck
+  app.post("/api/paychecks", isAuthenticated, requirePermission(Permission.MANAGE_EMPLOYEES), async (req, res) => {
+    try {
+      const paycheck = await storage.createPaycheck(req.body);
+      res.status(201).json(paycheck);
+    } catch (error) {
+      console.error("Error creating paycheck:", error);
+      res.status(500).json({ error: "Failed to create paycheck" });
+    }
+  });
+
+  // Update paycheck
+  app.put("/api/paychecks/:id", isAuthenticated, requirePermission(Permission.MANAGE_EMPLOYEES), async (req, res) => {
+    try {
+      const paycheck = await storage.updatePaycheck(req.params.id, req.body);
+      res.json(paycheck);
+    } catch (error) {
+      console.error("Error updating paycheck:", error);
+      res.status(500).json({ error: "Failed to update paycheck" });
+    }
+  });
+
+  // Employee pay stub routes
+  app.get("/api/employees/:employeeId/pay-stubs", isAuthenticated, async (req, res) => {
+    try {
+      const payStubs = await storage.getEmployeePayStubs(req.params.employeeId);
+      res.json(payStubs);
+    } catch (error) {
+      console.error("Error fetching pay stubs:", error);
+      res.status(500).json({ error: "Failed to fetch pay stubs" });
+    }
+  });
+
+  // Mark pay stub as viewed
+  app.put("/api/pay-stubs/:id/viewed", isAuthenticated, async (req, res) => {
+    try {
+      await storage.markPayStubViewed(req.params.id);
+      res.json({ message: "Pay stub marked as viewed" });
+    } catch (error) {
+      console.error("Error marking pay stub as viewed:", error);
+      res.status(500).json({ error: "Failed to mark pay stub as viewed" });
+    }
+  });
+
+  // Get time entries for payroll calculation
+  app.get("/api/employees/:employeeId/time-entries", isAuthenticated, async (req, res) => {
+    try {
+      const { startDate, endDate } = req.query;
+      const timeEntries = await storage.getTimeEntries(
+        req.params.employeeId, 
+        startDate as string, 
+        endDate as string
+      );
+      res.json(timeEntries);
+    } catch (error) {
+      console.error("Error fetching time entries:", error);
+      res.status(500).json({ error: "Failed to fetch time entries" });
+    }
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }

@@ -426,6 +426,19 @@ export interface IStorage {
   getRecipeAssignmentsForEmployee(employeeId: string): Promise<RecipeAssignment[]>;
   createRecipeAssignment(assignment: InsertRecipeAssignment): Promise<RecipeAssignment>;
   updateRecipeAssignmentStatus(id: string, status: string): Promise<RecipeAssignment>;
+
+  // Payroll operations
+  getPayrollPeriods(locationId?: string): Promise<PayrollPeriod[]>;
+  createPayrollPeriod(period: InsertPayrollPeriod): Promise<PayrollPeriod>;
+  getPayrollPeriod(id: string): Promise<PayrollPeriod | undefined>;
+  updatePayrollPeriod(id: string, period: Partial<PayrollPeriod>): Promise<PayrollPeriod>;
+  getPaychecks(payrollPeriodId: string): Promise<(Paycheck & { employee: Employee })[]>;
+  createPaycheck(paycheck: InsertPaycheck): Promise<Paycheck>;
+  updatePaycheck(id: string, paycheck: Partial<Paycheck>): Promise<Paycheck>;
+  getEmployeePayStubs(employeeId: string): Promise<PayStub[]>;
+  createPayStub(payStub: InsertPayStub): Promise<PayStub>;
+  markPayStubViewed(payStubId: string): Promise<void>;
+  getTimeEntries(employeeId: string, startDate: string, endDate: string): Promise<TimeEntry[]>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -3250,6 +3263,92 @@ export class DatabaseStorage implements IStorage {
       .returning();
     
     return updated;
+  }
+
+  // Payroll operations
+  async getPayrollPeriods(locationId?: string): Promise<PayrollPeriod[]> {
+    let query = db.select().from(payrollPeriods).orderBy(desc(payrollPeriods.createdAt));
+    
+    if (locationId) {
+      query = query.where(eq(payrollPeriods.locationId, locationId)) as any;
+    }
+    
+    return await query;
+  }
+
+  async createPayrollPeriod(period: InsertPayrollPeriod): Promise<PayrollPeriod> {
+    const [created] = await db.insert(payrollPeriods).values(period).returning();
+    return created;
+  }
+
+  async getPayrollPeriod(id: string): Promise<PayrollPeriod | undefined> {
+    const [period] = await db.select().from(payrollPeriods).where(eq(payrollPeriods.id, id));
+    return period;
+  }
+
+  async updatePayrollPeriod(id: string, period: Partial<PayrollPeriod>): Promise<PayrollPeriod> {
+    const [updated] = await db.update(payrollPeriods)
+      .set({ ...period, updatedAt: new Date() })
+      .where(eq(payrollPeriods.id, id))
+      .returning();
+    return updated;
+  }
+
+  async getPaychecks(payrollPeriodId: string): Promise<(Paycheck & { employee: Employee })[]> {
+    const result = await db.select({
+      paycheck: paychecks,
+      employee: employees,
+    })
+    .from(paychecks)
+    .innerJoin(employees, eq(paychecks.employeeId, employees.id))
+    .where(eq(paychecks.payrollPeriodId, payrollPeriodId))
+    .orderBy(employees.lastName, employees.firstName);
+    
+    return result.map(r => ({ ...r.paycheck, employee: r.employee })) as any;
+  }
+
+  async createPaycheck(paycheck: InsertPaycheck): Promise<Paycheck> {
+    const [created] = await db.insert(paychecks).values(paycheck).returning();
+    return created;
+  }
+
+  async updatePaycheck(id: string, paycheck: Partial<Paycheck>): Promise<Paycheck> {
+    const [updated] = await db.update(paychecks)
+      .set({ ...paycheck, updatedAt: new Date() })
+      .where(eq(paychecks.id, id))
+      .returning();
+    return updated;
+  }
+
+  async getEmployeePayStubs(employeeId: string): Promise<PayStub[]> {
+    return await db.select()
+      .from(payStubs)
+      .where(eq(payStubs.employeeId, employeeId))
+      .orderBy(desc(payStubs.createdAt));
+  }
+
+  async createPayStub(payStub: InsertPayStub): Promise<PayStub> {
+    const [created] = await db.insert(payStubs).values(payStub).returning();
+    return created;
+  }
+
+  async markPayStubViewed(payStubId: string): Promise<void> {
+    await db.update(payStubs)
+      .set({ viewedAt: new Date() })
+      .where(eq(payStubs.id, payStubId));
+  }
+
+  async getTimeEntries(employeeId: string, startDate: string, endDate: string): Promise<TimeEntry[]> {
+    return await db.select()
+      .from(timeEntries)
+      .where(
+        and(
+          eq(timeEntries.employeeId, employeeId),
+          gte(timeEntries.date, startDate),
+          lte(timeEntries.date, endDate)
+        )
+      )
+      .orderBy(timeEntries.date);
   }
 }
 
