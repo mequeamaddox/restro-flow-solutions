@@ -77,11 +77,19 @@ export default function HRTimeClock() {
   const queryClient = useQueryClient();
 
   const { data: employees = [], isLoading: employeesLoading } = useQuery<Employee[]>({
-    queryKey: ['/api/hr/employees'],
+    queryKey: ['/api/employees'],
+    queryFn: async () => {
+      const response = await apiRequest('GET', '/api/employees');
+      return response.json();
+    },
   });
 
   const { data: timeEntries = [], isLoading: entriesLoading } = useQuery<TimeEntry[]>({
     queryKey: ['/api/hr/time-entries'],
+    queryFn: async () => {
+      const response = await apiRequest('GET', '/api/hr/time-entries');
+      return response.json();
+    },
   });
 
   const clockInMutation = useMutation({
