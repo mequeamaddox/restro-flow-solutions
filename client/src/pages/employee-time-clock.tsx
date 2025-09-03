@@ -292,7 +292,8 @@ export default function EmployeeTimeClock() {
                 <Button 
                   onClick={() => clockInMutation.mutate()}
                   disabled={clockInMutation.isPending || !userId}
-                  className="w-full bg-gradient-to-r from-orange-500 to-red-600 hover:from-orange-600 hover:to-red-700 text-white"
+                  variant="default"
+                  className="w-full !bg-gradient-to-r !from-orange-500 !to-red-600 hover:!from-orange-600 hover:!to-red-700 !text-white !border-0 shadow-lg"
                 >
                   <Play className="h-4 w-4 mr-2" />
                   {!userId ? 'Authentication Required' : 'Clock In'}
