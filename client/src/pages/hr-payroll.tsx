@@ -60,17 +60,25 @@ interface Paycheck {
 }
 
 export default function HRPayroll() {
+  // Patriot Software 3-step workflow state
+  const [currentStep, setCurrentStep] = useState<'setup' | 'hours' | 'review' | 'finalize'>('setup');
   const [selectedPayPeriod, setSelectedPayPeriod] = useState<PayrollPeriod | null>(null);
+  const [payrollData, setPayrollData] = useState<Record<string, any>>({});
+  
+  // Dialog states
   const [showCreatePeriodDialog, setShowCreatePeriodDialog] = useState(false);
   const [showPaystubDialog, setShowPaystubDialog] = useState(false);
   const [selectedPaycheck, setSelectedPaycheck] = useState<Paycheck | null>(null);
   const [showPrintDialog, setShowPrintDialog] = useState(false);
+  
+  // Form state
   const [payPeriodForm, setPayPeriodForm] = useState({
     startDate: format(startOfWeek(new Date(), { weekStartsOn: 1 }), 'yyyy-MM-dd'),
     endDate: format(endOfWeek(new Date(), { weekStartsOn: 1 }), 'yyyy-MM-dd'),
     payDate: format(addDays(endOfWeek(new Date(), { weekStartsOn: 1 }), 3), 'yyyy-MM-dd'),
     frequency: 'biweekly'
   });
+  
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const { currentLocation } = useLocation();
@@ -356,18 +364,386 @@ export default function HRPayroll() {
     );
   }
 
-  return (
-    <div className="p-6 space-y-6" data-testid="hr-payroll-page">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold" data-testid="page-title">Payroll Management</h1>
-          <p className="text-muted-foreground">Generate paychecks and manage employee pay stubs</p>
-        </div>
-        <Button onClick={() => setShowCreatePeriodDialog(true)} data-testid="button-create-period">
-          <Plus className="h-4 w-4 mr-2" />
-          New Pay Period
+  // Patriot Software-style step renderer
+  const renderCurrentStep = () => {
+    switch (currentStep) {
+      case 'setup':
+        return renderPayrollSetup();
+      case 'hours':
+        return renderEnterHours();
+      case 'review':
+        return renderReviewApprove();
+      case 'finalize':
+        return renderFinalizePayment();
+      default:
+        return renderPayrollSetup();
+    }
+  };
+
+  const renderPayrollSetup = () => (
+    <div className="space-y-6">
+      <div className="text-center">
+        <h2 className="text-2xl font-bold mb-2">Ready to Run Payroll?</h2>
+        <p className="text-muted-foreground mb-6">Select or create a pay period to get started</p>
+        
+        <Button 
+          size="lg" 
+          className="text-lg px-8 py-4 h-auto"
+          onClick={() => {
+            if (payrollPeriods.length === 0) {
+              setShowCreatePeriodDialog(true);
+            } else {
+              setCurrentStep('hours');
+            }
+          }}
+          data-testid="button-run-payroll"
+        >
+          <Calculator className="h-5 w-5 mr-2" />
+          Run Payroll
         </Button>
       </div>
+
+      {/* Existing Pay Periods */}
+      {payrollPeriods.length > 0 && (
+        <div className="mt-8">
+          <h3 className="text-lg font-semibold mb-4">Recent Pay Periods</h3>
+          <div className="grid gap-4">
+            {payrollPeriods.slice(0, 3).map((period) => (
+              <Card 
+                key={period.id} 
+                className="cursor-pointer hover:shadow-md transition-shadow"
+                onClick={() => {
+                  setSelectedPayPeriod(period);
+                  setCurrentStep('hours');
+                }}
+                data-testid={`period-card-${period.id}`}
+              >
+                <CardContent className="p-4">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <h4 className="font-semibold">{period.name || `${period.frequency} Period`}</h4>
+                      <p className="text-sm text-muted-foreground">
+                        {format(new Date(period.startDate), 'MMM dd')} - {format(new Date(period.endDate), 'MMM dd, yyyy')}
+                      </p>
+                    </div>
+                    <div className="text-right">
+                      <Badge variant={period.status === 'paid' ? 'default' : 'secondary'}>
+                        {period.status.charAt(0).toUpperCase() + period.status.slice(1)}
+                      </Badge>
+                      <p className="text-lg font-bold mt-1">{formatCurrency(period.totalNetPay || 0)}</p>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+
+  const renderEnterHours = () => (
+    <div className="space-y-6">
+      <div className="flex items-center justify-between">
+        <div>
+          <h2 className="text-2xl font-bold">Step 1: Enter Hours & Money</h2>
+          <p className="text-muted-foreground">
+            {selectedPayPeriod ? 
+              `${selectedPayPeriod.name} - Pay Date: ${format(new Date(selectedPayPeriod.payDate), 'MMM dd, yyyy')}` :
+              'Enter employee hours and additional payments'
+            }
+          </p>
+        </div>
+        <div className="flex gap-2">
+          <Button variant="outline" onClick={() => setCurrentStep('setup')}>
+            Back
+          </Button>
+          <Button onClick={() => setCurrentStep('review')} data-testid="button-proceed-review">
+            Review & Approve
+          </Button>
+        </div>
+      </div>
+
+      {/* Employee Hours Entry */}
+      <div className="grid gap-4">
+        {employees.map((employee) => (
+          <Card key={employee.id}>
+            <CardContent className="p-4">
+              <div className="grid grid-cols-6 gap-4 items-center">
+                <div className="col-span-2">
+                  <h4 className="font-semibold">{employee.firstName} {employee.lastName}</h4>
+                  <p className="text-sm text-muted-foreground">
+                    {employee.departmentName || 'General'} • ${employee.hourlyWage || '15.00'}/hr
+                  </p>
+                </div>
+                <div>
+                  <Label htmlFor={`regular-${employee.id}`}>Regular Hours</Label>
+                  <Input 
+                    id={`regular-${employee.id}`}
+                    type="number" 
+                    step="0.25"
+                    placeholder="40.00"
+                    value={payrollData[employee.id]?.regularHours || ''}
+                    onChange={(e) => setPayrollData(prev => ({
+                      ...prev,
+                      [employee.id]: { ...prev[employee.id], regularHours: e.target.value }
+                    }))}
+                    data-testid={`input-regular-hours-${employee.id}`}
+                  />
+                </div>
+                <div>
+                  <Label htmlFor={`overtime-${employee.id}`}>Overtime Hours</Label>
+                  <Input 
+                    id={`overtime-${employee.id}`}
+                    type="number" 
+                    step="0.25"
+                    placeholder="0.00"
+                    value={payrollData[employee.id]?.overtimeHours || ''}
+                    onChange={(e) => setPayrollData(prev => ({
+                      ...prev,
+                      [employee.id]: { ...prev[employee.id], overtimeHours: e.target.value }
+                    }))}
+                    data-testid={`input-overtime-hours-${employee.id}`}
+                  />
+                </div>
+                <div>
+                  <Label htmlFor={`bonus-${employee.id}`}>Tips/Bonus</Label>
+                  <Input 
+                    id={`bonus-${employee.id}`}
+                    type="number" 
+                    step="0.01"
+                    placeholder="0.00"
+                    value={payrollData[employee.id]?.bonus || ''}
+                    onChange={(e) => setPayrollData(prev => ({
+                      ...prev,
+                      [employee.id]: { ...prev[employee.id], bonus: e.target.value }
+                    }))}
+                    data-testid={`input-bonus-${employee.id}`}
+                  />
+                </div>
+                <div className="text-right">
+                  <p className="text-sm text-muted-foreground">Gross Pay</p>
+                  <p className="font-semibold text-lg">
+                    {formatCurrency(calculateGrossPay(employee, payrollData[employee.id] || {}))}
+                  </p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        ))}
+      </div>
+    </div>
+  );
+
+  const renderReviewApprove = () => (
+    <div className="space-y-6">
+      <div className="flex items-center justify-between">
+        <div>
+          <h2 className="text-2xl font-bold">Step 2: Review & Approve</h2>
+          <p className="text-muted-foreground">Review calculations and approve payroll for processing</p>
+        </div>
+        <div className="flex gap-2">
+          <Button variant="outline" onClick={() => setCurrentStep('hours')}>
+            Back to Hours
+          </Button>
+          <Button onClick={() => setCurrentStep('finalize')} data-testid="button-approve-payroll">
+            Approve Payroll
+          </Button>
+        </div>
+      </div>
+
+      {/* Payroll Summary */}
+      <div className="grid grid-cols-4 gap-4 mb-6">
+        <Card>
+          <CardContent className="p-4 text-center">
+            <p className="text-2xl font-bold">{employees.length}</p>
+            <p className="text-sm text-muted-foreground">Employees</p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="p-4 text-center">
+            <p className="text-2xl font-bold text-green-600">
+              {formatCurrency(getTotalGrossPay())}
+            </p>
+            <p className="text-sm text-muted-foreground">Gross Pay</p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="p-4 text-center">
+            <p className="text-2xl font-bold text-red-600">
+              {formatCurrency(getTotalDeductions())}
+            </p>
+            <p className="text-sm text-muted-foreground">Total Deductions</p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="p-4 text-center">
+            <p className="text-2xl font-bold text-blue-600">
+              {formatCurrency(getTotalNetPay())}
+            </p>
+            <p className="text-sm text-muted-foreground">Net Pay</p>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Employee Review List */}
+      <div className="space-y-2">
+        {employees.map((employee) => {
+          const employeeData = payrollData[employee.id] || {};
+          const grossPay = calculateGrossPay(employee, employeeData);
+          const deductions = calculateDeductions(grossPay);
+          const netPay = grossPay - deductions.total;
+          
+          return (
+            <Card key={employee.id}>
+              <CardContent className="p-4">
+                <div className="grid grid-cols-6 gap-4 items-center">
+                  <div>
+                    <h4 className="font-semibold">{employee.firstName} {employee.lastName}</h4>
+                  </div>
+                  <div className="text-center">
+                    <p className="font-medium">{(parseFloat(employeeData.regularHours || '0') + parseFloat(employeeData.overtimeHours || '0')).toFixed(2)}</p>
+                    <p className="text-xs text-muted-foreground">Hours</p>
+                  </div>
+                  <div className="text-center">
+                    <p className="font-medium">{formatCurrency(grossPay)}</p>
+                    <p className="text-xs text-muted-foreground">Gross</p>
+                  </div>
+                  <div className="text-center">
+                    <p className="font-medium text-red-600">{formatCurrency(deductions.total)}</p>
+                    <p className="text-xs text-muted-foreground">Deductions</p>
+                  </div>
+                  <div className="text-center">
+                    <p className="font-medium text-green-600">{formatCurrency(netPay)}</p>
+                    <p className="text-xs text-muted-foreground">Net Pay</p>
+                  </div>
+                  <div className="text-center">
+                    <Badge variant="outline">Ready</Badge>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          );
+        })}
+      </div>
+    </div>
+  );
+
+  const renderFinalizePayment = () => (
+    <div className="space-y-6">
+      <div className="flex items-center justify-between">
+        <div>
+          <h2 className="text-2xl font-bold">Step 3: Finalize Payment</h2>
+          <p className="text-muted-foreground">Process direct deposits and print checks</p>
+        </div>
+        <div className="flex gap-2">
+          <Button variant="outline" onClick={() => setCurrentStep('review')}>
+            Back to Review
+          </Button>
+          <Button 
+            onClick={() => {
+              processPayrollMutation.mutate(selectedPayPeriod?.id || '');
+              setCurrentStep('setup');
+            }}
+            disabled={processPayrollMutation.isPending}
+            data-testid="button-finalize-payroll"
+          >
+            {processPayrollMutation.isPending ? 'Processing...' : 'Finalize Payroll'}
+          </Button>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-2 gap-6">
+        <Card>
+          <CardHeader>
+            <CardTitle>Direct Deposit</CardTitle>
+            <CardDescription>Automatic bank transfers (recommended)</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-4">
+              <div className="flex justify-between">
+                <span>Employees with Direct Deposit:</span>
+                <span className="font-semibold">{employees.filter(e => e.directDeposit).length}</span>
+              </div>
+              <div className="flex justify-between">
+                <span>Total Amount:</span>
+                <span className="font-semibold">{formatCurrency(getTotalNetPay())}</span>
+              </div>
+              <Button className="w-full" disabled>
+                <Check className="h-4 w-4 mr-2" />
+                Ready for Processing
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>Print Checks</CardTitle>
+            <CardDescription>For employees without direct deposit</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-4">
+              <div className="flex justify-between">
+                <span>Check Recipients:</span>
+                <span className="font-semibold">{employees.filter(e => !e.directDeposit).length}</span>
+              </div>
+              <div className="flex justify-between">
+                <span>Total Amount:</span>
+                <span className="font-semibold">{formatCurrency(0)}</span>
+              </div>
+              <Button variant="outline" className="w-full">
+                <Printer className="h-4 w-4 mr-2" />
+                Print Checks
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    </div>
+  );
+
+  return (
+    <div className="p-6 space-y-6" data-testid="hr-payroll-page">
+      {/* Patriot-style Progress Indicator */}
+      <div className="flex items-center justify-between mb-8">
+        <div>
+          <h1 className="text-3xl font-bold" data-testid="page-title">Payroll Processing</h1>
+          <p className="text-muted-foreground">Professional payroll management powered by Patriot Software methodology</p>
+        </div>
+        
+        {currentStep !== 'setup' && (
+          <div className="flex items-center space-x-4">
+            <div className={`flex items-center space-x-2 ${currentStep === 'hours' ? 'text-blue-600 font-semibold' : currentStep === 'review' || currentStep === 'finalize' ? 'text-green-600' : 'text-gray-400'}`}>
+              <div className={`w-8 h-8 rounded-full border-2 flex items-center justify-center text-sm ${
+                currentStep === 'hours' ? 'border-blue-600 bg-blue-100' :
+                currentStep === 'review' || currentStep === 'finalize' ? 'border-green-600 bg-green-100' :
+                'border-gray-300'
+              }`}>1</div>
+              <span>Hours & Money</span>
+            </div>
+            
+            <div className={`flex items-center space-x-2 ${currentStep === 'review' ? 'text-blue-600 font-semibold' : currentStep === 'finalize' ? 'text-green-600' : 'text-gray-400'}`}>
+              <div className={`w-8 h-8 rounded-full border-2 flex items-center justify-center text-sm ${
+                currentStep === 'review' ? 'border-blue-600 bg-blue-100' :
+                currentStep === 'finalize' ? 'border-green-600 bg-green-100' :
+                'border-gray-300'
+              }`}>2</div>
+              <span>Review & Approve</span>
+            </div>
+            
+            <div className={`flex items-center space-x-2 ${currentStep === 'finalize' ? 'text-blue-600 font-semibold' : 'text-gray-400'}`}>
+              <div className={`w-8 h-8 rounded-full border-2 flex items-center justify-center text-sm ${
+                currentStep === 'finalize' ? 'border-blue-600 bg-blue-100' : 'border-gray-300'
+              }`}>3</div>
+              <span>Finalize Payment</span>
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* Dynamic Content Based on Current Step */}
+      {renderCurrentStep()}
 
       {/* Payroll Summary Cards */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
