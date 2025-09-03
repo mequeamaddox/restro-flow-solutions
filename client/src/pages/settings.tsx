@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -21,6 +21,14 @@ import { useAuth } from "@/hooks/useAuth";
 import { EmployeeAccountManager } from "@/components/admin/EmployeeAccountManager";
 
 export default function Settings() {
+  const { user } = useAuth();
+  
+  // Redirect employees to their own settings page
+  useEffect(() => {
+    if ((user as any)?.role === 'employee') {
+      window.location.href = '/employee/settings';
+    }
+  }, [user]);
   const [isAddLocationOpen, setIsAddLocationOpen] = useState(false);
   const [editingLocation, setEditingLocation] = useState<Location | null>(null);
   const [preferences, setPreferences] = useState({
