@@ -172,12 +172,14 @@ export default function HRPayroll() {
 
   // Process payroll mutation (calculate for all employees)
   const processPayrollMutation = useMutation({
-    mutationFn: async (payPeriodId: string) => {
+    mutationFn: async (data: { periodId: string; period: PayrollPeriod }) => {
+      const { periodId, period } = data;
+      
       // Calculate payroll for all employees in the period
       const paycheckPromises = employees.map(async (employee) => {
         // Get time entries for this employee in the pay period
         const timeResponse = await apiRequest('GET', 
-          `/api/employees/${employee.id}/time-entries?startDate=${selectedPayPeriod?.startDate}&endDate=${selectedPayPeriod?.endDate}`
+          `/api/employees/${employee.id}/time-entries?startDate=${period.startDate}&endDate=${period.endDate}`
         );
         const timeEntries = await timeResponse.json();
 
@@ -189,9 +191,9 @@ export default function HRPayroll() {
         
         // Determine overtime threshold based on pay frequency
         let overtimeThreshold = 40; // Default weekly/biweekly threshold
-        if (selectedPayPeriod?.frequency === 'monthly') {
+        if (period.frequency === 'monthly') {
           overtimeThreshold = 173; // ~40 hours/week * 4.33 weeks/month
-        } else if (selectedPayPeriod?.frequency === 'weekly') {
+        } else if (period.frequency === 'weekly') {
           overtimeThreshold = 40;
         }
         
@@ -200,18 +202,18 @@ export default function HRPayroll() {
         let regularPay = 0;
         let overtimePay = 0;
         let grossPay = 0;
+        let hourlyRate = parseFloat(employee.hourlyRate || '15.00'); // Declare hourlyRate here
 
         // Handle salary vs hourly employees
-        if (employee.salary && selectedPayPeriod?.frequency === 'salary') {
+        if (employee.salary && period.frequency === 'salary') {
           // Salaried employee - calculate based on annual salary
           const annualSalary = parseFloat(employee.salary);
           grossPay = annualSalary / 26; // Biweekly salary amount
           regularPay = grossPay;
           regularHours = 80; // Standard biweekly hours for salary
+          hourlyRate = grossPay / regularHours; // Calculate effective hourly rate for salary
         } else {
           // Hourly employee - calculate based on hours worked
-          const hourlyRate = parseFloat(employee.hourlyRate || '15.00');
-          
           if (totalHours > overtimeThreshold) {
             regularHours = overtimeThreshold;
             overtimeHours = totalHours - overtimeThreshold;
@@ -232,7 +234,7 @@ export default function HRPayroll() {
         const netPay = grossPay - totalDeductions;
 
         const paycheckData = {
-          payrollPeriodId,
+          payrollPeriodId: periodId,
           employeeId: employee.id,
           checkNumber: `${employee.id.slice(-4)}-${format(new Date(), 'yyMMdd')}`,
           regularHours: regularHours.toFixed(2),
@@ -760,10 +762,12 @@ export default function HRPayroll() {
           </Button>
           <Button 
             onClick={() => {
-              processPayrollMutation.mutate(selectedPayPeriod?.id || '');
-              setCurrentStep('setup');
+              if (selectedPayPeriod) {
+                processPayrollMutation.mutate({ periodId: selectedPayPeriod.id, period: selectedPayPeriod });
+                setCurrentStep('setup');
+              }
             }}
-            disabled={processPayrollMutation.isPending}
+            disabled={processPayrollMutation.isPending || !selectedPayPeriod}
             data-testid="button-finalize-payroll"
           >
             {processPayrollMutation.isPending ? 'Processing...' : 'Finalize Payroll'}
@@ -981,7 +985,7 @@ export default function HRPayroll() {
                           onClick={(e) => {
                             e.stopPropagation();
                             setSelectedPayPeriod(period);
-                            processPayrollMutation.mutate(period.id);
+                            processPayrollMutation.mutate({ periodId: period.id, period });
                           }}
                           disabled={processPayrollMutation.isPending}
                           data-testid={`button-process-${period.id}`}
