@@ -1,32 +1,34 @@
-import { useState, useEffect } from 'react';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { apiRequest } from '@/lib/queryClient';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Badge } from '@/components/ui/badge';
-import { Separator } from '@/components/ui/separator';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/useAuth';
-import { Download, Eye, FileText, DollarSign, Calendar, TrendingUp } from 'lucide-react';
+import { 
+  Download, 
+  Eye, 
+  FileText, 
+  DollarSign, 
+  Calendar, 
+  TrendingUp,
+  Printer,
+  TrendingDown,
+  Minus
+} from 'lucide-react';
 import { format } from 'date-fns';
+import { ActualPaycheck } from '@/components/payroll/actual-paycheck';
 
-interface PayStub {
+interface EmployeePaystub {
   id: string;
-  paycheckId: string;
-  employeeId: string;
-  stubData: string;
-  viewedAt?: string;
-  downloadedAt?: string;
-  createdAt: string;
-}
-
-interface PaycheckData {
-  id: string;
-  checkNumber?: string;
+  payPeriodId: string;
   regularHours: string;
   overtimeHours: string;
-  hourlyRate: string;
+  regularRate: string;
+  overtimeRate: string;
   regularPay: string;
   overtimePay: string;
   grossPay: string;
@@ -34,429 +36,310 @@ interface PaycheckData {
   stateTax: string;
   socialSecurity: string;
   medicare: string;
-  otherDeductions: string;
   totalDeductions: string;
   netPay: string;
-  status: string;
-  payPeriod?: {
+  checkNumber: string;
+  payDate: string;
+  status: 'draft' | 'calculated' | 'paid';
+  bonuses?: string;
+  tips?: string;
+  notes?: string;
+  payPeriod: {
+    id: string;
+    name: string;
     startDate: string;
     endDate: string;
     payDate: string;
+    frequency: string;
+    status: string;
   };
 }
 
+interface PayrollSummary {
+  totalGrossPay: number;
+  totalNetPay: number;
+  totalDeductions: number;
+  averageHours: number;
+  yearToDateGross: number;
+  yearToDateNet: number;
+  yearToDateTaxes: number;
+}
+
 export default function EmployeePayStubs() {
-  const [selectedPayStub, setSelectedPayStub] = useState<PayStub | null>(null);
-  const [showPayStubDialog, setShowPayStubDialog] = useState(false);
-  const [payStubData, setPayStubData] = useState<PaycheckData | null>(null);
+  const [selectedYear, setSelectedYear] = useState(new Date().getFullYear().toString());
+  const [selectedPaystub, setSelectedPaystub] = useState<EmployeePaystub | null>(null);
+  const [showPaystubDialog, setShowPaystubDialog] = useState(false);
   const { toast } = useToast();
   const { user } = useAuth();
-  const queryClient = useQueryClient();
 
-  // Fetch employee's pay stubs
-  const { data: payStubs = [], isLoading, error } = useQuery<PayStub[]>({
-    queryKey: ['/api/employees', user?.id, 'pay-stubs'],
+  const userId = (user as any)?.id || (user as any)?.claims?.sub;
+
+  // Fetch employee pay stubs
+  const { data: paystubs = [], isLoading: paystubsLoading } = useQuery<EmployeePaystub[]>({
+    queryKey: ['/api/employee/pay-stubs', userId, selectedYear],
     queryFn: async () => {
-      if (!user?.id) return [];
-      const response = await apiRequest('GET', `/api/employees/${user.id}/pay-stubs`);
+      const response = await apiRequest('GET', `/api/employee/${userId}/pay-stubs?year=${selectedYear}`);
       return response.json();
     },
-    enabled: !!user?.id,
+    enabled: !!userId,
   });
 
-  // Mark pay stub as viewed mutation
-  const markViewedMutation = useMutation({
-    mutationFn: async (payStubId: string) => {
-      await apiRequest('PUT', `/api/pay-stubs/${payStubId}/viewed`);
+  // Fetch payroll summary
+  const { data: summary } = useQuery<PayrollSummary>({
+    queryKey: ['/api/employee/payroll-summary', userId, selectedYear],
+    queryFn: async () => {
+      const response = await apiRequest('GET', `/api/employee/${userId}/payroll-summary?year=${selectedYear}`);
+      return response.json();
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/employees', user?.id, 'pay-stubs'] });
-    },
+    enabled: !!userId,
   });
 
-  const handleViewPayStub = async (payStub: PayStub) => {
-    try {
-      setSelectedPayStub(payStub);
-      
-      // Parse the stub data
-      const stubData = JSON.parse(payStub.stubData) as PaycheckData;
-      setPayStubData(stubData);
-      
-      // Mark as viewed if not already viewed
-      if (!payStub.viewedAt) {
-        markViewedMutation.mutate(payStub.id);
-      }
-      
-      setShowPayStubDialog(true);
-    } catch (error) {
-      console.error('Error parsing pay stub data:', error);
-      toast({
-        title: "Error",
-        description: "Failed to load pay stub details",
-        variant: "destructive",
-      });
-    }
-  };
-
-  const handleDownloadPayStub = (payStub: PayStub) => {
-    try {
-      const stubData = JSON.parse(payStub.stubData) as PaycheckData;
-      
-      // Generate pay stub content
-      const content = `
-═══════════════════════════════════════════════════════════════════════════
-                              PAY STUB
-                        ${user?.email || 'Employee'}
-═══════════════════════════════════════════════════════════════════════════
-
-Check Number: ${stubData.checkNumber || 'N/A'}
-Pay Period: ${stubData.payPeriod ? format(new Date(stubData.payPeriod.startDate), 'MM/dd/yyyy') + ' - ' + format(new Date(stubData.payPeriod.endDate), 'MM/dd/yyyy') : 'N/A'}
-Pay Date: ${stubData.payPeriod ? format(new Date(stubData.payPeriod.payDate), 'MM/dd/yyyy') : 'N/A'}
-
-───────────────────────────────────────────────────────────────────────────
-                               EARNINGS
-───────────────────────────────────────────────────────────────────────────
-Regular Hours:    ${parseFloat(stubData.regularHours).toFixed(2).padStart(8)} @ $${parseFloat(stubData.hourlyRate).toFixed(2).padStart(6)} = $${parseFloat(stubData.regularPay).toFixed(2).padStart(8)}
-Overtime Hours:   ${parseFloat(stubData.overtimeHours).toFixed(2).padStart(8)} @ $${(parseFloat(stubData.hourlyRate) * 1.5).toFixed(2).padStart(6)} = $${parseFloat(stubData.overtimePay).toFixed(2).padStart(8)}
-
-GROSS PAY:                                                $${parseFloat(stubData.grossPay).toFixed(2).padStart(10)}
-
-───────────────────────────────────────────────────────────────────────────
-                              DEDUCTIONS
-───────────────────────────────────────────────────────────────────────────
-Federal Tax:                                              $${parseFloat(stubData.federalTax).toFixed(2).padStart(10)}
-State Tax:                                                $${parseFloat(stubData.stateTax).toFixed(2).padStart(10)}
-Social Security:                                          $${parseFloat(stubData.socialSecurity).toFixed(2).padStart(10)}
-Medicare:                                                 $${parseFloat(stubData.medicare).toFixed(2).padStart(10)}
-Other Deductions:                                         $${parseFloat(stubData.otherDeductions).toFixed(2).padStart(10)}
-
-TOTAL DEDUCTIONS:                                         $${parseFloat(stubData.totalDeductions).toFixed(2).padStart(10)}
-
-───────────────────────────────────────────────────────────────────────────
-
-NET PAY:                                                  $${parseFloat(stubData.netPay).toFixed(2).padStart(10)}
-
-═══════════════════════════════════════════════════════════════════════════
-      `;
-
-      // Create and download the file
-      const blob = new Blob([content], { type: 'text/plain' });
-      const url = window.URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.style.display = 'none';
-      a.href = url;
-      a.download = `paystub-${stubData.checkNumber || format(new Date(payStub.createdAt), 'yyyyMMdd')}.txt`;
-      document.body.appendChild(a);
-      a.click();
-      window.URL.revokeObjectURL(url);
-      document.body.removeChild(a);
-
-      toast({
-        title: "Download Complete",
-        description: "Pay stub has been downloaded successfully.",
-      });
-    } catch (error) {
-      console.error('Error downloading pay stub:', error);
-      toast({
-        title: "Download Failed",
-        description: "Failed to download pay stub",
-        variant: "destructive",
-      });
-    }
-  };
+  // Get paycheck settings for display
+  const { data: settings } = useQuery({
+    queryKey: ['/api/payroll/paycheck-settings'],
+    queryFn: async () => {
+      const response = await apiRequest('GET', '/api/payroll/paycheck-settings');
+      return response.json();
+    },
+  });
 
   const formatCurrency = (amount: string | number) => {
     return new Intl.NumberFormat('en-US', {
       style: 'currency',
       currency: 'USD'
-    }).format(Number(amount));
+    }).format(typeof amount === 'string' ? parseFloat(amount) : amount);
   };
 
-  // Calculate summary statistics
-  const totalEarnings = payStubs.reduce((sum, stub) => {
-    try {
-      const data = JSON.parse(stub.stubData) as PaycheckData;
-      return sum + parseFloat(data.grossPay || '0');
-    } catch {
-      return sum;
+  const getStatusBadge = (status: string) => {
+    switch (status) {
+      case 'paid':
+        return <Badge className="bg-green-100 text-green-800 border-green-200">Paid</Badge>;
+      case 'calculated':
+        return <Badge className="bg-blue-100 text-blue-800 border-blue-200">Ready</Badge>;
+      case 'draft':
+        return <Badge className="bg-gray-100 text-gray-800 border-gray-200">Processing</Badge>;
+      default:
+        return <Badge variant="secondary">{status}</Badge>;
     }
-  }, 0);
+  };
 
-  const totalDeductions = payStubs.reduce((sum, stub) => {
-    try {
-      const data = JSON.parse(stub.stubData) as PaycheckData;
-      return sum + parseFloat(data.totalDeductions || '0');
-    } catch {
-      return sum;
-    }
-  }, 0);
-
-  const totalNetPay = payStubs.reduce((sum, stub) => {
-    try {
-      const data = JSON.parse(stub.stubData) as PaycheckData;
-      return sum + parseFloat(data.netPay || '0');
-    } catch {
-      return sum;
-    }
-  }, 0);
-
-  if (isLoading) {
-    return (
-      <div className="h-screen flex items-center justify-center">
-        <div className="animate-spin w-8 h-8 border-4 border-primary border-t-transparent rounded-full" />
-      </div>
-    );
+  const yearOptions = [];
+  const currentYear = new Date().getFullYear();
+  for (let year = currentYear; year >= currentYear - 3; year--) {
+    yearOptions.push(year.toString());
   }
 
-  if (error) {
+  if (paystubsLoading) {
     return (
       <div className="p-6">
-        <Card>
-          <CardContent className="p-8 text-center">
-            <FileText className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-            <h3 className="text-lg font-medium mb-2">Unable to Load Pay Stubs</h3>
-            <p className="text-muted-foreground">There was an error loading your pay stubs. Please try again later.</p>
-          </CardContent>
-        </Card>
+        <div className="animate-pulse space-y-4">
+          <div className="h-8 bg-gray-200 rounded w-1/4"></div>
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+            {[1, 2, 3, 4].map(i => (
+              <div key={i} className="h-24 bg-gray-200 rounded"></div>
+            ))}
+          </div>
+        </div>
       </div>
     );
   }
 
   return (
     <div className="p-6 space-y-6" data-testid="employee-pay-stubs-page">
-      <div className="flex items-center justify-between">
+      {/* Header */}
+      <div className="flex justify-between items-center">
         <div>
-          <h1 className="text-3xl font-bold" data-testid="page-title">My Pay Stubs</h1>
-          <p className="text-muted-foreground">View and download your pay stubs and earnings history</p>
+          <h1 className="text-2xl font-bold text-gray-900" data-testid="page-title">My Pay Stubs</h1>
+          <p className="text-gray-600">View your paycheck history and earnings summary</p>
         </div>
+        
+        <Select value={selectedYear} onValueChange={setSelectedYear}>
+          <SelectTrigger className="w-32">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            {yearOptions.map(year => (
+              <SelectItem key={year} value={year}>{year}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
       </div>
 
       {/* Summary Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <Card data-testid="card-total-earnings">
-          <CardContent className="p-6">
-            <div className="flex items-center">
-              <DollarSign className="h-8 w-8 text-green-600" />
-              <div className="ml-4">
-                <p className="text-sm font-medium text-gray-600">Total Earnings</p>
-                <p className="text-2xl font-bold">{formatCurrency(totalEarnings)}</p>
+      {summary && (
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+          <Card data-testid="card-total-earnings">
+            <CardContent className="p-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-gray-600">YTD Gross Pay</p>
+                  <p className="text-2xl font-bold text-gray-900">
+                    {formatCurrency(summary.yearToDateGross)}
+                  </p>
+                </div>
+                <DollarSign className="w-8 h-8 text-green-600" />
               </div>
-            </div>
-          </CardContent>
-        </Card>
+            </CardContent>
+          </Card>
 
-        <Card data-testid="card-total-deductions">
-          <CardContent className="p-6">
-            <div className="flex items-center">
-              <TrendingUp className="h-8 w-8 text-red-600" />
-              <div className="ml-4">
-                <p className="text-sm font-medium text-gray-600">Total Deductions</p>
-                <p className="text-2xl font-bold">{formatCurrency(totalDeductions)}</p>
+          <Card data-testid="card-total-deductions">
+            <CardContent className="p-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-gray-600">YTD Net Pay</p>
+                  <p className="text-2xl font-bold text-gray-900">
+                    {formatCurrency(summary.yearToDateNet)}
+                  </p>
+                </div>
+                <TrendingUp className="w-8 h-8 text-blue-600" />
               </div>
-            </div>
-          </CardContent>
-        </Card>
+            </CardContent>
+          </Card>
 
-        <Card data-testid="card-total-net-pay">
-          <CardContent className="p-6">
-            <div className="flex items-center">
-              <Calendar className="h-8 w-8 text-blue-600" />
-              <div className="ml-4">
-                <p className="text-sm font-medium text-gray-600">Total Net Pay</p>
-                <p className="text-2xl font-bold">{formatCurrency(totalNetPay)}</p>
+          <Card data-testid="card-total-net-pay">
+            <CardContent className="p-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-gray-600">YTD Taxes</p>
+                  <p className="text-2xl font-bold text-gray-900">
+                    {formatCurrency(summary.yearToDateTaxes)}
+                  </p>
+                </div>
+                <TrendingDown className="w-8 h-8 text-red-600" />
               </div>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardContent className="p-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-gray-600">Avg Hours/Pay</p>
+                  <p className="text-2xl font-bold text-gray-900">
+                    {summary.averageHours.toFixed(1)}
+                  </p>
+                </div>
+                <Calendar className="w-8 h-8 text-purple-600" />
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      )}
 
       {/* Pay Stubs List */}
       <Card>
         <CardHeader>
-          <CardTitle>Pay Stubs History</CardTitle>
+          <CardTitle>Pay Stubs for {selectedYear}</CardTitle>
           <CardDescription>
             View and download your pay stubs from recent pay periods
           </CardDescription>
         </CardHeader>
         <CardContent>
-          {payStubs.length === 0 ? (
-            <div className="text-center py-8">
-              <FileText className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-              <h3 className="text-lg font-medium mb-2">No Pay Stubs Available</h3>
-              <p className="text-muted-foreground">
-                Your pay stubs will appear here after payroll is processed.
-              </p>
+          {paystubs.length === 0 ? (
+            <div className="text-center py-12">
+              <DollarSign className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+              <h3 className="text-lg font-medium text-gray-900 mb-2">No pay stubs found</h3>
+              <p className="text-gray-600">You don't have any pay stubs for {selectedYear} yet.</p>
             </div>
           ) : (
             <div className="space-y-4">
-              {payStubs.map((payStub) => {
-                let stubData: PaycheckData | null = null;
-                try {
-                  stubData = JSON.parse(payStub.stubData) as PaycheckData;
-                } catch (error) {
-                  console.error('Error parsing pay stub data:', error);
-                }
-
-                return (
-                  <Card key={payStub.id} data-testid={`pay-stub-card-${payStub.id}`}>
-                    <CardContent className="p-6">
-                      <div className="flex items-center justify-between">
-                        <div>
-                          <div className="flex items-center gap-2 mb-2">
-                            <h3 className="font-semibold">
-                              Check #{stubData?.checkNumber || 'N/A'}
-                            </h3>
-                            {!payStub.viewedAt && (
-                              <Badge variant="secondary">New</Badge>
-                            )}
-                          </div>
-                          <p className="text-sm text-muted-foreground mb-2">
-                            Pay Period: {stubData?.payPeriod ? 
-                              `${format(new Date(stubData.payPeriod.startDate), 'MM/dd/yyyy')} - ${format(new Date(stubData.payPeriod.endDate), 'MM/dd/yyyy')}` : 
-                              format(new Date(payStub.createdAt), 'MM/dd/yyyy')
-                            }
-                          </p>
-                          {stubData && (
-                            <div className="grid grid-cols-3 gap-4 text-sm">
-                              <div>
-                                <span className="text-muted-foreground">Gross Pay:</span>
-                                <div className="font-medium">{formatCurrency(stubData.grossPay)}</div>
-                              </div>
-                              <div>
-                                <span className="text-muted-foreground">Deductions:</span>
-                                <div className="font-medium">{formatCurrency(stubData.totalDeductions)}</div>
-                              </div>
-                              <div>
-                                <span className="text-muted-foreground">Net Pay:</span>
-                                <div className="font-bold text-green-600">{formatCurrency(stubData.netPay)}</div>
-                              </div>
-                            </div>
-                          )}
-                        </div>
-                        
-                        <div className="flex items-center gap-2">
-                          <Button 
-                            variant="outline" 
-                            size="sm"
-                            onClick={() => handleViewPayStub(payStub)}
-                            data-testid={`button-view-pay-stub-${payStub.id}`}
-                          >
-                            <Eye className="h-4 w-4 mr-2" />
-                            View
-                          </Button>
-                          <Button 
-                            variant="outline" 
-                            size="sm"
-                            onClick={() => handleDownloadPayStub(payStub)}
-                            data-testid={`button-download-pay-stub-${payStub.id}`}
-                          >
-                            <Download className="h-4 w-4 mr-2" />
-                            Download
-                          </Button>
-                        </div>
+              {paystubs.map((paystub) => (
+                <div
+                  key={paystub.id}
+                  className="flex items-center justify-between p-4 border rounded-lg hover:bg-gray-50"
+                  data-testid={`paystub-row-${paystub.id}`}
+                >
+                  <div className="flex-1">
+                    <div className="flex items-center gap-4">
+                      <div>
+                        <h4 className="font-medium text-gray-900">
+                          {paystub.payPeriod.name}
+                        </h4>
+                        <p className="text-sm text-gray-600">
+                          {format(new Date(paystub.payPeriod.startDate), 'MMM d')} - {format(new Date(paystub.payPeriod.endDate), 'MMM d, yyyy')}
+                        </p>
                       </div>
-                    </CardContent>
-                  </Card>
-                );
-              })}
+                      {getStatusBadge(paystub.status)}
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-8">
+                    <div className="text-right">
+                      <p className="font-medium text-gray-900">
+                        {formatCurrency(paystub.netPay)}
+                      </p>
+                      <p className="text-sm text-gray-600">
+                        Net Pay
+                      </p>
+                    </div>
+                    <div className="text-right">
+                      <p className="font-medium text-gray-900">
+                        {formatCurrency(paystub.grossPay)}
+                      </p>
+                      <p className="text-sm text-gray-600">
+                        Gross Pay
+                      </p>
+                    </div>
+                    <div className="text-right">
+                      <p className="font-medium text-gray-900">
+                        {(parseFloat(paystub.regularHours) + parseFloat(paystub.overtimeHours)).toFixed(1)}h
+                      </p>
+                      <p className="text-sm text-gray-600">
+                        Total Hours
+                      </p>
+                    </div>
+                    <div className="flex gap-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => {
+                          setSelectedPaystub(paystub);
+                          setShowPaystubDialog(true);
+                        }}
+                        className="gap-2"
+                        data-testid={`view-paystub-${paystub.id}`}
+                      >
+                        <Eye className="w-4 h-4" />
+                        View
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+              ))}
             </div>
           )}
         </CardContent>
       </Card>
 
-      {/* Pay Stub Details Dialog */}
-      <Dialog open={showPayStubDialog} onOpenChange={setShowPayStubDialog}>
-        <DialogContent className="max-w-2xl">
-          {selectedPayStub && payStubData && (
-            <>
-              <DialogHeader>
-                <DialogTitle>Pay Stub Details</DialogTitle>
-                <DialogDescription>
-                  Check #{payStubData.checkNumber || 'N/A'} - {payStubData.payPeriod ? 
-                    `${format(new Date(payStubData.payPeriod.startDate), 'MM/dd/yyyy')} - ${format(new Date(payStubData.payPeriod.endDate), 'MM/dd/yyyy')}` : 
-                    format(new Date(selectedPayStub.createdAt), 'MM/dd/yyyy')
-                  }
-                </DialogDescription>
-              </DialogHeader>
-              
-              <div className="space-y-6">
-                <div className="grid grid-cols-2 gap-6">
-                  <div>
-                    <h3 className="font-semibold mb-3">Earnings</h3>
-                    <div className="space-y-2 text-sm">
-                      <div className="flex justify-between">
-                        <span>Regular Hours ({parseFloat(payStubData.regularHours).toFixed(2)} @ {formatCurrency(payStubData.hourlyRate)}):</span>
-                        <span>{formatCurrency(payStubData.regularPay)}</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span>Overtime Hours ({parseFloat(payStubData.overtimeHours).toFixed(2)} @ {formatCurrency(parseFloat(payStubData.hourlyRate) * 1.5)}):</span>
-                        <span>{formatCurrency(payStubData.overtimePay)}</span>
-                      </div>
-                      <Separator />
-                      <div className="flex justify-between font-semibold">
-                        <span>Gross Pay:</span>
-                        <span>{formatCurrency(payStubData.grossPay)}</span>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div>
-                    <h3 className="font-semibold mb-3">Deductions</h3>
-                    <div className="space-y-2 text-sm">
-                      <div className="flex justify-between">
-                        <span>Federal Tax:</span>
-                        <span>{formatCurrency(payStubData.federalTax)}</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span>State Tax:</span>
-                        <span>{formatCurrency(payStubData.stateTax)}</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span>Social Security:</span>
-                        <span>{formatCurrency(payStubData.socialSecurity)}</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span>Medicare:</span>
-                        <span>{formatCurrency(payStubData.medicare)}</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span>Other:</span>
-                        <span>{formatCurrency(payStubData.otherDeductions)}</span>
-                      </div>
-                      <Separator />
-                      <div className="flex justify-between font-semibold">
-                        <span>Total Deductions:</span>
-                        <span>{formatCurrency(payStubData.totalDeductions)}</span>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                <Separator />
-                
-                <div className="text-center">
-                  <div className="text-lg font-bold text-green-600">
-                    Net Pay: {formatCurrency(payStubData.netPay)}
-                  </div>
-                  {payStubData.payPeriod && (
-                    <div className="text-sm text-muted-foreground mt-2">
-                      Pay Date: {format(new Date(payStubData.payPeriod.payDate), 'MMMM dd, yyyy')}
-                    </div>
-                  )}
-                </div>
-
-                <div className="flex justify-center">
-                  <Button 
-                    onClick={() => handleDownloadPayStub(selectedPayStub)}
-                    data-testid="button-download-current-stub"
-                  >
-                    <Download className="h-4 w-4 mr-2" />
-                    Download This Pay Stub
-                  </Button>
-                </div>
-              </div>
-            </>
+      {/* Pay Stub Detail Dialog */}
+      <Dialog open={showPaystubDialog} onOpenChange={setShowPaystubDialog}>
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-auto">
+          <DialogHeader>
+            <DialogTitle>Pay Stub Details</DialogTitle>
+            {selectedPaystub && (
+              <DialogDescription>
+                {selectedPaystub.payPeriod.name} - Pay Date: {format(new Date(selectedPaystub.payDate), 'MMM d, yyyy')}
+              </DialogDescription>
+            )}
+          </DialogHeader>
+          {selectedPaystub && (
+            <div className="py-4">
+              <ActualPaycheck paycheck={selectedPaystub} settings={settings} />
+            </div>
           )}
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowPaystubDialog(false)}>
+              Close
+            </Button>
+            <Button className="gap-2">
+              <Download className="w-4 h-4" />
+              Download PDF
+            </Button>
+            <Button className="gap-2">
+              <Printer className="w-4 h-4" />
+              Print
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
     </div>

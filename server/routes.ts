@@ -2352,6 +2352,33 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Employee pay stub access endpoints
+  app.get('/api/employee/:employeeId/pay-stubs', async (req, res) => {
+    try {
+      const { employeeId } = req.params;
+      const year = req.query.year ? parseInt(req.query.year as string) : new Date().getFullYear();
+      
+      const payStubs = await storage.getEmployeePayStubs(employeeId, year);
+      res.json(payStubs);
+    } catch (error) {
+      console.error('Error fetching employee pay stubs:', error);
+      res.status(500).json({ message: 'Failed to fetch pay stubs' });
+    }
+  });
+
+  app.get('/api/employee/:employeeId/payroll-summary', async (req, res) => {
+    try {
+      const { employeeId } = req.params;
+      const year = req.query.year ? parseInt(req.query.year as string) : new Date().getFullYear();
+      
+      const summary = await storage.getEmployeePayrollSummary(employeeId, year);
+      res.json(summary);
+    } catch (error) {
+      console.error('Error fetching employee payroll summary:', error);
+      res.status(500).json({ message: 'Failed to fetch payroll summary' });
+    }
+  });
+
   app.delete('/api/hr/payroll/pay-periods/:id', isAuthenticated, requirePermission(Permission.MANAGE_PAYROLL), async (req, res) => {
     try {
       await storage.deletePayPeriod(req.params.id);

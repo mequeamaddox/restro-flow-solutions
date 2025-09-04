@@ -2782,6 +2782,70 @@ export class DatabaseStorage implements IStorage {
     return updatedPaystub;
   }
 
+  async getEmployeePayStubs(employeeId: string, year: number): Promise<any[]> {
+    const startDate = new Date(year, 0, 1);
+    const endDate = new Date(year + 1, 0, 1);
+
+    const results = await db
+      .select({
+        paystub: paystubs,
+        payPeriod: payPeriods
+      })
+      .from(paystubs)
+      .leftJoin(payPeriods, eq(paystubs.payPeriodId, payPeriods.id))
+      .where(
+        and(
+          eq(paystubs.employeeId, employeeId),
+          gte(payPeriods.payDate, startDate),
+          lt(payPeriods.payDate, endDate)
+        )
+      )
+      .orderBy(desc(payPeriods.payDate));
+
+    return results.map(result => ({
+      ...result.paystub,
+      payPeriod: result.payPeriod
+    }));
+  }
+
+  async getEmployeePayrollSummary(employeeId: string, year: number): Promise<any> {
+    const startDate = new Date(year, 0, 1);
+    const endDate = new Date(year + 1, 0, 1);
+
+    const results = await db
+      .select({
+        paystub: paystubs,
+        payPeriod: payPeriods
+      })
+      .from(paystubs)
+      .leftJoin(payPeriods, eq(paystubs.payPeriodId, payPeriods.id))
+      .where(
+        and(
+          eq(paystubs.employeeId, employeeId),
+          gte(payPeriods.payDate, startDate),
+          lt(payPeriods.payDate, endDate),
+          eq(paystubs.status, 'calculated')
+        )
+      );
+
+    const yearToDateGross = results.reduce((sum, r) => sum + parseFloat(r.paystub.grossPay || '0'), 0);
+    const yearToDateNet = results.reduce((sum, r) => sum + parseFloat(r.paystub.netPay || '0'), 0);
+    const yearToDateTaxes = results.reduce((sum, r) => sum + parseFloat(r.paystub.totalDeductions || '0'), 0);
+    const totalHours = results.reduce((sum, r) => 
+      sum + parseFloat(r.paystub.regularHours || '0') + parseFloat(r.paystub.overtimeHours || '0'), 0
+    );
+
+    return {
+      totalGrossPay: yearToDateGross,
+      totalNetPay: yearToDateNet,
+      totalDeductions: yearToDateTaxes,
+      averageHours: results.length > 0 ? totalHours / results.length : 0,
+      yearToDateGross,
+      yearToDateNet,
+      yearToDateTaxes
+    };
+  }
+
   async getPaystubsByPeriod(payPeriodId: string): Promise<(Paystub & { employee?: Employee })[]> {
     const paystubResults = await db
       .select({
