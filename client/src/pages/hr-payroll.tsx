@@ -15,6 +15,7 @@ import { useToast } from '@/hooks/use-toast';
 import { useLocation } from '@/contexts/LocationContext';
 import { Calendar, Plus, Download, DollarSign, Users, Clock, TrendingUp, FileText, Eye, Check, Calculator, Printer, Mail, Trash2 } from 'lucide-react';
 import { format, startOfWeek, endOfWeek, addDays } from 'date-fns';
+import { ActualPaycheck } from '@/components/payroll/actual-paycheck';
 
 interface PayrollPeriod {
   id: string;
@@ -1433,78 +1434,37 @@ Note: 1 grid = 10 rows/columns
         </DialogContent>
       </Dialog>
 
-      {/* Paycheck Details Dialog */}
+      {/* Paycheck Details Dialog - Real Check Format */}
       <Dialog open={showPaystubDialog} onOpenChange={setShowPaystubDialog}>
-        <DialogContent className="max-w-2xl">
+        <DialogContent className="max-w-7xl max-h-[90vh] overflow-y-auto">
           {selectedPaycheck && (
             <>
               <DialogHeader>
-                <DialogTitle>Pay Stub Details</DialogTitle>
+                <DialogTitle className="flex items-center justify-between">
+                  <span>Paycheck - {selectedPaycheck.employee.firstName} {selectedPaycheck.employee.lastName}</span>
+                  <div className="flex gap-2">
+                    <Button 
+                      variant="outline" 
+                      size="sm"
+                      onClick={() => window.print()}
+                      data-testid="print-actual-paycheck"
+                    >
+                      <Printer className="h-4 w-4 mr-2" />
+                      Print
+                    </Button>
+                  </div>
+                </DialogTitle>
                 <DialogDescription>
-                  {selectedPaycheck.employee.firstName} {selectedPaycheck.employee.lastName} - Check #{selectedPaycheck.checkNumber}
+                  Check #{selectedPaycheck.checkNumber} - {selectedPaycheck.employee.firstName} {selectedPaycheck.employee.lastName}
                 </DialogDescription>
               </DialogHeader>
               
-              <div className="space-y-6">
-                <div className="grid grid-cols-2 gap-6">
-                  <div>
-                    <h3 className="font-semibold mb-3">Earnings</h3>
-                    <div className="space-y-2 text-sm">
-                      <div className="flex justify-between">
-                        <span>Regular Hours ({parseFloat(selectedPaycheck.regularHours).toFixed(2)} @ {formatCurrency(selectedPaycheck.hourlyRate)}):</span>
-                        <span>{formatCurrency(selectedPaycheck.regularPay)}</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span>Overtime Hours ({parseFloat(selectedPaycheck.overtimeHours).toFixed(2)} @ {formatCurrency(parseFloat(selectedPaycheck.hourlyRate) * 1.5)}):</span>
-                        <span>{formatCurrency(selectedPaycheck.overtimePay)}</span>
-                      </div>
-                      <Separator />
-                      <div className="flex justify-between font-semibold">
-                        <span>Gross Pay:</span>
-                        <span>{formatCurrency(selectedPaycheck.grossPay)}</span>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div>
-                    <h3 className="font-semibold mb-3">Deductions</h3>
-                    <div className="space-y-2 text-sm">
-                      <div className="flex justify-between">
-                        <span>Federal Tax:</span>
-                        <span>{formatCurrency(selectedPaycheck.federalTax)}</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span>State Tax:</span>
-                        <span>{formatCurrency(selectedPaycheck.stateTax)}</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span>Social Security:</span>
-                        <span>{formatCurrency(selectedPaycheck.socialSecurity)}</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span>Medicare:</span>
-                        <span>{formatCurrency(selectedPaycheck.medicare)}</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span>Other:</span>
-                        <span>{formatCurrency(selectedPaycheck.otherDeductions)}</span>
-                      </div>
-                      <Separator />
-                      <div className="flex justify-between font-semibold">
-                        <span>Total Deductions:</span>
-                        <span>{formatCurrency(selectedPaycheck.totalDeductions)}</span>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                <Separator />
-                
-                <div className="text-center">
-                  <div className="text-lg font-bold text-green-600">
-                    Net Pay: {formatCurrency(selectedPaycheck.netPay)}
-                  </div>
-                </div>
+              <div className="mt-4">
+                <ActualPaycheck 
+                  settings={paycheckSettings}
+                  employee={selectedPaycheck.employee}
+                  paycheck={selectedPaycheck}
+                />
               </div>
             </>
           )}

@@ -1,4 +1,5 @@
 import React from 'react';
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Printer, Download } from "lucide-react";
 
@@ -74,141 +75,77 @@ export function PaycheckGenerator({ settings, employee, paycheck }: PaycheckGene
 
       case 'check_on_top':
         return (
-          <div className="bg-white text-black font-mono" style={{ width: '8.5in', margin: '0 auto' }}>
-            {/* Actual Check Format - Matches Pawleys Fish Camp */}
-            <div className="border-b-2 border-dashed border-gray-400 pb-4 mb-4" style={{ height: '3.5in', padding: '0.5in' }}>
-              
-              {/* Top row: Business name, Bank name, Check number */}
-              <div className="flex justify-between items-start mb-4">
-                <div className="text-sm font-bold">
-                  {settings?.businessName || 'Pawleys Fish Camp'}<br/>
-                  10744 Ocean Hwy<br/>
-                  G<br/>
-                  Pawleys Island, SC 29585
-                </div>
-                <div className="text-center">
-                  <div className="text-sm font-bold">First Citizens Bank</div>
+          <div className={commonStyles}>
+            {/* Check portion on top */}
+            <div className="border-b-2 border-dashed border-gray-400 pb-4 mb-4">
+              <div className="flex justify-between items-center">
+                <div>
+                  <div className="text-lg font-bold">{settings?.businessName || 'Business Name'}</div>
+                  {settings?.displayTaxFilingName && (
+                    <div className="text-sm text-gray-600">{settings?.taxFilingName}</div>
+                  )}
                 </div>
                 <div className="text-right">
-                  <div className="text-xl font-bold">{settings?.lastCheckNumber || '3461'}</div>
-                  <div className="text-sm mt-2">{paycheck?.payDate || new Date().toLocaleDateString()}</div>
+                  {settings?.showLastCheckNumber && (
+                    <div className="text-sm">Check #{settings?.lastCheckNumber || 1000}</div>
+                  )}
+                  <div className="text-xl font-mono">${paycheck?.netPay || '0.00'}</div>
                 </div>
               </div>
-
-              {/* PAY TO THE ORDER OF section */}
-              <div className="mt-8 mb-4">
-                <div className="text-xs font-bold mb-1">PAY TO THE</div>
-                <div className="text-xs font-bold mb-2">ORDER OF</div>
-                <div className="border-b border-black pb-1">
-                  <span className="text-base font-bold ml-4">{employee?.firstName} {employee?.lastName}</span>
-                </div>
-              </div>
-
-              {/* Amount in words and dollar box */}
-              <div className="flex justify-between items-center my-6">
-                <div className="flex-1">
-                  <div className="border-b border-black pb-1">
-                    <span className="text-sm capitalize">
-                      {convertNumberToWords(parseFloat(paycheck?.netPay || '27.70')).toLowerCase()} and {String(parseFloat(paycheck?.netPay || '27.70')).split('.')[1] || '00'}/100 Dollars
-                    </span>
-                  </div>
-                </div>
-                <div className="ml-4 border border-black px-3 py-1">
-                  <span className="text-lg font-bold">${paycheck?.netPay || '27.70'}</span>
-                </div>
-              </div>
-
-              {/* Employee name and signature line */}
-              <div className="flex justify-between items-end mt-8">
-                <div className="text-sm">
-                  {employee?.firstName} {employee?.lastName}
+              <div className="mt-4 flex justify-between">
+                <div>
+                  <div className="font-semibold">{employee?.firstName} {employee?.lastName}</div>
+                  {settings?.displayLast4Ssn && employee?.ssn && (
+                    <div className="text-sm">SSN: {formatSSN(employee.ssn)}</div>
+                  )}
                 </div>
                 <div className="text-right">
-                  <div className="border-b border-black w-64 pb-2 mb-1">
-                    {settings?.printSignature && (
-                      <span className="text-sm">AUTHORIZED SIGNATURE</span>
-                    )}
-                  </div>
+                  <div>Pay Date: {paycheck?.payDate || new Date().toLocaleDateString()}</div>
+                  {settings?.printSignature && (
+                    <div className="mt-2 text-sm italic">Electronically Signed</div>
+                  )}
                 </div>
-              </div>
-
-              {/* Bank routing numbers at bottom */}
-              <div className="mt-4 text-center font-mono text-xs">
-                C{settings?.lastCheckNumber || '3461'}C A053906041A 9166868409C
               </div>
             </div>
-
-            {/* Pay Stub Section - Matches exact format */}
+            {/* Stub details below */}
             <PayStubDetails settings={settings} employee={employee} paycheck={paycheck} />
           </div>
         );
 
       case 'check_on_bottom':
         return (
-          <div className="bg-white text-black font-mono" style={{ width: '8.5in', margin: '0 auto' }}>
-            {/* Pay Stub Section - Top */}
+          <div className={commonStyles}>
+            {/* Stub details on top */}
             <PayStubDetails settings={settings} employee={employee} paycheck={paycheck} />
-            
-            {/* Actual Check Format - Bottom */}
-            <div className="border-t-2 border-dashed border-gray-400 pt-4 mt-4" style={{ height: '3.5in', padding: '0.5in' }}>
-              
-              {/* Top row: Business name, Bank name, Check number */}
-              <div className="flex justify-between items-start mb-4">
-                <div className="text-sm font-bold">
-                  {settings?.businessName || 'Pawleys Fish Camp'}<br/>
-                  10744 Ocean Hwy<br/>
-                  G<br/>
-                  Pawleys Island, SC 29585
-                </div>
-                <div className="text-center">
-                  <div className="text-sm font-bold">First Citizens Bank</div>
+            {/* Check portion on bottom */}
+            <div className="border-t-2 border-dashed border-gray-400 pt-4 mt-4">
+              <div className="flex justify-between items-center">
+                <div>
+                  <div className="text-lg font-bold">{settings?.businessName || 'Business Name'}</div>
+                  {settings?.displayTaxFilingName && (
+                    <div className="text-sm text-gray-600">{settings?.taxFilingName}</div>
+                  )}
                 </div>
                 <div className="text-right">
-                  <div className="text-xl font-bold">{settings?.lastCheckNumber || '3461'}</div>
-                  <div className="text-sm mt-2">{paycheck?.payDate || new Date().toLocaleDateString()}</div>
+                  {settings?.showLastCheckNumber && (
+                    <div className="text-sm">Check #{settings?.lastCheckNumber || 1000}</div>
+                  )}
+                  <div className="text-xl font-mono">${paycheck?.netPay || '0.00'}</div>
                 </div>
               </div>
-
-              {/* PAY TO THE ORDER OF section */}
-              <div className="mt-8 mb-4">
-                <div className="text-xs font-bold mb-1">PAY TO THE</div>
-                <div className="text-xs font-bold mb-2">ORDER OF</div>
-                <div className="border-b border-black pb-1">
-                  <span className="text-base font-bold ml-4">{employee?.firstName} {employee?.lastName}</span>
-                </div>
-              </div>
-
-              {/* Amount in words and dollar box */}
-              <div className="flex justify-between items-center my-6">
-                <div className="flex-1">
-                  <div className="border-b border-black pb-1">
-                    <span className="text-sm capitalize">
-                      {convertNumberToWords(parseFloat(paycheck?.netPay || '27.70')).toLowerCase()} and {String(parseFloat(paycheck?.netPay || '27.70')).split('.')[1] || '00'}/100 Dollars
-                    </span>
-                  </div>
-                </div>
-                <div className="ml-4 border border-black px-3 py-1">
-                  <span className="text-lg font-bold">${paycheck?.netPay || '27.70'}</span>
-                </div>
-              </div>
-
-              {/* Employee name and signature line */}
-              <div className="flex justify-between items-end mt-8">
-                <div className="text-sm">
-                  {employee?.firstName} {employee?.lastName}
+              <div className="mt-4 flex justify-between">
+                <div>
+                  <div className="font-semibold">{employee?.firstName} {employee?.lastName}</div>
+                  {settings?.displayLast4Ssn && employee?.ssn && (
+                    <div className="text-sm">SSN: {formatSSN(employee.ssn)}</div>
+                  )}
                 </div>
                 <div className="text-right">
-                  <div className="border-b border-black w-64 pb-2 mb-1">
-                    {settings?.printSignature && (
-                      <span className="text-sm">AUTHORIZED SIGNATURE</span>
-                    )}
-                  </div>
+                  <div>Pay Date: {paycheck?.payDate || new Date().toLocaleDateString()}</div>
+                  {settings?.printSignature && (
+                    <div className="mt-2 text-sm italic">Electronically Signed</div>
+                  )}
                 </div>
-              </div>
-
-              {/* Bank routing numbers at bottom */}
-              <div className="mt-4 text-center font-mono text-xs">
-                C{settings?.lastCheckNumber || '3461'}C A053906041A 9166868409C
               </div>
             </div>
           </div>
@@ -225,33 +162,40 @@ export function PaycheckGenerator({ settings, employee, paycheck }: PaycheckGene
   };
 
   return (
-    <div className="w-full" data-testid="live-preview">
-      <div className="flex justify-between items-center mb-4 no-print">
-        <div className="text-sm text-gray-600">
-          Layout: <span className="font-semibold capitalize">{settings?.paycheckLayout?.replace('_', ' ')}</span>
+    <Card className="w-full max-w-4xl mx-auto">
+      <CardHeader>
+        <CardTitle className="flex items-center justify-between">
+          <span>Paycheck Preview</span>
+          <div className="flex gap-2">
+            <Button 
+              variant="outline" 
+              size="sm"
+              onClick={() => window.print()}
+              data-testid="print-paycheck"
+            >
+              <Printer className="h-4 w-4 mr-2" />
+              Print
+            </Button>
+            <Button 
+              variant="outline" 
+              size="sm"
+              data-testid="download-paycheck"
+            >
+              <Download className="h-4 w-4 mr-2" />
+              Download
+            </Button>
+          </div>
+        </CardTitle>
+      </CardHeader>
+      <CardContent>
+        <div className="space-y-4">
+          <div className="text-sm text-gray-600 mb-4">
+            Layout: <span className="font-semibold capitalize">{settings?.paycheckLayout?.replace('_', ' ')}</span>
+          </div>
+          {renderPaycheckLayout()}
         </div>
-        <div className="flex gap-2">
-          <Button 
-            variant="outline" 
-            size="sm"
-            onClick={() => window.print()}
-            data-testid="print-paycheck"
-          >
-            <Printer className="h-4 w-4 mr-2" />
-            Print
-          </Button>
-          <Button 
-            variant="outline" 
-            size="sm"
-            data-testid="download-paycheck"
-          >
-            <Download className="h-4 w-4 mr-2" />
-            Download
-          </Button>
-        </div>
-      </div>
-      {renderPaycheckLayout()}
-    </div>
+      </CardContent>
+    </Card>
   );
 }
 
