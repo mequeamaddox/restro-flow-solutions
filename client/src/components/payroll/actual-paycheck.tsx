@@ -39,6 +39,18 @@ interface ActualPaycheckProps {
 }
 
 export function ActualPaycheck({ paycheck, settings }: ActualPaycheckProps) {
+  // Helper function to safely format dates
+  const safeFormatDate = (dateString: string | null | undefined): string => {
+    if (!dateString) return 'Invalid Date';
+    try {
+      const date = new Date(dateString);
+      if (isNaN(date.getTime())) return 'Invalid Date';
+      return date.toLocaleDateString();
+    } catch (error) {
+      return 'Invalid Date';
+    }
+  };
+
   // Convert number to written words for check
   const convertNumberToWords = (num: number): string => {
     const ones = ['', 'ONE', 'TWO', 'THREE', 'FOUR', 'FIVE', 'SIX', 'SEVEN', 'EIGHT', 'NINE'];
@@ -107,7 +119,7 @@ export function ActualPaycheck({ paycheck, settings }: ActualPaycheckProps) {
           </div>
           <div className="text-right">
             <div className="text-xl font-bold">{paycheck.checkNumber}</div>
-            <div className="text-sm mt-2">{new Date(paycheck.payDate).toLocaleDateString()}</div>
+            <div className="text-sm mt-2">{safeFormatDate(paycheck.payDate)}</div>
           </div>
         </div>
 
@@ -140,7 +152,7 @@ export function ActualPaycheck({ paycheck, settings }: ActualPaycheckProps) {
           <div>
             <div className="text-xs mb-1">MEMO</div>
             <div className="text-sm border-b border-black pb-1" style={{ width: '200px' }}>
-              Payroll - {new Date(paycheck.payPeriod.startDate).toLocaleDateString()} to {new Date(paycheck.payPeriod.endDate).toLocaleDateString()}
+              Payroll - {safeFormatDate(paycheck.payPeriod?.startDate)} to {safeFormatDate(paycheck.payPeriod?.endDate)}
             </div>
           </div>
           <div className="text-right">
@@ -190,11 +202,11 @@ export function ActualPaycheck({ paycheck, settings }: ActualPaycheckProps) {
           <div className="grid grid-cols-3 gap-4 text-sm">
             <div>
               <strong>Pay Period:</strong><br/>
-              {new Date(paycheck.payPeriod.startDate).toLocaleDateString()} - {new Date(paycheck.payPeriod.endDate).toLocaleDateString()}
+              {safeFormatDate(paycheck.payPeriod?.startDate)} - {safeFormatDate(paycheck.payPeriod?.endDate)}
             </div>
             <div>
               <strong>Pay Date:</strong><br/>
-              {new Date(paycheck.payDate).toLocaleDateString()}
+              {safeFormatDate(paycheck.payDate)}
             </div>
             <div>
               <strong>Check Number:</strong><br/>

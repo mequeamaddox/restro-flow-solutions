@@ -72,6 +72,18 @@ export default function EmployeePayStubs() {
   const { toast } = useToast();
   const { user } = useAuth();
 
+  // Helper function to safely format dates
+  const safeFormatDate = (dateString: string | null | undefined, formatString: string): string => {
+    if (!dateString) return 'Invalid Date';
+    try {
+      const date = new Date(dateString);
+      if (isNaN(date.getTime())) return 'Invalid Date';
+      return format(date, formatString);
+    } catch (error) {
+      return 'Invalid Date';
+    }
+  };
+
   const userId = (user as any)?.id || (user as any)?.claims?.sub;
 
   // Fetch employee pay stubs
@@ -258,10 +270,10 @@ export default function EmployeePayStubs() {
                         <p className="text-sm text-gray-600">
                           {paystub.payPeriod?.startDate && paystub.payPeriod?.endDate ? (
                             <>
-                              {format(new Date(paystub.payPeriod.startDate), 'MMM d')} - {format(new Date(paystub.payPeriod.endDate), 'MMM d, yyyy')}
+                              {safeFormatDate(paystub.payPeriod.startDate, 'MMM d')} - {safeFormatDate(paystub.payPeriod.endDate, 'MMM d, yyyy')}
                             </>
                           ) : (
-                            `Pay Date: ${format(new Date(paystub.payDate), 'MMM d, yyyy')}`
+                            `Pay Date: ${safeFormatDate(paystub.payDate, 'MMM d, yyyy')}`
                           )}
                         </p>
                       </div>
@@ -324,7 +336,7 @@ export default function EmployeePayStubs() {
             <DialogTitle>Pay Stub Details</DialogTitle>
             {selectedPaystub && (
               <DialogDescription>
-                {selectedPaystub.payPeriod?.name || 'Pay Period'} - Pay Date: {format(new Date(selectedPaystub.payDate), 'MMM d, yyyy')}
+                {selectedPaystub.payPeriod?.name || 'Pay Period'} - Pay Date: {safeFormatDate(selectedPaystub.payDate, 'MMM d, yyyy')}
               </DialogDescription>
             )}
           </DialogHeader>
