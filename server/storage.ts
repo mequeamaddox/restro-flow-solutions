@@ -2130,8 +2130,17 @@ export class DatabaseStorage implements IStorage {
   // HR Time Entry operations (for time clock)
   async getTimeEntries(): Promise<(TimeEntry & { employee?: Employee })[]> {
     try {
-      // Just get basic time entries without complex joins to avoid timestamp issues
-      const entries = await db.select().from(timeEntries).orderBy(desc(timeEntries.createdAt));
+      // Get time entries with safe timestamp handling
+      const entries = await db.select({
+        id: timeEntries.id,
+        employeeId: timeEntries.employeeId,
+        clockInTime: timeEntries.clockInTime,
+        clockOutTime: timeEntries.clockOutTime,
+        totalHours: timeEntries.totalHours,
+        status: timeEntries.status,
+        notes: timeEntries.notes,
+        createdAt: timeEntries.createdAt
+      }).from(timeEntries).orderBy(desc(timeEntries.createdAt));
       
       // Get employee info separately to avoid join issues
       const employeeMap = new Map();
@@ -2151,10 +2160,10 @@ export class DatabaseStorage implements IStorage {
       
       return entries.map(entry => ({
         ...entry,
-        clockInTime: entry.clockInTime?.toISOString() || new Date().toISOString(),
-        clockOutTime: entry.clockOutTime?.toISOString() || null,
-        breakStartTime: entry.breakStartTime?.toISOString() || null,
-        breakEndTime: entry.breakEndTime?.toISOString() || null,
+        clockInTime: entry.clockInTime ? new Date(entry.clockInTime).toISOString() : new Date().toISOString(),
+        clockOutTime: entry.clockOutTime ? new Date(entry.clockOutTime).toISOString() : null,
+        breakStartTime: entry.breakStartTime ? new Date(entry.breakStartTime).toISOString() : null,
+        breakEndTime: entry.breakEndTime ? new Date(entry.breakEndTime).toISOString() : null,
         status: entry.status || 'clocked-in',
         employee: employeeMap.get(entry.employeeId)
       })) as (TimeEntry & { employee?: Employee })[];

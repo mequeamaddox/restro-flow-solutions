@@ -68,11 +68,6 @@ export default function HRPaycheckSettings() {
 
   const { data: settings, isLoading } = useQuery<PaycheckSettings>({
     queryKey: ['/api/payroll/paycheck-settings'],
-    onSuccess: (data) => {
-      if (data?.paycheckLayout) {
-        setSelectedLayout(data.paycheckLayout);
-      }
-    }
   });
 
   // Update selected layout when settings load
@@ -275,7 +270,7 @@ export default function HRPaycheckSettings() {
           <div className="flex items-center space-x-3">
             <Checkbox
               id="displayLast4Ssn"
-              checked={settings?.displayLast4Ssn || false}
+              checked={(settings as any)?.displayLast4Ssn || false}
               onCheckedChange={(checked) => handleOptionChange('displayLast4Ssn', !!checked)}
               disabled={!canManage}
               data-testid="checkbox-display-ssn"
@@ -295,7 +290,7 @@ export default function HRPaycheckSettings() {
           <div className="flex items-center space-x-3">
             <Checkbox
               id="displayTaxFilingName"
-              checked={settings?.displayTaxFilingName || false}
+              checked={(settings as any)?.displayTaxFilingName || false}
               onCheckedChange={(checked) => handleOptionChange('displayTaxFilingName', !!checked)}
               disabled={!canManage}
               data-testid="checkbox-tax-filing-name"
@@ -315,7 +310,7 @@ export default function HRPaycheckSettings() {
           <div className="flex items-center space-x-3">
             <Checkbox
               id="displayBusinessName"
-              checked={settings?.displayBusinessName || false}
+              checked={(settings as any)?.displayBusinessName || false}
               onCheckedChange={(checked) => handleOptionChange('displayBusinessName', !!checked)}
               disabled={!canManage}
               data-testid="checkbox-business-name"
@@ -335,7 +330,7 @@ export default function HRPaycheckSettings() {
           <div className="flex items-center space-x-3">
             <Checkbox
               id="printSignature"
-              checked={settings?.printSignature || false}
+              checked={(settings as any)?.printSignature || false}
               onCheckedChange={(checked) => handleOptionChange('printSignature', !!checked)}
               disabled={!canManage}
               data-testid="checkbox-print-signature"
@@ -355,7 +350,7 @@ export default function HRPaycheckSettings() {
           <div className="flex items-center space-x-3">
             <Checkbox
               id="showLastCheckNumber"
-              checked={settings?.showLastCheckNumber || false}
+              checked={(settings as any)?.showLastCheckNumber || false}
               onCheckedChange={(checked) => handleOptionChange('showLastCheckNumber', !!checked)}
               disabled={!canManage}
               data-testid="checkbox-check-number"

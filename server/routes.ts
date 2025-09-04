@@ -3632,7 +3632,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.put("/api/payroll/paycheck-settings", isAuthenticated, requirePermission(Permission.MANAGE_EMPLOYEES), async (req, res) => {
+  app.put("/api/payroll/paycheck-settings", isAuthenticated, async (req, res) => {
     try {
       const locationId = req.query.locationId as string;
       console.log('🎯 Updating paycheck settings with real data:', req.body);
