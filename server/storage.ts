@@ -2640,6 +2640,148 @@ export class DatabaseStorage implements IStorage {
     return payPeriod;
   }
 
+  async createManualPaystub(payPeriodId: string, manualData: any): Promise<Paystub> {
+    const {
+      employeeId,
+      regularHours,
+      overtimeHours,
+      regularRate,
+      bonuses,
+      tips,
+      customDeductions,
+      notes
+    } = manualData;
+
+    // Get employee details
+    const employee = await this.getEmployee(employeeId);
+    if (!employee) throw new Error('Employee not found');
+
+    // Get paycheck settings for check number generation
+    const paycheckSettings = await this.getPaycheckSettings();
+
+    // Calculate pay
+    const regHours = parseFloat(regularHours) || 0;
+    const otHours = parseFloat(overtimeHours) || 0;
+    const rate = parseFloat(regularRate) || 0;
+    const bonusAmount = parseFloat(bonuses) || 0;
+    const tipAmount = parseFloat(tips) || 0;
+    const customDeductionAmount = parseFloat(customDeductions) || 0;
+
+    const regularPay = regHours * rate;
+    const overtimePay = otHours * rate * 1.5;
+    const grossPay = regularPay + overtimePay + bonusAmount + tipAmount;
+
+    // Calculate taxes
+    const federalTax = grossPay * 0.08;
+    const stateTax = grossPay * 0.02;
+    const socialSecurity = grossPay * 0.062;
+    const medicare = grossPay * 0.0145;
+    
+    const totalDeductions = federalTax + stateTax + socialSecurity + medicare + customDeductionAmount;
+    const netPay = grossPay - totalDeductions;
+
+    // Generate check number
+    let checkNumber: number | undefined;
+    if (paycheckSettings?.showLastCheckNumber) {
+      checkNumber = (paycheckSettings.lastCheckNumber || 1000) + 1;
+      await this.updatePaycheckSettings({ lastCheckNumber: checkNumber });
+    }
+
+    // Create paystub
+    const paystubData = {
+      payPeriodId,
+      employeeId,
+      regularHours: regHours.toString(),
+      overtimeHours: otHours.toString(),
+      regularRate: rate.toString(),
+      overtimeRate: (rate * 1.5).toString(),
+      regularPay: regularPay.toString(),
+      overtimePay: overtimePay.toString(),
+      bonuses: bonusAmount.toString(),
+      tips: tipAmount.toString(),
+      grossPay: grossPay.toString(),
+      federalTax: federalTax.toString(),
+      stateTax: stateTax.toString(),
+      socialSecurity: socialSecurity.toString(),
+      medicare: medicare.toString(),
+      otherDeductions: customDeductionAmount.toString(),
+      totalDeductions: totalDeductions.toString(),
+      netPay: netPay.toString(),
+      status: 'calculated',
+      checkNumber: checkNumber?.toString(),
+      notes
+    };
+
+    const [createdPaystub] = await db
+      .insert(paystubs)
+      .values(paystubData)
+      .returning();
+
+    return createdPaystub;
+  }
+
+  async updatePaystub(paystubId: string, updateData: any): Promise<Paystub> {
+    const {
+      regularHours,
+      overtimeHours,
+      regularRate,
+      bonuses,
+      tips,
+      customDeductions,
+      notes
+    } = updateData;
+
+    // Recalculate pay based on new values
+    const regHours = parseFloat(regularHours) || 0;
+    const otHours = parseFloat(overtimeHours) || 0;
+    const rate = parseFloat(regularRate) || 0;
+    const bonusAmount = parseFloat(bonuses) || 0;
+    const tipAmount = parseFloat(tips) || 0;
+    const customDeductionAmount = parseFloat(customDeductions) || 0;
+
+    const regularPay = regHours * rate;
+    const overtimePay = otHours * rate * 1.5;
+    const grossPay = regularPay + overtimePay + bonusAmount + tipAmount;
+
+    // Calculate taxes
+    const federalTax = grossPay * 0.08;
+    const stateTax = grossPay * 0.02;
+    const socialSecurity = grossPay * 0.062;
+    const medicare = grossPay * 0.0145;
+    
+    const totalDeductions = federalTax + stateTax + socialSecurity + medicare + customDeductionAmount;
+    const netPay = grossPay - totalDeductions;
+
+    const updatedData = {
+      regularHours: regHours.toString(),
+      overtimeHours: otHours.toString(),
+      regularRate: rate.toString(),
+      overtimeRate: (rate * 1.5).toString(),
+      regularPay: regularPay.toString(),
+      overtimePay: overtimePay.toString(),
+      bonuses: bonusAmount.toString(),
+      tips: tipAmount.toString(),
+      grossPay: grossPay.toString(),
+      federalTax: federalTax.toString(),
+      stateTax: stateTax.toString(),
+      socialSecurity: socialSecurity.toString(),
+      medicare: medicare.toString(),
+      otherDeductions: customDeductionAmount.toString(),
+      totalDeductions: totalDeductions.toString(),
+      netPay: netPay.toString(),
+      notes,
+      updatedAt: new Date()
+    };
+
+    const [updatedPaystub] = await db
+      .update(paystubs)
+      .set(updatedData)
+      .where(eq(paystubs.id, paystubId))
+      .returning();
+
+    return updatedPaystub;
+  }
+
   async getPaystubsByPeriod(payPeriodId: string): Promise<(Paystub & { employee?: Employee })[]> {
     const paystubResults = await db
       .select({

@@ -54,6 +54,9 @@ interface Paystub {
   checkNumber: string;
   payDate: string;
   status: 'draft' | 'calculated' | 'paid';
+  bonuses?: string;
+  tips?: string;
+  notes?: string;
   employee: {
     id: string;
     firstName: string;
@@ -76,6 +79,8 @@ export default function HRPayroll() {
   const [showCreateDialog, setShowCreateDialog] = useState(false);
   const [showPaystubDialog, setShowPaystubDialog] = useState(false);
   const [showApprovalDialog, setShowApprovalDialog] = useState(false);
+  const [showManualPayrollDialog, setShowManualPayrollDialog] = useState(false);
+  const [editingPaystub, setEditingPaystub] = useState<Paystub | null>(null);
   
   // Form State
   const [newPeriodForm, setNewPeriodForm] = useState({
@@ -83,6 +88,17 @@ export default function HRPayroll() {
     endDate: format(endOfWeek(new Date(), { weekStartsOn: 1 }), 'yyyy-MM-dd'),
     payDate: format(addDays(endOfWeek(new Date(), { weekStartsOn: 1 }), 3), 'yyyy-MM-dd'),
     frequency: 'weekly'
+  });
+  
+  const [manualPayrollForm, setManualPayrollForm] = useState({
+    employeeId: '',
+    regularHours: '',
+    overtimeHours: '',
+    regularRate: '',
+    bonuses: '',
+    tips: '',
+    customDeductions: '',
+    notes: ''
   });
   
   const { toast } = useToast();
@@ -108,6 +124,15 @@ export default function HRPayroll() {
       return response.json();
     },
     enabled: !!selectedPeriod?.id,
+  });
+
+  // Fetch employees for manual entry
+  const { data: employees = [] } = useQuery({
+    queryKey: ['/api/hr/employees'],
+    queryFn: async () => {
+      const response = await apiRequest('GET', '/api/hr/employees');
+      return response.json();
+    },
   });
 
   // Get paycheck settings
@@ -195,10 +220,94 @@ export default function HRPayroll() {
     },
   });
 
+  // Manual payroll entry
+  const createManualPayrollMutation = useMutation({
+    mutationFn: async (data: any) => {
+      const response = await apiRequest('POST', `/api/payroll-periods/${selectedPeriod?.id}/manual-paycheck`, { 
+        body: data 
+      });
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/payroll-periods', selectedPeriod?.id, 'paychecks'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/payroll-periods'] });
+      setShowManualPayrollDialog(false);
+      resetManualForm();
+      toast({ 
+        title: "Manual Paycheck Created", 
+        description: "Manual paycheck entry has been saved successfully." 
+      });
+    },
+    onError: (error: any) => {
+      toast({ 
+        title: "Failed to Create", 
+        description: error.message || "Failed to create manual paycheck", 
+        variant: "destructive" 
+      });
+    },
+  });
+
+  // Update existing paycheck
+  const updatePaycheckMutation = useMutation({
+    mutationFn: async ({ paycheckId, data }: { paycheckId: string; data: any }) => {
+      const response = await apiRequest('PATCH', `/api/paychecks/${paycheckId}`, { 
+        body: data 
+      });
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/payroll-periods', selectedPeriod?.id, 'paychecks'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/payroll-periods'] });
+      setEditingPaystub(null);
+      toast({ 
+        title: "Paycheck Updated", 
+        description: "Paycheck has been updated successfully." 
+      });
+    },
+    onError: (error: any) => {
+      toast({ 
+        title: "Update Failed", 
+        description: error.message || "Failed to update paycheck", 
+        variant: "destructive" 
+      });
+    },
+  });
+
   const handleCreatePeriod = () => {
     createPeriodMutation.mutate({
       ...newPeriodForm,
       locationId: currentLocation?.id
+    });
+  };
+
+  const resetManualForm = () => {
+    setManualPayrollForm({
+      employeeId: '',
+      regularHours: '',
+      overtimeHours: '',
+      regularRate: '',
+      bonuses: '',
+      tips: '',
+      customDeductions: '',
+      notes: ''
+    });
+  };
+
+  const handleCreateManualPayroll = () => {
+    createManualPayrollMutation.mutate(manualPayrollForm);
+  };
+
+  const handleEditPaystub = (paystub: Paystub) => {
+    setEditingPaystub(paystub);
+    setManualPayrollForm({
+      employeeId: paystub.employeeId,
+      regularHours: paystub.regularHours,
+      overtimeHours: paystub.overtimeHours,
+      regularRate: paystub.regularRate,
+      bonuses: paystub.bonuses || '0',
+      tips: paystub.tips || '0',
+      customDeductions: '0',
+      notes: paystub.notes || ''
     });
   };
 
@@ -296,15 +405,26 @@ export default function HRPayroll() {
             {/* Step Actions */}
             <div className="flex gap-4">
               {currentStep === 'calculate' && (
-                <Button 
-                  onClick={() => calculatePayrollMutation.mutate(selectedPeriod.id)}
-                  disabled={calculatePayrollMutation.isPending}
-                  size="lg"
-                  className="gap-2"
-                >
-                  <Calculator className="w-4 h-4" />
-                  {calculatePayrollMutation.isPending ? 'Calculating...' : 'Calculate Payroll'}
-                </Button>
+                <>
+                  <Button 
+                    onClick={() => calculatePayrollMutation.mutate(selectedPeriod.id)}
+                    disabled={calculatePayrollMutation.isPending}
+                    size="lg"
+                    className="gap-2"
+                  >
+                    <Calculator className="w-4 h-4" />
+                    {calculatePayrollMutation.isPending ? 'Calculating...' : 'Calculate Payroll'}
+                  </Button>
+                  <Button 
+                    onClick={() => setShowManualPayrollDialog(true)}
+                    variant="outline"
+                    size="lg"
+                    className="gap-2"
+                  >
+                    <Plus className="w-4 h-4" />
+                    Manual Entry
+                  </Button>
+                </>
               )}
               
               {currentStep === 'review' && paystubs.length > 0 && (
@@ -471,18 +591,30 @@ export default function HRPayroll() {
                                 ${parseFloat(paystub.grossPay).toFixed(2)} gross
                               </div>
                             </div>
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => {
-                                setSelectedPaystub(paystub);
-                                setShowPaystubDialog(true);
-                              }}
-                              className="gap-2"
-                            >
-                              <Eye className="w-4 h-4" />
-                              View
-                            </Button>
+                            <div className="flex gap-2">
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => {
+                                  setSelectedPaystub(paystub);
+                                  setShowPaystubDialog(true);
+                                }}
+                                className="gap-2"
+                              >
+                                <Eye className="w-4 h-4" />
+                                View
+                              </Button>
+                              {selectedPeriod?.status === 'calculated' && (
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => handleEditPaystub(paystub)}
+                                  className="gap-2"
+                                >
+                                  Edit
+                                </Button>
+                              )}
+                            </div>
                           </div>
                         </div>
                       ))}
@@ -625,6 +757,189 @@ export default function HRPayroll() {
             <Button className="gap-2">
               <Printer className="w-4 h-4" />
               Print Paycheck
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Manual Payroll Entry Dialog */}
+      <Dialog open={showManualPayrollDialog || editingPaystub !== null} onOpenChange={(open) => {
+        if (!open) {
+          setShowManualPayrollDialog(false);
+          setEditingPaystub(null);
+          resetManualForm();
+        }
+      }}>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-auto">
+          <DialogHeader>
+            <DialogTitle>{editingPaystub ? 'Edit Paycheck' : 'Manual Payroll Entry'}</DialogTitle>
+            <DialogDescription>
+              {editingPaystub 
+                ? `Editing paycheck for ${editingPaystub.employee.firstName} ${editingPaystub.employee.lastName}`
+                : 'Create a manual paycheck entry for special cases, bonuses, or corrections'
+              }
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="space-y-4 py-4">
+            {/* Employee Selection - Only show if creating new entry */}
+            {!editingPaystub && (
+              <div>
+                <Label>Employee *</Label>
+                <Select 
+                  value={manualPayrollForm.employeeId} 
+                  onValueChange={(value) => setManualPayrollForm({...manualPayrollForm, employeeId: value})}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select employee" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {employees.filter((emp: any) => emp.status === 'active').map((employee: any) => (
+                      <SelectItem key={employee.id} value={employee.id}>
+                        {employee.firstName} {employee.lastName} - {employee.department?.name || 'No Dept'}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
+
+            {/* Hours Section */}
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <Label>Regular Hours</Label>
+                <Input
+                  type="number"
+                  step="0.25"
+                  value={manualPayrollForm.regularHours}
+                  onChange={(e) => setManualPayrollForm({...manualPayrollForm, regularHours: e.target.value})}
+                  placeholder="40.00"
+                />
+              </div>
+              <div>
+                <Label>Overtime Hours</Label>
+                <Input
+                  type="number"
+                  step="0.25"
+                  value={manualPayrollForm.overtimeHours}
+                  onChange={(e) => setManualPayrollForm({...manualPayrollForm, overtimeHours: e.target.value})}
+                  placeholder="0.00"
+                />
+              </div>
+            </div>
+
+            {/* Rate Section */}
+            <div>
+              <Label>Regular Rate ($)</Label>
+              <Input
+                type="number"
+                step="0.01"
+                value={manualPayrollForm.regularRate}
+                onChange={(e) => setManualPayrollForm({...manualPayrollForm, regularRate: e.target.value})}
+                placeholder="15.00"
+              />
+            </div>
+
+            {/* Additional Compensation */}
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <Label>Bonuses ($)</Label>
+                <Input
+                  type="number"
+                  step="0.01"
+                  value={manualPayrollForm.bonuses}
+                  onChange={(e) => setManualPayrollForm({...manualPayrollForm, bonuses: e.target.value})}
+                  placeholder="0.00"
+                />
+              </div>
+              <div>
+                <Label>Tips ($)</Label>
+                <Input
+                  type="number"
+                  step="0.01"
+                  value={manualPayrollForm.tips}
+                  onChange={(e) => setManualPayrollForm({...manualPayrollForm, tips: e.target.value})}
+                  placeholder="0.00"
+                />
+              </div>
+            </div>
+
+            {/* Custom Deductions */}
+            <div>
+              <Label>Custom Deductions ($)</Label>
+              <Input
+                type="number"
+                step="0.01"
+                value={manualPayrollForm.customDeductions}
+                onChange={(e) => setManualPayrollForm({...manualPayrollForm, customDeductions: e.target.value})}
+                placeholder="0.00"
+              />
+              <p className="text-sm text-muted-foreground mt-1">
+                Additional deductions beyond standard taxes (uniforms, cash drawer shortage, etc.)
+              </p>
+            </div>
+
+            {/* Notes */}
+            <div>
+              <Label>Notes</Label>
+              <Input
+                value={manualPayrollForm.notes}
+                onChange={(e) => setManualPayrollForm({...manualPayrollForm, notes: e.target.value})}
+                placeholder="Reason for manual entry..."
+              />
+            </div>
+
+            {/* Preview Calculation */}
+            {manualPayrollForm.regularHours && manualPayrollForm.regularRate && (
+              <div className="bg-gray-50 p-4 rounded-lg space-y-2">
+                <div className="font-medium">Preview Calculation:</div>
+                <div className="grid grid-cols-2 gap-4 text-sm">
+                  <div>
+                    <div>Regular Pay: ${((parseFloat(manualPayrollForm.regularHours) || 0) * (parseFloat(manualPayrollForm.regularRate) || 0)).toFixed(2)}</div>
+                    <div>Overtime Pay: ${((parseFloat(manualPayrollForm.overtimeHours) || 0) * (parseFloat(manualPayrollForm.regularRate) || 0) * 1.5).toFixed(2)}</div>
+                    <div>Bonuses: ${(parseFloat(manualPayrollForm.bonuses) || 0).toFixed(2)}</div>
+                    <div>Tips: ${(parseFloat(manualPayrollForm.tips) || 0).toFixed(2)}</div>
+                  </div>
+                  <div>
+                    <div className="font-medium">
+                      Gross Pay: ${(
+                        (parseFloat(manualPayrollForm.regularHours) || 0) * (parseFloat(manualPayrollForm.regularRate) || 0) +
+                        (parseFloat(manualPayrollForm.overtimeHours) || 0) * (parseFloat(manualPayrollForm.regularRate) || 0) * 1.5 +
+                        (parseFloat(manualPayrollForm.bonuses) || 0) +
+                        (parseFloat(manualPayrollForm.tips) || 0)
+                      ).toFixed(2)}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+
+          <DialogFooter>
+            <Button 
+              variant="outline" 
+              onClick={() => {
+                setShowManualPayrollDialog(false);
+                setEditingPaystub(null);
+                resetManualForm();
+              }}
+            >
+              Cancel
+            </Button>
+            <Button 
+              onClick={editingPaystub ? 
+                () => updatePaycheckMutation.mutate({ paycheckId: editingPaystub.id, data: manualPayrollForm }) :
+                handleCreateManualPayroll
+              }
+              disabled={
+                !manualPayrollForm.employeeId || 
+                !manualPayrollForm.regularHours || 
+                !manualPayrollForm.regularRate ||
+                createManualPayrollMutation.isPending ||
+                updatePaycheckMutation.isPending
+              }
+            >
+              {editingPaystub ? 'Update Paycheck' : 'Create Manual Entry'}
             </Button>
           </DialogFooter>
         </DialogContent>

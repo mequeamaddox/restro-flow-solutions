@@ -2325,6 +2325,33 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Manual payroll entry endpoints
+  app.post('/api/payroll-periods/:id/manual-paycheck', async (req, res) => {
+    try {
+      const payPeriodId = req.params.id;
+      const manualData = req.body;
+      
+      const paystub = await storage.createManualPaystub(payPeriodId, manualData);
+      res.status(201).json(paystub);
+    } catch (error) {
+      console.error('Error creating manual paycheck:', error);
+      res.status(500).json({ message: 'Failed to create manual paycheck' });
+    }
+  });
+
+  app.patch('/api/paychecks/:id', async (req, res) => {
+    try {
+      const paycheckId = req.params.id;
+      const updateData = req.body;
+      
+      const updatedPaystub = await storage.updatePaystub(paycheckId, updateData);
+      res.json(updatedPaystub);
+    } catch (error) {
+      console.error('Error updating paycheck:', error);
+      res.status(500).json({ message: 'Failed to update paycheck' });
+    }
+  });
+
   app.delete('/api/hr/payroll/pay-periods/:id', isAuthenticated, requirePermission(Permission.MANAGE_PAYROLL), async (req, res) => {
     try {
       await storage.deletePayPeriod(req.params.id);
