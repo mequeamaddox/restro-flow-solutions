@@ -35,7 +35,9 @@ import {
   MessageSquare,
   UserCircle,
   Home,
-  BookOpen
+  BookOpen,
+  Building,
+  Briefcase
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import logoImg from "@assets/IMG_20250812_004328_1754973838131.png";
@@ -58,6 +60,8 @@ const navigation = [
 const hrNavigation = [
   { name: 'HR Dashboard', href: '/hr/dashboard', icon: Users, badge: 'ADD-ON' },
   { name: 'Employees', href: '/hr/employees', icon: Users },
+  { name: 'Departments', href: '/hr/departments', icon: Building },
+  { name: 'Positions', href: '/hr/positions', icon: Briefcase },
   { name: 'Documents & Onboarding', href: '/hr/documents', icon: FileText },
   { name: 'Analytics', href: '/hr/analytics', icon: BarChart3, badge: 'LIVE' },
   { name: 'Scheduling', href: '/hr/scheduling', icon: Calendar },

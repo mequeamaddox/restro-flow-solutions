@@ -46,6 +46,7 @@ import EmployeeSettings from "@/pages/employee-settings";
 import EmployeeHandbook from "@/pages/employee-handbook";
 import EmployeeBuildSheets from "@/pages/employee-build-sheets";
 import EmployeePayStubs from "@/pages/employee-pay-stubs";
+import EmployeeTimeOff from "@/pages/employee-time-off";
 import PublicOnboarding from "@/pages/public-onboarding";
 import Sidebar from "@/components/layout/sidebar";
 import Header from "@/components/layout/header";
@@ -141,6 +142,7 @@ function Router() {
                 <Route path="/employee/time-clock" component={EmployeeTimeClock} />
                 <Route path="/employee/timeclock" component={EmployeeTimeClock} />
                 <Route path="/employee/schedule" component={EmployeeSchedule} />
+                <Route path="/employee/time-off" component={EmployeeTimeOff} />
                 <Route path="/employee/settings" component={EmployeeSettings} />
                 <Route component={NotFound} />
               </Switch>
