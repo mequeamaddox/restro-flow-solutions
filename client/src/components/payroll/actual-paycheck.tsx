@@ -1,18 +1,50 @@
 import React from 'react';
 
 interface ActualPaycheckProps {
-  settings: any;
-  employee: any;
-  paycheck: any;
+  paycheck: {
+    checkNumber: string;
+    regularHours: string;
+    overtimeHours: string;
+    regularRate: string;
+    overtimeRate: string;
+    regularPay: string;
+    overtimePay: string;
+    grossPay: string;
+    federalTax: string;
+    stateTax: string;
+    socialSecurity: string;
+    medicare: string;
+    totalDeductions: string;
+    netPay: string;
+    payDate: string;
+    payPeriod: {
+      startDate: string;
+      endDate: string;
+    };
+    employee: {
+      firstName: string;
+      lastName: string;
+      address: string;
+      phone: string;
+    };
+  };
+  settings?: {
+    businessName?: string;
+    taxFilingName?: string;
+    lastCheckNumber?: string;
+    displayBusinessName?: boolean;
+    displayTaxFilingName?: boolean;
+    printSignature?: boolean;
+  };
 }
 
-export function ActualPaycheck({ settings, employee, paycheck }: ActualPaycheckProps) {
+export function ActualPaycheck({ paycheck, settings }: ActualPaycheckProps) {
   // Convert number to written words for check
   const convertNumberToWords = (num: number): string => {
     const ones = ['', 'ONE', 'TWO', 'THREE', 'FOUR', 'FIVE', 'SIX', 'SEVEN', 'EIGHT', 'NINE'];
     const teens = ['TEN', 'ELEVEN', 'TWELVE', 'THIRTEEN', 'FOURTEEN', 'FIFTEEN', 'SIXTEEN', 'SEVENTEEN', 'EIGHTEEN', 'NINETEEN'];
     const tens = ['', '', 'TWENTY', 'THIRTY', 'FORTY', 'FIFTY', 'SIXTY', 'SEVENTY', 'EIGHTY', 'NINETY'];
-    const thousands = ['', 'THOUSAND', 'MILLION', 'BILLION'];
+    const thousands = ['', 'THOUSAND', 'MILLION'];
 
     if (num === 0) return 'ZERO';
     if (num < 0) return 'NEGATIVE ' + convertNumberToWords(-num);
@@ -53,180 +85,192 @@ export function ActualPaycheck({ settings, employee, paycheck }: ActualPaycheckP
     return result.trim();
   };
 
+  const netAmount = parseFloat(paycheck.netPay);
+  const dollarAmount = Math.floor(netAmount);
+  const centsAmount = Math.round((netAmount % 1) * 100);
+  const amountInWords = convertNumberToWords(dollarAmount);
+
   return (
     <div className="bg-white text-black font-mono print:p-0" style={{ width: '8.5in', margin: '0 auto' }}>
-      {/* Actual Check Format - Matches Pawleys Fish Camp */}
+      {/* Professional Check Format */}
       <div className="border-b-2 border-dashed border-gray-400 pb-4 mb-4" style={{ height: '3.5in', padding: '0.5in' }}>
         
-        {/* Top row: Business name, Bank name, Check number */}
+        {/* Top row: Business info, Bank, Check number */}
         <div className="flex justify-between items-start mb-4">
           <div className="text-sm font-bold leading-tight">
-            {settings?.businessName || 'Your Business Name'}<br/>
-            {settings?.businessAddress || '123 Business Street'}<br/>
-            {settings?.businessCity || 'City'}, {settings?.businessState || 'ST'} {settings?.businessZip || '12345'}
+            {settings?.businessName || 'RestroFlow Restaurant'}<br/>
+            123 Main Street<br/>
+            Charleston, SC 29401
           </div>
           <div className="text-center">
-            <div className="text-sm font-bold">{settings?.bankName || 'Your Bank'}</div>
+            <div className="text-sm font-bold">First Citizens Bank</div>
           </div>
           <div className="text-right">
-            <div className="text-xl font-bold">{paycheck?.checkNumber || (settings?.lastCheckNumber || '1000')}</div>
-            <div className="text-sm mt-2">{paycheck?.payDate || new Date().toLocaleDateString()}</div>
+            <div className="text-xl font-bold">{paycheck.checkNumber}</div>
+            <div className="text-sm mt-2">{new Date(paycheck.payDate).toLocaleDateString()}</div>
           </div>
         </div>
 
-        {/* PAY TO THE ORDER OF section */}
-        <div className="mt-8 mb-4">
-          <div className="text-xs font-bold mb-1">PAY TO THE</div>
-          <div className="text-xs font-bold mb-2">ORDER OF</div>
-          <div className="border-b border-black pb-1">
-            <span className="text-base font-bold ml-4">{employee?.firstName} {employee?.lastName}</span>
+        {/* Pay to line */}
+        <div className="mb-4">
+          <div className="text-sm mb-1">PAY TO THE ORDER OF</div>
+          <div className="text-lg font-bold border-b border-black pb-1">
+            {paycheck.employee.firstName} {paycheck.employee.lastName}
           </div>
         </div>
 
-        {/* Amount in words and dollar box */}
-        <div className="flex justify-between items-center my-6">
-          <div className="flex-1">
-            <div className="border-b border-black pb-1">
-              <span className="text-sm capitalize">
-                {convertNumberToWords(parseFloat(paycheck?.netPay || '0')).toLowerCase()} and {String(parseFloat(paycheck?.netPay || '0')).split('.')[1]?.padEnd(2, '0') || '00'}/100 Dollars
-              </span>
+        {/* Amount section */}
+        <div className="flex justify-between items-center mb-4">
+          <div className="flex-1 mr-4">
+            <div className="text-xs mb-1">AMOUNT IN WORDS</div>
+            <div className="text-sm font-bold border-b border-black pb-1">
+              {amountInWords} DOLLARS AND {centsAmount.toString().padStart(2, '0')}/100 CENTS
             </div>
           </div>
-          <div className="ml-4 border border-black px-3 py-1">
-            <span className="text-lg font-bold">${paycheck?.netPay || '0.00'}</span>
-          </div>
-        </div>
-
-        {/* Employee name and signature line */}
-        <div className="flex justify-between items-end mt-8">
-          <div className="text-sm">
-            {employee?.firstName} {employee?.lastName}
-          </div>
           <div className="text-right">
-            <div className="border-b border-black w-64 pb-2 mb-1">
-              {settings?.printSignature && (
-                <span className="text-sm">AUTHORIZED SIGNATURE</span>
-              )}
+            <div className="text-xs mb-1">$</div>
+            <div className="text-xl font-bold border border-black px-2 py-1">
+              {parseFloat(paycheck.netPay).toFixed(2)}
             </div>
           </div>
         </div>
 
-        {/* Bank routing numbers at bottom */}
-        <div className="mt-4 text-center font-mono text-xs">
-          C{paycheck?.checkNumber || (settings?.lastCheckNumber || '1000')}C {settings?.routingNumber || 'A000000000A'} {settings?.accountNumber || '0000000000C'}
-        </div>
-      </div>
-
-      {/* Pay Stub Section - Detailed breakdown */}
-      <div className="grid grid-cols-3 gap-6 text-xs p-4">
-        {/* Employee Info */}
-        <div>
-          <div className="font-bold mb-2">{employee?.firstName} {employee?.lastName}</div>
-          <div>{employee?.address || 'Employee Address'}</div>
-          <div>{employee?.phone || '(555) 123-4567'}</div>
-        </div>
-
-        {/* Business Info */}
-        <div>
-          <div className="font-bold mb-2">{settings?.businessName || 'Your Business Name'}</div>
-          <div>{settings?.businessAddress || '123 Business Street'}</div>
-          <div>{settings?.businessCity || 'City'}, {settings?.businessState || 'ST'} {settings?.businessZip || '12345'}</div>
-          <div>{settings?.businessPhone || '(555) 123-4567'}</div>
-          <div>{settings?.businessState || 'ST'} EIN: {settings?.businessEIN || '12-3456789'}</div>
-        </div>
-
-        {/* Pay Period Info */}
-        <div>
-          <div className="font-bold mb-2">Pay Period</div>
-          <div>{paycheck?.payPeriod?.startDate || 'Start Date'} - {paycheck?.payPeriod?.endDate || 'End Date'}</div>
-          <div className="mt-2">
-            <div><span className="font-semibold">Pay Type:</span> {employee?.payType || 'Hourly'}</div>
-            <div><span className="font-semibold">Pay Date:</span> {paycheck?.payDate || new Date().toLocaleDateString()}</div>
-            <div><span className="font-semibold">Check#:</span> {paycheck?.checkNumber || (settings?.lastCheckNumber || '3461')}</div>
+        {/* Memo and signature line */}
+        <div className="flex justify-between items-end">
+          <div>
+            <div className="text-xs mb-1">MEMO</div>
+            <div className="text-sm border-b border-black pb-1" style={{ width: '200px' }}>
+              Payroll - {new Date(paycheck.payPeriod.startDate).toLocaleDateString()} to {new Date(paycheck.payPeriod.endDate).toLocaleDateString()}
+            </div>
+          </div>
+          <div className="text-right">
+            <div className="text-sm border-b border-black pb-1" style={{ width: '200px' }}>
+              {settings?.printSignature ? 'AUTHORIZED SIGNATURE' : ''}
+            </div>
           </div>
         </div>
+
+        {/* Check routing numbers */}
+        <div className="mt-4 text-xs text-center">
+          C{paycheck.checkNumber}C A053906041A 123456789C
+        </div>
       </div>
 
-      {/* Detailed Pay Information */}
-      <div className="grid grid-cols-4 gap-4 text-xs p-4 border-t border-gray-300">
-        {/* Hours */}
-        <div>
-          <div className="font-bold border-b mb-2">HOURS</div>
-          <div className="space-y-1">
-            <div className="font-semibold">Description</div>
-            <div>Regular</div>
-            <div>Server</div>
+      {/* Pay Stub - Employee Copy */}
+      <div className="p-4 bg-gray-50" style={{ minHeight: '4.5in' }}>
+        <div className="text-center mb-4">
+          <h2 className="text-lg font-bold">{settings?.businessName || 'RestroFlow Restaurant'}</h2>
+          <p className="text-sm">Employee Pay Stub</p>
+        </div>
+
+        <div className="grid grid-cols-2 gap-6">
+          {/* Employee Info */}
+          <div>
+            <div className="font-bold mb-2">{paycheck.employee.firstName} {paycheck.employee.lastName}</div>
+            <div className="text-sm space-y-1">
+              <div>{paycheck.employee.address}</div>
+              <div>{paycheck.employee.phone}</div>
+            </div>
+          </div>
+
+          {/* Business Info */}
+          <div>
+            <div className="font-bold mb-2">{settings?.businessName || 'RestroFlow Restaurant'}</div>
+            <div className="text-sm space-y-1">
+              <div>123 Main Street</div>
+              <div>Charleston, SC 29401</div>
+              <div>(843) 555-0123</div>
+              <div>SC EIN: 12-3456789</div>
+            </div>
+          </div>
+        </div>
+
+        {/* Pay Period and Check Info */}
+        <div className="mt-6 mb-4 p-3 bg-white border rounded">
+          <div className="grid grid-cols-3 gap-4 text-sm">
+            <div>
+              <strong>Pay Period:</strong><br/>
+              {new Date(paycheck.payPeriod.startDate).toLocaleDateString()} - {new Date(paycheck.payPeriod.endDate).toLocaleDateString()}
+            </div>
+            <div>
+              <strong>Pay Date:</strong><br/>
+              {new Date(paycheck.payDate).toLocaleDateString()}
+            </div>
+            <div>
+              <strong>Check Number:</strong><br/>
+              {paycheck.checkNumber}
+            </div>
           </div>
         </div>
 
         {/* Earnings */}
-        <div>
-          <div className="font-bold border-b mb-2">EARNINGS</div>
-          <div className="space-y-1">
-            <div className="grid grid-cols-3 gap-1 text-xs font-semibold">
-              <span>Hours</span>
-              <span>Rate</span>
-              <span>Pay Period</span>
+        <div className="mb-4">
+          <h3 className="font-bold text-sm mb-2 bg-gray-200 p-2">EARNINGS</h3>
+          <div className="grid grid-cols-4 gap-2 text-sm">
+            <div className="font-semibold">Description</div>
+            <div className="font-semibold text-right">Hours</div>
+            <div className="font-semibold text-right">Rate</div>
+            <div className="font-semibold text-right">Amount</div>
+            
+            <div>Regular Pay</div>
+            <div className="text-right">{parseFloat(paycheck.regularHours).toFixed(2)}</div>
+            <div className="text-right">${parseFloat(paycheck.regularRate).toFixed(2)}</div>
+            <div className="text-right">${parseFloat(paycheck.regularPay).toFixed(2)}</div>
+            
+            {parseFloat(paycheck.overtimeHours) > 0 && (
+              <>
+                <div>Overtime Pay</div>
+                <div className="text-right">{parseFloat(paycheck.overtimeHours).toFixed(2)}</div>
+                <div className="text-right">${parseFloat(paycheck.overtimeRate).toFixed(2)}</div>
+                <div className="text-right">${parseFloat(paycheck.overtimePay).toFixed(2)}</div>
+              </>
+            )}
+            
+            <div className="border-t pt-1 font-semibold">GROSS PAY</div>
+            <div className="border-t pt-1"></div>
+            <div className="border-t pt-1"></div>
+            <div className="border-t pt-1 text-right font-semibold">${parseFloat(paycheck.grossPay).toFixed(2)}</div>
+          </div>
+        </div>
+
+        {/* Deductions */}
+        <div className="mb-4">
+          <h3 className="font-bold text-sm mb-2 bg-gray-200 p-2">DEDUCTIONS</h3>
+          <div className="grid grid-cols-2 gap-4 text-sm">
+            <div className="space-y-1">
+              <div className="flex justify-between">
+                <span>Federal Tax:</span>
+                <span>${parseFloat(paycheck.federalTax).toFixed(2)}</span>
+              </div>
+              <div className="flex justify-between">
+                <span>State Tax:</span>
+                <span>${parseFloat(paycheck.stateTax).toFixed(2)}</span>
+              </div>
             </div>
-            <div className="grid grid-cols-3 gap-1">
-              <span>{parseFloat(paycheck?.regularHours || '0').toFixed(2)}</span>
-              <span>${parseFloat(paycheck?.hourlyRate || '0').toFixed(2)}</span>
-              <span>${parseFloat(paycheck?.regularPay || '0').toFixed(2)}</span>
+            <div className="space-y-1">
+              <div className="flex justify-between">
+                <span>Social Security:</span>
+                <span>${parseFloat(paycheck.socialSecurity).toFixed(2)}</span>
+              </div>
+              <div className="flex justify-between">
+                <span>Medicare:</span>
+                <span>${parseFloat(paycheck.medicare).toFixed(2)}</span>
+              </div>
+            </div>
+          </div>
+          <div className="border-t pt-2 mt-2">
+            <div className="flex justify-between font-semibold">
+              <span>TOTAL DEDUCTIONS:</span>
+              <span>${parseFloat(paycheck.totalDeductions).toFixed(2)}</span>
             </div>
           </div>
         </div>
 
-        {/* Employee Taxes */}
-        <div>
-          <div className="font-bold border-b mb-2">EMPLOYEE TAXES</div>
-          <div className="space-y-1">
-            <div className="grid grid-cols-2 gap-1 text-xs font-semibold">
-              <span>Description</span>
-              <span>Pay Period</span>
-            </div>
-            <div className="grid grid-cols-2 gap-1">
-              <span>Social Security</span>
-              <span>${parseFloat(paycheck?.socialSecurity || '0').toFixed(2)}</span>
-            </div>
-            <div className="grid grid-cols-2 gap-1">
-              <span>Medicare</span>
-              <span>${parseFloat(paycheck?.medicare || '0').toFixed(2)}</span>
-            </div>
-            <div className="grid grid-cols-2 gap-1">
-              <span>South Carolina State Tax</span>
-              <span>${parseFloat(paycheck?.stateTax || '0').toFixed(2)}</span>
-            </div>
-            <div className="grid grid-cols-2 gap-1 font-semibold border-t pt-1">
-              <span>Totals</span>
-              <span>${parseFloat(paycheck?.totalDeductions || '0').toFixed(2)}</span>
-            </div>
-          </div>
-        </div>
-
-        {/* Check Totals */}
-        <div>
-          <div className="font-bold border-b mb-2">CHECK TOTALS</div>
-          <div className="space-y-1">
-            <div className="grid grid-cols-2 gap-1 text-xs font-semibold">
-              <span>Description</span>
-              <span>Pay Period</span>
-            </div>
-            <div className="grid grid-cols-2 gap-1">
-              <span>Gross Pay</span>
-              <span>${parseFloat(paycheck?.grossPay || '0').toFixed(2)}</span>
-            </div>
-            <div className="grid grid-cols-2 gap-1">
-              <span>Total Employee Taxes</span>
-              <span>${parseFloat(paycheck?.totalDeductions || '0').toFixed(2)}</span>
-            </div>
-            <div className="grid grid-cols-2 gap-1 font-semibold border-t pt-1">
-              <span>Check #{paycheck?.checkNumber || (settings?.lastCheckNumber || '3461')}</span>
-              <span>${parseFloat(paycheck?.netPay || '0').toFixed(2)}</span>
-            </div>
-            <div className="grid grid-cols-2 gap-1 font-semibold">
-              <span>Total Net Pay</span>
-              <span>${parseFloat(paycheck?.netPay || '0').toFixed(2)}</span>
-            </div>
+        {/* Net Pay */}
+        <div className="bg-green-50 border border-green-200 rounded p-3">
+          <div className="flex justify-between items-center">
+            <span className="text-lg font-bold">NET PAY:</span>
+            <span className="text-xl font-bold text-green-600">${parseFloat(paycheck.netPay).toFixed(2)}</span>
           </div>
         </div>
       </div>
