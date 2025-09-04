@@ -32,7 +32,7 @@ interface PayrollPeriod {
 
 interface Paycheck {
   id: string;
-  payrollPeriodId: string;
+  payPeriodId: string;
   employeeId: string;
   checkNumber?: string;
   regularHours: string;
@@ -234,12 +234,13 @@ export default function HRPayroll() {
         const netPay = grossPay - totalDeductions;
 
         const paycheckData = {
-          payrollPeriodId: periodId,
+          payPeriodId: periodId,
           employeeId: employee.id,
           checkNumber: `${employee.id.slice(-4)}-${format(new Date(), 'yyMMdd')}`,
           regularHours: regularHours.toFixed(2),
           overtimeHours: overtimeHours.toFixed(2),
-          hourlyRate: hourlyRate.toFixed(2),
+          regularRate: hourlyRate.toFixed(2),
+          overtimeRate: (hourlyRate * 1.5).toFixed(2),
           regularPay: regularPay.toFixed(2),
           overtimePay: overtimePay.toFixed(2),
           grossPay: grossPay.toFixed(2),
@@ -418,7 +419,7 @@ Note: 1 grid = 10 rows/columns
         
         return {
           id: `temp-${employee.id}`,
-          payrollPeriodId: selectedPayPeriod?.id || '',
+          payPeriodId: selectedPayPeriod?.id || '',
           employeeId: employee.id,
           employee: employee,
           checkNumber: `${employee.id.slice(-4)}-${format(new Date(), 'yyMMdd')}`,
@@ -449,7 +450,7 @@ Note: 1 grid = 10 rows/columns
         
         return {
           id: `sample-${employee.id}`,
-          payrollPeriodId: selectedPayPeriod?.id || '',
+          payPeriodId: selectedPayPeriod?.id || '',
           employeeId: employee.id,
           employee: employee,
           checkNumber: `${employee.id.slice(-4)}-${format(new Date(), 'yyMMdd')}`,
