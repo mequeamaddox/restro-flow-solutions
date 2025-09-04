@@ -2130,21 +2130,39 @@ export class DatabaseStorage implements IStorage {
   // HR Time Entry operations (for time clock)
   async getTimeEntries(): Promise<(TimeEntry & { employee?: Employee })[]> {
     try {
-      // Get time entries with safe timestamp handling
-      const entries = await db.select({
-        id: timeEntries.id,
-        employeeId: timeEntries.employeeId,
-        clockInTime: timeEntries.clockInTime,
-        clockOutTime: timeEntries.clockOutTime,
-        totalHours: timeEntries.totalHours,
-        status: timeEntries.status,
-        notes: timeEntries.notes,
-        createdAt: timeEntries.createdAt
-      }).from(timeEntries).orderBy(desc(timeEntries.createdAt));
+      // Get time entries with basic fields only to avoid timestamp issues
+      const rawEntries = await db.execute(sql`
+        SELECT 
+          id, 
+          employee_id,
+          CASE WHEN clock_in_time IS NOT NULL THEN clock_in_time::text ELSE NULL END as clock_in_time,
+          CASE WHEN clock_out_time IS NOT NULL THEN clock_out_time::text ELSE NULL END as clock_out_time,
+          CASE WHEN break_start_time IS NOT NULL THEN break_start_time::text ELSE NULL END as break_start_time,
+          CASE WHEN break_end_time IS NOT NULL THEN break_end_time::text ELSE NULL END as break_end_time,
+          total_hours,
+          status,
+          notes,
+          CASE WHEN created_at IS NOT NULL THEN created_at::text ELSE NULL END as created_at
+        FROM time_entries 
+        ORDER BY created_at DESC NULLS LAST
+      `);
       
-      // Get employee info separately to avoid join issues
+      const entries = rawEntries.rows.map((row: any) => ({
+        id: row.id,
+        employeeId: row.employee_id,
+        clockInTime: row.clock_in_time,
+        clockOutTime: row.clock_out_time,
+        breakStartTime: row.break_start_time,
+        breakEndTime: row.break_end_time,
+        totalHours: row.total_hours,
+        status: row.status,
+        notes: row.notes,
+        createdAt: row.created_at
+      }));
+      
+      // Get employee info separately to avoid join issues  
       const employeeMap = new Map();
-      const employeeIds = [...new Set(entries.map(e => e.employeeId))];
+      const employeeIds = [...new Set(entries.map(e => e.employeeId).filter(id => id))];
       
       if (employeeIds.length > 0) {
         const employeeData = await db.select({
@@ -2161,14 +2179,14 @@ export class DatabaseStorage implements IStorage {
       return entries.map(entry => ({
         id: entry.id,
         employeeId: entry.employeeId,
-        clockInTime: entry.clockInTime ? (entry.clockInTime instanceof Date ? entry.clockInTime.toISOString() : new Date(entry.clockInTime).toISOString()) : new Date().toISOString(),
-        clockOutTime: entry.clockOutTime ? (entry.clockOutTime instanceof Date ? entry.clockOutTime.toISOString() : new Date(entry.clockOutTime).toISOString()) : null,
-        breakStartTime: entry.breakStartTime ? (entry.breakStartTime instanceof Date ? entry.breakStartTime.toISOString() : new Date(entry.breakStartTime).toISOString()) : null,
-        breakEndTime: entry.breakEndTime ? (entry.breakEndTime instanceof Date ? entry.breakEndTime.toISOString() : new Date(entry.breakEndTime).toISOString()) : null,
+        clockInTime: entry.clockInTime || new Date().toISOString(),
+        clockOutTime: entry.clockOutTime || null,
+        breakStartTime: entry.breakStartTime || null,
+        breakEndTime: entry.breakEndTime || null,
         totalHours: entry.totalHours || 0,
         status: entry.status || 'clocked-in',
         notes: entry.notes,
-        createdAt: entry.createdAt ? (entry.createdAt instanceof Date ? entry.createdAt.toISOString() : new Date(entry.createdAt).toISOString()) : new Date().toISOString(),
+        createdAt: entry.createdAt || new Date().toISOString(),
         employee: employeeMap.get(entry.employeeId)
       })) as (TimeEntry & { employee?: Employee })[];
     } catch (error) {
@@ -2188,13 +2206,23 @@ export class DatabaseStorage implements IStorage {
   }
 
   async clockIn(employeeId: string, shiftId?: string): Promise<TimeEntry> {
+    const clockInTime = new Date();
     const [entry] = await db.insert(timeEntries).values({
       employeeId,
       shiftId: shiftId || null,
-      clockInTime: new Date(),
+      clockInTime,
       status: 'clocked-in',
+      createdAt: new Date(),
     }).returning();
-    return entry;
+    return {
+      ...entry,
+      clockInTime: clockInTime.toISOString(),
+      clockOutTime: null,
+      breakStartTime: null,
+      breakEndTime: null,
+      totalHours: 0,
+      createdAt: clockInTime.toISOString()
+    } as TimeEntry;
   }
 
   async clockOut(entryId: string): Promise<TimeEntry> {
@@ -3581,9 +3609,10 @@ export class DatabaseStorage implements IStorage {
       const settings = await query.limit(1);
       
       if (settings.length === 0) {
-        // Create default settings if none exist
+        // Create default settings if none exist - ensure locationId is never null
+        const defaultLocationId = locationId || "8d0336af-20da-41fb-a37e-dfdae21ba9bb";
         const defaultSettings = {
-          locationId: locationId || null,
+          locationId: defaultLocationId,
           paycheckLayout: 'check_stub_only' as const,
           displayLast4Ssn: true,
           displayTaxFilingName: true,
@@ -3628,9 +3657,10 @@ export class DatabaseStorage implements IStorage {
         console.log('✅ Updated paycheck settings:', updated);
         return updated;
       } else {
-        // Create new settings if none exist
+        // Create new settings if none exist - ensure locationId is never null  
+        const defaultLocationId = locationId || "8d0336af-20da-41fb-a37e-dfdae21ba9bb";
         const newSettings = {
-          locationId: locationId || null,
+          locationId: defaultLocationId,
           ...settingsData,
           isActive: true
         };
