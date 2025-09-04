@@ -3785,7 +3785,7 @@ export class DatabaseStorage implements IStorage {
               id: entry.employeeId,
               firstName: entry.employeeFirstName || '',
               lastName: entry.employeeLastName || '',
-              hourlyWage: entry.employeeHourlyWage || '15.00'
+              hourlyWage: entry.employeeHourlyWage || ''
             } as Employee
           });
         }
