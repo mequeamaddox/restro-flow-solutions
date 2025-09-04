@@ -61,16 +61,15 @@ export function ActualPaycheck({ settings, employee, paycheck }: ActualPaycheckP
         {/* Top row: Business name, Bank name, Check number */}
         <div className="flex justify-between items-start mb-4">
           <div className="text-sm font-bold leading-tight">
-            {settings?.businessName || 'Pawleys Fish Camp'}<br/>
-            10744 Ocean Hwy<br/>
-            G<br/>
-            Pawleys Island, SC 29585
+            {settings?.businessName || 'Your Business Name'}<br/>
+            {settings?.businessAddress || '123 Business Street'}<br/>
+            {settings?.businessCity || 'City'}, {settings?.businessState || 'ST'} {settings?.businessZip || '12345'}
           </div>
           <div className="text-center">
-            <div className="text-sm font-bold">First Citizens Bank</div>
+            <div className="text-sm font-bold">{settings?.bankName || 'Your Bank'}</div>
           </div>
           <div className="text-right">
-            <div className="text-xl font-bold">{paycheck?.checkNumber || (settings?.lastCheckNumber || '3461')}</div>
+            <div className="text-xl font-bold">{paycheck?.checkNumber || (settings?.lastCheckNumber || '1000')}</div>
             <div className="text-sm mt-2">{paycheck?.payDate || new Date().toLocaleDateString()}</div>
           </div>
         </div>
@@ -114,7 +113,7 @@ export function ActualPaycheck({ settings, employee, paycheck }: ActualPaycheckP
 
         {/* Bank routing numbers at bottom */}
         <div className="mt-4 text-center font-mono text-xs">
-          C{paycheck?.checkNumber || (settings?.lastCheckNumber || '3461')}C A053906041A 9166868409C
+          C{paycheck?.checkNumber || (settings?.lastCheckNumber || '1000')}C {settings?.routingNumber || 'A000000000A'} {settings?.accountNumber || '0000000000C'}
         </div>
       </div>
 
@@ -123,24 +122,23 @@ export function ActualPaycheck({ settings, employee, paycheck }: ActualPaycheckP
         {/* Employee Info */}
         <div>
           <div className="font-bold mb-2">{employee?.firstName} {employee?.lastName}</div>
-          <div>{employee?.address || '19 Yellow Kelp Ct'}</div>
-          <div>{employee?.city || 'Hopkins'}, {employee?.state || 'SC'} {employee?.zipCode || '29061'}</div>
+          <div>{employee?.address || 'Employee Address'}</div>
+          <div>{employee?.phone || '(555) 123-4567'}</div>
         </div>
 
         {/* Business Info */}
         <div>
-          <div className="font-bold mb-2">{settings?.businessName || 'Pawleys Fish Camp'}</div>
-          <div>10744 Ocean Hwy</div>
-          <div>G</div>
-          <div>Pawleys Island, SC 29585</div>
-          <div>(864) 247-7655</div>
-          <div>SC EIN: 11993268-0</div>
+          <div className="font-bold mb-2">{settings?.businessName || 'Your Business Name'}</div>
+          <div>{settings?.businessAddress || '123 Business Street'}</div>
+          <div>{settings?.businessCity || 'City'}, {settings?.businessState || 'ST'} {settings?.businessZip || '12345'}</div>
+          <div>{settings?.businessPhone || '(555) 123-4567'}</div>
+          <div>{settings?.businessState || 'ST'} EIN: {settings?.businessEIN || '12-3456789'}</div>
         </div>
 
         {/* Pay Period Info */}
         <div>
           <div className="font-bold mb-2">Pay Period</div>
-          <div>{paycheck?.payPeriodStart || '8/18/2025'} - {paycheck?.payPeriodEnd || '8/31/2025'}</div>
+          <div>{paycheck?.payPeriod?.startDate || 'Start Date'} - {paycheck?.payPeriod?.endDate || 'End Date'}</div>
           <div className="mt-2">
             <div><span className="font-semibold">Pay Type:</span> {employee?.payType || 'Hourly'}</div>
             <div><span className="font-semibold">Pay Date:</span> {paycheck?.payDate || new Date().toLocaleDateString()}</div>

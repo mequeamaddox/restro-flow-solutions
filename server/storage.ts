@@ -3411,13 +3411,23 @@ export class DatabaseStorage implements IStorage {
     const result = await db.select({
       paycheck: paystubs,
       employee: employees,
+      payPeriod: payPeriods
     })
     .from(paystubs)
     .innerJoin(employees, eq(paystubs.employeeId, employees.id))
+    .leftJoin(payPeriods, eq(paystubs.payPeriodId, payPeriods.id))
     .where(eq(paystubs.payPeriodId, payrollPeriodId))
     .orderBy(employees.lastName, employees.firstName);
     
-    return result.map(r => ({ ...r.paycheck, employee: r.employee })) as any;
+    return result.map(r => ({ 
+      ...r.paycheck, 
+      employee: r.employee,
+      payPeriod: r.payPeriod ? {
+        startDate: r.payPeriod.startDate,
+        endDate: r.payPeriod.endDate
+      } : undefined,
+      payDate: r.payPeriod?.payDate
+    })) as any;
   }
 
   async createPaycheck(paycheck: InsertPaycheck): Promise<Paycheck> {

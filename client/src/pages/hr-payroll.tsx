@@ -29,6 +29,8 @@ interface PayrollPeriod {
   totalDeductions: string;
   createdBy: string;
   createdAt: string;
+  frequency?: string;
+  name?: string;
 }
 
 interface Paycheck {
@@ -51,12 +53,23 @@ interface Paycheck {
   netPay: string;
   status: string;
   issuedAt?: string;
+  payDate?: string;
+  payPeriod?: {
+    startDate: string;
+    endDate: string;
+  };
   employee: {
     id: string;
     firstName: string;
     lastName: string;
     email: string;
     hourlyWage: string;
+    address?: string;
+    city?: string;
+    state?: string;
+    zipCode?: string;
+    phone?: string;
+    ssn?: string;
   };
 }
 
