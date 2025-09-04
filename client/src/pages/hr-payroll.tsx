@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { apiRequest } from '@/lib/queryClient';
 import { Button } from '@/components/ui/button';
@@ -64,6 +64,7 @@ export default function HRPayroll() {
   const [currentStep, setCurrentStep] = useState<'setup' | 'hours' | 'review' | 'finalize'>('setup');
   const [selectedPayPeriod, setSelectedPayPeriod] = useState<PayrollPeriod | null>(null);
   const [payrollData, setPayrollData] = useState<Record<string, any>>({});
+  const [isInitialized, setIsInitialized] = useState(false);
   
   // Dialog states
   const [showCreatePeriodDialog, setShowCreatePeriodDialog] = useState(false);
@@ -103,6 +104,29 @@ export default function HRPayroll() {
     },
     enabled: !!selectedPayPeriod?.id,
   });
+
+  // Initialize payroll data from existing paychecks when they load
+  useEffect(() => {
+    if (paychecks.length > 0 && !isInitialized) {
+      const initialPayrollData: Record<string, any> = {};
+      paychecks.forEach((paycheck) => {
+        initialPayrollData[paycheck.employeeId] = {
+          regularHours: paycheck.regularHours,
+          overtimeHours: paycheck.overtimeHours,
+          bonus: '0'
+        };
+      });
+      setPayrollData(initialPayrollData);
+      setIsInitialized(true);
+      console.log('Initialized payroll data from existing paychecks:', initialPayrollData);
+    }
+  }, [paychecks, isInitialized]);
+
+  // Reset initialization when pay period changes
+  useEffect(() => {
+    setIsInitialized(false);
+    setPayrollData({});
+  }, [selectedPayPeriod?.id]);
 
   // Fetch employees
   const { data: employees = [], isLoading: employeesLoading } = useQuery<any[]>({
