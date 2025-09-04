@@ -28,15 +28,15 @@ export default function HRDepartments() {
   const queryClient = useQueryClient();
   const { hasPermission } = usePermissions();
 
-  const { data: departments = [], isLoading } = useQuery({
+  const { data: departments = [], isLoading } = useQuery<Department[]>({
     queryKey: ['/api/hr/departments'],
   });
 
-  const { data: employees = [] } = useQuery({
+  const { data: employees = [] } = useQuery<any[]>({
     queryKey: ['/api/hr/employees'],
   });
 
-  const { data: locations = [] } = useQuery({
+  const { data: locations = [] } = useQuery<any[]>({
     queryKey: ['/api/locations'],
   });
 
@@ -103,7 +103,7 @@ export default function HRDepartments() {
     }
   };
 
-  const canManage = hasPermission(Permission.MANAGE_DEPARTMENTS);
+  const canManage = hasPermission(Permission.MANAGE_EMPLOYEES);
 
   return (
     <div className="max-w-7xl mx-auto p-6">
