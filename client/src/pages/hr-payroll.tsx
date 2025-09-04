@@ -281,62 +281,124 @@ export default function HRPayroll() {
     },
   });
 
+  // Helper function to convert numbers to words for check writing
+  const convertToWords = (amount: number): string => {
+    const ones = ['', 'One', 'Two', 'Three', 'Four', 'Five', 'Six', 'Seven', 'Eight', 'Nine'];
+    const teens = ['Ten', 'Eleven', 'Twelve', 'Thirteen', 'Fourteen', 'Fifteen', 'Sixteen', 'Seventeen', 'Eighteen', 'Nineteen'];
+    const tens = ['', '', 'Twenty', 'Thirty', 'Forty', 'Fifty', 'Sixty', 'Seventy', 'Eighty', 'Ninety'];
+    const thousands = ['', 'Thousand', 'Million'];
+    
+    if (amount === 0) return 'Zero';
+    
+    const integerPart = Math.floor(amount);
+    let result = '';
+    let thousandCounter = 0;
+    
+    let num = integerPart;
+    while (num > 0) {
+      if (num % 1000 !== 0) {
+        result = convertHundreds(num % 1000, ones, teens, tens) + ' ' + thousands[thousandCounter] + ' ' + result;
+      }
+      num = Math.floor(num / 1000);
+      thousandCounter++;
+    }
+    
+    return result.trim();
+  };
+  
+  const convertHundreds = (num: number, ones: string[], teens: string[], tens: string[]): string => {
+    let result = '';
+    
+    if (num >= 100) {
+      result += ones[Math.floor(num / 100)] + ' Hundred ';
+      num %= 100;
+    }
+    
+    if (num >= 20) {
+      result += tens[Math.floor(num / 10)];
+      if (num % 10 !== 0) {
+        result += '-' + ones[num % 10].toLowerCase();
+      }
+    } else if (num >= 10) {
+      result += teens[num - 10];
+    } else if (num > 0) {
+      result += ones[num];
+    }
+    
+    return result;
+  };
+
   const generatePayStubSheet = (paychecks: Paycheck[]) => {
     let content = '';
-    const chunks = [];
     
-    // Group paychecks into chunks of 3 for 3-per-page template
-    for (let i = 0; i < paychecks.length; i += 3) {
-      chunks.push(paychecks.slice(i, i + 3));
-    }
-
-    chunks.forEach((chunk, pageIndex) => {
-      if (pageIndex > 0) content += '\\n\\n--- PAGE BREAK ---\\n\\n';
+    paychecks.forEach((paycheck, index) => {
+      if (index > 0) content += '\\n\\n--- PAGE BREAK ---\\n\\n';
       
-      content += `╔═══════════════════════════════════════════════════════════════════════════════╗
-║                           ${currentLocation?.name?.toUpperCase() || 'COMPANY NAME'}                            ║
-║                                PAYROLL STUBS                                  ║
-║                         Pay Period: ${selectedPayPeriod ? format(new Date(selectedPayPeriod.startDate), 'MM/dd/yyyy') : ''} - ${selectedPayPeriod ? format(new Date(selectedPayPeriod.endDate), 'MM/dd/yyyy') : ''}                      ║
-╚═══════════════════════════════════════════════════════════════════════════════╝
+      const employee = paycheck.employee;
+      const companyName = currentLocation?.name || 'RestroFlow Restaurant';
+      const checkDate = selectedPayPeriod ? format(new Date(selectedPayPeriod.payDate), 'M/d/yyyy') : format(new Date(), 'M/d/yyyy');
+      const startDate = selectedPayPeriod ? format(new Date(selectedPayPeriod.startDate), 'M/d/yyyy') : '';
+      const endDate = selectedPayPeriod ? format(new Date(selectedPayPeriod.endDate), 'M/d/yyyy') : '';
+      const netAmount = parseFloat(paycheck.netPay);
+      const wordsAmount = convertToWords(netAmount);
+      const cents = Math.round((netAmount % 1) * 100);
+      
+      // Check portion (top half)
+      content += `
+     ${companyName.padEnd(50)} First Citizens Bank                                     ${paycheck.checkNumber || '1001'}
+     ${(currentLocation?.address || '123 Main Street').padEnd(50)}                                                                              ${checkDate}
+     ${(currentLocation?.city + ', ' + (currentLocation?.state || 'SC') + ' ' + (currentLocation?.zipCode || '29585')).padEnd(50)}
+
+     PAY TO THE
+     ORDER OF
+                ${employee.firstName} ${employee.lastName}
+
+
+     ${wordsAmount} and ${cents.toString().padStart(2, '0')}/100 Dollars                                                                                         $${netAmount.toFixed(2)}
+
+       ${employee.firstName} ${employee.lastName}
+
+                                                                                     AUTHORIZED SIGNATURE
+
+
+
+                                   C${paycheck.checkNumber || '1001'}C A053906041A 9166868409C
+Note: 1 grid = 10 rows/columns
+
+        ${employee.firstName} ${employee.lastName}                                      ${companyName}                                      Pay Period
+        ${employee.address || 'Employee Address 1'}                            ${currentLocation?.address || '123 Main Street'}                                        ${startDate} - ${endDate}
+        ${employee.phone || 'Employee Phone'}                               ${(currentLocation?.city || 'Your City') + ', ' + (currentLocation?.state || 'SC') + ' ' + (currentLocation?.zipCode || '29585')}                              Pay Type       Pay Date        Check#
+        ${employee.email || 'employee@email.com'}                              (843) 555-0123                               Hourly         ${checkDate}       ${paycheck.checkNumber || '1001'}
+
+         HOURS                                            EARNINGS               EMPLOYEE TAXES                                          AMOUNT
+
+         Description               Hours     Rate    Pay Period          YTD     Description                                     Pay Period            YTD
+         Regular                    ${parseFloat(paycheck.regularHours).toFixed(2).padStart(5)}   $${parseFloat(paycheck.hourlyRate).toFixed(2)}      $${parseFloat(paycheck.regularPay).toFixed(2).padStart(7)}     $${(parseFloat(paycheck.regularPay) * 26).toFixed(2).padStart(9)}   Federal Tax                                        $${parseFloat(paycheck.federalTax).toFixed(2).padStart(7)}         $${(parseFloat(paycheck.federalTax) * 26).toFixed(2).padStart(7)}
+         Overtime                   ${parseFloat(paycheck.overtimeHours).toFixed(2).padStart(5)}   $${(parseFloat(paycheck.hourlyRate) * 1.5).toFixed(2)}      $${parseFloat(paycheck.overtimePay).toFixed(2).padStart(7)}      $${(parseFloat(paycheck.overtimePay) * 26).toFixed(2).padStart(8)}   State Tax                                          $${parseFloat(paycheck.stateTax).toFixed(2).padStart(7)}         $${(parseFloat(paycheck.stateTax) * 26).toFixed(2).padStart(7)}
+                                                                                                        Social Security                                    $${parseFloat(paycheck.socialSecurity).toFixed(2).padStart(7)}         $${(parseFloat(paycheck.socialSecurity) * 26).toFixed(2).padStart(7)}
+                                                                                                        Medicare                                           $${parseFloat(paycheck.medicare).toFixed(2).padStart(7)}         $${(parseFloat(paycheck.medicare) * 26).toFixed(2).padStart(7)}
+         Totals                     ${(parseFloat(paycheck.regularHours) + parseFloat(paycheck.overtimeHours)).toFixed(2).padStart(5)}             $${parseFloat(paycheck.grossPay).toFixed(2).padStart(7)}     $${(parseFloat(paycheck.grossPay) * 26).toFixed(2).padStart(9)}   Totals                                             $${parseFloat(paycheck.totalDeductions).toFixed(2).padStart(7)}         $${(parseFloat(paycheck.totalDeductions) * 26).toFixed(2).padStart(7)}
+
+
+         DEDUCTIONS                                        AMOUNT                EMPLOYER CONTRIBUTIONS                                  AMOUNT
+
+         Description                                 Pay Period          YTD     Description                                     Pay Period            YTD
+         Health Insurance                                $0.00         $0.00    FICA Match                                              $0.00          $0.00
+         Totals                                          $0.00         $0.00    Totals                                                  $0.00          $0.00
+
+                                                                                 ACCRUED TIME-OFF HOURS                                  AMOUNT
+                                                                                 Description                                     Pay Period        Balance
+                                                                                 PTO                                                     0.00          0.00
+
+         CHECK TOTALS                                      AMOUNT                DIRECT DEPOSIT / CHECK DETAILS                          AMOUNT
+
+         Description                                 Pay Period          YTD     Description                                     Pay Period            YTD
+         Gross Pay                                    $${parseFloat(paycheck.grossPay).toFixed(2).padStart(7)}     $${(parseFloat(paycheck.grossPay) * 26).toFixed(2).padStart(9)}   Check #${paycheck.checkNumber || '1001'}                                        $${parseFloat(paycheck.netPay).toFixed(2).padStart(7)}                -
+         Total Deductions                                $${parseFloat(paycheck.totalDeductions).toFixed(2).padStart(7)}         $${(parseFloat(paycheck.totalDeductions) * 26).toFixed(2).padStart(7)}   
+         Total Employee Taxes                           $${parseFloat(paycheck.totalDeductions).toFixed(2).padStart(7)}         $${(parseFloat(paycheck.totalDeductions) * 26).toFixed(2).padStart(7)}   
+         Total Net Pay                                $${parseFloat(paycheck.netPay).toFixed(2).padStart(7)}     $${(parseFloat(paycheck.netPay) * 26).toFixed(2).padStart(9)}   Total Net Pay                                    $${parseFloat(paycheck.netPay).toFixed(2).padStart(7)}       $${(parseFloat(paycheck.netPay) * 26).toFixed(2).padStart(9)}
 
 `;
-
-      chunk.forEach((paycheck, index) => {
-        const employee = paycheck.employee;
-        content += `
-┌─────────────────────────────────────────────────────────────────────────────┐
-│ EMPLOYEE: ${(employee.firstName + ' ' + employee.lastName).padEnd(25)} CHECK #: ${(paycheck.checkNumber || 'N/A').padEnd(12)} │
-│ PAY DATE: ${selectedPayPeriod ? format(new Date(selectedPayPeriod.payDate), 'MM/dd/yyyy').padEnd(25) : ''.padEnd(25)} PERIOD: ${selectedPayPeriod ? format(new Date(selectedPayPeriod.startDate), 'MM/dd') + ' - ' + format(new Date(selectedPayPeriod.endDate), 'MM/dd') : ''.padEnd(12)} │
-├─────────────────────────────────────────────────────────────────────────────┤
-│                               EARNINGS                                      │
-├─────────────────────────────────────────────────────────────────────────────┤
-│ Regular Hours:    ${parseFloat(paycheck.regularHours).toFixed(2).padStart(8)} @ $${parseFloat(paycheck.hourlyRate).toFixed(2).padStart(6)} = $${parseFloat(paycheck.regularPay).toFixed(2).padStart(8)} │
-│ Overtime Hours:   ${parseFloat(paycheck.overtimeHours).toFixed(2).padStart(8)} @ $${(parseFloat(paycheck.hourlyRate) * 1.5).toFixed(2).padStart(6)} = $${parseFloat(paycheck.overtimePay).toFixed(2).padStart(8)} │
-│                                                                             │
-│ GROSS PAY:                                                $${parseFloat(paycheck.grossPay).toFixed(2).padStart(10)} │
-├─────────────────────────────────────────────────────────────────────────────┤
-│                              DEDUCTIONS                                     │
-├─────────────────────────────────────────────────────────────────────────────┤
-│ Federal Tax:                                              $${parseFloat(paycheck.federalTax).toFixed(2).padStart(10)} │
-│ State Tax:                                                $${parseFloat(paycheck.stateTax).toFixed(2).padStart(10)} │
-│ Social Security:                                          $${parseFloat(paycheck.socialSecurity).toFixed(2).padStart(10)} │
-│ Medicare:                                                 $${parseFloat(paycheck.medicare).toFixed(2).padStart(10)} │
-│ Other Deductions:                                         $${parseFloat(paycheck.otherDeductions).toFixed(2).padStart(10)} │
-│                                                                             │
-│ TOTAL DEDUCTIONS:                                         $${parseFloat(paycheck.totalDeductions).toFixed(2).padStart(10)} │
-├─────────────────────────────────────────────────────────────────────────────┤
-│                                                                             │
-│ NET PAY:                                                  $${parseFloat(paycheck.netPay).toFixed(2).padStart(10)} │
-│                                                                             │
-└─────────────────────────────────────────────────────────────────────────────┘
-
-`;
-        
-        // Add spacing between paystubs on the same page
-        if (index < chunk.length - 1) {
-          content += '\\n';
-        }
-      });
     });
 
     return content;
