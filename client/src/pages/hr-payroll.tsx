@@ -770,23 +770,23 @@ export default function HRPayroll() {
                 Once approved, this payroll cannot be modified. Please review all paychecks carefully.
               </AlertDescription>
             </Alert>
-            <div className="bg-gray-50 p-4 rounded-lg space-y-3">
+            <div className="bg-gray-900 border border-gray-700 p-4 rounded-lg space-y-3">
               <div className="flex justify-between items-center">
-                <span className="text-sm">Total Employees:</span>
-                <span className="font-medium text-sm">{paystubs.length}</span>
+                <span className="text-sm text-gray-300">Total Employees:</span>
+                <span className="font-medium text-sm text-white">{paystubs.length}</span>
               </div>
               <div className="flex justify-between items-center">
-                <span className="text-sm">Gross Pay:</span>
-                <span className="font-medium text-sm">${periodTotals.grossPay.toFixed(2)}</span>
+                <span className="text-sm text-gray-300">Gross Pay:</span>
+                <span className="font-medium text-sm text-green-400">${periodTotals.grossPay.toFixed(2)}</span>
               </div>
               <div className="flex justify-between items-center">
-                <span className="text-sm">Total Deductions:</span>
-                <span className="font-medium text-sm">${periodTotals.deductions.toFixed(2)}</span>
+                <span className="text-sm text-gray-300">Total Deductions:</span>
+                <span className="font-medium text-sm text-red-400">${periodTotals.deductions.toFixed(2)}</span>
               </div>
-              <Separator />
+              <Separator className="bg-gray-700" />
               <div className="flex justify-between items-center">
-                <span className="font-semibold">Net Pay:</span>
-                <span className="font-semibold">${periodTotals.netPay.toFixed(2)}</span>
+                <span className="font-semibold text-white">Net Pay:</span>
+                <span className="font-semibold text-green-500">${periodTotals.netPay.toFixed(2)}</span>
               </div>
             </div>
           </div>
