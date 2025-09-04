@@ -755,7 +755,7 @@ Note: 1 grid = 10 rows/columns
                 <div className="col-span-2">
                   <h4 className="font-semibold">{employee.firstName} {employee.lastName}</h4>
                   <p className="text-sm text-muted-foreground">
-                    {employee.departmentName || 'General'} • ${employee.hourlyWage || '15.00'}/hr
+                    {employee.position?.title || employee.department?.name || 'General'} • ${employee.hourlyRate || '15.00'}/hr
                   </p>
                 </div>
                 <div>
