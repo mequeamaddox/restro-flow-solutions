@@ -100,10 +100,47 @@ export default function HRPayroll() {
     customDeductions: '',
     notes: ''
   });
+
+  // Bulk Payroll Real-time Calculation State
+  const [bulkPayrollInputs, setBulkPayrollInputs] = useState<Record<string, {
+    hours: string;
+    tips: string;
+    bonus: string;
+    overtime: string;
+    deduction: string;
+    notes: string;
+  }>>({});
   
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const { currentLocation } = useLocation();
+
+  // Helper function to calculate gross pay for real-time display
+  const calculateEmployeeGrossPay = (employee: any, inputs: any) => {
+    const hours = parseFloat(inputs.hours || '0');
+    const tips = parseFloat(inputs.tips || '0');
+    const bonus = parseFloat(inputs.bonus || '0');
+    const overtime = parseFloat(inputs.overtime || '0');
+    const deduction = parseFloat(inputs.deduction || '0');
+    const hourlyRate = parseFloat(employee.hourlyRate || '0');
+
+    const regularPay = hours * hourlyRate;
+    const overtimePay = overtime * hourlyRate * 1.5; // 1.5x for overtime
+    const grossPay = regularPay + overtimePay + tips + bonus - deduction;
+
+    return Math.max(0, grossPay);
+  };
+
+  // Handler for bulk payroll input changes
+  const handleBulkInputChange = (employeeId: string, field: string, value: string) => {
+    setBulkPayrollInputs(prev => ({
+      ...prev,
+      [employeeId]: {
+        ...prev[employeeId],
+        [field]: value
+      }
+    }));
+  };
 
   // Fetch payroll periods
   const { data: periods = [], isLoading: periodsLoading } = useQuery<PayrollPeriod[]>({
@@ -299,29 +336,17 @@ export default function HRPayroll() {
 
   const handleBulkManualPayroll = () => {
     const employeeEntries = employees.filter((emp: any) => emp.status === 'active').map((employee: any) => {
-      const hoursInput = document.getElementById(`hours-${employee.id}`) as HTMLInputElement;
-      const tipsInput = document.getElementById(`tips-${employee.id}`) as HTMLInputElement;
-      const bonusInput = document.getElementById(`bonus-${employee.id}`) as HTMLInputElement;
-      const overtimeInput = document.getElementById(`overtime-${employee.id}`) as HTMLInputElement;
-      const deductionInput = document.getElementById(`deduction-${employee.id}`) as HTMLInputElement;
-      const notesInput = document.getElementById(`notes-${employee.id}`) as HTMLInputElement;
-
-      const hours = hoursInput?.value || '';
-      const tips = tipsInput?.value || '';
-      const bonus = bonusInput?.value || '';
-      const overtime = overtimeInput?.value || '';
-      const deduction = deductionInput?.value || '';
-      const notes = notesInput?.value || '';
-
+      const inputs = bulkPayrollInputs[employee.id] || {};
+      
       return {
         employeeId: employee.id,
-        regularHours: hours,
-        overtimeHours: overtime,
+        regularHours: inputs.hours || '',
+        overtimeHours: inputs.overtime || '',
         regularRate: employee.hourlyRate || '',
-        bonuses: bonus,
-        tips: tips,
-        customDeductions: deduction,
-        notes: notes
+        bonuses: inputs.bonus || '',
+        tips: inputs.tips || '',
+        customDeductions: inputs.deduction || '',
+        notes: inputs.notes || ''
       };
     });
 
@@ -333,6 +358,7 @@ export default function HRPayroll() {
     });
 
     setShowManualPayrollDialog(false);
+    setBulkPayrollInputs({}); // Clear all inputs after processing
   };
 
   const handleEditPaystub = (paystub: Paystub) => {
@@ -801,7 +827,10 @@ export default function HRPayroll() {
       </Dialog>
 
       {/* Bulk Manual Payroll Entry Dialog */}
-      <Dialog open={showManualPayrollDialog} onOpenChange={setShowManualPayrollDialog}>
+      <Dialog open={showManualPayrollDialog} onOpenChange={(open) => {
+        setShowManualPayrollDialog(open);
+        if (!open) setBulkPayrollInputs({}); // Clear inputs when closing dialog
+      }}>
         <DialogContent className="max-w-6xl max-h-[90vh] overflow-auto">
           <DialogHeader>
             <DialogTitle>Manual Payroll Entry</DialogTitle>
@@ -818,6 +847,11 @@ export default function HRPayroll() {
                   <div className="w-40">
                     <div className="font-medium">{employee.firstName} {employee.lastName}</div>
                     <div className="text-sm text-gray-600">${employee.hourlyRate || 'N/A'}/hr</div>
+                    {bulkPayrollInputs[employee.id] && (
+                      <div className="text-sm font-medium text-green-600">
+                        ${calculateEmployeeGrossPay(employee, bulkPayrollInputs[employee.id] || {}).toFixed(2)}
+                      </div>
+                    )}
                   </div>
                   
                   {/* Hours */}
@@ -828,9 +862,10 @@ export default function HRPayroll() {
                       step="0.25"
                       min="0"
                       placeholder="Hours"
-                      defaultValue=""
+                      value={bulkPayrollInputs[employee.id]?.hours || ''}
                       className="text-sm"
                       id={`hours-${employee.id}`}
+                      onChange={(e) => handleBulkInputChange(employee.id, 'hours', e.target.value)}
                       onWheel={(e) => e.currentTarget.blur()}
                     />
                   </div>
@@ -843,8 +878,10 @@ export default function HRPayroll() {
                       step="0.01"
                       min="0"
                       placeholder=""
+                      value={bulkPayrollInputs[employee.id]?.tips || ''}
                       className="text-sm"
                       id={`tips-${employee.id}`}
+                      onChange={(e) => handleBulkInputChange(employee.id, 'tips', e.target.value)}
                       onWheel={(e) => e.currentTarget.blur()}
                     />
                   </div>
@@ -857,8 +894,10 @@ export default function HRPayroll() {
                       step="0.01"
                       min="0"
                       placeholder=""
+                      value={bulkPayrollInputs[employee.id]?.bonus || ''}
                       className="text-sm"
                       id={`bonus-${employee.id}`}
+                      onChange={(e) => handleBulkInputChange(employee.id, 'bonus', e.target.value)}
                       onWheel={(e) => e.currentTarget.blur()}
                     />
                   </div>
@@ -871,8 +910,10 @@ export default function HRPayroll() {
                       step="0.25"
                       min="0"
                       placeholder=""
+                      value={bulkPayrollInputs[employee.id]?.overtime || ''}
                       className="text-sm"
                       id={`overtime-${employee.id}`}
+                      onChange={(e) => handleBulkInputChange(employee.id, 'overtime', e.target.value)}
                       onWheel={(e) => e.currentTarget.blur()}
                     />
                   </div>
@@ -885,8 +926,10 @@ export default function HRPayroll() {
                       step="0.01"
                       min="0"
                       placeholder=""
+                      value={bulkPayrollInputs[employee.id]?.deduction || ''}
                       className="text-sm"
                       id={`deduction-${employee.id}`}
+                      onChange={(e) => handleBulkInputChange(employee.id, 'deduction', e.target.value)}
                       onWheel={(e) => e.currentTarget.blur()}
                     />
                   </div>
@@ -896,8 +939,10 @@ export default function HRPayroll() {
                     <Label className="text-xs">Notes</Label>
                     <Input
                       placeholder="Optional note..."
+                      value={bulkPayrollInputs[employee.id]?.notes || ''}
                       className="text-sm"
                       id={`notes-${employee.id}`}
+                      onChange={(e) => handleBulkInputChange(employee.id, 'notes', e.target.value)}
                     />
                   </div>
                 </div>
