@@ -2295,7 +2295,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post('/api/hr/payroll/pay-periods/:id/calculate', isAuthenticated, async (req, res) => {
+  app.post('/api/hr/payroll/pay-periods/:id/calculate', async (req, res) => {
     try {
       const paystubs = await storage.calculatePayroll(req.params.id);
       res.json(paystubs);

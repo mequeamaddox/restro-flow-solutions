@@ -152,7 +152,7 @@ import {
   type InsertOnboardingToken,
 } from "@shared/schema";
 import { db } from "./db";
-import { eq, sql, desc, and, gte, lte, ilike, sum, isNull, asc } from "drizzle-orm";
+import { eq, sql, desc, and, gte, lte, ilike, sum, isNull, isNotNull, asc } from "drizzle-orm";
 
 export interface IStorage {
   // User operations (required for Replit Auth)
@@ -2509,12 +2509,13 @@ export class DatabaseStorage implements IStorage {
     const employees = await this.getEmployees();
     const activeEmployees = employees.filter(emp => emp.status === 'active');
 
-    // Get time entries for the pay period
+    // Get time entries for the pay period (exclude NULL clock_in_time entries)
     const employeeTimeEntries = await db
       .select()
       .from(timeEntries)
       .where(
         and(
+          isNotNull(timeEntries.clockInTime),
           gte(timeEntries.clockInTime, sql`${payPeriod.startDate}::timestamp`),
           lte(timeEntries.clockInTime, sql`${payPeriod.endDate}::timestamp + interval '1 day'`)
         )
