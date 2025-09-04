@@ -3495,6 +3495,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Delete payroll period
+  app.delete("/api/payroll-periods/:id", isAuthenticated, requirePermission(Permission.MANAGE_EMPLOYEES), async (req, res) => {
+    try {
+      await storage.deletePayPeriod(req.params.id);
+      res.status(200).json({ message: "Payroll period deleted successfully" });
+    } catch (error) {
+      console.error("Error deleting payroll period:", error);
+      res.status(500).json({ error: "Failed to delete payroll period" });
+    }
+  });
+
   // Get payroll period details
   app.get("/api/payroll-periods/:id", isAuthenticated, requirePermission(Permission.MANAGE_EMPLOYEES), async (req, res) => {
     try {
