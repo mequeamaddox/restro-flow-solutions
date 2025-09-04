@@ -2121,8 +2121,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const userId = (req.session as any)?.user?.id || (req.user as any)?.claims?.sub;
       console.log('🕐 Time entries request - userId:', userId, 'employeeId:', req.params.employeeId);
       
-      // Ensure employees can only access their own time entries
-      if (req.params.employeeId !== userId) {
+      // Allow owners/admins to view any employee's time entries, employees can only view their own
+      const user = await storage.getUser(userId);
+      const isOwnerOrAdmin = user?.role === 'admin' || user?.role === 'owner';
+      
+      if (!isOwnerOrAdmin && req.params.employeeId !== userId) {
         return res.status(403).json({ message: 'Access denied - can only view your own time entries' });
       }
       const timeEntries = await storage.getEmployeeTimeEntries(req.params.employeeId);
