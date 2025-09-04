@@ -15,6 +15,52 @@ export function PaycheckGenerator({ settings, employee, paycheck }: PaycheckGene
     return `***-**-${ssn.slice(-4)}`;
   };
 
+  // Convert number to written words for check
+  const convertNumberToWords = (num: number): string => {
+    const ones = ['', 'ONE', 'TWO', 'THREE', 'FOUR', 'FIVE', 'SIX', 'SEVEN', 'EIGHT', 'NINE'];
+    const teens = ['TEN', 'ELEVEN', 'TWELVE', 'THIRTEEN', 'FOURTEEN', 'FIFTEEN', 'SIXTEEN', 'SEVENTEEN', 'EIGHTEEN', 'NINETEEN'];
+    const tens = ['', '', 'TWENTY', 'THIRTY', 'FORTY', 'FIFTY', 'SIXTY', 'SEVENTY', 'EIGHTY', 'NINETY'];
+    const thousands = ['', 'THOUSAND', 'MILLION', 'BILLION'];
+
+    if (num === 0) return 'ZERO';
+    if (num < 0) return 'NEGATIVE ' + convertNumberToWords(-num);
+
+    let result = '';
+    let thousandIndex = 0;
+
+    while (num > 0) {
+      const chunk = num % 1000;
+      if (chunk !== 0) {
+        let chunkWords = '';
+        
+        const hundreds = Math.floor(chunk / 100);
+        if (hundreds > 0) {
+          chunkWords += ones[hundreds] + ' HUNDRED ';
+        }
+        
+        const remainder = chunk % 100;
+        if (remainder >= 20) {
+          chunkWords += tens[Math.floor(remainder / 10)] + ' ';
+          if (remainder % 10 > 0) {
+            chunkWords += ones[remainder % 10] + ' ';
+          }
+        } else if (remainder >= 10) {
+          chunkWords += teens[remainder - 10] + ' ';
+        } else if (remainder > 0) {
+          chunkWords += ones[remainder] + ' ';
+        }
+        
+        chunkWords += thousands[thousandIndex] + ' ';
+        result = chunkWords + result;
+      }
+      
+      num = Math.floor(num / 1000);
+      thousandIndex++;
+    }
+    
+    return result.trim();
+  };
+
   const renderPaycheckLayout = () => {
     const commonStyles = "p-6 border border-gray-300 bg-white text-black print:shadow-none";
     
@@ -30,34 +76,80 @@ export function PaycheckGenerator({ settings, employee, paycheck }: PaycheckGene
       case 'check_on_top':
         return (
           <div className={commonStyles}>
-            {/* Check portion on top */}
-            <div className="border-b-2 border-dashed border-gray-400 pb-4 mb-4">
-              <div className="flex justify-between items-center">
-                <div>
-                  <div className="text-lg font-bold">{settings?.businessName || 'Business Name'}</div>
+            {/* Professional Check Format - Top */}
+            <div className="border-b-2 border-dashed border-gray-400 pb-6 mb-6">
+              {/* Header row with company and check info */}
+              <div className="flex justify-between items-start mb-6">
+                <div className="space-y-1">
+                  <div className="text-lg font-bold">{settings?.businessName || 'Your Business Name'}</div>
+                  <div className="text-sm text-gray-700">123 Business Address</div>
+                  <div className="text-sm text-gray-700">City, State 12345</div>
                   {settings?.displayTaxFilingName && (
-                    <div className="text-sm text-gray-600">{settings?.taxFilingName}</div>
+                    <div className="text-xs text-gray-600 mt-2">DBA: {settings?.taxFilingName}</div>
                   )}
                 </div>
-                <div className="text-right">
+                <div className="text-right space-y-2">
                   {settings?.showLastCheckNumber && (
-                    <div className="text-sm">Check #{settings?.lastCheckNumber || 1000}</div>
+                    <div className="text-lg font-mono border border-gray-400 px-3 py-1">
+                      Check #{(settings?.lastCheckNumber || 1000) + 1}
+                    </div>
                   )}
-                  <div className="text-xl font-mono">${paycheck?.netPay || '0.00'}</div>
+                  <div className="text-sm">
+                    Date: {paycheck?.payDate || new Date().toLocaleDateString()}
+                  </div>
                 </div>
               </div>
-              <div className="mt-4 flex justify-between">
-                <div>
-                  <div className="font-semibold">{employee?.firstName} {employee?.lastName}</div>
-                  {settings?.displayLast4Ssn && employee?.ssn && (
-                    <div className="text-sm">SSN: {formatSSN(employee.ssn)}</div>
-                  )}
+
+              {/* Pay to the order of line */}
+              <div className="mb-4">
+                <div className="flex items-center space-x-2">
+                  <span className="text-sm font-medium">PAY TO THE ORDER OF</span>
+                  <div className="flex-1 border-b border-black pb-1">
+                    <span className="text-base font-semibold ml-2">
+                      {employee?.firstName} {employee?.lastName}
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Amount boxes */}
+              <div className="flex justify-between items-center mb-4">
+                <div className="flex-1 mr-4">
+                  <div className="border border-black p-2 text-center">
+                    <div className="text-lg font-mono font-bold">${paycheck?.netPay || '0.00'}</div>
+                  </div>
+                </div>
+                <div className="text-sm">
+                  <span className="font-medium">DOLLARS</span>
+                </div>
+              </div>
+
+              {/* Written amount line */}
+              <div className="mb-4">
+                <div className="border-b border-black pb-1">
+                  <span className="text-sm ml-2">
+                    {convertNumberToWords(parseFloat(paycheck?.netPay || '0'))} DOLLARS
+                  </span>
+                </div>
+              </div>
+
+              {/* Memo and signature line */}
+              <div className="flex justify-between items-end">
+                <div className="flex-1 mr-8">
+                  <div className="text-xs mb-1">MEMO</div>
+                  <div className="border-b border-black pb-1">
+                    <span className="text-sm ml-2">
+                      Payroll for {new Date(paycheck?.payDate || new Date()).toLocaleDateString('en-US', { month: 'short', year: 'numeric' })}
+                    </span>
+                  </div>
                 </div>
                 <div className="text-right">
-                  <div>Pay Date: {paycheck?.payDate || new Date().toLocaleDateString()}</div>
-                  {settings?.printSignature && (
-                    <div className="mt-2 text-sm italic">Electronically Signed</div>
-                  )}
+                  <div className="border-b border-black pb-1 w-48">
+                    {settings?.printSignature && (
+                      <span className="text-sm italic">Electronically Authorized</span>
+                    )}
+                  </div>
+                  <div className="text-xs mt-1">SIGNATURE</div>
                 </div>
               </div>
             </div>
@@ -71,34 +163,80 @@ export function PaycheckGenerator({ settings, employee, paycheck }: PaycheckGene
           <div className={commonStyles}>
             {/* Stub details on top */}
             <PayStubDetails settings={settings} employee={employee} paycheck={paycheck} />
-            {/* Check portion on bottom */}
-            <div className="border-t-2 border-dashed border-gray-400 pt-4 mt-4">
-              <div className="flex justify-between items-center">
-                <div>
-                  <div className="text-lg font-bold">{settings?.businessName || 'Business Name'}</div>
+            {/* Professional Check Format - Bottom */}
+            <div className="border-t-2 border-dashed border-gray-400 pt-6 mt-6">
+              {/* Header row with company and check info */}
+              <div className="flex justify-between items-start mb-6">
+                <div className="space-y-1">
+                  <div className="text-lg font-bold">{settings?.businessName || 'Your Business Name'}</div>
+                  <div className="text-sm text-gray-700">123 Business Address</div>
+                  <div className="text-sm text-gray-700">City, State 12345</div>
                   {settings?.displayTaxFilingName && (
-                    <div className="text-sm text-gray-600">{settings?.taxFilingName}</div>
+                    <div className="text-xs text-gray-600 mt-2">DBA: {settings?.taxFilingName}</div>
                   )}
                 </div>
-                <div className="text-right">
+                <div className="text-right space-y-2">
                   {settings?.showLastCheckNumber && (
-                    <div className="text-sm">Check #{settings?.lastCheckNumber || 1000}</div>
+                    <div className="text-lg font-mono border border-gray-400 px-3 py-1">
+                      Check #{(settings?.lastCheckNumber || 1000) + 1}
+                    </div>
                   )}
-                  <div className="text-xl font-mono">${paycheck?.netPay || '0.00'}</div>
+                  <div className="text-sm">
+                    Date: {paycheck?.payDate || new Date().toLocaleDateString()}
+                  </div>
                 </div>
               </div>
-              <div className="mt-4 flex justify-between">
-                <div>
-                  <div className="font-semibold">{employee?.firstName} {employee?.lastName}</div>
-                  {settings?.displayLast4Ssn && employee?.ssn && (
-                    <div className="text-sm">SSN: {formatSSN(employee.ssn)}</div>
-                  )}
+
+              {/* Pay to the order of line */}
+              <div className="mb-4">
+                <div className="flex items-center space-x-2">
+                  <span className="text-sm font-medium">PAY TO THE ORDER OF</span>
+                  <div className="flex-1 border-b border-black pb-1">
+                    <span className="text-base font-semibold ml-2">
+                      {employee?.firstName} {employee?.lastName}
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Amount boxes */}
+              <div className="flex justify-between items-center mb-4">
+                <div className="flex-1 mr-4">
+                  <div className="border border-black p-2 text-center">
+                    <div className="text-lg font-mono font-bold">${paycheck?.netPay || '0.00'}</div>
+                  </div>
+                </div>
+                <div className="text-sm">
+                  <span className="font-medium">DOLLARS</span>
+                </div>
+              </div>
+
+              {/* Written amount line */}
+              <div className="mb-4">
+                <div className="border-b border-black pb-1">
+                  <span className="text-sm ml-2">
+                    {convertNumberToWords(parseFloat(paycheck?.netPay || '0'))} DOLLARS
+                  </span>
+                </div>
+              </div>
+
+              {/* Memo and signature line */}
+              <div className="flex justify-between items-end">
+                <div className="flex-1 mr-8">
+                  <div className="text-xs mb-1">MEMO</div>
+                  <div className="border-b border-black pb-1">
+                    <span className="text-sm ml-2">
+                      Payroll for {new Date(paycheck?.payDate || new Date()).toLocaleDateString('en-US', { month: 'short', year: 'numeric' })}
+                    </span>
+                  </div>
                 </div>
                 <div className="text-right">
-                  <div>Pay Date: {paycheck?.payDate || new Date().toLocaleDateString()}</div>
-                  {settings?.printSignature && (
-                    <div className="mt-2 text-sm italic">Electronically Signed</div>
-                  )}
+                  <div className="border-b border-black pb-1 w-48">
+                    {settings?.printSignature && (
+                      <span className="text-sm italic">Electronically Authorized</span>
+                    )}
+                  </div>
+                  <div className="text-xs mt-1">SIGNATURE</div>
                 </div>
               </div>
             </div>
