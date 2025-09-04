@@ -441,6 +441,7 @@ export interface IStorage {
   markPayStubViewed(payStubId: string): Promise<void>;
   getTimeEntries(employeeId: string, startDate: string, endDate: string): Promise<TimeEntry[]>;
   calculatePayrollHoursFromTimeEntries(payrollPeriodId: string): Promise<{ employeeId: string; regularHours: number; overtimeHours: number; totalHours: number; employee?: Employee }[]>;
+  recalculatePayPeriodTotals(payrollPeriodId: string): Promise<void>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -3358,6 +3359,33 @@ export class DatabaseStorage implements IStorage {
       .where(eq(paystubs.id, id))
       .returning();
     return updated;
+  }
+
+  async recalculatePayPeriodTotals(payrollPeriodId: string): Promise<void> {
+    // Get all paychecks for this pay period
+    const paychecks = await db.select()
+      .from(paystubs)
+      .where(eq(paystubs.payPeriodId, payrollPeriodId));
+    
+    if (paychecks.length === 0) {
+      return;
+    }
+    
+    // Calculate totals
+    const totalGrossPay = paychecks.reduce((sum, paycheck) => sum + Number(paycheck.grossPay || 0), 0);
+    const totalDeductions = paychecks.reduce((sum, paycheck) => sum + Number(paycheck.totalDeductions || 0), 0);
+    const totalNetPay = paychecks.reduce((sum, paycheck) => sum + Number(paycheck.netPay || 0), 0);
+    
+    // Update the pay period with calculated totals
+    await db.update(payPeriods)
+      .set({
+        totalGrossPay: totalGrossPay.toString(),
+        totalDeductions: totalDeductions.toString(),
+        totalNetPay: totalNetPay.toString(),
+        status: 'calculated',
+        updatedAt: new Date()
+      })
+      .where(eq(payPeriods.id, payrollPeriodId));
   }
 
   async getEmployeePayStubs(employeeId: string): Promise<PayStub[]> {

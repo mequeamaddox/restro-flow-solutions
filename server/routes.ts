@@ -3542,6 +3542,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Recalculate pay period totals
+  app.post("/api/payroll-periods/:id/recalculate-totals", isAuthenticated, requirePermission(Permission.MANAGE_EMPLOYEES), async (req, res) => {
+    try {
+      await storage.recalculatePayPeriodTotals(req.params.id);
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Error recalculating pay period totals:", error);
+      res.status(500).json({ error: "Failed to recalculate totals" });
+    }
+  });
+
   // Update paycheck
   app.put("/api/paychecks/:id", isAuthenticated, requirePermission(Permission.MANAGE_EMPLOYEES), async (req, res) => {
     try {

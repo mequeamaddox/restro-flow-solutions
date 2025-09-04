@@ -258,6 +258,9 @@ export default function HRPayroll() {
       });
 
       await Promise.all(paycheckPromises);
+      
+      // Update pay period totals after creating all paychecks
+      await apiRequest('POST', `/api/payroll-periods/${periodId}/recalculate-totals`);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/payroll-periods'] });
