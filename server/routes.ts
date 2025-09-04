@@ -1870,6 +1870,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Basic employees endpoint for time clock and general use
+  app.get('/api/employees', isAuthenticated, async (req, res) => {
+    try {
+      const locationId = req.query.locationId as string;
+      const employees = await storage.getEmployees(locationId);
+      res.json(employees);
+    } catch (error) {
+      console.error('Error fetching employees:', error);
+      res.status(500).json({ message: 'Failed to fetch employees' });
+    }
+  });
+
   // HR Employees
   app.get('/api/hr/employees', isAuthenticated, requireAnyPermission([Permission.VIEW_ALL_EMPLOYEES, Permission.VIEW_EMPLOYEE_DETAILS]), async (req, res) => {
     try {
