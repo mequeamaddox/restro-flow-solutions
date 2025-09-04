@@ -218,134 +218,19 @@ export default function HRPayroll() {
     },
   });
 
-  // Process payroll mutation (calculate for all employees)
+  // Process payroll mutation (use proper backend calculation)
   const processPayrollMutation = useMutation({
     mutationFn: async (data: { periodId: string; period: PayrollPeriod }) => {
-      const { periodId, period } = data;
+      const { periodId } = data;
       
-      console.log('🚀 Starting payroll processing for period:', {
-        periodId,
-        startDate: period.startDate,
-        endDate: period.endDate,
-        employeeCount: employees.length
-      });
+      console.log('🚀 Starting backend payroll calculation for period:', periodId);
       
-      // Calculate payroll for all employees in the period
-      const paycheckPromises = employees.map(async (employee) => {
-        // Get time entries for this employee in the pay period
-        const timeResponse = await apiRequest('GET', 
-          `/api/employees/${employee.id}/time-entries?startDate=${period.startDate}&endDate=${period.endDate}`
-        );
-        const timeEntries = await timeResponse.json();
-
-        // Calculate total hours from time entries
-        let totalHours = timeEntries.reduce((sum: number, entry: any) => {
-          const hours = parseFloat(entry.totalHours || '0');
-          return sum + hours;
-        }, 0);
-        
-        // Data quality check: Cap unrealistic hours (likely time clock errors)
-        // Maximum reasonable hours per pay period: 80 hours (2 weeks * 40 hours)
-        if (totalHours > 80) {
-          console.warn(`Employee ${employee.firstName} ${employee.lastName} has ${totalHours} hours, capping at 80 hours`);
-          totalHours = 80; // Cap at reasonable maximum
-        }
-        
-        // Determine overtime threshold based on pay frequency
-        let overtimeThreshold = 40; // Default weekly/biweekly threshold
-        if (period.frequency === 'monthly') {
-          overtimeThreshold = 173; // ~40 hours/week * 4.33 weeks/month
-        } else if (period.frequency === 'weekly') {
-          overtimeThreshold = 40;
-        }
-        
-        let regularHours = totalHours;
-        let overtimeHours = 0;
-        let regularPay = 0;
-        let overtimePay = 0;
-        let grossPay = 0;
-        let hourlyRate = parseFloat(employee.hourlyRate || '15.00');
-        
-        // Debug logging
-        console.log(`Processing payroll for ${employee.firstName} ${employee.lastName}:`, {
-          employeeId: employee.id,
-          hourlyRate,
-          totalHours,
-          timeEntries: timeEntries.length
-        });
-        
-        // Skip employees with no time entries (unless salaried)
-        if (totalHours === 0 && !employee.salary) {
-          console.log(`Skipping ${employee.firstName} ${employee.lastName} - no time entries`);
-          return null; // Skip this employee
-        }
-
-        // Handle salary vs hourly employees
-        if (employee.salary && period.frequency === 'salary') {
-          // Salaried employee - calculate based on annual salary
-          const annualSalary = parseFloat(employee.salary);
-          grossPay = annualSalary / 26; // Biweekly salary amount
-          regularPay = grossPay;
-          regularHours = 80; // Standard biweekly hours for salary
-          hourlyRate = grossPay / regularHours; // Calculate effective hourly rate for salary
-        } else {
-          // Hourly employee - calculate based on hours worked
-          if (totalHours > overtimeThreshold) {
-            regularHours = overtimeThreshold;
-            overtimeHours = totalHours - overtimeThreshold;
-          }
-          
-          regularPay = regularHours * hourlyRate;
-          overtimePay = overtimeHours * hourlyRate * 1.5;
-          grossPay = regularPay + overtimePay;
-        }
-
-        // Calculate deductions using South Carolina 2025 tax rates
-        const federalTax = grossPay * 0.12; // 12% federal (standard bracket for most restaurant workers)
-        const stateTax = grossPay * 0.05; // 5% SC state tax (average of 3% and 6.2% brackets)
-        const socialSecurity = grossPay * 0.062; // 6.2% Social Security (mandatory)
-        const medicare = grossPay * 0.0145; // 1.45% Medicare (mandatory)
-        const scUnemployment = grossPay * 0.006; // 0.6% SC unemployment (employer portion estimated)
-        const totalDeductions = federalTax + stateTax + socialSecurity + medicare;
-        const netPay = grossPay - totalDeductions;
-
-        const paycheckData = {
-          payPeriodId: periodId,
-          employeeId: employee.id,
-          checkNumber: `${employee.id.slice(-4)}-${format(new Date(), 'yyMMdd')}`,
-          regularHours: regularHours.toFixed(2),
-          overtimeHours: overtimeHours.toFixed(2),
-          regularRate: hourlyRate.toFixed(2),
-          overtimeRate: (hourlyRate * 1.5).toFixed(2),
-          regularPay: regularPay.toFixed(2),
-          overtimePay: overtimePay.toFixed(2),
-          grossPay: grossPay.toFixed(2),
-          federalTax: federalTax.toFixed(2),
-          stateTax: stateTax.toFixed(2),
-          socialSecurity: socialSecurity.toFixed(2),
-          medicare: medicare.toFixed(2),
-          otherDeductions: '0.00',
-          totalDeductions: totalDeductions.toFixed(2),
-          netPay: netPay.toFixed(2),
-          status: 'pending'
-        };
-
-        console.log(`💰 Creating paycheck for ${employee.firstName} ${employee.lastName}:`, {
-          totalHours,
-          grossPay: grossPay.toFixed(2),
-          netPay: netPay.toFixed(2)
-        });
-        
-        return apiRequest('POST', '/api/paychecks', { body: paycheckData });
-      });
-
-      // Filter out null promises (skipped employees) and await valid ones
-      const validPromises = paycheckPromises.filter(promise => promise !== null);
-      await Promise.all(validPromises);
-      console.log(`Created ${validPromises.length} paychecks out of ${employees.length} employees`);
+      // Use the proper backend calculation endpoint that does everything
+      const response = await apiRequest('POST', `/api/hr/payroll/pay-periods/${periodId}/calculate`);
+      const result = await response.json();
       
-      // Update pay period totals after creating all paychecks
-      await apiRequest('POST', `/api/payroll-periods/${periodId}/recalculate-totals`);
+      console.log('✅ Backend calculation completed:', result);
+      return result;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/payroll-periods'] });
