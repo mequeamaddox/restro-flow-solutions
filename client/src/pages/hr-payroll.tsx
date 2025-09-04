@@ -199,6 +199,13 @@ export default function HRPayroll() {
     mutationFn: async (data: { periodId: string; period: PayrollPeriod }) => {
       const { periodId, period } = data;
       
+      console.log('🚀 Starting payroll processing for period:', {
+        periodId,
+        startDate: period.startDate,
+        endDate: period.endDate,
+        employeeCount: employees.length
+      });
+      
       // Calculate payroll for all employees in the period
       const paycheckPromises = employees.map(async (employee) => {
         // Get time entries for this employee in the pay period
@@ -299,7 +306,13 @@ export default function HRPayroll() {
           status: 'pending'
         };
 
-        return apiRequest('POST', '/api/paychecks', paycheckData);
+        console.log(`💰 Creating paycheck for ${employee.firstName} ${employee.lastName}:`, {
+          totalHours,
+          grossPay: grossPay.toFixed(2),
+          netPay: netPay.toFixed(2)
+        });
+        
+        return apiRequest('POST', '/api/paychecks', { body: paycheckData });
       });
 
       // Filter out null promises (skipped employees) and await valid ones
