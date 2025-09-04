@@ -105,6 +105,16 @@ export default function HRPayroll() {
     enabled: !!selectedPayPeriod?.id,
   });
 
+  // Get paycheck settings to control real payroll behavior
+  const { data: paycheckSettings } = useQuery({
+    queryKey: ['/api/payroll/paycheck-settings', currentLocation?.id],
+    queryFn: async () => {
+      const response = await apiRequest('GET', `/api/payroll/paycheck-settings?locationId=${currentLocation?.id}`);
+      return response.json();
+    },
+    enabled: !!currentLocation,
+  });
+
   // Initialize payroll data from existing paychecks when they load
   useEffect(() => {
     if (paychecks.length > 0 && !isInitialized) {
@@ -396,11 +406,17 @@ export default function HRPayroll() {
   const generatePayStubSheet = (paychecks: Paycheck[]) => {
     let content = '';
     
+    // Get real paycheck settings to control actual output format
+    const settings = paycheckSettings || {};
+    
     paychecks.forEach((paycheck, index) => {
       if (index > 0) content += '\\n\\n--- PAGE BREAK ---\\n\\n';
       
       const employee = paycheck.employee;
-      const companyName = currentLocation?.name || 'RestroFlow Restaurant';
+      // Use real business name from settings
+      const companyName = settings.displayBusinessName && settings.businessName 
+        ? settings.businessName 
+        : (currentLocation?.name || 'RestroFlow Restaurant');
       const checkDate = selectedPayPeriod ? format(new Date(selectedPayPeriod.payDate), 'M/d/yyyy') : format(new Date(), 'M/d/yyyy');
       const startDate = selectedPayPeriod ? format(new Date(selectedPayPeriod.startDate), 'M/d/yyyy') : '';
       const endDate = selectedPayPeriod ? format(new Date(selectedPayPeriod.endDate), 'M/d/yyyy') : '';
@@ -408,11 +424,16 @@ export default function HRPayroll() {
       const wordsAmount = convertToWords(netAmount);
       const cents = Math.round((netAmount % 1) * 100);
       
+      // Apply real settings for SSN display and check numbers
+      const employeeSSN = settings.displayLast4Ssn && employee.ssn ? `***-**-${employee.ssn.slice(-4)}` : '';
+      const checkNumber = settings.showLastCheckNumber ? (paycheck.checkNumber || '1001') : '';
+      const authSignature = settings.printSignature ? 'AUTHORIZED SIGNATURE' : 'SIGNATURE REQUIRED';
+      
       // Check portion (top half)
       content += `
-     ${companyName.padEnd(50)} First Citizens Bank                                     ${paycheck.checkNumber || '1001'}
+     ${companyName.padEnd(50)} First Citizens Bank                                     ${checkNumber}
      ${(currentLocation?.address || '123 Main Street').padEnd(50)}                                                                              ${checkDate}
-     ${(currentLocation?.city + ', ' + (currentLocation?.state || 'SC') + ' ' + (currentLocation?.zipCode || '29585')).padEnd(50)}
+     ${settings.displayTaxFilingName && settings.taxFilingName ? settings.taxFilingName.padEnd(50) : (currentLocation?.city + ', ' + (currentLocation?.state || 'SC') + ' ' + (currentLocation?.zipCode || '29585')).padEnd(50)}
 
      PAY TO THE
      ORDER OF
@@ -422,12 +443,13 @@ export default function HRPayroll() {
      ${wordsAmount} and ${cents.toString().padStart(2, '0')}/100 Dollars                                                                                         $${netAmount.toFixed(2)}
 
        ${employee.firstName} ${employee.lastName}
+       ${employeeSSN}
 
-                                                                                     AUTHORIZED SIGNATURE
+                                                                                     ${authSignature}
 
 
 
-                                   C${paycheck.checkNumber || '1001'}C A053906041A 9166868409C
+                                   C${checkNumber}C A053906041A 9166868409C
 Note: 1 grid = 10 rows/columns
 
         ${employee.firstName} ${employee.lastName}                                      ${companyName}                                      Pay Period

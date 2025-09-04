@@ -2467,6 +2467,10 @@ export class DatabaseStorage implements IStorage {
     const payPeriod = await this.getPayPeriod(payPeriodId);
     if (!payPeriod) throw new Error('Pay period not found');
 
+    // Get paycheck settings to control actual payroll processing behavior
+    const paycheckSettings = await this.getPaycheckSettings();
+    console.log('🎯 Using real paycheck settings for payroll processing:', paycheckSettings);
+    
     // Get all active employees
     const employees = await this.getEmployees();
     const activeEmployees = employees.filter(emp => emp.status === 'active');
@@ -2522,6 +2526,12 @@ export class DatabaseStorage implements IStorage {
       const totalDeductions = federalTax + stateTax + socialSecurity + medicare;
       const netPay = grossPay - totalDeductions;
 
+      // Generate real check number using settings
+      let checkNumber: number | undefined;
+      if (paycheckSettings?.showLastCheckNumber) {
+        checkNumber = (paycheckSettings.lastCheckNumber || 1000) + paystubsToCreate.length + 1;
+      }
+
       paystubsToCreate.push({
         payPeriodId,
         employeeId: employee.id,
@@ -2538,7 +2548,18 @@ export class DatabaseStorage implements IStorage {
         medicare: medicare.toString(),
         totalDeductions: totalDeductions.toString(),
         netPay: netPay.toString(),
-        status: 'calculated'
+        status: 'calculated',
+        checkNumber: checkNumber?.toString(),
+        // Store the real settings that control how this paycheck will be displayed/printed
+        metadata: JSON.stringify({
+          displayLast4Ssn: paycheckSettings?.displayLast4Ssn || false,
+          displayBusinessName: paycheckSettings?.displayBusinessName || false,
+          displayTaxFilingName: paycheckSettings?.displayTaxFilingName || false,
+          paycheckLayout: paycheckSettings?.paycheckLayout || 'check_stub_only',
+          printSignature: paycheckSettings?.printSignature || false,
+          businessName: paycheckSettings?.businessName || 'Business Name',
+          taxFilingName: paycheckSettings?.taxFilingName || 'Tax Filing Name'
+        })
       });
     }
 
@@ -2547,6 +2568,13 @@ export class DatabaseStorage implements IStorage {
       .insert(paystubs)
       .values(paystubsToCreate)
       .returning();
+
+    // Update the last check number in settings after processing payroll
+    if (paycheckSettings?.showLastCheckNumber && paystubsToCreate.length > 0) {
+      const lastCheckUsed = (paycheckSettings.lastCheckNumber || 1000) + paystubsToCreate.length;
+      await this.updatePaycheckSettings({ lastCheckNumber: lastCheckUsed });
+      console.log('✅ Updated last check number to:', lastCheckUsed);
+    }
 
     // Update pay period totals
     const totalGrossPay = paystubsToCreate.reduce((sum, stub) => sum + Number(stub.grossPay), 0);
