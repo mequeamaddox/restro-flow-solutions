@@ -762,7 +762,7 @@ export default function HRPayroll() {
         </DialogContent>
       </Dialog>
 
-      {/* Manual Payroll Entry Dialog */}
+      {/* Manual Payroll Entry Dialog - Simplified */}
       <Dialog open={showManualPayrollDialog || editingPaystub !== null} onOpenChange={(open) => {
         if (!open) {
           setShowManualPayrollDialog(false);
@@ -770,13 +770,13 @@ export default function HRPayroll() {
           resetManualForm();
         }
       }}>
-        <DialogContent className="max-w-2xl max-h-[90vh] overflow-auto">
+        <DialogContent className="max-w-lg max-h-[90vh] overflow-auto">
           <DialogHeader>
-            <DialogTitle>{editingPaystub ? 'Edit Paycheck' : 'Manual Payroll Entry'}</DialogTitle>
+            <DialogTitle>{editingPaystub ? 'Quick Edit' : 'Quick Pay Entry'}</DialogTitle>
             <DialogDescription>
               {editingPaystub 
-                ? `Editing paycheck for ${editingPaystub.employee.firstName} ${editingPaystub.employee.lastName}`
-                : 'Create a manual paycheck entry for special cases, bonuses, or corrections'
+                ? `Editing ${editingPaystub.employee.firstName} ${editingPaystub.employee.lastName}'s paycheck`
+                : 'Quick entry for bonuses, tips, or corrections'
               }
             </DialogDescription>
           </DialogHeader>
@@ -788,7 +788,17 @@ export default function HRPayroll() {
                 <Label>Employee *</Label>
                 <Select 
                   value={manualPayrollForm.employeeId} 
-                  onValueChange={(value) => setManualPayrollForm({...manualPayrollForm, employeeId: value})}
+                  onValueChange={(value) => {
+                    const selectedEmployee = employees.find((emp: any) => emp.id === value);
+                    if (selectedEmployee) {
+                      setManualPayrollForm({
+                        ...manualPayrollForm, 
+                        employeeId: value,
+                        regularRate: selectedEmployee.hourlyWage || '15.00',
+                        regularHours: '40'
+                      });
+                    }
+                  }}
                 >
                   <SelectTrigger>
                     <SelectValue placeholder="Select employee" />
@@ -796,7 +806,7 @@ export default function HRPayroll() {
                   <SelectContent>
                     {employees.filter((emp: any) => emp.status === 'active').map((employee: any) => (
                       <SelectItem key={employee.id} value={employee.id}>
-                        {employee.firstName} {employee.lastName} - {employee.department?.name || 'No Dept'}
+                        {employee.firstName} {employee.lastName} - ${employee.hourlyWage || '15.00'}/hr
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -804,112 +814,113 @@ export default function HRPayroll() {
               </div>
             )}
 
-            {/* Hours Section */}
-            <div className="grid grid-cols-2 gap-4">
+            {/* Quick Options */}
+            <div className="grid grid-cols-3 gap-2">
+              <Button 
+                type="button"
+                variant="outline" 
+                size="sm"
+                onClick={() => setManualPayrollForm({
+                  ...manualPayrollForm, 
+                  bonuses: '100',
+                  notes: 'Performance bonus'
+                })}
+              >
+                $100 Bonus
+              </Button>
+              <Button 
+                type="button"
+                variant="outline" 
+                size="sm"
+                onClick={() => setManualPayrollForm({
+                  ...manualPayrollForm, 
+                  tips: '50',
+                  notes: 'Tip adjustment'
+                })}
+              >
+                $50 Tips
+              </Button>
+              <Button 
+                type="button"
+                variant="outline" 
+                size="sm"
+                onClick={() => setManualPayrollForm({
+                  ...manualPayrollForm, 
+                  regularHours: '45',
+                  notes: 'Hours correction'
+                })}
+              >
+                45 Hours
+              </Button>
+            </div>
+
+            {/* Key Fields Only */}
+            <div className="grid grid-cols-2 gap-3">
               <div>
-                <Label>Regular Hours</Label>
+                <Label className="text-sm">Hours</Label>
                 <Input
                   type="number"
                   step="0.25"
                   value={manualPayrollForm.regularHours}
                   onChange={(e) => setManualPayrollForm({...manualPayrollForm, regularHours: e.target.value})}
-                  placeholder="40.00"
+                  placeholder="40"
                 />
               </div>
               <div>
-                <Label>Overtime Hours</Label>
+                <Label className="text-sm">Rate ($)</Label>
                 <Input
                   type="number"
-                  step="0.25"
-                  value={manualPayrollForm.overtimeHours}
-                  onChange={(e) => setManualPayrollForm({...manualPayrollForm, overtimeHours: e.target.value})}
-                  placeholder="0.00"
+                  step="0.01"
+                  value={manualPayrollForm.regularRate}
+                  onChange={(e) => setManualPayrollForm({...manualPayrollForm, regularRate: e.target.value})}
+                  placeholder="15.00"
                 />
               </div>
             </div>
 
-            {/* Rate Section */}
-            <div>
-              <Label>Regular Rate ($)</Label>
-              <Input
-                type="number"
-                step="0.01"
-                value={manualPayrollForm.regularRate}
-                onChange={(e) => setManualPayrollForm({...manualPayrollForm, regularRate: e.target.value})}
-                placeholder="15.00"
-              />
-            </div>
-
-            {/* Additional Compensation */}
-            <div className="grid grid-cols-2 gap-4">
+            {/* Optional Adjustments */}
+            <div className="grid grid-cols-2 gap-3">
               <div>
-                <Label>Bonuses ($)</Label>
+                <Label className="text-sm">Bonus ($)</Label>
                 <Input
                   type="number"
                   step="0.01"
                   value={manualPayrollForm.bonuses}
                   onChange={(e) => setManualPayrollForm({...manualPayrollForm, bonuses: e.target.value})}
-                  placeholder="0.00"
+                  placeholder="0"
                 />
               </div>
               <div>
-                <Label>Tips ($)</Label>
+                <Label className="text-sm">Tips ($)</Label>
                 <Input
                   type="number"
                   step="0.01"
                   value={manualPayrollForm.tips}
                   onChange={(e) => setManualPayrollForm({...manualPayrollForm, tips: e.target.value})}
-                  placeholder="0.00"
+                  placeholder="0"
                 />
               </div>
             </div>
 
-            {/* Custom Deductions */}
-            <div>
-              <Label>Custom Deductions ($)</Label>
-              <Input
-                type="number"
-                step="0.01"
-                value={manualPayrollForm.customDeductions}
-                onChange={(e) => setManualPayrollForm({...manualPayrollForm, customDeductions: e.target.value})}
-                placeholder="0.00"
-              />
-              <p className="text-sm text-muted-foreground mt-1">
-                Additional deductions beyond standard taxes (uniforms, cash drawer shortage, etc.)
-              </p>
-            </div>
-
             {/* Notes */}
             <div>
-              <Label>Notes</Label>
+              <Label className="text-sm">Reason</Label>
               <Input
                 value={manualPayrollForm.notes}
                 onChange={(e) => setManualPayrollForm({...manualPayrollForm, notes: e.target.value})}
-                placeholder="Reason for manual entry..."
+                placeholder="Quick note..."
               />
             </div>
 
-            {/* Preview Calculation */}
+            {/* Auto-calculated Preview */}
             {manualPayrollForm.regularHours && manualPayrollForm.regularRate && (
-              <div className="bg-gray-50 p-4 rounded-lg space-y-2">
-                <div className="font-medium">Preview Calculation:</div>
-                <div className="grid grid-cols-2 gap-4 text-sm">
-                  <div>
-                    <div>Regular Pay: ${((parseFloat(manualPayrollForm.regularHours) || 0) * (parseFloat(manualPayrollForm.regularRate) || 0)).toFixed(2)}</div>
-                    <div>Overtime Pay: ${((parseFloat(manualPayrollForm.overtimeHours) || 0) * (parseFloat(manualPayrollForm.regularRate) || 0) * 1.5).toFixed(2)}</div>
-                    <div>Bonuses: ${(parseFloat(manualPayrollForm.bonuses) || 0).toFixed(2)}</div>
-                    <div>Tips: ${(parseFloat(manualPayrollForm.tips) || 0).toFixed(2)}</div>
-                  </div>
-                  <div>
-                    <div className="font-medium">
-                      Gross Pay: ${(
-                        (parseFloat(manualPayrollForm.regularHours) || 0) * (parseFloat(manualPayrollForm.regularRate) || 0) +
-                        (parseFloat(manualPayrollForm.overtimeHours) || 0) * (parseFloat(manualPayrollForm.regularRate) || 0) * 1.5 +
-                        (parseFloat(manualPayrollForm.bonuses) || 0) +
-                        (parseFloat(manualPayrollForm.tips) || 0)
-                      ).toFixed(2)}
-                    </div>
-                  </div>
+              <div className="bg-green-50 p-3 rounded-lg">
+                <div className="text-sm font-medium text-green-800">
+                  Estimated Total: ${(
+                    (parseFloat(manualPayrollForm.regularHours) || 0) * (parseFloat(manualPayrollForm.regularRate) || 0) +
+                    (parseFloat(manualPayrollForm.bonuses) || 0) +
+                    (parseFloat(manualPayrollForm.tips) || 0)
+                  ).toFixed(2)} gross
                 </div>
               </div>
             )}
@@ -932,14 +943,12 @@ export default function HRPayroll() {
                 handleCreateManualPayroll
               }
               disabled={
-                !manualPayrollForm.employeeId || 
-                !manualPayrollForm.regularHours || 
-                !manualPayrollForm.regularRate ||
+                (!editingPaystub && !manualPayrollForm.employeeId) ||
                 createManualPayrollMutation.isPending ||
                 updatePaycheckMutation.isPending
               }
             >
-              {editingPaystub ? 'Update Paycheck' : 'Create Manual Entry'}
+              {editingPaystub ? 'Update' : 'Create'}
             </Button>
           </DialogFooter>
         </DialogContent>
