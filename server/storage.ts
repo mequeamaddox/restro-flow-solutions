@@ -2101,9 +2101,10 @@ export class DatabaseStorage implements IStorage {
     return created;
   }
 
-  async updateTask(id: string, task: Partial<InsertTask>): Promise<Task> {
-    const [updated] = await db.update(tasks)
-      .set({ ...task, updatedAt: new Date() })
+  async updateTask(id: string, data: Partial<InsertTask>): Promise<Task> {
+    const [updated] = await db
+      .update(tasks)
+      .set({ ...data, updatedAt: new Date() })
       .where(eq(tasks.id, id))
       .returning();
     return updated;
@@ -2111,6 +2112,19 @@ export class DatabaseStorage implements IStorage {
 
   async deleteTask(id: string): Promise<void> {
     await db.delete(tasks).where(eq(tasks.id, id));
+  }
+
+  async updateTaskStatus(id: string, status: string): Promise<Task> {
+    const [updated] = await db
+      .update(tasks)
+      .set({ 
+        status: status as 'pending' | 'in_progress' | 'completed' | 'cancelled', 
+        updatedAt: new Date(),
+        completedAt: status === 'completed' ? new Date() : null
+      })
+      .where(eq(tasks.id, id))
+      .returning();
+    return updated;
   }
 
   // HR Time Entry operations (for time clock)

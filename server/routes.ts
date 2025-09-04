@@ -1849,6 +1849,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.delete('/api/hr/departments/:id', isAuthenticated, async (req, res) => {
+    try {
+      const { id } = req.params;
+      await storage.deleteDepartment(id);
+      res.status(204).send();
+    } catch (error) {
+      console.error("Error deleting department:", error);
+      res.status(400).json({ message: "Failed to delete department" });
+    }
+  });
+
   // HR Positions
   app.get('/api/hr/positions', isAuthenticated, async (req, res) => {
     try {
@@ -1874,7 +1885,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get('/api/employees', isAuthenticated, async (req, res) => {
     try {
       const locationId = req.query.locationId as string;
-      const employees = await storage.getEmployees(locationId);
+      const employees = await storage.getEmployees();
       res.json(employees);
     } catch (error) {
       console.error('Error fetching employees:', error);
@@ -1882,11 +1893,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.delete('/api/hr/positions/:id', isAuthenticated, async (req, res) => {
+    try {
+      const { id } = req.params;
+      await storage.deletePosition(id);
+      res.status(204).send();
+    } catch (error) {
+      console.error("Error deleting position:", error);
+      res.status(400).json({ message: "Failed to delete position" });
+    }
+  });
+
   // HR Employees
   app.get('/api/hr/employees', isAuthenticated, requireAnyPermission([Permission.VIEW_ALL_EMPLOYEES, Permission.VIEW_EMPLOYEE_DETAILS]), async (req, res) => {
     try {
       const locationId = req.query.locationId as string;
-      const employees = await storage.getEmployees(locationId);
+      const employees = await storage.getEmployees();
       res.json(employees);
     } catch (error) {
       console.error('Error fetching employees:', error);
@@ -2079,6 +2101,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error('Error creating task:', error);
       res.status(500).json({ message: 'Failed to create task' });
+    }
+  });
+
+  app.put('/api/hr/tasks/:id', isAuthenticated, async (req, res) => {
+    try {
+      const task = await storage.updateTask(req.params.id, req.body);
+      res.json(task);
+    } catch (error) {
+      console.error('Error updating task:', error);
+      res.status(500).json({ message: 'Failed to update task' });
+    }
+  });
+
+  app.put('/api/hr/tasks/:id/status', isAuthenticated, async (req, res) => {
+    try {
+      const { status } = req.body;
+      const task = await storage.updateTaskStatus(req.params.id, status);
+      res.json(task);
+    } catch (error) {
+      console.error('Error updating task status:', error);
+      res.status(500).json({ message: 'Failed to update task status' });
     }
   });
 
