@@ -306,7 +306,7 @@ export default function HRPayroll() {
       const deductionInput = document.getElementById(`deduction-${employee.id}`) as HTMLInputElement;
       const notesInput = document.getElementById(`notes-${employee.id}`) as HTMLInputElement;
 
-      const hours = hoursInput?.value || employee.defaultHours || '';
+      const hours = hoursInput?.value || '';
       const tips = tipsInput?.value || '';
       const bonus = bonusInput?.value || '';
       const overtime = overtimeInput?.value || '';
@@ -317,7 +317,7 @@ export default function HRPayroll() {
         employeeId: employee.id,
         regularHours: hours,
         overtimeHours: overtime,
-        regularRate: employee.hourlyWage || '',
+        regularRate: employee.hourlyRate || '',
         bonuses: bonus,
         tips: tips,
         customDeductions: deduction,
@@ -817,7 +817,7 @@ export default function HRPayroll() {
                   {/* Employee Info */}
                   <div className="w-40">
                     <div className="font-medium">{employee.firstName} {employee.lastName}</div>
-                    <div className="text-sm text-gray-600">${employee.hourlyWage || 'N/A'}/hr</div>
+                    <div className="text-sm text-gray-600">${employee.hourlyRate || 'N/A'}/hr</div>
                   </div>
                   
                   {/* Hours */}
@@ -826,8 +826,8 @@ export default function HRPayroll() {
                     <Input
                       type="number"
                       step="0.25"
-                      placeholder={employee.defaultHours || ""}
-                      defaultValue={employee.defaultHours || ""}
+                      placeholder="Hours"
+                      defaultValue=""
                       className="text-sm"
                       id={`hours-${employee.id}`}
                     />
