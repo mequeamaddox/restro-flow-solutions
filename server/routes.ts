@@ -2358,7 +2358,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const { employeeId } = req.params;
       const year = req.query.year ? parseInt(req.query.year as string) : new Date().getFullYear();
       
-      const payStubs = await storage.getEmployeePayStubs(employeeId, year);
+      // For owner account using Replit user ID, get the actual employee record
+      let actualEmployeeId = employeeId;
+      if (employeeId === '46308728') {
+        const user = await storage.getUser(employeeId);
+        if (user && user.email) {
+          // Find the employee record by email
+          const employees = await storage.getEmployees();
+          const employee = employees.find(emp => emp.email === user.email);
+          if (employee) {
+            actualEmployeeId = employee.id;
+            console.log(`📋 Mapped user ${employeeId} to employee ${actualEmployeeId}`);
+          }
+        }
+      }
+      
+      const payStubs = await storage.getEmployeePayStubs(actualEmployeeId, year);
       res.json(payStubs);
     } catch (error) {
       console.error('Error fetching employee pay stubs:', error);
@@ -2371,7 +2386,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const { employeeId } = req.params;
       const year = req.query.year ? parseInt(req.query.year as string) : new Date().getFullYear();
       
-      const summary = await storage.getEmployeePayrollSummary(employeeId, year);
+      // For owner account using Replit user ID, get the actual employee record
+      let actualEmployeeId = employeeId;
+      if (employeeId === '46308728') {
+        const user = await storage.getUser(employeeId);
+        if (user && user.email) {
+          // Find the employee record by email
+          const employees = await storage.getEmployees();
+          const employee = employees.find(emp => emp.email === user.email);
+          if (employee) {
+            actualEmployeeId = employee.id;
+            console.log(`📋 Mapped user ${employeeId} to employee ${actualEmployeeId}`);
+          }
+        }
+      }
+      
+      const summary = await storage.getEmployeePayrollSummary(actualEmployeeId, year);
       res.json(summary);
     } catch (error) {
       console.error('Error fetching employee payroll summary:', error);
