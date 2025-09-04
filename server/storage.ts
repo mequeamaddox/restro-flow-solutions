@@ -343,6 +343,7 @@ export interface IStorage {
   clockOut(entryId: string): Promise<TimeEntry>;
   startBreak(entryId: string): Promise<TimeEntry>;
   endBreak(entryId: string): Promise<TimeEntry>;
+  createTimeEntry(entryData: any): Promise<TimeEntry>;
 
   // HR Message operations
   getMessages(): Promise<Message[]>;
@@ -2248,6 +2249,20 @@ export class DatabaseStorage implements IStorage {
 
   async deleteTimeEntry(entryId: string): Promise<void> {
     await db.delete(timeEntries).where(eq(timeEntries.id, entryId));
+  }
+
+  async createTimeEntry(entryData: any): Promise<TimeEntry> {
+    const [entry] = await db.insert(timeEntries).values({
+      employeeId: entryData.employeeId,
+      clockInTime: new Date(entryData.clockInTime),
+      clockOutTime: entryData.clockOutTime ? new Date(entryData.clockOutTime) : null,
+      breakStartTime: entryData.breakStartTime ? new Date(entryData.breakStartTime) : null,
+      breakEndTime: entryData.breakEndTime ? new Date(entryData.breakEndTime) : null,
+      notes: entryData.notes || null,
+      status: entryData.clockOutTime ? 'clocked-out' : 'clocked-in',
+      createdAt: new Date()
+    }).returning();
+    return entry;
   }
 
   async getEmployeeTimeEntries(employeeId: string): Promise<TimeEntry[]> {
