@@ -13,7 +13,7 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useToast } from '@/hooks/use-toast';
 import { useLocation } from '@/contexts/LocationContext';
-import { Calendar, Plus, Download, DollarSign, Users, Clock, TrendingUp, FileText, Eye, Check, Calculator, Printer, Mail } from 'lucide-react';
+import { Calendar, Plus, Download, DollarSign, Users, Clock, TrendingUp, FileText, Eye, Check, Calculator, Printer, Mail, Trash2 } from 'lucide-react';
 import { format, startOfWeek, endOfWeek, addDays } from 'date-fns';
 
 interface PayrollPeriod {
@@ -143,6 +143,28 @@ export default function HRPayroll() {
       toast({
         title: "Creation Failed",
         description: error.message || "Failed to create pay period",
+        variant: "destructive",
+      });
+    },
+  });
+
+  // Delete payroll period mutation
+  const deletePeriodMutation = useMutation({
+    mutationFn: async (periodId: string) => {
+      return apiRequest('DELETE', `/api/payroll-periods/${periodId}`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/payroll-periods'] });
+      setSelectedPayPeriod(null);
+      toast({
+        title: "Pay Period Deleted",
+        description: "Pay period has been deleted successfully.",
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to delete pay period",
         variant: "destructive",
       });
     },
@@ -966,6 +988,21 @@ export default function HRPayroll() {
                         >
                           <Calculator className="h-4 w-4 mr-2" />
                           Process Payroll
+                        </Button>
+                        <Button 
+                          size="sm"
+                          variant="destructive"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            if (confirm('Are you sure you want to delete this pay period? This action cannot be undone.')) {
+                              deletePeriodMutation.mutate(period.id);
+                            }
+                          }}
+                          disabled={deletePeriodMutation.isPending}
+                          data-testid={`button-delete-${period.id}`}
+                        >
+                          <Trash2 className="h-4 w-4 mr-2" />
+                          Delete
                         </Button>
                       </div>
                     )}
