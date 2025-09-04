@@ -756,7 +756,7 @@ export default function HRPayroll() {
 
       {/* Payroll Approval Dialog */}
       <Dialog open={showApprovalDialog} onOpenChange={setShowApprovalDialog}>
-        <DialogContent>
+        <DialogContent className="max-w-md">
           <DialogHeader>
             <DialogTitle>Approve Payroll</DialogTitle>
             <DialogDescription>
@@ -770,21 +770,21 @@ export default function HRPayroll() {
                 Once approved, this payroll cannot be modified. Please review all paychecks carefully.
               </AlertDescription>
             </Alert>
-            <div className="bg-gray-50 p-4 rounded-lg space-y-2">
-              <div className="flex justify-between">
-                <span>Total Employees:</span>
-                <span className="font-medium">{paystubs.length}</span>
+            <div className="bg-gray-50 p-4 rounded-lg space-y-3">
+              <div className="flex justify-between items-center">
+                <span className="text-sm">Total Employees:</span>
+                <span className="font-medium text-sm">{paystubs.length}</span>
               </div>
-              <div className="flex justify-between">
-                <span>Gross Pay:</span>
-                <span className="font-medium">${periodTotals.grossPay.toFixed(2)}</span>
+              <div className="flex justify-between items-center">
+                <span className="text-sm">Gross Pay:</span>
+                <span className="font-medium text-sm">${periodTotals.grossPay.toFixed(2)}</span>
               </div>
-              <div className="flex justify-between">
-                <span>Total Deductions:</span>
-                <span className="font-medium">${periodTotals.deductions.toFixed(2)}</span>
+              <div className="flex justify-between items-center">
+                <span className="text-sm">Total Deductions:</span>
+                <span className="font-medium text-sm">${periodTotals.deductions.toFixed(2)}</span>
               </div>
               <Separator />
-              <div className="flex justify-between text-lg">
+              <div className="flex justify-between items-center">
                 <span className="font-semibold">Net Pay:</span>
                 <span className="font-semibold">${periodTotals.netPay.toFixed(2)}</span>
               </div>
