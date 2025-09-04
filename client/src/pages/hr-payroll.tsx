@@ -826,10 +826,12 @@ export default function HRPayroll() {
                     <Input
                       type="number"
                       step="0.25"
+                      min="0"
                       placeholder="Hours"
                       defaultValue=""
                       className="text-sm"
                       id={`hours-${employee.id}`}
+                      onWheel={(e) => e.currentTarget.blur()}
                     />
                   </div>
                   
@@ -839,9 +841,11 @@ export default function HRPayroll() {
                     <Input
                       type="number"
                       step="0.01"
+                      min="0"
                       placeholder=""
                       className="text-sm"
                       id={`tips-${employee.id}`}
+                      onWheel={(e) => e.currentTarget.blur()}
                     />
                   </div>
                   
@@ -851,9 +855,11 @@ export default function HRPayroll() {
                     <Input
                       type="number"
                       step="0.01"
+                      min="0"
                       placeholder=""
                       className="text-sm"
                       id={`bonus-${employee.id}`}
+                      onWheel={(e) => e.currentTarget.blur()}
                     />
                   </div>
                   
@@ -863,9 +869,11 @@ export default function HRPayroll() {
                     <Input
                       type="number"
                       step="0.25"
+                      min="0"
                       placeholder=""
                       className="text-sm"
                       id={`overtime-${employee.id}`}
+                      onWheel={(e) => e.currentTarget.blur()}
                     />
                   </div>
                   
@@ -875,9 +883,11 @@ export default function HRPayroll() {
                     <Input
                       type="number"
                       step="0.01"
+                      min="0"
                       placeholder=""
                       className="text-sm"
                       id={`deduction-${employee.id}`}
+                      onWheel={(e) => e.currentTarget.blur()}
                     />
                   </div>
                   
@@ -934,8 +944,10 @@ export default function HRPayroll() {
                 <Input
                   type="number"
                   step="0.25"
+                  min="0"
                   value={manualPayrollForm.regularHours}
                   onChange={(e) => setManualPayrollForm({...manualPayrollForm, regularHours: e.target.value})}
+                  onWheel={(e) => e.currentTarget.blur()}
                 />
               </div>
               <div>
@@ -943,8 +955,10 @@ export default function HRPayroll() {
                 <Input
                   type="number"
                   step="0.01"
+                  min="0"
                   value={manualPayrollForm.regularRate}
                   onChange={(e) => setManualPayrollForm({...manualPayrollForm, regularRate: e.target.value})}
+                  onWheel={(e) => e.currentTarget.blur()}
                 />
               </div>
             </div>
@@ -955,8 +969,10 @@ export default function HRPayroll() {
                 <Input
                   type="number"
                   step="0.01"
+                  min="0"
                   value={manualPayrollForm.bonuses}
                   onChange={(e) => setManualPayrollForm({...manualPayrollForm, bonuses: e.target.value})}
+                  onWheel={(e) => e.currentTarget.blur()}
                 />
               </div>
               <div>
@@ -964,8 +980,10 @@ export default function HRPayroll() {
                 <Input
                   type="number"
                   step="0.01"
+                  min="0"
                   value={manualPayrollForm.tips}
                   onChange={(e) => setManualPayrollForm({...manualPayrollForm, tips: e.target.value})}
+                  onWheel={(e) => e.currentTarget.blur()}
                 />
               </div>
             </div>
