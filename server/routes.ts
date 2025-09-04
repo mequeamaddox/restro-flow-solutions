@@ -3534,6 +3534,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Create paycheck
   app.post("/api/paychecks", isAuthenticated, requirePermission(Permission.MANAGE_EMPLOYEES), async (req, res) => {
     try {
+      console.log('🔍 Creating paycheck with data:', JSON.stringify(req.body, null, 2));
       const paycheck = await storage.createPaycheck(req.body);
       res.status(201).json(paycheck);
     } catch (error) {
