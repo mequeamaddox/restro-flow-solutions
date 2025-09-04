@@ -2159,12 +2159,16 @@ export class DatabaseStorage implements IStorage {
       }
       
       return entries.map(entry => ({
-        ...entry,
-        clockInTime: entry.clockInTime ? new Date(entry.clockInTime).toISOString() : new Date().toISOString(),
-        clockOutTime: entry.clockOutTime ? new Date(entry.clockOutTime).toISOString() : null,
-        breakStartTime: entry.breakStartTime ? new Date(entry.breakStartTime).toISOString() : null,
-        breakEndTime: entry.breakEndTime ? new Date(entry.breakEndTime).toISOString() : null,
+        id: entry.id,
+        employeeId: entry.employeeId,
+        clockInTime: entry.clockInTime ? (entry.clockInTime instanceof Date ? entry.clockInTime.toISOString() : new Date(entry.clockInTime).toISOString()) : new Date().toISOString(),
+        clockOutTime: entry.clockOutTime ? (entry.clockOutTime instanceof Date ? entry.clockOutTime.toISOString() : new Date(entry.clockOutTime).toISOString()) : null,
+        breakStartTime: entry.breakStartTime ? (entry.breakStartTime instanceof Date ? entry.breakStartTime.toISOString() : new Date(entry.breakStartTime).toISOString()) : null,
+        breakEndTime: entry.breakEndTime ? (entry.breakEndTime instanceof Date ? entry.breakEndTime.toISOString() : new Date(entry.breakEndTime).toISOString()) : null,
+        totalHours: entry.totalHours || 0,
         status: entry.status || 'clocked-in',
+        notes: entry.notes,
+        createdAt: entry.createdAt ? (entry.createdAt instanceof Date ? entry.createdAt.toISOString() : new Date(entry.createdAt).toISOString()) : new Date().toISOString(),
         employee: employeeMap.get(entry.employeeId)
       })) as (TimeEntry & { employee?: Employee })[];
     } catch (error) {
