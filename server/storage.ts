@@ -2111,9 +2111,34 @@ export class DatabaseStorage implements IStorage {
   // HR Time Entry operations (for time clock)
   async getTimeEntries(): Promise<(TimeEntry & { employee?: Employee })[]> {
     try {
-      // For now, return empty array to fix the loading issue
-      // TODO: Fix the timestamp issue with time entries
-      return [];
+      // Just get basic time entries without complex joins to avoid timestamp issues
+      const entries = await db.select().from(timeEntries).orderBy(desc(timeEntries.createdAt));
+      
+      // Get employee info separately to avoid join issues
+      const employeeMap = new Map();
+      const employeeIds = [...new Set(entries.map(e => e.employeeId))];
+      
+      if (employeeIds.length > 0) {
+        const employeeData = await db.select({
+          id: employees.id,
+          firstName: employees.firstName,
+          lastName: employees.lastName
+        }).from(employees).where(sql`${employees.id} IN (${sql.join(employeeIds.map(id => sql`${id}`), sql`, `)})`); 
+        
+        employeeData.forEach(emp => {
+          employeeMap.set(emp.id, emp);
+        });
+      }
+      
+      return entries.map(entry => ({
+        ...entry,
+        clockInTime: entry.clockInTime?.toISOString() || new Date().toISOString(),
+        clockOutTime: entry.clockOutTime?.toISOString() || null,
+        breakStartTime: entry.breakStartTime?.toISOString() || null,
+        breakEndTime: entry.breakEndTime?.toISOString() || null,
+        status: entry.status || 'clocked-in',
+        employee: employeeMap.get(entry.employeeId)
+      })) as (TimeEntry & { employee?: Employee })[];
     } catch (error) {
       console.error('Error fetching time entries:', error);
       return [];

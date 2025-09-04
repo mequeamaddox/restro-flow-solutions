@@ -148,7 +148,7 @@ export default function HRTimeClock() {
 
   const createManualEntryMutation = useMutation({
     mutationFn: async (entryData: any) => {
-      return await apiRequest('POST', '/api/hr/time-entries/manual', { body: entryData });
+      return await apiRequest('POST', '/api/hr/time-entries/manual', entryData);
     },
     onSuccess: () => {
       toast({ title: "Success", description: "Manual time entry created successfully" });
