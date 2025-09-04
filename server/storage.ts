@@ -152,7 +152,7 @@ import {
   type InsertOnboardingToken,
 } from "@shared/schema";
 import { db } from "./db";
-import { eq, sql, desc, and, gte, lte, ilike, sum, isNull, isNotNull, asc } from "drizzle-orm";
+import { eq, sql, desc, and, gte, lte, lt, ilike, sum, isNull, isNotNull, asc } from "drizzle-orm";
 
 export interface IStorage {
   // User operations (required for Replit Auth)
