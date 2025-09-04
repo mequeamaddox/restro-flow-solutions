@@ -343,7 +343,73 @@ export default function HRPayroll() {
   };
 
   const handlePrintPayStubs = () => {
-    const content = generatePayStubSheet(paychecks);
+    // If no paychecks exist, generate them from current payroll data
+    let payStubData = paychecks;
+    
+    if (paychecks.length === 0 && Object.keys(payrollData).length > 0) {
+      // Generate pay stubs from current payroll data for preview
+      payStubData = employees.map((employee) => {
+        const data = payrollData[employee.id] || {};
+        const grossPay = calculateGrossPay(employee, data);
+        const deductions = calculateDeductions(grossPay);
+        const netPay = grossPay - deductions.total;
+        
+        return {
+          id: `temp-${employee.id}`,
+          payrollPeriodId: selectedPayPeriod?.id || '',
+          employeeId: employee.id,
+          employee: employee,
+          checkNumber: `${employee.id.slice(-4)}-${format(new Date(), 'yyMMdd')}`,
+          regularHours: data.regularHours || '0',
+          overtimeHours: data.overtimeHours || '0',
+          hourlyRate: employee.hourlyRate || '15.00',
+          regularPay: (parseFloat(data.regularHours || '0') * parseFloat(employee.hourlyRate || '15')).toFixed(2),
+          overtimePay: (parseFloat(data.overtimeHours || '0') * parseFloat(employee.hourlyRate || '15') * 1.5).toFixed(2),
+          grossPay: grossPay.toFixed(2),
+          federalTax: deductions.federalTax.toFixed(2),
+          stateTax: deductions.stateTax.toFixed(2),
+          socialSecurity: deductions.socialSecurity.toFixed(2),
+          medicare: deductions.medicare.toFixed(2),
+          otherDeductions: '0.00',
+          totalDeductions: deductions.total.toFixed(2),
+          netPay: netPay.toFixed(2),
+          status: 'preview'
+        } as any;
+      }).filter(stub => parseFloat(stub.grossPay) > 0); // Only include employees with pay
+    } else if (paychecks.length === 0) {
+      // Generate sample pay stubs for all employees
+      payStubData = employees.map((employee) => {
+        const defaultHours = 40;
+        const hourlyRate = parseFloat(employee.hourlyRate || '15.00');
+        const grossPay = defaultHours * hourlyRate;
+        const deductions = calculateDeductions(grossPay);
+        const netPay = grossPay - deductions.total;
+        
+        return {
+          id: `sample-${employee.id}`,
+          payrollPeriodId: selectedPayPeriod?.id || '',
+          employeeId: employee.id,
+          employee: employee,
+          checkNumber: `${employee.id.slice(-4)}-${format(new Date(), 'yyMMdd')}`,
+          regularHours: defaultHours.toString(),
+          overtimeHours: '0',
+          hourlyRate: hourlyRate.toFixed(2),
+          regularPay: grossPay.toFixed(2),
+          overtimePay: '0.00',
+          grossPay: grossPay.toFixed(2),
+          federalTax: deductions.federalTax.toFixed(2),
+          stateTax: deductions.stateTax.toFixed(2),
+          socialSecurity: deductions.socialSecurity.toFixed(2),
+          medicare: deductions.medicare.toFixed(2),
+          otherDeductions: '0.00',
+          totalDeductions: deductions.total.toFixed(2),
+          netPay: netPay.toFixed(2),
+          status: 'sample'
+        } as any;
+      });
+    }
+    
+    const content = generatePayStubSheet(payStubData);
     
     // Create a new window for printing
     const printWindow = window.open('', '_blank');
