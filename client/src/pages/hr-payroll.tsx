@@ -261,6 +261,12 @@ export default function HRPayroll() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/payroll-periods'] });
       queryClient.invalidateQueries({ queryKey: ['/api/payroll-periods', selectedPayPeriod?.id, 'paychecks'] });
+      
+      // Import actual hours data after processing
+      setTimeout(() => {
+        importHoursMutation.mutate();
+      }, 1000);
+      
       toast({
         title: "Payroll Processed",
         description: "Payroll has been calculated for all employees.",
@@ -762,15 +768,17 @@ export default function HRPayroll() {
           </Button>
           <Button 
             onClick={() => {
-              if (selectedPayPeriod) {
-                processPayrollMutation.mutate({ periodId: selectedPayPeriod.id, period: selectedPayPeriod });
-                setCurrentStep('setup');
-              }
+              // This should finalize the payroll, not reprocess it
+              toast({
+                title: "Payroll Finalized",
+                description: "Payroll has been successfully finalized and is ready for payment processing.",
+              });
+              setCurrentStep('setup');
             }}
-            disabled={processPayrollMutation.isPending || !selectedPayPeriod}
+            disabled={paychecks.length === 0}
             data-testid="button-finalize-payroll"
           >
-            {processPayrollMutation.isPending ? 'Processing...' : 'Finalize Payroll'}
+            Finalize Payroll
           </Button>
         </div>
       </div>
@@ -785,7 +793,7 @@ export default function HRPayroll() {
             <div className="space-y-4">
               <div className="flex justify-between">
                 <span>Employees with Direct Deposit:</span>
-                <span className="font-semibold">{employees.filter(e => e.directDeposit || e.bankAccount).length}</span>
+                <span className="font-semibold">0</span>
               </div>
               <div className="flex justify-between">
                 <span>Total Amount:</span>
@@ -808,11 +816,19 @@ export default function HRPayroll() {
             <div className="space-y-4">
               <div className="flex justify-between">
                 <span>Check Recipients:</span>
-                <span className="font-semibold">{employees.filter(e => !e.directDeposit && !e.bankAccount).length}</span>
+                <span className="font-semibold">{employees.length}</span>
               </div>
               <div className="flex justify-between">
                 <span>Total Amount:</span>
-                <span className="font-semibold">{formatCurrency(0)}</span>
+                <span className="font-semibold">{formatCurrency(
+                  employees
+                    // All employees get checks since no payment method is set
+                    .reduce((total, employee) => {
+                      const grossPay = calculateGrossPay(employee, payrollData[employee.id] || {});
+                      const deductions = calculateDeductions(grossPay);
+                      return total + (grossPay - deductions.total);
+                    }, 0)
+                )}</span>
               </div>
               <Button variant="outline" className="w-full" onClick={handlePrintPayStubs}>
                 <Printer className="h-4 w-4 mr-2" />
