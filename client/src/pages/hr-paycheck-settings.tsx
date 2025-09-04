@@ -4,6 +4,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
@@ -258,10 +259,73 @@ export default function HRPaycheckSettings() {
         </CardContent>
       </Card>
 
+      {/* Business Information */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Business Information</CardTitle>
+          <CardDescription>
+            Configure your business details that appear on paychecks and pay stubs.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-6">
+          <div className="grid gap-2">
+            <Label htmlFor="businessName" className="text-sm font-medium">
+              Business Operating Name
+            </Label>
+            <Input
+              id="businessName"
+              value={settings?.businessName || ''}
+              onChange={(e) => handleOptionChange('businessName', e.target.value)}
+              placeholder="Enter your business operating name"
+              disabled={!canManage}
+              data-testid="input-business-name"
+            />
+            <p className="text-xs text-muted-foreground">
+              This name appears on employee paychecks
+            </p>
+          </div>
+
+          <div className="grid gap-2">
+            <Label htmlFor="taxFilingName" className="text-sm font-medium">
+              Legal Tax Filing Name
+            </Label>
+            <Input
+              id="taxFilingName"
+              value={settings?.taxFilingName || ''}
+              onChange={(e) => handleOptionChange('taxFilingName', e.target.value)}
+              placeholder="Enter your legal business name for tax filings"
+              disabled={!canManage}
+              data-testid="input-tax-filing-name"
+            />
+            <p className="text-xs text-muted-foreground">
+              Legal entity name used for tax reporting and compliance
+            </p>
+          </div>
+
+          <div className="grid gap-2">
+            <Label htmlFor="lastCheckNumber" className="text-sm font-medium">
+              Starting Check Number
+            </Label>
+            <Input
+              id="lastCheckNumber"
+              type="number"
+              value={settings?.lastCheckNumber || 1000}
+              onChange={(e) => handleOptionChange('lastCheckNumber', parseInt(e.target.value) || 1000)}
+              placeholder="1000"
+              disabled={!canManage}
+              data-testid="input-check-number"
+            />
+            <p className="text-xs text-muted-foreground">
+              Next check number to be used for payroll
+            </p>
+          </div>
+        </CardContent>
+      </Card>
+
       {/* Additional Options */}
       <Card>
         <CardHeader>
-          <CardTitle>Options</CardTitle>
+          <CardTitle>Display Options</CardTitle>
           <CardDescription>
             Configure additional display options for your paychecks and pay stubs.
           </CardDescription>
@@ -297,7 +361,7 @@ export default function HRPaycheckSettings() {
             />
             <div className="grid gap-1.5 leading-none">
               <Label htmlFor="displayTaxFilingName" className="text-sm font-medium">
-                Display Tax Filing Name on Check Stub: AAM COLLECTIVE LLC
+                Display Tax Filing Name on Check Stub: {settings?.taxFilingName || 'AAM COLLECTIVE LLC'}
               </Label>
               <p className="text-xs text-muted-foreground">
                 Shows your legal business name for tax purposes
@@ -317,7 +381,7 @@ export default function HRPaycheckSettings() {
             />
             <div className="grid gap-1.5 leading-none">
               <Label htmlFor="displayBusinessName" className="text-sm font-medium">
-                Display Business Name on Check Stub: Pawleys Fish Camp
+                Display Business Name on Check Stub: {settings?.businessName || 'Pawleys Fish Camp'}
               </Label>
               <p className="text-xs text-muted-foreground">
                 Shows your business operating name
