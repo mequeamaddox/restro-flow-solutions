@@ -775,7 +775,7 @@ export default function HRPayroll() {
               });
               setCurrentStep('setup');
             }}
-            disabled={paychecks.length === 0}
+            disabled={false}
             data-testid="button-finalize-payroll"
           >
             Finalize Payroll
