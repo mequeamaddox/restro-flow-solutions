@@ -253,10 +253,16 @@ export default function EmployeePayStubs() {
                     <div className="flex items-center gap-4">
                       <div>
                         <h4 className="font-medium text-gray-900">
-                          {paystub.payPeriod.name}
+                          {paystub.payPeriod?.name || 'Pay Period'}
                         </h4>
                         <p className="text-sm text-gray-600">
-                          {format(new Date(paystub.payPeriod.startDate), 'MMM d')} - {format(new Date(paystub.payPeriod.endDate), 'MMM d, yyyy')}
+                          {paystub.payPeriod?.startDate && paystub.payPeriod?.endDate ? (
+                            <>
+                              {format(new Date(paystub.payPeriod.startDate), 'MMM d')} - {format(new Date(paystub.payPeriod.endDate), 'MMM d, yyyy')}
+                            </>
+                          ) : (
+                            `Pay Date: ${format(new Date(paystub.payDate), 'MMM d, yyyy')}`
+                          )}
                         </p>
                       </div>
                       {getStatusBadge(paystub.status)}
@@ -318,7 +324,7 @@ export default function EmployeePayStubs() {
             <DialogTitle>Pay Stub Details</DialogTitle>
             {selectedPaystub && (
               <DialogDescription>
-                {selectedPaystub.payPeriod.name} - Pay Date: {format(new Date(selectedPaystub.payDate), 'MMM d, yyyy')}
+                {selectedPaystub.payPeriod?.name || 'Pay Period'} - Pay Date: {format(new Date(selectedPaystub.payDate), 'MMM d, yyyy')}
               </DialogDescription>
             )}
           </DialogHeader>
