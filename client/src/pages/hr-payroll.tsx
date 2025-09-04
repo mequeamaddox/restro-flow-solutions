@@ -184,10 +184,17 @@ export default function HRPayroll() {
         const timeEntries = await timeResponse.json();
 
         // Calculate total hours from time entries
-        const totalHours = timeEntries.reduce((sum: number, entry: any) => {
+        let totalHours = timeEntries.reduce((sum: number, entry: any) => {
           const hours = parseFloat(entry.totalHours || '0');
           return sum + hours;
         }, 0);
+        
+        // Data quality check: Cap unrealistic hours (likely time clock errors)
+        // Maximum reasonable hours per pay period: 80 hours (2 weeks * 40 hours)
+        if (totalHours > 80) {
+          console.warn(`Employee ${employee.firstName} ${employee.lastName} has ${totalHours} hours, capping at 80 hours`);
+          totalHours = 80; // Cap at reasonable maximum
+        }
         
         // Determine overtime threshold based on pay frequency
         let overtimeThreshold = 40; // Default weekly/biweekly threshold
@@ -202,7 +209,21 @@ export default function HRPayroll() {
         let regularPay = 0;
         let overtimePay = 0;
         let grossPay = 0;
-        let hourlyRate = parseFloat(employee.hourlyRate || '15.00'); // Declare hourlyRate here
+        let hourlyRate = parseFloat(employee.hourlyRate || '15.00');
+        
+        // Debug logging
+        console.log(`Processing payroll for ${employee.firstName} ${employee.lastName}:`, {
+          employeeId: employee.id,
+          hourlyRate,
+          totalHours,
+          timeEntries: timeEntries.length
+        });
+        
+        // Skip employees with no time entries (unless salaried)
+        if (totalHours === 0 && !employee.salary) {
+          console.log(`Skipping ${employee.firstName} ${employee.lastName} - no time entries`);
+          return null; // Skip this employee
+        }
 
         // Handle salary vs hourly employees
         if (employee.salary && period.frequency === 'salary') {
@@ -257,7 +278,10 @@ export default function HRPayroll() {
         return apiRequest('POST', '/api/paychecks', paycheckData);
       });
 
-      await Promise.all(paycheckPromises);
+      // Filter out null promises (skipped employees) and await valid ones
+      const validPromises = paycheckPromises.filter(promise => promise !== null);
+      await Promise.all(validPromises);
+      console.log(`Created ${validPromises.length} paychecks out of ${employees.length} employees`);
       
       // Update pay period totals after creating all paychecks
       await apiRequest('POST', `/api/payroll-periods/${periodId}/recalculate-totals`);
