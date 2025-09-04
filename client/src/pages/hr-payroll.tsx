@@ -229,7 +229,7 @@ export default function HRPayroll() {
           status: 'pending'
         };
 
-        return apiRequest('POST', '/api/paychecks', { body: paycheckData });
+        return apiRequest('POST', '/api/paychecks', paycheckData);
       });
 
       await Promise.all(paycheckPromises);
@@ -759,7 +759,7 @@ export default function HRPayroll() {
             <div className="space-y-4">
               <div className="flex justify-between">
                 <span>Employees with Direct Deposit:</span>
-                <span className="font-semibold">{employees.filter(e => e.directDeposit).length}</span>
+                <span className="font-semibold">{employees.filter(e => e.directDeposit || e.bankAccount).length}</span>
               </div>
               <div className="flex justify-between">
                 <span>Total Amount:</span>
@@ -782,13 +782,13 @@ export default function HRPayroll() {
             <div className="space-y-4">
               <div className="flex justify-between">
                 <span>Check Recipients:</span>
-                <span className="font-semibold">{employees.filter(e => !e.directDeposit).length}</span>
+                <span className="font-semibold">{employees.filter(e => !e.directDeposit && !e.bankAccount).length}</span>
               </div>
               <div className="flex justify-between">
                 <span>Total Amount:</span>
                 <span className="font-semibold">{formatCurrency(0)}</span>
               </div>
-              <Button variant="outline" className="w-full">
+              <Button variant="outline" className="w-full" onClick={handlePrintPayStubs}>
                 <Printer className="h-4 w-4 mr-2" />
                 Print Checks
               </Button>

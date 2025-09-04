@@ -3575,21 +3575,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Get time entries for payroll calculation
-  app.get("/api/employees/:employeeId/time-entries", isAuthenticated, async (req, res) => {
-    try {
-      const { startDate, endDate } = req.query;
-      const timeEntries = await storage.getTimeEntries(
-        req.params.employeeId, 
-        startDate as string, 
-        endDate as string
-      );
-      res.json(timeEntries);
-    } catch (error) {
-      console.error("Error fetching time entries:", error);
-      res.status(500).json({ error: "Failed to fetch time entries" });
-    }
-  });
+  // This duplicate route is removed - using the one above with proper permissions
 
   // Calculate payroll hours from time entries for a pay period
   app.get('/api/payroll-periods/:periodId/calculated-hours', isAuthenticated, async (req, res) => {
