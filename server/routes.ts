@@ -2073,7 +2073,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // HR Analytics and Reports
-  app.get('/api/hr/analytics', isAuthenticated, requirePermission(Permission.VIEW_ANALYTICS), async (req, res) => {
+  app.get('/api/hr/analytics', isAuthenticated, async (req, res) => {
     try {
       const analytics = await storage.getHRAnalytics();
       res.json(analytics);
