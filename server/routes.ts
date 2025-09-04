@@ -2315,7 +2315,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post('/api/hr/payroll/pay-periods/:id/approve', isAuthenticated, async (req, res) => {
+  app.post('/api/hr/payroll/pay-periods/:id/approve', async (req, res) => {
     try {
       const payPeriod = await storage.approvePayroll(req.params.id, (req.user as any)?.claims?.sub);
       res.json(payPeriod);

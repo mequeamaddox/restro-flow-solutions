@@ -8,9 +8,12 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Badge } from '@/components/ui/badge';
+import { Separator } from '@/components/ui/separator';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useToast } from '@/hooks/use-toast';
 import { useLocation } from '@/contexts/LocationContext';
-import { Calendar, Plus, DollarSign, Users, Calculator, Eye } from 'lucide-react';
+import { Calendar, Plus, DollarSign, Users, Clock, Calculator, Eye, CheckCircle, AlertCircle, FileText, Printer } from 'lucide-react';
 import { format, startOfWeek, endOfWeek, addDays } from 'date-fns';
 import { ActualPaycheck } from '@/components/payroll/actual-paycheck';
 
@@ -20,15 +23,21 @@ interface PayrollPeriod {
   startDate: string;
   endDate: string;
   payDate: string;
-  status: string;
+  status: 'draft' | 'calculated' | 'approved' | 'paid';
   totalGrossPay: string;
   totalNetPay: string;
+  totalDeductions: string;
   frequency: string;
+  locationId: string;
+  approvedBy?: string;
+  approvedAt?: string;
+  notes?: string;
 }
 
-interface Paycheck {
+interface Paystub {
   id: string;
-  checkNumber: string;
+  payPeriodId: string;
+  employeeId: string;
   regularHours: string;
   overtimeHours: string;
   regularRate: string;
@@ -42,27 +51,34 @@ interface Paycheck {
   medicare: string;
   totalDeductions: string;
   netPay: string;
+  checkNumber: string;
   payDate: string;
-  payPeriod: {
-    startDate: string;
-    endDate: string;
-  };
+  status: 'draft' | 'calculated' | 'paid';
   employee: {
     id: string;
     firstName: string;
     lastName: string;
+    email: string;
     address: string;
     phone: string;
   };
 }
 
+type WorkflowStep = 'setup' | 'calculate' | 'review' | 'approve';
+
 export default function HRPayroll() {
-  const [showCreateDialog, setShowCreateDialog] = useState(false);
-  const [showPaycheckDialog, setShowPaycheckDialog] = useState(false);
-  const [selectedPaycheck, setSelectedPaycheck] = useState<Paycheck | null>(null);
+  // Patriot Software 3-Step Workflow State
+  const [currentStep, setCurrentStep] = useState<WorkflowStep>('setup');
   const [selectedPeriod, setSelectedPeriod] = useState<PayrollPeriod | null>(null);
+  const [selectedPaystub, setSelectedPaystub] = useState<Paystub | null>(null);
   
-  const [newPeriod, setNewPeriod] = useState({
+  // Dialog States
+  const [showCreateDialog, setShowCreateDialog] = useState(false);
+  const [showPaystubDialog, setShowPaystubDialog] = useState(false);
+  const [showApprovalDialog, setShowApprovalDialog] = useState(false);
+  
+  // Form State
+  const [newPeriodForm, setNewPeriodForm] = useState({
     startDate: format(startOfWeek(new Date(), { weekStartsOn: 1 }), 'yyyy-MM-dd'),
     endDate: format(endOfWeek(new Date(), { weekStartsOn: 1 }), 'yyyy-MM-dd'),
     payDate: format(addDays(endOfWeek(new Date(), { weekStartsOn: 1 }), 3), 'yyyy-MM-dd'),
@@ -74,16 +90,17 @@ export default function HRPayroll() {
   const { currentLocation } = useLocation();
 
   // Fetch payroll periods
-  const { data: periods = [] } = useQuery<PayrollPeriod[]>({
-    queryKey: ['/api/payroll-periods'],
+  const { data: periods = [], isLoading: periodsLoading } = useQuery<PayrollPeriod[]>({
+    queryKey: ['/api/payroll-periods', currentLocation?.id],
     queryFn: async () => {
-      const response = await apiRequest('GET', '/api/payroll-periods');
+      const response = await apiRequest('GET', `/api/payroll-periods?locationId=${currentLocation?.id}`);
       return response.json();
     },
+    enabled: !!currentLocation,
   });
 
-  // Fetch paychecks for selected period
-  const { data: paychecks = [] } = useQuery<Paycheck[]>({
+  // Fetch paystubs for selected period
+  const { data: paystubs = [], isLoading: paystubsLoading } = useQuery<Paystub[]>({
     queryKey: ['/api/payroll-periods', selectedPeriod?.id, 'paychecks'],
     queryFn: async () => {
       if (!selectedPeriod?.id) return [];
@@ -103,23 +120,32 @@ export default function HRPayroll() {
   });
 
   // Create payroll period
-  const createPeriod = useMutation({
+  const createPeriodMutation = useMutation({
     mutationFn: async (data: any) => {
       const response = await apiRequest('POST', '/api/payroll-periods', { body: data });
       return response.json();
     },
-    onSuccess: () => {
+    onSuccess: (newPeriod) => {
       queryClient.invalidateQueries({ queryKey: ['/api/payroll-periods'] });
+      setSelectedPeriod(newPeriod);
+      setCurrentStep('calculate');
       setShowCreateDialog(false);
-      toast({ title: "Pay Period Created", description: "New payroll period created successfully." });
+      toast({ 
+        title: "Pay Period Created", 
+        description: `${newPeriod.name} created successfully. Ready for payroll calculation.` 
+      });
     },
     onError: () => {
-      toast({ title: "Error", description: "Failed to create pay period", variant: "destructive" });
+      toast({ 
+        title: "Error", 
+        description: "Failed to create pay period", 
+        variant: "destructive" 
+      });
     },
   });
 
-  // Calculate payroll (process paychecks)
-  const calculatePayroll = useMutation({
+  // Calculate payroll (Patriot Software Step 2)
+  const calculatePayrollMutation = useMutation({
     mutationFn: async (periodId: string) => {
       const response = await apiRequest('POST', `/api/hr/payroll/pay-periods/${periodId}/calculate`);
       return response.json();
@@ -127,166 +153,347 @@ export default function HRPayroll() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/payroll-periods'] });
       queryClient.invalidateQueries({ queryKey: ['/api/payroll-periods', selectedPeriod?.id, 'paychecks'] });
-      toast({ title: "Payroll Calculated", description: "Paychecks generated successfully." });
+      setCurrentStep('review');
+      toast({ 
+        title: "Payroll Calculated", 
+        description: "All employee paychecks calculated and saved successfully." 
+      });
     },
     onError: (error: any) => {
-      toast({ title: "Calculation Failed", description: error.message || "Failed to calculate payroll", variant: "destructive" });
+      toast({ 
+        title: "Calculation Failed", 
+        description: error.message || "Failed to calculate payroll", 
+        variant: "destructive" 
+      });
+    },
+  });
+
+  // Approve payroll (Patriot Software Step 3)
+  const approvePayrollMutation = useMutation({
+    mutationFn: async ({ periodId, notes }: { periodId: string; notes?: string }) => {
+      const response = await apiRequest('POST', `/api/hr/payroll/pay-periods/${periodId}/approve`, { 
+        body: { notes } 
+      });
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/payroll-periods'] });
+      setCurrentStep('setup');
+      setSelectedPeriod(null);
+      setShowApprovalDialog(false);
+      toast({ 
+        title: "Payroll Approved", 
+        description: "Payroll has been approved and is ready for payment processing." 
+      });
+    },
+    onError: (error: any) => {
+      toast({ 
+        title: "Approval Failed", 
+        description: error.message || "Failed to approve payroll", 
+        variant: "destructive" 
+      });
     },
   });
 
   const handleCreatePeriod = () => {
-    createPeriod.mutate({
-      body: {
-        ...newPeriod,
-        locationId: currentLocation?.id
-      }
+    createPeriodMutation.mutate({
+      ...newPeriodForm,
+      locationId: currentLocation?.id
     });
   };
 
-  const handleCalculatePayroll = () => {
-    if (selectedPeriod) {
-      calculatePayroll.mutate(selectedPeriod.id);
+  const handleSelectPeriod = (period: PayrollPeriod) => {
+    setSelectedPeriod(period);
+    if (period.status === 'draft') {
+      setCurrentStep('calculate');
+    } else if (period.status === 'calculated') {
+      setCurrentStep('review');
+    } else {
+      setCurrentStep('approve');
     }
   };
 
+  const getStepStatus = (step: WorkflowStep) => {
+    const stepOrder: WorkflowStep[] = ['setup', 'calculate', 'review', 'approve'];
+    const currentIndex = stepOrder.indexOf(currentStep);
+    const stepIndex = stepOrder.indexOf(step);
+    
+    if (stepIndex < currentIndex) return 'completed';
+    if (stepIndex === currentIndex) return 'current';
+    return 'upcoming';
+  };
+
+  // Calculate totals for display
+  const periodTotals = paystubs.reduce((totals, paystub) => ({
+    grossPay: totals.grossPay + parseFloat(paystub.grossPay || '0'),
+    deductions: totals.deductions + parseFloat(paystub.totalDeductions || '0'),
+    netPay: totals.netPay + parseFloat(paystub.netPay || '0')
+  }), { grossPay: 0, deductions: 0, netPay: 0 });
+
   return (
     <div className="p-6 max-w-7xl mx-auto space-y-6">
+      {/* Header */}
       <div className="flex justify-between items-center">
         <div>
-          <h1 className="text-2xl font-bold">Payroll Management</h1>
-          <p className="text-muted-foreground">Professional payroll processing for your restaurant</p>
+          <h1 className="text-3xl font-bold">Payroll Management</h1>
+          <p className="text-muted-foreground">Professional payroll processing like Patriot Software</p>
         </div>
-        <Button onClick={() => setShowCreateDialog(true)} className="gap-2">
-          <Plus className="w-4 h-4" />
-          New Pay Period
-        </Button>
+        {currentStep === 'setup' && (
+          <Button onClick={() => setShowCreateDialog(true)} className="gap-2" size="lg">
+            <Plus className="w-4 h-4" />
+            New Pay Period
+          </Button>
+        )}
       </div>
 
-      {/* Pay Periods List */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Calendar className="w-5 h-5" />
-            Pay Periods
-          </CardTitle>
-          <CardDescription>Select a pay period to view or process payroll</CardDescription>
-        </CardHeader>
-        <CardContent>
-          {periods.length === 0 ? (
-            <div className="text-center py-8 text-muted-foreground">
-              No pay periods found. Create your first pay period to get started.
-            </div>
-          ) : (
-            <div className="space-y-3">
-              {periods.map((period) => (
-                <div
-                  key={period.id}
-                  className={`p-4 border rounded-lg cursor-pointer transition-colors ${
-                    selectedPeriod?.id === period.id ? 'border-blue-500 bg-blue-50' : 'border-border hover:border-gray-300'
-                  }`}
-                  onClick={() => setSelectedPeriod(period)}
-                >
-                  <div className="flex justify-between items-center">
-                    <div>
-                      <h3 className="font-medium">{period.name}</h3>
-                      <p className="text-sm text-muted-foreground">
-                        {format(new Date(period.startDate), 'MMM d')} - {format(new Date(period.endDate), 'MMM d, yyyy')}
-                        • Pay Date: {format(new Date(period.payDate), 'MMM d, yyyy')}
-                      </p>
-                    </div>
-                    <div className="flex items-center gap-3">
-                      <Badge variant={period.status === 'calculated' ? 'default' : 'secondary'}>
-                        {period.status}
-                      </Badge>
-                      {period.status === 'calculated' && (
-                        <div className="text-right text-sm">
-                          <div className="font-medium">${parseFloat(period.totalNetPay || '0').toFixed(2)} Net</div>
-                          <div className="text-muted-foreground">${parseFloat(period.totalGrossPay || '0').toFixed(2)} Gross</div>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-        </CardContent>
-      </Card>
-
-      {/* Selected Period Actions */}
+      {/* Patriot Software 3-Step Progress */}
       {selectedPeriod && (
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Calculator className="w-5 h-5" />
-              Payroll Actions
+              Payroll Processing: {selectedPeriod.name}
             </CardTitle>
-            <CardDescription>Process payroll for {selectedPeriod.name}</CardDescription>
-          </CardHeader>
-          <CardContent className="flex gap-3">
-            {selectedPeriod.status === 'draft' ? (
-              <Button 
-                onClick={handleCalculatePayroll}
-                disabled={calculatePayroll.isPending}
-                className="gap-2"
-              >
-                <Calculator className="w-4 h-4" />
-                {calculatePayroll.isPending ? 'Calculating...' : 'Calculate Payroll'}
-              </Button>
-            ) : (
-              <div className="flex items-center gap-2 text-green-600">
-                <Calculator className="w-4 h-4" />
-                <span>Payroll calculated - {paychecks.length} paychecks generated</span>
-              </div>
-            )}
-          </CardContent>
-        </Card>
-      )}
-
-      {/* Paychecks List */}
-      {selectedPeriod && paychecks.length > 0 && (
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Users className="w-5 h-5" />
-              Generated Paychecks
-            </CardTitle>
-            <CardDescription>View and manage paychecks for {selectedPeriod.name}</CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="space-y-3">
-              {paychecks.map((paycheck) => (
-                <div key={paycheck.id} className="flex justify-between items-center p-4 border rounded-lg">
-                  <div>
-                    <h4 className="font-medium">{paycheck.employee.firstName} {paycheck.employee.lastName}</h4>
-                    <p className="text-sm text-muted-foreground">
-                      Check #{paycheck.checkNumber} • {parseFloat(paycheck.regularHours).toFixed(1)}h regular, {parseFloat(paycheck.overtimeHours).toFixed(1)}h overtime
+            <div className="flex items-center justify-between mb-6">
+              {(['setup', 'calculate', 'review', 'approve'] as WorkflowStep[]).map((step, index) => {
+                const status = getStepStatus(step);
+                const stepLabels = {
+                  setup: 'Setup Period',
+                  calculate: 'Calculate Payroll',
+                  review: 'Review & Verify',
+                  approve: 'Approve & Finalize'
+                };
+                
+                return (
+                  <div key={step} className="flex items-center">
+                    <div className={`flex items-center justify-center w-10 h-10 rounded-full border-2 ${
+                      status === 'completed' ? 'bg-green-500 border-green-500 text-white' :
+                      status === 'current' ? 'bg-blue-500 border-blue-500 text-white' :
+                      'bg-gray-100 border-gray-300 text-gray-500'
+                    }`}>
+                      {status === 'completed' ? <CheckCircle className="w-5 h-5" /> : index + 1}
+                    </div>
+                    <div className="ml-3 min-w-0">
+                      <p className={`text-sm font-medium ${
+                        status === 'current' ? 'text-blue-600' : 
+                        status === 'completed' ? 'text-green-600' : 'text-gray-500'
+                      }`}>
+                        {stepLabels[step]}
+                      </p>
+                    </div>
+                    {index < 3 && (
+                      <div className={`flex-1 h-0.5 mx-4 ${
+                        status === 'completed' ? 'bg-green-500' : 'bg-gray-200'
+                      }`} />
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+
+            {/* Step Actions */}
+            <div className="flex gap-4">
+              {currentStep === 'calculate' && (
+                <Button 
+                  onClick={() => calculatePayrollMutation.mutate(selectedPeriod.id)}
+                  disabled={calculatePayrollMutation.isPending}
+                  size="lg"
+                  className="gap-2"
+                >
+                  <Calculator className="w-4 h-4" />
+                  {calculatePayrollMutation.isPending ? 'Calculating...' : 'Calculate Payroll'}
+                </Button>
+              )}
+              
+              {currentStep === 'review' && paystubs.length > 0 && (
+                <div className="flex gap-4">
+                  <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+                    <div className="flex items-center gap-2 text-green-800">
+                      <CheckCircle className="w-5 h-5" />
+                      <span className="font-semibold">Payroll Calculated</span>
+                    </div>
+                    <p className="text-sm text-green-700 mt-1">
+                      {paystubs.length} paychecks • ${periodTotals.netPay.toFixed(2)} total net pay
                     </p>
                   </div>
-                  <div className="flex items-center gap-3">
-                    <div className="text-right">
-                      <div className="font-medium">${parseFloat(paycheck.netPay).toFixed(2)}</div>
-                      <div className="text-sm text-muted-foreground">${parseFloat(paycheck.grossPay).toFixed(2)} gross</div>
-                    </div>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => {
-                        setSelectedPaycheck(paycheck);
-                        setShowPaycheckDialog(true);
-                      }}
-                      className="gap-2"
-                    >
-                      <Eye className="w-4 h-4" />
-                      View
-                    </Button>
-                  </div>
+                  <Button 
+                    onClick={() => setShowApprovalDialog(true)}
+                    size="lg"
+                    className="gap-2"
+                  >
+                    <FileText className="w-4 h-4" />
+                    Approve Payroll
+                  </Button>
                 </div>
-              ))}
+              )}
             </div>
           </CardContent>
         </Card>
       )}
+
+      <Tabs value={currentStep === 'setup' ? 'periods' : 'current'} className="space-y-6">
+        <TabsList className="grid w-full grid-cols-2">
+          <TabsTrigger value="periods" onClick={() => { setCurrentStep('setup'); setSelectedPeriod(null); }}>
+            Pay Periods
+          </TabsTrigger>
+          <TabsTrigger value="current" disabled={!selectedPeriod}>
+            Current Payroll
+          </TabsTrigger>
+        </TabsList>
+
+        {/* Pay Periods List */}
+        <TabsContent value="periods">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Calendar className="w-5 h-5" />
+                Payroll Periods
+              </CardTitle>
+              <CardDescription>Select or create a pay period to begin payroll processing</CardDescription>
+            </CardHeader>
+            <CardContent>
+              {periodsLoading ? (
+                <div className="text-center py-8 text-muted-foreground">Loading pay periods...</div>
+              ) : periods.length === 0 ? (
+                <div className="text-center py-8 text-muted-foreground">
+                  No pay periods found. Create your first pay period to get started.
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {periods.map((period) => (
+                    <div
+                      key={period.id}
+                      className="p-4 border rounded-lg cursor-pointer hover:border-blue-300 transition-colors"
+                      onClick={() => handleSelectPeriod(period)}
+                    >
+                      <div className="flex justify-between items-center">
+                        <div>
+                          <h3 className="font-medium">{period.name}</h3>
+                          <p className="text-sm text-muted-foreground">
+                            Pay Date: {format(new Date(period.payDate), 'MMM d, yyyy')} • {period.frequency}
+                          </p>
+                        </div>
+                        <div className="flex items-center gap-3">
+                          <Badge variant={
+                            period.status === 'approved' ? 'default' : 
+                            period.status === 'calculated' ? 'secondary' : 'outline'
+                          }>
+                            {period.status}
+                          </Badge>
+                          {period.status !== 'draft' && (
+                            <div className="text-right text-sm">
+                              <div className="font-medium">${parseFloat(period.totalNetPay || '0').toFixed(2)} Net</div>
+                              <div className="text-muted-foreground">${parseFloat(period.totalGrossPay || '0').toFixed(2)} Gross</div>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* Current Payroll Processing */}
+        <TabsContent value="current">
+          {selectedPeriod && (
+            <div className="space-y-6">
+              {/* Payroll Summary */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <DollarSign className="w-5 h-5" />
+                    Payroll Summary
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="grid grid-cols-3 gap-6">
+                    <div className="text-center">
+                      <div className="text-2xl font-bold text-green-600">
+                        ${periodTotals.grossPay.toFixed(2)}
+                      </div>
+                      <div className="text-sm text-muted-foreground">Gross Pay</div>
+                    </div>
+                    <div className="text-center">
+                      <div className="text-2xl font-bold text-red-600">
+                        ${periodTotals.deductions.toFixed(2)}
+                      </div>
+                      <div className="text-sm text-muted-foreground">Total Deductions</div>
+                    </div>
+                    <div className="text-center">
+                      <div className="text-2xl font-bold text-blue-600">
+                        ${periodTotals.netPay.toFixed(2)}
+                      </div>
+                      <div className="text-sm text-muted-foreground">Net Pay</div>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Employee Paystubs */}
+              {paystubs.length > 0 && (
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <Users className="w-5 h-5" />
+                      Employee Paychecks ({paystubs.length})
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-3">
+                      {paystubs.map((paystub) => (
+                        <div key={paystub.id} className="flex justify-between items-center p-4 border rounded-lg">
+                          <div>
+                            <h4 className="font-medium">
+                              {paystub.employee.firstName} {paystub.employee.lastName}
+                            </h4>
+                            <div className="text-sm text-muted-foreground flex items-center gap-4">
+                              <span>Check #{paystub.checkNumber}</span>
+                              <span className="flex items-center gap-1">
+                                <Clock className="w-3 h-3" />
+                                {parseFloat(paystub.regularHours).toFixed(1)}h regular
+                              </span>
+                              {parseFloat(paystub.overtimeHours) > 0 && (
+                                <span className="text-orange-600">
+                                  +{parseFloat(paystub.overtimeHours).toFixed(1)}h overtime
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-3">
+                            <div className="text-right">
+                              <div className="font-medium">${parseFloat(paystub.netPay).toFixed(2)}</div>
+                              <div className="text-sm text-muted-foreground">
+                                ${parseFloat(paystub.grossPay).toFixed(2)} gross
+                              </div>
+                            </div>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => {
+                                setSelectedPaystub(paystub);
+                                setShowPaystubDialog(true);
+                              }}
+                              className="gap-2"
+                            >
+                              <Eye className="w-4 h-4" />
+                              View
+                            </Button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
+            </div>
+          )}
+        </TabsContent>
+      </Tabs>
 
       {/* Create Period Dialog */}
       <Dialog open={showCreateDialog} onOpenChange={setShowCreateDialog}>
@@ -297,8 +504,11 @@ export default function HRPayroll() {
           </DialogHeader>
           <div className="space-y-4">
             <div>
-              <Label>Frequency</Label>
-              <Select value={newPeriod.frequency} onValueChange={(value) => setNewPeriod({...newPeriod, frequency: value})}>
+              <Label>Pay Frequency</Label>
+              <Select 
+                value={newPeriodForm.frequency} 
+                onValueChange={(value) => setNewPeriodForm({...newPeriodForm, frequency: value})}
+              >
                 <SelectTrigger>
                   <SelectValue />
                 </SelectTrigger>
@@ -314,16 +524,16 @@ export default function HRPayroll() {
                 <Label>Start Date</Label>
                 <Input
                   type="date"
-                  value={newPeriod.startDate}
-                  onChange={(e) => setNewPeriod({...newPeriod, startDate: e.target.value})}
+                  value={newPeriodForm.startDate}
+                  onChange={(e) => setNewPeriodForm({...newPeriodForm, startDate: e.target.value})}
                 />
               </div>
               <div>
                 <Label>End Date</Label>
                 <Input
                   type="date"
-                  value={newPeriod.endDate}
-                  onChange={(e) => setNewPeriod({...newPeriod, endDate: e.target.value})}
+                  value={newPeriodForm.endDate}
+                  onChange={(e) => setNewPeriodForm({...newPeriodForm, endDate: e.target.value})}
                 />
               </div>
             </div>
@@ -331,36 +541,91 @@ export default function HRPayroll() {
               <Label>Pay Date</Label>
               <Input
                 type="date"
-                value={newPeriod.payDate}
-                onChange={(e) => setNewPeriod({...newPeriod, payDate: e.target.value})}
+                value={newPeriodForm.payDate}
+                onChange={(e) => setNewPeriodForm({...newPeriodForm, payDate: e.target.value})}
               />
             </div>
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setShowCreateDialog(false)}>Cancel</Button>
-            <Button onClick={handleCreatePeriod} disabled={createPeriod.isPending}>
-              {createPeriod.isPending ? 'Creating...' : 'Create Period'}
+            <Button 
+              onClick={handleCreatePeriod} 
+              disabled={createPeriodMutation.isPending}
+            >
+              {createPeriodMutation.isPending ? 'Creating...' : 'Create Period'}
             </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
 
-      {/* Paycheck View Dialog */}
-      <Dialog open={showPaycheckDialog} onOpenChange={setShowPaycheckDialog}>
+      {/* Payroll Approval Dialog */}
+      <Dialog open={showApprovalDialog} onOpenChange={setShowApprovalDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Approve Payroll</DialogTitle>
+            <DialogDescription>
+              Review and approve payroll for {selectedPeriod?.name}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <Alert>
+              <AlertCircle className="h-4 w-4" />
+              <AlertDescription>
+                Once approved, this payroll cannot be modified. Please review all paychecks carefully.
+              </AlertDescription>
+            </Alert>
+            <div className="bg-gray-50 p-4 rounded-lg space-y-2">
+              <div className="flex justify-between">
+                <span>Total Employees:</span>
+                <span className="font-medium">{paystubs.length}</span>
+              </div>
+              <div className="flex justify-between">
+                <span>Gross Pay:</span>
+                <span className="font-medium">${periodTotals.grossPay.toFixed(2)}</span>
+              </div>
+              <div className="flex justify-between">
+                <span>Total Deductions:</span>
+                <span className="font-medium">${periodTotals.deductions.toFixed(2)}</span>
+              </div>
+              <Separator />
+              <div className="flex justify-between text-lg">
+                <span className="font-semibold">Net Pay:</span>
+                <span className="font-semibold">${periodTotals.netPay.toFixed(2)}</span>
+              </div>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowApprovalDialog(false)}>Cancel</Button>
+            <Button 
+              onClick={() => approvePayrollMutation.mutate({ periodId: selectedPeriod!.id })}
+              disabled={approvePayrollMutation.isPending}
+            >
+              {approvePayrollMutation.isPending ? 'Approving...' : 'Approve Payroll'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Paystub View Dialog */}
+      <Dialog open={showPaystubDialog} onOpenChange={setShowPaystubDialog}>
         <DialogContent className="max-w-4xl max-h-[90vh] overflow-auto">
           <DialogHeader>
             <DialogTitle>Paycheck Details</DialogTitle>
             <DialogDescription>
-              {selectedPaycheck && `Paycheck for ${selectedPaycheck.employee.firstName} ${selectedPaycheck.employee.lastName}`}
+              {selectedPaystub && `Paycheck for ${selectedPaystub.employee.firstName} ${selectedPaystub.employee.lastName}`}
             </DialogDescription>
           </DialogHeader>
-          {selectedPaycheck && (
+          {selectedPaystub && (
             <div className="py-4">
-              <ActualPaycheck paycheck={selectedPaycheck} settings={settings} />
+              <ActualPaycheck paycheck={selectedPaystub} settings={settings} />
             </div>
           )}
           <DialogFooter>
-            <Button variant="outline" onClick={() => setShowPaycheckDialog(false)}>Close</Button>
+            <Button variant="outline" onClick={() => setShowPaystubDialog(false)}>Close</Button>
+            <Button className="gap-2">
+              <Printer className="w-4 h-4" />
+              Print Paycheck
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
