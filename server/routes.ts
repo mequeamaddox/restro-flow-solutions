@@ -3565,6 +3565,39 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Employee specific time-off requests
+  app.get("/api/employees/:employeeId/time-off-requests", isAuthenticated, async (req, res) => {
+    try {
+      const employeeId = req.params.employeeId;
+      const requests = await storage.getEmployeeTimeOffRequests(employeeId);
+      res.json(requests);
+    } catch (error) {
+      console.error("Error fetching employee time-off requests:", error);
+      res.status(500).json({ message: "Failed to fetch time-off requests" });
+    }
+  });
+
+  // Payroll settings routes
+  app.get("/api/payroll/paycheck-settings", isAuthenticated, async (req, res) => {
+    try {
+      const settings = await storage.getPaycheckSettings();
+      res.json(settings);
+    } catch (error) {
+      console.error("Error fetching paycheck settings:", error);
+      res.status(500).json({ error: "Failed to fetch paycheck settings" });
+    }
+  });
+
+  app.put("/api/payroll/paycheck-settings", isAuthenticated, requirePermission(Permission.MANAGE_EMPLOYEES), async (req, res) => {
+    try {
+      const settings = await storage.updatePaycheckSettings(req.body);
+      res.json(settings);
+    } catch (error) {
+      console.error("Error updating paycheck settings:", error);
+      res.status(500).json({ error: "Failed to update paycheck settings" });
+    }
+  });
+
   // Employee pay stub routes
   app.get("/api/employees/:employeeId/pay-stubs", isAuthenticated, async (req, res) => {
     try {

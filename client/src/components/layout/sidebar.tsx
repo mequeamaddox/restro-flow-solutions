@@ -68,6 +68,7 @@ const hrNavigation = [
   { name: 'Time Clock', href: '/hr/time-clock', icon: Clock },
   { name: 'Time Off', href: '/hr/time-off', icon: Calendar },
   { name: 'Payroll', href: '/hr/payroll', icon: DollarSign },
+  { name: 'Paycheck Settings', href: '/hr/paycheck-settings', icon: Settings },
   { name: 'Tasks', href: '/hr/tasks', icon: CheckSquare },
   { name: 'Messaging', href: '/hr/messaging', icon: MessageSquare },
 ];

@@ -442,6 +442,8 @@ export interface IStorage {
   getTimeEntries(employeeId: string, startDate: string, endDate: string): Promise<TimeEntry[]>;
   calculatePayrollHoursFromTimeEntries(payrollPeriodId: string): Promise<{ employeeId: string; regularHours: number; overtimeHours: number; totalHours: number; employee?: Employee }[]>;
   recalculatePayPeriodTotals(payrollPeriodId: string): Promise<void>;
+  getPaycheckSettings(): Promise<any>;
+  updatePaycheckSettings(settings: any): Promise<any>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -2304,6 +2306,13 @@ export class DatabaseStorage implements IStorage {
     return await db.select().from(timeOffRequests).orderBy(desc(timeOffRequests.createdAt));
   }
 
+  async getEmployeeTimeOffRequests(employeeId: string): Promise<TimeOffRequest[]> {
+    return await db.select()
+      .from(timeOffRequests)
+      .where(eq(timeOffRequests.employeeId, employeeId))
+      .orderBy(desc(timeOffRequests.createdAt));
+  }
+
   async createTimeOffRequest(request: InsertTimeOffRequest): Promise<TimeOffRequest> {
     const [created] = await db.insert(timeOffRequests).values(request).returning();
     return created;
@@ -3521,6 +3530,38 @@ export class DatabaseStorage implements IStorage {
       return result;
     } catch (error) {
       console.error('Error calculating payroll hours:', error);
+      throw error;
+    }
+  }
+
+  // Paycheck settings methods
+  async getPaycheckSettings(): Promise<any> {
+    try {
+      // Return default settings for now - in a full implementation this would come from database
+      return {
+        paycheckLayout: 'check_stub_only',
+        displayLast4Ssn: true,
+        displayTaxFilingName: true,
+        displayBusinessName: true,
+        printSignature: false,
+        showLastCheckNumber: true,
+        businessName: 'Pawleys Fish Camp',
+        taxFilingName: 'AAM COLLECTIVE LLC'
+      };
+    } catch (error) {
+      console.error('Error fetching paycheck settings:', error);
+      return {};
+    }
+  }
+
+  async updatePaycheckSettings(settings: any): Promise<any> {
+    try {
+      // In a full implementation, this would update the database
+      // For now, just return the updated settings
+      console.log('Updating paycheck settings:', settings);
+      return { ...settings };
+    } catch (error) {
+      console.error('Error updating paycheck settings:', error);
       throw error;
     }
   }
