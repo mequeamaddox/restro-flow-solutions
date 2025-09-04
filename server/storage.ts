@@ -73,6 +73,7 @@ import {
   tasks,
   taskCompletions,
   messages,
+  paycheckSettings,
   messageThreads,
   performanceReviews,
   timeEntries,
@@ -3534,32 +3535,76 @@ export class DatabaseStorage implements IStorage {
     }
   }
 
-  // Paycheck settings methods
-  async getPaycheckSettings(): Promise<any> {
+  // Paycheck settings methods - now with real database operations
+  async getPaycheckSettings(locationId?: string): Promise<any> {
     try {
-      // Return default settings for now - in a full implementation this would come from database
-      return {
-        paycheckLayout: 'check_stub_only',
-        displayLast4Ssn: true,
-        displayTaxFilingName: true,
-        displayBusinessName: true,
-        printSignature: false,
-        showLastCheckNumber: true,
-        businessName: 'Pawleys Fish Camp',
-        taxFilingName: 'AAM COLLECTIVE LLC'
-      };
+      let query = db.select().from(paycheckSettings).where(eq(paycheckSettings.isActive, true));
+      
+      if (locationId) {
+        query = query.where(eq(paycheckSettings.locationId, locationId));
+      }
+      
+      const settings = await query.limit(1);
+      
+      if (settings.length === 0) {
+        // Create default settings if none exist
+        const defaultSettings = {
+          locationId: locationId || null,
+          paycheckLayout: 'check_stub_only' as const,
+          displayLast4Ssn: true,
+          displayTaxFilingName: true,
+          displayBusinessName: true,
+          printSignature: false,
+          showLastCheckNumber: true,
+          businessName: 'Pawleys Fish Camp',
+          taxFilingName: 'AAM COLLECTIVE LLC',
+          lastCheckNumber: 1000,
+          isActive: true
+        };
+        
+        const [created] = await db.insert(paycheckSettings).values(defaultSettings).returning();
+        return created;
+      }
+      
+      return settings[0];
     } catch (error) {
       console.error('Error fetching paycheck settings:', error);
-      return {};
+      throw error;
     }
   }
 
-  async updatePaycheckSettings(settings: any): Promise<any> {
+  async updatePaycheckSettings(settingsData: any, locationId?: string): Promise<any> {
     try {
-      // In a full implementation, this would update the database
-      // For now, just return the updated settings
-      console.log('Updating paycheck settings:', settings);
-      return { ...settings };
+      // First get existing settings
+      const existing = await this.getPaycheckSettings(locationId);
+      
+      if (existing && existing.id) {
+        // Update existing settings
+        const updateData = {
+          ...settingsData,
+          updatedAt: new Date()
+        };
+        
+        const [updated] = await db
+          .update(paycheckSettings)
+          .set(updateData)
+          .where(eq(paycheckSettings.id, existing.id))
+          .returning();
+          
+        console.log('✅ Updated paycheck settings:', updated);
+        return updated;
+      } else {
+        // Create new settings if none exist
+        const newSettings = {
+          locationId: locationId || null,
+          ...settingsData,
+          isActive: true
+        };
+        
+        const [created] = await db.insert(paycheckSettings).values(newSettings).returning();
+        console.log('✅ Created new paycheck settings:', created);
+        return created;
+      }
     } catch (error) {
       console.error('Error updating paycheck settings:', error);
       throw error;

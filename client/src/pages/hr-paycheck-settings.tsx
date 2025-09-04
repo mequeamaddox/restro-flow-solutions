@@ -1,4 +1,4 @@
-import { useState } from "react";
+import React, { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -11,6 +11,7 @@ import { Settings, FileText, Printer, CheckCircle, CircleX } from "lucide-react"
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import { usePermissions, Permission } from "@/contexts/PermissionContext";
+import { PaycheckGenerator } from "@/components/payroll/paycheck-generator";
 
 interface PaycheckSettings {
   id?: string;
@@ -67,7 +68,19 @@ export default function HRPaycheckSettings() {
 
   const { data: settings, isLoading } = useQuery<PaycheckSettings>({
     queryKey: ['/api/payroll/paycheck-settings'],
+    onSuccess: (data) => {
+      if (data?.paycheckLayout) {
+        setSelectedLayout(data.paycheckLayout);
+      }
+    }
   });
+
+  // Update selected layout when settings load
+  React.useEffect(() => {
+    if (settings?.paycheckLayout) {
+      setSelectedLayout(settings.paycheckLayout);
+    }
+  }, [settings]);
 
   const { data: locations = [] } = useQuery<any[]>({
     queryKey: ['/api/locations'],
@@ -227,15 +240,24 @@ export default function HRPaycheckSettings() {
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
               <FileText className="h-5 w-5 text-blue-600" />
-              <span className="font-medium">Print Sample</span>
+              <span className="font-medium">Generate Sample Check</span>
+              <span className="text-sm text-gray-500">- Uses live settings</span>
             </div>
             <Button 
               variant="outline" 
               size="sm"
               data-testid="print-sample-button"
-              onClick={() => toast({ title: "Feature Coming Soon", description: "Print sample functionality will be available soon" })}
+              onClick={() => {
+                const previewElement = document.querySelector('[data-testid="live-preview"]');
+                if (previewElement) {
+                  previewElement.scrollIntoView({ behavior: 'smooth' });
+                  toast({ title: "Live Preview", description: "Scroll down to see your paycheck with current settings" });
+                } else {
+                  toast({ title: "Generating Preview", description: "Live preview showing actual paycheck format" });
+                }
+              }}
             >
-              Print Sample
+              View Live Sample
             </Button>
           </div>
         </CardContent>
@@ -342,11 +364,54 @@ export default function HRPaycheckSettings() {
               <Label htmlFor="showLastCheckNumber" className="text-sm font-medium">
                 Show last check number used
               </Label>
-              <p className="text-xs text-muted-foreference">
-                Displays the most recent check number for reference
+              <p className="text-xs text-muted-foreground">
+                Displays the most recent check number for reference: #{settings?.lastCheckNumber || 1000}
               </p>
             </div>
           </div>
+        </CardContent>
+      </Card>
+
+      {/* Live Preview */}
+      <Card className="mt-8">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <FileText className="h-5 w-5" />
+            Live Preview
+          </CardTitle>
+          <CardDescription>
+            See how your paycheck settings will look with actual data
+          </CardDescription>
+        </CardHeader>
+        <CardContent data-testid="live-preview">
+          <PaycheckGenerator 
+            settings={{
+              ...settings,
+              paycheckLayout: selectedLayout
+            }}
+            employee={{
+              firstName: "John",
+              lastName: "Smith", 
+              employeeId: "EMP001",
+              ssn: "123456789"
+            }}
+            paycheck={{
+              payPeriodStart: "01/01/2025",
+              payPeriodEnd: "01/15/2025",
+              payDate: "01/18/2025",
+              regularHours: "80.00",
+              regularPay: "1600.00",
+              overtimeHours: "5.00", 
+              overtimePay: "187.50",
+              grossPay: "1787.50",
+              federalTax: "268.13",
+              stateTax: "89.38",
+              socialSecurity: "110.83",
+              medicare: "25.92",
+              totalDeductions: "494.26",
+              netPay: "1293.24"
+            }}
+          />
         </CardContent>
       </Card>
 

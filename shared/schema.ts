@@ -213,6 +213,27 @@ export const inventoryTransactions = pgTable("inventory_transactions", {
   createdAt: timestamp("created_at").defaultNow(),
 });
 
+// Paycheck settings for actual payroll processing
+export const paycheckLayoutEnum = pgEnum("paycheck_layout", ["no_printing", "check_stub_only", "check_on_top", "check_on_bottom"]);
+
+export const paycheckSettings = pgTable("paycheck_settings", {
+  id: uuid("id").primaryKey().default(sql`gen_random_uuid()`),
+  locationId: uuid("location_id").references(() => locations.id).notNull(),
+  paycheckLayout: paycheckLayoutEnum("paycheck_layout").notNull().default("check_stub_only"),
+  displayLast4Ssn: boolean("display_last4_ssn").default(true),
+  displayTaxFilingName: boolean("display_tax_filing_name").default(true),
+  displayBusinessName: boolean("display_business_name").default(true),
+  printSignature: boolean("print_signature").default(false),
+  showLastCheckNumber: boolean("show_last_check_number").default(true),
+  businessName: varchar("business_name", { length: 255 }).default("Pawleys Fish Camp"),
+  taxFilingName: varchar("tax_filing_name", { length: 255 }).default("AAM COLLECTIVE LLC"),
+  lastCheckNumber: integer("last_check_number").default(1000),
+  signatureImagePath: varchar("signature_image_path", { length: 500 }),
+  isActive: boolean("is_active").default(true),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
 // Relations
 export const locationsRelations = relations(locations, ({ many }) => ({
   users: many(users),

@@ -3577,10 +3577,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Payroll settings routes
+  // Payroll settings routes - now with location-aware functionality
   app.get("/api/payroll/paycheck-settings", isAuthenticated, async (req, res) => {
     try {
-      const settings = await storage.getPaycheckSettings();
+      const locationId = req.query.locationId as string;
+      const settings = await storage.getPaycheckSettings(locationId);
       res.json(settings);
     } catch (error) {
       console.error("Error fetching paycheck settings:", error);
@@ -3590,7 +3591,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.put("/api/payroll/paycheck-settings", isAuthenticated, requirePermission(Permission.MANAGE_EMPLOYEES), async (req, res) => {
     try {
-      const settings = await storage.updatePaycheckSettings(req.body);
+      const locationId = req.query.locationId as string;
+      console.log('🎯 Updating paycheck settings with real data:', req.body);
+      const settings = await storage.updatePaycheckSettings(req.body, locationId);
       res.json(settings);
     } catch (error) {
       console.error("Error updating paycheck settings:", error);
