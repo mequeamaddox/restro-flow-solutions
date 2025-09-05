@@ -2311,10 +2311,33 @@ export class DatabaseStorage implements IStorage {
   }
 
   async createTimeEntry(entryData: any): Promise<TimeEntry> {
+    const clockInTime = new Date(entryData.clockInTime);
+    const clockOutTime = entryData.clockOutTime ? new Date(entryData.clockOutTime) : null;
+    
+    // Check for overlapping time entries for the same employee
+    if (clockOutTime) {
+      const existingEntries = await db.select().from(timeEntries)
+        .where(eq(timeEntries.employeeId, entryData.employeeId));
+      
+      for (const existing of existingEntries) {
+        if (existing.clockInTime && existing.clockOutTime) {
+          const existingStart = existing.clockInTime.getTime();
+          const existingEnd = existing.clockOutTime.getTime();
+          const newStart = clockInTime.getTime();
+          const newEnd = clockOutTime.getTime();
+          
+          // Check if times overlap
+          if ((newStart < existingEnd && newEnd > existingStart)) {
+            throw new Error(`Time entry overlaps with existing entry from ${existing.clockInTime.toISOString()} to ${existing.clockOutTime.toISOString()}`);
+          }
+        }
+      }
+    }
+
     const [entry] = await db.insert(timeEntries).values({
       employeeId: entryData.employeeId,
-      clockInTime: new Date(entryData.clockInTime),
-      clockOutTime: entryData.clockOutTime ? new Date(entryData.clockOutTime) : null,
+      clockInTime: clockInTime,
+      clockOutTime: clockOutTime,
       breakStartTime: entryData.breakStartTime ? new Date(entryData.breakStartTime) : null,
       breakEndTime: entryData.breakEndTime ? new Date(entryData.breakEndTime) : null,
       notes: entryData.notes || null,
