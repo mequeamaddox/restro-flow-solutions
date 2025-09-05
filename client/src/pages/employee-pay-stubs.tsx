@@ -149,12 +149,12 @@ export default function EmployeePayStubs() {
 
   if (paystubsLoading) {
     return (
-      <div className="p-6">
+      <div className="p-4 lg:p-6">
         <div className="animate-pulse space-y-4">
-          <div className="h-8 bg-gray-200 dark:bg-gray-700 rounded w-1/4"></div>
+          <div className="h-8 bg-slate-700 rounded w-1/4"></div>
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
             {[1, 2, 3, 4].map(i => (
-              <div key={i} className="h-24 bg-gray-200 dark:bg-gray-700 rounded"></div>
+              <div key={i} className="h-24 bg-slate-700 rounded"></div>
             ))}
           </div>
         </div>
@@ -163,12 +163,12 @@ export default function EmployeePayStubs() {
   }
 
   return (
-    <div className="p-6 space-y-6" data-testid="employee-pay-stubs-page">
+    <div className="p-4 lg:p-6 space-y-6" data-testid="employee-pay-stubs-page">
       {/* Header */}
       <div className="flex justify-between items-center">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100" data-testid="page-title">My Pay Stubs</h1>
-          <p className="text-gray-600 dark:text-gray-400">View your paycheck history and earnings summary</p>
+          <h1 className="text-2xl font-semibold text-white" data-testid="page-title">My Pay Stubs</h1>
+          <p className="text-slate-300">View your paycheck history and earnings summary</p>
         </div>
         
         <Select value={selectedYear} onValueChange={setSelectedYear}>
@@ -186,12 +186,12 @@ export default function EmployeePayStubs() {
       {/* Summary Cards */}
       {summary && (
         <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-          <Card data-testid="card-total-earnings">
+          <Card className="bg-slate-800/80 backdrop-blur-sm border-slate-700/50" data-testid="card-total-earnings">
             <CardContent className="p-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-medium text-gray-600 dark:text-gray-400">YTD Gross Pay</p>
-                  <p className="text-2xl font-bold text-gray-900 dark:text-gray-100">
+                  <p className="text-sm font-medium text-slate-400">YTD Gross Pay</p>
+                  <p className="text-2xl font-bold text-white">
                     {formatCurrency(summary.yearToDateGross)}
                   </p>
                 </div>
@@ -200,12 +200,12 @@ export default function EmployeePayStubs() {
             </CardContent>
           </Card>
 
-          <Card data-testid="card-total-deductions">
+          <Card className="bg-slate-800/80 backdrop-blur-sm border-slate-700/50" data-testid="card-total-deductions">
             <CardContent className="p-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-medium text-gray-600 dark:text-gray-400">YTD Net Pay</p>
-                  <p className="text-2xl font-bold text-gray-900 dark:text-gray-100">
+                  <p className="text-sm font-medium text-slate-400">YTD Net Pay</p>
+                  <p className="text-2xl font-bold text-white">
                     {formatCurrency(summary.yearToDateNet)}
                   </p>
                 </div>
@@ -214,12 +214,12 @@ export default function EmployeePayStubs() {
             </CardContent>
           </Card>
 
-          <Card data-testid="card-total-net-pay">
+          <Card className="bg-slate-800/80 backdrop-blur-sm border-slate-700/50" data-testid="card-total-net-pay">
             <CardContent className="p-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-medium text-gray-600 dark:text-gray-400">YTD Taxes</p>
-                  <p className="text-2xl font-bold text-gray-900 dark:text-gray-100">
+                  <p className="text-sm font-medium text-slate-400">YTD Taxes</p>
+                  <p className="text-2xl font-bold text-white">
                     {formatCurrency(summary.yearToDateTaxes)}
                   </p>
                 </div>
@@ -228,12 +228,12 @@ export default function EmployeePayStubs() {
             </CardContent>
           </Card>
 
-          <Card>
+          <Card className="bg-slate-800/80 backdrop-blur-sm border-slate-700/50">
             <CardContent className="p-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Avg Hours/Pay</p>
-                  <p className="text-2xl font-bold text-gray-900 dark:text-gray-100">
+                  <p className="text-sm font-medium text-slate-400">Avg Hours/Pay</p>
+                  <p className="text-2xl font-bold text-white">
                     {summary.averageHours.toFixed(1)}
                   </p>
                 </div>
@@ -245,35 +245,35 @@ export default function EmployeePayStubs() {
       )}
 
       {/* Pay Stubs List */}
-      <Card>
+      <Card className="bg-slate-900/50 border-slate-700">
         <CardHeader>
-          <CardTitle>Pay Stubs for {selectedYear}</CardTitle>
-          <CardDescription>
+          <CardTitle className="text-white">Pay Stubs for {selectedYear}</CardTitle>
+          <CardDescription className="text-slate-400">
             View and download your pay stubs from recent pay periods
           </CardDescription>
         </CardHeader>
         <CardContent>
           {paystubs.length === 0 ? (
             <div className="text-center py-12">
-              <DollarSign className="w-12 h-12 text-gray-400 dark:text-gray-600 mx-auto mb-4" />
-              <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100 mb-2">No pay stubs found</h3>
-              <p className="text-gray-600 dark:text-gray-400">You don't have any pay stubs for {selectedYear} yet.</p>
+              <DollarSign className="w-12 h-12 text-slate-400 mx-auto mb-4" />
+              <h3 className="text-lg font-medium text-white mb-2">No pay stubs found</h3>
+              <p className="text-slate-400">You don't have any pay stubs for {selectedYear} yet.</p>
             </div>
           ) : (
             <div className="space-y-4">
               {paystubs.map((paystub) => (
                 <div
                   key={paystub.id}
-                  className="flex items-center justify-between p-4 border border-gray-200 dark:border-gray-700 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800/50"
+                  className="flex items-center justify-between p-4 border border-slate-600 rounded-lg hover:bg-slate-800/30 bg-slate-800/20"
                   data-testid={`paystub-row-${paystub.id}`}
                 >
                   <div className="flex-1">
                     <div className="flex items-center gap-4">
                       <div>
-                        <h4 className="font-medium text-gray-900 dark:text-gray-100">
+                        <h4 className="font-medium text-white">
                           {paystub.payPeriod?.name || 'Pay Period'}
                         </h4>
-                        <p className="text-sm text-gray-600 dark:text-gray-400">
+                        <p className="text-sm text-slate-400">
                           {paystub.payPeriod?.startDate && paystub.payPeriod?.endDate ? (
                             <>
                               {safeFormatDate(paystub.payPeriod.startDate, 'MMM d')} - {safeFormatDate(paystub.payPeriod.endDate, 'MMM d, yyyy')}
@@ -289,26 +289,26 @@ export default function EmployeePayStubs() {
 
                   <div className="flex items-center gap-8">
                     <div className="text-right">
-                      <p className="font-medium text-gray-900 dark:text-gray-100">
+                      <p className="font-medium text-white">
                         {formatCurrency(paystub.netPay)}
                       </p>
-                      <p className="text-sm text-gray-600 dark:text-gray-400">
+                      <p className="text-sm text-slate-400">
                         Net Pay
                       </p>
                     </div>
                     <div className="text-right">
-                      <p className="font-medium text-gray-900 dark:text-gray-100">
+                      <p className="font-medium text-white">
                         {formatCurrency(paystub.grossPay)}
                       </p>
-                      <p className="text-sm text-gray-600 dark:text-gray-400">
+                      <p className="text-sm text-slate-400">
                         Gross Pay
                       </p>
                     </div>
                     <div className="text-right">
-                      <p className="font-medium text-gray-900 dark:text-gray-100">
+                      <p className="font-medium text-white">
                         {(parseFloat(paystub.regularHours) + parseFloat(paystub.overtimeHours)).toFixed(1)}h
                       </p>
-                      <p className="text-sm text-gray-600 dark:text-gray-400">
+                      <p className="text-sm text-slate-400">
                         Total Hours
                       </p>
                     </div>
@@ -337,11 +337,11 @@ export default function EmployeePayStubs() {
 
       {/* Pay Stub Detail Dialog */}
       <Dialog open={showPaystubDialog} onOpenChange={setShowPaystubDialog}>
-        <DialogContent className="max-w-4xl max-h-[90vh] overflow-auto">
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-auto bg-slate-900 border-slate-700">
           <DialogHeader>
-            <DialogTitle>Pay Stub Details</DialogTitle>
+            <DialogTitle className="text-white">Pay Stub Details</DialogTitle>
             {selectedPaystub && (
-              <DialogDescription>
+              <DialogDescription className="text-slate-400">
                 {selectedPaystub.payPeriod?.name || 'Pay Period'} - Pay Date: {safeFormatDate(selectedPaystub.payDate, 'MMM d, yyyy')}
               </DialogDescription>
             )}
