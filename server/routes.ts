@@ -308,6 +308,36 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Firebase Authentication Route
+  app.post('/api/auth/firebase-login', async (req, res) => {
+    try {
+      const { idToken } = req.body;
+      
+      if (!idToken) {
+        return res.status(400).json({ message: 'ID token required' });
+      }
+
+      // Verify Firebase token
+      const decodedToken = await verifyFirebaseToken(idToken);
+      
+      // Sync user to our database
+      const user = await syncFirebaseUser({
+        uid: decodedToken.uid,
+        email: decodedToken.email || null,
+        displayName: decodedToken.name || null,
+        photoURL: decodedToken.picture || null,
+      });
+
+      // Set session
+      (req.session as any).user = user;
+      
+      res.json(user);
+    } catch (error) {
+      console.error('Firebase authentication error:', error);
+      res.status(401).json({ message: 'Authentication failed' });
+    }
+  });
+
   // Invoice Processing Routes
   app.get('/api/invoices', isAuthenticated, async (req, res) => {
     try {
@@ -1932,20 +1962,30 @@ export async function registerRoutes(app: Express): Promise<Server> {
           // Generate a temporary password for the employee
           const tempPassword = 'TEMP1234!';
           
-          // Create user record in our database with proper role mapping
+          console.log('🔥 Creating Firebase user for employee:', employee.email);
+          
+          // Create Firebase user account
+          const firebaseUser = await createFirebaseUser(employee.email, tempPassword);
+          
+          // Create user record in our database with Firebase UID and proper role mapping
           const employeeWithPosition = await storage.getEmployee(employee.id);
           const userRole = mapPositionToRole(employeeWithPosition?.position?.title);
           
-          console.log('👤 Creating user account with role:', userRole);
+          console.log('👤 Creating user account with Firebase UID and role:', { uid: firebaseUser.uid, role: userRole });
           await storage.upsertUser({
-            id: employee.id,
+            id: firebaseUser.uid, // Use Firebase UID instead of employee.id
             email: employee.email,
             firstName: employee.firstName,
             lastName: employee.lastName,
             role: userRole,
           });
           
-          console.log('✅ User account created successfully');
+          // Also update employee record to reference Firebase UID for easier lookup
+          await storage.updateEmployee(employee.id, { 
+            notes: `Firebase UID: ${firebaseUser.uid}` 
+          });
+          
+          console.log('✅ Firebase user and local user account created successfully');
           
           // Return success with login instructions
           return res.status(201).json({

@@ -11,6 +11,7 @@ import NotFound from "@/pages/not-found";
 import Landing from "@/pages/landing";
 import Pricing from "@/pages/pricing";
 import Auth from "@/pages/auth";
+import FirebaseAuth from "@/pages/firebase-auth";
 import Dashboard from "@/pages/dashboard";
 import Inventory from "@/pages/inventory";
 import Recipes from "@/pages/recipes";
@@ -70,13 +71,8 @@ function Router() {
         <Route path="/landing" component={Landing} />
         <Route path="/pricing" component={Pricing} />
         <Route path="/onboarding/:token" component={PublicOnboarding} />
-        <Route path="/admin" component={() => {
-          // Redirect to Replit auth for admin access
-          window.location.href = '/api/login';
-          return <div>Redirecting to admin login...</div>;
-        }} />
-        <Route path="/" component={Auth} />
-        <Route component={Auth} />
+        <Route path="/" component={FirebaseAuth} />
+        <Route component={FirebaseAuth} />
       </Switch>
     );
   }
