@@ -204,10 +204,10 @@ export default function HRTimeClock() {
 
   const getStatusColor = (status: string) => {
     switch (status) {
-      case 'clocked-in': return 'bg-green-100 text-green-800';
-      case 'on-break': return 'bg-yellow-100 text-yellow-800';
-      case 'clocked-out': return 'bg-gray-100 text-gray-800';
-      default: return 'bg-gray-100 text-gray-800';
+      case 'clocked-in': return 'bg-green-900/80 text-green-200 border-green-600';
+      case 'on-break': return 'bg-yellow-900/80 text-yellow-200 border-yellow-600';
+      case 'clocked-out': return 'bg-slate-700/80 text-slate-300 border-slate-500';
+      default: return 'bg-slate-700/80 text-slate-300 border-slate-500';
     }
   };
 
@@ -369,26 +369,26 @@ export default function HRTimeClock() {
                 if (!employee) return null;
 
                 return (
-                  <div key={entry.id} className="flex items-center justify-between p-4 border rounded-lg">
+                  <div key={entry.id} className="flex items-center justify-between p-4 border border-slate-600 rounded-lg bg-slate-700/50">
                     <div className="flex items-center gap-3">
                       <Avatar className="h-10 w-10">
                         <AvatarImage src={employee.profilePhoto} />
                         <AvatarFallback>{getInitials(employee.firstName, employee.lastName)}</AvatarFallback>
                       </Avatar>
                       <div>
-                        <p className="font-medium">{employee.firstName} {employee.lastName}</p>
-                        <p className="text-sm text-gray-500">{employee.position?.title}</p>
-                        <p className="text-xs text-gray-400">
+                        <p className="font-medium text-white">{employee.firstName} {employee.lastName}</p>
+                        <p className="text-sm text-slate-400">{employee.position?.title}</p>
+                        <p className="text-xs text-slate-500">
                           Started: {new Date(entry.clockInTime).toLocaleTimeString()}
                         </p>
                       </div>
                     </div>
                     <div className="text-right">
-                      <Badge className={getStatusColor(entry.status)}>
+                      <Badge className={`${getStatusColor(entry.status)} flex items-center justify-center gap-1 border`}>
                         {getStatusIcon(entry.status)}
-                        <span className="ml-2 capitalize">{entry.status.replace('-', ' ')}</span>
+                        <span className="capitalize">{entry.status.replace('-', ' ')}</span>
                       </Badge>
-                      <p className="text-sm text-gray-500 mt-1">
+                      <p className="text-sm text-slate-400 mt-1">
                         {formatDuration(entry.clockInTime)}
                       </p>
                       <Button
@@ -706,7 +706,7 @@ export default function HRTimeClock() {
                 <div className="grid grid-cols-7 gap-1">
                   {/* Day Headers */}
                   {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map(day => (
-                    <div key={day} className="p-2 text-center text-sm font-medium text-gray-600 bg-gray-50">
+                    <div key={day} className="p-2 text-center text-sm font-medium text-slate-300 bg-slate-700/50">
                       {day}
                     </div>
                   ))}
@@ -724,14 +724,14 @@ export default function HRTimeClock() {
                           min-h-[80px] p-2 border cursor-pointer transition-colors
                           ${
                             !date 
-                              ? 'bg-gray-50' 
+                              ? 'bg-slate-800/50 border-slate-600' 
                               : isSelected 
-                                ? 'bg-blue-100 border-blue-300' 
+                                ? 'bg-blue-900/50 border-blue-500' 
                                 : isToday 
-                                  ? 'bg-yellow-50 border-yellow-300'
+                                  ? 'bg-yellow-900/50 border-yellow-500'
                                   : dayEntries.length > 0 
-                                    ? 'bg-green-50 border-green-200 hover:bg-green-100' 
-                                    : 'hover:bg-gray-50'
+                                    ? 'bg-green-900/30 border-green-600/50 hover:bg-green-900/50' 
+                                    : 'hover:bg-slate-700/50 border-slate-600'
                           }
                         `}
                         onClick={() => date && setSelectedDate(date)}
@@ -740,9 +740,9 @@ export default function HRTimeClock() {
                         {date && (
                           <>
                             <div className={`text-sm font-medium ${
-                              isToday ? 'text-yellow-700' : 
-                              isSelected ? 'text-blue-700' :
-                              'text-gray-900'
+                              isToday ? 'text-yellow-300' : 
+                              isSelected ? 'text-blue-300' :
+                              'text-white'
                             }`}>
                               {date.getDate()}
                             </div>
