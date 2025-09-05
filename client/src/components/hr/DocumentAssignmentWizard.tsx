@@ -20,6 +20,7 @@ import { cn } from "@/lib/utils";
 
 interface Employee {
   id: string;
+  employeeNumber: string;
   firstName: string;
   lastName: string;
   email: string;

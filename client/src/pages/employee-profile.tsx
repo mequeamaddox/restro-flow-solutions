@@ -64,6 +64,7 @@ interface DocumentTemplate {
 interface EmployeeProfile {
   employee: {
     id: string;
+    employeeNumber: string;
     firstName: string;
     lastName: string;
     email: string;
@@ -214,9 +215,14 @@ export default function EmployeePage() {
             </Button>
           </Link>
           <div>
-            <h1 className="text-2xl font-bold text-gray-900">
-              {employee.firstName} {employee.lastName}
-            </h1>
+            <div className="flex items-center gap-3 mb-1">
+              <h1 className="text-2xl font-bold text-gray-900">
+                {employee.firstName} {employee.lastName}
+              </h1>
+              <Badge variant="secondary" className="text-xs font-mono">
+                {employee.employeeNumber}
+              </Badge>
+            </div>
             <p className="text-gray-600">{employee.position?.title || employee.position} • {employee.department?.name || employee.department}</p>
           </div>
         </div>

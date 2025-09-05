@@ -19,6 +19,7 @@ import { useEffect } from "react";
 
 interface Employee {
   id: string;
+  employeeNumber: string;
   firstName: string;
   lastName: string;
   profilePhoto?: string;

@@ -434,7 +434,12 @@ export default function HREmployees() {
                     <AvatarFallback>{getInitials(employee.firstName, employee.lastName)}</AvatarFallback>
                   </Avatar>
                   <div>
-                    <CardTitle className="text-lg">{employee.firstName} {employee.lastName}</CardTitle>
+                    <div className="flex items-center gap-2 mb-1">
+                      <CardTitle className="text-lg">{employee.firstName} {employee.lastName}</CardTitle>
+                      <Badge variant="outline" className="text-xs font-mono">
+                        {employee.employeeNumber}
+                      </Badge>
+                    </div>
                     <p className="text-sm text-gray-600">{employee.position?.title || 'No position assigned'}</p>
                   </div>
                 </div>

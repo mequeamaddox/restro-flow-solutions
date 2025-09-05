@@ -23,6 +23,7 @@ interface Task {
   assignedTo?: string;
   createdBy?: string;
   assignedEmployee?: {
+    employeeNumber: string;
     firstName: string;
     lastName: string;
     profilePhoto?: string;
@@ -379,9 +380,14 @@ export default function HRTasks() {
                         {getInitials(task.assignedEmployee.firstName, task.assignedEmployee.lastName)}
                       </AvatarFallback>
                     </Avatar>
-                    <span className="text-sm text-gray-600">
-                      {task.assignedEmployee.firstName} {task.assignedEmployee.lastName}
-                    </span>
+                    <div className="flex flex-col">
+                      <span className="text-sm text-gray-600">
+                        {task.assignedEmployee.firstName} {task.assignedEmployee.lastName}
+                      </span>
+                      <span className="text-xs font-mono text-gray-500">
+                        {task.assignedEmployee.employeeNumber}
+                      </span>
+                    </div>
                   </div>
                 )}
 
