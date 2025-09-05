@@ -342,7 +342,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post('/api/auth/bypass', async (req, res) => {
     try {
       // Get your user from database
-      const user = await storage.getUser('ekIc9CwRjJfTtAhBneB5VOIZODm2');
+      const user = await storage.getUser('Sur4jWAps3PlmgZX6KsG0mBBPyc2');
       
       if (user) {
         // Set session
