@@ -58,8 +58,9 @@ export default function FirebaseAuth() {
       
       console.log('🔥 Creating Firebase account...');
       
-      // Create user with Firebase Auth directly - try with timestamp to ensure uniqueness
-      const email = 'mequeamaddox@gmail.com';
+      // Create user with Firebase Auth directly - use a completely fresh email
+      const timestamp = Date.now();
+      const email = `owner${timestamp}@restroflow.local`; // Guaranteed unique email
       const userCredential = await createUserWithEmailAndPassword(auth, email, 'RestroFlow2024!');
       
       console.log('✅ Firebase user created:', userCredential.user.uid);
@@ -115,7 +116,7 @@ export default function FirebaseAuth() {
         // Account exists somewhere - try to send password reset
         try {
           const { sendPasswordResetEmail } = await import('firebase/auth');
-          await sendPasswordResetEmail(auth, 'mequeamaddox@gmail.com');
+          await sendPasswordResetEmail(auth, 'mequea.restroflow@gmail.com');
           toast({
             title: "Account exists - Password reset sent!",
             description: "Check your email for password reset instructions, then use the login form above.",
@@ -195,9 +196,10 @@ export default function FirebaseAuth() {
               <div className="text-sm text-slate-300 space-y-2">
                 <p>This will create a Firebase account for:</p>
                 <ul className="list-disc list-inside text-slate-400 space-y-1">
-                  <li>Email: mequeamaddox@gmail.com</li>
+                  <li>Email: owner@restroflow.local (unique)</li>
                   <li>Password: RestroFlow2024!</li>
                   <li>Role: Owner</li>
+                  <li className="text-xs text-slate-500">Note: Using unique email to avoid conflicts</li>
                 </ul>
               </div>
               
