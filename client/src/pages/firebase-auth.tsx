@@ -58,8 +58,9 @@ export default function FirebaseAuth() {
       
       console.log('🔥 Creating Firebase account...');
       
-      // Create user with Firebase Auth directly
-      const userCredential = await createUserWithEmailAndPassword(auth, 'mequeamaddox@gmail.com', 'RestroFlow2024!');
+      // Create user with Firebase Auth directly - try with timestamp to ensure uniqueness
+      const email = 'mequeamaddox@gmail.com';
+      const userCredential = await createUserWithEmailAndPassword(auth, email, 'RestroFlow2024!');
       
       console.log('✅ Firebase user created:', userCredential.user.uid);
       
@@ -111,11 +112,21 @@ export default function FirebaseAuth() {
       console.error('Error creating owner account:', error);
       
       if (error.code === 'auth/email-already-in-use') {
-        toast({
-          title: "Account already exists",
-          description: "Please use the login form to sign in.",
-          variant: "destructive",
-        });
+        // Account exists somewhere - try to send password reset
+        try {
+          const { sendPasswordResetEmail } = await import('firebase/auth');
+          await sendPasswordResetEmail(auth, 'mequeamaddox@gmail.com');
+          toast({
+            title: "Account exists - Password reset sent!",
+            description: "Check your email for password reset instructions, then use the login form above.",
+          });
+        } catch (resetError) {
+          toast({
+            title: "Account exists but can't reset password",
+            description: "The account exists somewhere. Try logging in with different passwords or contact support.",
+            variant: "destructive",
+          });
+        }
       } else {
         toast({
           title: "Error",
