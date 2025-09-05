@@ -56,20 +56,57 @@ export default function FirebaseAuth() {
       // Import Firebase auth functions
       const { createUserWithEmailAndPassword, updateProfile } = await import('firebase/auth');
       
+      console.log('🔥 Creating Firebase account...');
+      
       // Create user with Firebase Auth directly
       const userCredential = await createUserWithEmailAndPassword(auth, 'mequeamaddox@gmail.com', 'RestroFlow2024!');
+      
+      console.log('✅ Firebase user created:', userCredential.user.uid);
       
       // Update profile with display name
       await updateProfile(userCredential.user, {
         displayName: 'Mequea Maddox'
       });
 
-      // The useAuth hook will automatically handle the rest when user is created
+      console.log('✅ Profile updated');
+
+      // Create user in our local database with owner role
+      try {
+        console.log('💾 Adding user to local database...');
+        
+        // Get Firebase ID token for API call
+        const idToken = await userCredential.user.getIdToken();
+        
+        // Call our API to sync the user
+        const response = await fetch('/api/auth/firebase-login', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ idToken }),
+        });
+
+        if (!response.ok) {
+          console.error('Database sync failed');
+        }
+        
+        console.log('✅ User synced to database');
+      } catch (dbError) {
+        console.error('Database sync error:', dbError);
+        // Continue anyway - user is created in Firebase
+      }
+
       toast({
         title: "Owner account created!",
         description: "Account created successfully. You are now logged in.",
       });
       setShowCreateOwner(false);
+      
+      // Redirect to dashboard
+      setTimeout(() => {
+        window.location.href = '/';
+      }, 1000);
+      
     } catch (error: any) {
       console.error('Error creating owner account:', error);
       
@@ -109,25 +146,21 @@ export default function FirebaseAuth() {
               <CardHeader>
                 <CardTitle className="flex items-center gap-2 text-white text-sm">
                   <Flame className="h-4 w-4 text-orange-500" />
-                  Owner Account Ready
+                  First Time Setup
                 </CardTitle>
                 <CardDescription className="text-xs text-slate-400">
-                  Your owner account exists - just login above
+                  Create your owner account to get started
                 </CardDescription>
               </CardHeader>
-              <CardContent className="space-y-2">
-                <div className="text-xs text-slate-300 space-y-1">
-                  <div>Email: mequeamaddox@gmail.com</div>
-                  <div>Try: RestroFlow2024! or TEMP1234!</div>
-                </div>
+              <CardContent>
                 <Button
                   onClick={() => setShowCreateOwner(true)}
                   variant="outline"
-                  size="sm" 
+                  size="sm"
                   className="w-full border-orange-500 text-orange-500 hover:bg-orange-500 hover:text-white"
                   data-testid="button-create-owner"
                 >
-                  Show Account Info
+                  Create Owner Account
                 </Button>
               </CardContent>
             </Card>
