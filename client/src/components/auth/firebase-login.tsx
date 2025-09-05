@@ -234,6 +234,10 @@ export default function FirebaseLogin({ onSuccess }: FirebaseLoginProps) {
             </TabsContent>
             
             <TabsContent value="signup">
+              <div className="text-sm text-slate-300 mb-4 p-3 bg-slate-700/30 rounded">
+                <p className="font-medium">Quick Setup for Owner Account:</p>
+                <p className="text-xs text-slate-400 mt-1">Use: mequeamaddox@gmail.com / RestroFlow2024!</p>
+              </div>
               <form onSubmit={handleSignup} className="space-y-4">
                 <div className="space-y-2">
                   <Label htmlFor="signup-email" className="text-slate-300">
@@ -243,8 +247,8 @@ export default function FirebaseLogin({ onSuccess }: FirebaseLoginProps) {
                   <Input
                     id="signup-email"
                     type="email"
-                    placeholder="your@email.com"
-                    value={email}
+                    placeholder="mequeamaddox@gmail.com"
+                    value={email || "mequeamaddox@gmail.com"}
                     onChange={(e) => setEmail(e.target.value)}
                     required
                     className="bg-slate-700/50 border-slate-600 text-white"
