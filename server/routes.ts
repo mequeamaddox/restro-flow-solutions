@@ -2448,9 +2448,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const { employeeId } = req.params;
       const year = req.query.year ? parseInt(req.query.year as string) : new Date().getFullYear();
       
-      // For owner account using Replit user ID, get the actual employee record
+      // For owner account using Firebase user ID, get the actual employee record
       let actualEmployeeId = employeeId;
-      if (employeeId === '46308728') {
+      if (employeeId === 'Sur4jWAps3PlmgZX6KsG0mBBPyc2') {
         const user = await storage.getUser(employeeId);
         if (user && user.email) {
           // Find the employee record by email
@@ -2476,9 +2476,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const { employeeId } = req.params;
       const year = req.query.year ? parseInt(req.query.year as string) : new Date().getFullYear();
       
-      // For owner account using Replit user ID, get the actual employee record
+      // For owner account using Firebase user ID, get the actual employee record
       let actualEmployeeId = employeeId;
-      if (employeeId === '46308728') {
+      if (employeeId === 'Sur4jWAps3PlmgZX6KsG0mBBPyc2') {
         const user = await storage.getUser(employeeId);
         if (user && user.email) {
           // Find the employee record by email
