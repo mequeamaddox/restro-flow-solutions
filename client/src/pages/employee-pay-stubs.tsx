@@ -145,10 +145,10 @@ export default function EmployeePayStubs() {
     return (
       <div className="p-6">
         <div className="animate-pulse space-y-4">
-          <div className="h-8 bg-gray-200 rounded w-1/4"></div>
+          <div className="h-8 bg-gray-200 dark:bg-gray-700 rounded w-1/4"></div>
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
             {[1, 2, 3, 4].map(i => (
-              <div key={i} className="h-24 bg-gray-200 rounded"></div>
+              <div key={i} className="h-24 bg-gray-200 dark:bg-gray-700 rounded"></div>
             ))}
           </div>
         </div>
@@ -161,8 +161,8 @@ export default function EmployeePayStubs() {
       {/* Header */}
       <div className="flex justify-between items-center">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900" data-testid="page-title">My Pay Stubs</h1>
-          <p className="text-gray-600">View your paycheck history and earnings summary</p>
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100" data-testid="page-title">My Pay Stubs</h1>
+          <p className="text-gray-600 dark:text-gray-400">View your paycheck history and earnings summary</p>
         </div>
         
         <Select value={selectedYear} onValueChange={setSelectedYear}>
@@ -184,8 +184,8 @@ export default function EmployeePayStubs() {
             <CardContent className="p-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-medium text-gray-600">YTD Gross Pay</p>
-                  <p className="text-2xl font-bold text-gray-900">
+                  <p className="text-sm font-medium text-gray-600 dark:text-gray-400">YTD Gross Pay</p>
+                  <p className="text-2xl font-bold text-gray-900 dark:text-gray-100">
                     {formatCurrency(summary.yearToDateGross)}
                   </p>
                 </div>
@@ -198,8 +198,8 @@ export default function EmployeePayStubs() {
             <CardContent className="p-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-medium text-gray-600">YTD Net Pay</p>
-                  <p className="text-2xl font-bold text-gray-900">
+                  <p className="text-sm font-medium text-gray-600 dark:text-gray-400">YTD Net Pay</p>
+                  <p className="text-2xl font-bold text-gray-900 dark:text-gray-100">
                     {formatCurrency(summary.yearToDateNet)}
                   </p>
                 </div>
@@ -212,8 +212,8 @@ export default function EmployeePayStubs() {
             <CardContent className="p-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-medium text-gray-600">YTD Taxes</p>
-                  <p className="text-2xl font-bold text-gray-900">
+                  <p className="text-sm font-medium text-gray-600 dark:text-gray-400">YTD Taxes</p>
+                  <p className="text-2xl font-bold text-gray-900 dark:text-gray-100">
                     {formatCurrency(summary.yearToDateTaxes)}
                   </p>
                 </div>
@@ -226,8 +226,8 @@ export default function EmployeePayStubs() {
             <CardContent className="p-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-medium text-gray-600">Avg Hours/Pay</p>
-                  <p className="text-2xl font-bold text-gray-900">
+                  <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Avg Hours/Pay</p>
+                  <p className="text-2xl font-bold text-gray-900 dark:text-gray-100">
                     {summary.averageHours.toFixed(1)}
                   </p>
                 </div>
@@ -249,25 +249,25 @@ export default function EmployeePayStubs() {
         <CardContent>
           {paystubs.length === 0 ? (
             <div className="text-center py-12">
-              <DollarSign className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-              <h3 className="text-lg font-medium text-gray-900 mb-2">No pay stubs found</h3>
-              <p className="text-gray-600">You don't have any pay stubs for {selectedYear} yet.</p>
+              <DollarSign className="w-12 h-12 text-gray-400 dark:text-gray-600 mx-auto mb-4" />
+              <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100 mb-2">No pay stubs found</h3>
+              <p className="text-gray-600 dark:text-gray-400">You don't have any pay stubs for {selectedYear} yet.</p>
             </div>
           ) : (
             <div className="space-y-4">
               {paystubs.map((paystub) => (
                 <div
                   key={paystub.id}
-                  className="flex items-center justify-between p-4 border rounded-lg hover:bg-gray-50"
+                  className="flex items-center justify-between p-4 border border-gray-200 dark:border-gray-700 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800/50"
                   data-testid={`paystub-row-${paystub.id}`}
                 >
                   <div className="flex-1">
                     <div className="flex items-center gap-4">
                       <div>
-                        <h4 className="font-medium text-gray-900">
+                        <h4 className="font-medium text-gray-900 dark:text-gray-100">
                           {paystub.payPeriod?.name || 'Pay Period'}
                         </h4>
-                        <p className="text-sm text-gray-600">
+                        <p className="text-sm text-gray-600 dark:text-gray-400">
                           {paystub.payPeriod?.startDate && paystub.payPeriod?.endDate ? (
                             <>
                               {safeFormatDate(paystub.payPeriod.startDate, 'MMM d')} - {safeFormatDate(paystub.payPeriod.endDate, 'MMM d, yyyy')}
@@ -283,26 +283,26 @@ export default function EmployeePayStubs() {
 
                   <div className="flex items-center gap-8">
                     <div className="text-right">
-                      <p className="font-medium text-gray-900">
+                      <p className="font-medium text-gray-900 dark:text-gray-100">
                         {formatCurrency(paystub.netPay)}
                       </p>
-                      <p className="text-sm text-gray-600">
+                      <p className="text-sm text-gray-600 dark:text-gray-400">
                         Net Pay
                       </p>
                     </div>
                     <div className="text-right">
-                      <p className="font-medium text-gray-900">
+                      <p className="font-medium text-gray-900 dark:text-gray-100">
                         {formatCurrency(paystub.grossPay)}
                       </p>
-                      <p className="text-sm text-gray-600">
+                      <p className="text-sm text-gray-600 dark:text-gray-400">
                         Gross Pay
                       </p>
                     </div>
                     <div className="text-right">
-                      <p className="font-medium text-gray-900">
+                      <p className="font-medium text-gray-900 dark:text-gray-100">
                         {(parseFloat(paystub.regularHours) + parseFloat(paystub.overtimeHours)).toFixed(1)}h
                       </p>
-                      <p className="text-sm text-gray-600">
+                      <p className="text-sm text-gray-600 dark:text-gray-400">
                         Total Hours
                       </p>
                     </div>

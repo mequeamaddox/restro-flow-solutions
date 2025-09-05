@@ -3677,11 +3677,50 @@ export class DatabaseStorage implements IStorage {
       .where(eq(payPeriods.id, payrollPeriodId));
   }
 
-  async getEmployeePayStubs(employeeId: string): Promise<PayStub[]> {
-    return await db.select()
+  async getEmployeePayStubs(employeeId: string): Promise<any[]> {
+    const results = await db
+      .select({
+        id: paystubs.id,
+        payPeriodId: paystubs.payPeriodId,
+        employeeId: paystubs.employeeId,
+        regularHours: paystubs.regularHours,
+        overtimeHours: paystubs.overtimeHours,
+        regularRate: paystubs.regularRate,
+        overtimeRate: paystubs.overtimeRate,
+        regularPay: paystubs.regularPay,
+        overtimePay: paystubs.overtimePay,
+        bonuses: paystubs.bonuses,
+        tips: paystubs.tips,
+        grossPay: paystubs.grossPay,
+        federalTax: paystubs.federalTax,
+        stateTax: paystubs.stateTax,
+        socialSecurity: paystubs.socialSecurity,
+        medicare: paystubs.medicare,
+        totalDeductions: paystubs.totalDeductions,
+        netPay: paystubs.netPay,
+        status: paystubs.status,
+        notes: paystubs.notes,
+        createdAt: paystubs.createdAt,
+        updatedAt: paystubs.updatedAt,
+        payDate: paystubs.createdAt, // Use createdAt as payDate for now
+        checkNumber: paystubs.id, // Use ID as check number for now
+        // Pay period information
+        payPeriod: {
+          id: payPeriods.id,
+          name: payPeriods.name,
+          startDate: payPeriods.startDate,
+          endDate: payPeriods.endDate,
+          payDate: payPeriods.payDate,
+          frequency: payPeriods.frequency,
+          status: payPeriods.status
+        }
+      })
       .from(paystubs)
+      .leftJoin(payPeriods, eq(paystubs.payPeriodId, payPeriods.id))
       .where(eq(paystubs.employeeId, employeeId))
       .orderBy(desc(paystubs.createdAt));
+
+    return results;
   }
 
   async createPayStub(payStub: InsertPayStub): Promise<PayStub> {
