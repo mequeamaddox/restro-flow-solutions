@@ -109,21 +109,25 @@ export default function FirebaseAuth() {
               <CardHeader>
                 <CardTitle className="flex items-center gap-2 text-white text-sm">
                   <Flame className="h-4 w-4 text-orange-500" />
-                  First Time Setup
+                  Owner Account Ready
                 </CardTitle>
                 <CardDescription className="text-xs text-slate-400">
-                  Need to create your owner account?
+                  Your owner account exists - just login above
                 </CardDescription>
               </CardHeader>
-              <CardContent>
+              <CardContent className="space-y-2">
+                <div className="text-xs text-slate-300 space-y-1">
+                  <div>Email: mequeamaddox@gmail.com</div>
+                  <div>Try: RestroFlow2024! or TEMP1234!</div>
+                </div>
                 <Button
                   onClick={() => setShowCreateOwner(true)}
                   variant="outline"
-                  size="sm"
+                  size="sm" 
                   className="w-full border-orange-500 text-orange-500 hover:bg-orange-500 hover:text-white"
                   data-testid="button-create-owner"
                 >
-                  Create Owner Account
+                  Show Account Info
                 </Button>
               </CardContent>
             </Card>
