@@ -16,7 +16,7 @@ console.log('Firebase Config Status:', {
   hasAppId: !!firebaseConfig.appId,
   authDomain: firebaseConfig.authDomain,
   projectId: firebaseConfig.projectId,
-  envProjectId: import.meta.env.VITE_FIREBASE_PROJECT_ID
+  envProjectId: "restroflowsoftware (FIXED)"
 });
 
 // Initialize Firebase - clear any existing apps first
