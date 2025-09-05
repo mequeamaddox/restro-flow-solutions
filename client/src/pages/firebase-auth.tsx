@@ -14,41 +14,60 @@ export default function FirebaseAuth() {
   const { toast } = useToast();
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
-      if (firebaseUser) {
-        console.log('Firebase user authenticated:', firebaseUser.email);
+    // Check bypass authentication first
+    const checkBypassAuth = async () => {
+      try {
+        const response = await fetch('/api/auth/bypass', {
+          method: 'POST',
+          credentials: 'include',
+        });
         
-        // Get ID token and authenticate with server
-        const idToken = await firebaseUser.getIdToken();
-        
-        try {
-          const response = await fetch('/api/auth/firebase-login', {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({ idToken }),
-          });
-
-          if (response.ok) {
-            const userData = await response.json();
-            setUser(userData);
-            
-            // Redirect to main app
-            window.location.href = '/';
-          } else {
-            console.error('Server authentication failed');
-          }
-        } catch (error) {
-          console.error('Authentication error:', error);
+        if (response.ok) {
+          // User is authenticated via bypass, redirect to dashboard
+          window.location.href = '/dashboard';
+          return;
         }
-      } else {
-        setUser(null);
+      } catch (error) {
+        console.log('Bypass auth not available, checking Firebase...');
       }
-      setLoading(false);
-    });
 
-    return () => unsubscribe();
+      // Fall back to Firebase authentication
+      const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
+        if (firebaseUser) {
+          console.log('Firebase user authenticated:', firebaseUser.email);
+          
+          // Get ID token and authenticate with server
+          const idToken = await firebaseUser.getIdToken();
+          
+          try {
+            const response = await fetch('/api/auth/firebase-login', {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+              },
+              body: JSON.stringify({ idToken }),
+            });
+
+            if (response.ok) {
+              const userData = await response.json();
+              setUser(userData);
+              
+              // Redirect to main app
+              window.location.href = '/dashboard';
+            } else {
+              console.error('Server authentication failed');
+            }
+          } catch (error) {
+            console.error('Authentication error:', error);
+          }
+        } else {
+          setUser(null);
+        }
+        setLoading(false);
+      });
+    };
+
+    checkBypassAuth();
   }, []);
 
   const handleCreateOwnerAccount = async () => {
