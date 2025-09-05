@@ -202,7 +202,7 @@ export function hasAllPermissions(userRole: string, permissions: Permission[]): 
 // Middleware to check permissions
 export function requirePermission(permission: Permission) {
   return async (req: Request, res: Response, next: NextFunction) => {
-    const user = (req as any).user;
+    const user = (req as any).user || (req.session as any)?.user;
     
     if (!user) {
       return res.status(401).json({ message: "Unauthorized - No user session" });
@@ -211,7 +211,7 @@ export function requirePermission(permission: Permission) {
     try {
       // Import storage to get user role from database
       const { storage } = await import('./storage');
-      const userId = user.claims?.sub;
+      const userId = user.claims?.sub || user.id;
       const dbUser = await storage.getUser(userId);
       const userRole = dbUser?.role || 'employee';
       
@@ -234,7 +234,7 @@ export function requirePermission(permission: Permission) {
 // Middleware to check multiple permissions (OR logic)
 export function requireAnyPermission(permissions: Permission[]) {
   return async (req: Request, res: Response, next: NextFunction) => {
-    const user = (req as any).user;
+    const user = (req as any).user || (req.session as any)?.user;
     
     if (!user) {
       return res.status(401).json({ message: "Unauthorized - No user session" });
@@ -243,7 +243,7 @@ export function requireAnyPermission(permissions: Permission[]) {
     try {
       // Import storage to get user role from database
       const { storage } = await import('./storage');
-      const userId = user.claims?.sub;
+      const userId = user.claims?.sub || user.id;
       const dbUser = await storage.getUser(userId);
       const userRole = dbUser?.role || 'employee';
       
