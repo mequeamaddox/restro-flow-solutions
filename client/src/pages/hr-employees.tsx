@@ -17,6 +17,7 @@ import { useLocation } from "wouter";
 
 interface Employee {
   id: string;
+  employeeNumber: string;
   firstName: string;
   lastName: string;
   email: string;

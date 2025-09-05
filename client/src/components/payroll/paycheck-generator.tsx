@@ -216,7 +216,7 @@ function PayStubDetails({ settings, employee, paycheck }: any) {
       <div className="grid grid-cols-2 gap-4 text-sm">
         <div>
           <div className="font-semibold">{employee?.firstName} {employee?.lastName}</div>
-          <div>Employee ID: {employee?.employeeId || 'EMP001'}</div>
+          <div>Employee ID: {employee?.employeeNumber || 'EMP001'}</div>
           {settings?.displayLast4Ssn && employee?.ssn && (
             <div>SSN: ***-**-{employee.ssn.slice(-4)}</div>
           )}

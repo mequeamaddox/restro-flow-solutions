@@ -442,6 +442,7 @@ export const positions = pgTable("positions", {
 // Employee profiles and basic info
 export const employees = pgTable("employees", {
   id: uuid("id").primaryKey().default(sql`gen_random_uuid()`),
+  employeeNumber: varchar("employee_number", { length: 10 }).unique().notNull(), // Clean, short employee ID for display
   firstName: varchar("first_name", { length: 50 }).notNull(),
   lastName: varchar("last_name", { length: 50 }).notNull(),
   email: varchar("email"),
@@ -623,7 +624,7 @@ export const teamResources = pgTable("team_resources", {
 // HR Insert schemas and Types (moved here after table definitions)
 export const insertDepartmentSchema = createInsertSchema(departments).omit({ id: true, createdAt: true, updatedAt: true });
 export const insertPositionSchema = createInsertSchema(positions).omit({ id: true, createdAt: true, updatedAt: true });
-export const insertEmployeeSchema = createInsertSchema(employees).omit({ id: true, createdAt: true, updatedAt: true });
+export const insertEmployeeSchema = createInsertSchema(employees).omit({ id: true, employeeNumber: true, createdAt: true, updatedAt: true });
 export const insertShiftSchema = createInsertSchema(shifts).omit({ id: true, createdAt: true, updatedAt: true });
 export const insertAvailabilitySchema = createInsertSchema(availability).omit({ id: true, createdAt: true, updatedAt: true });
 export const insertTimeOffRequestSchema = createInsertSchema(timeOffRequests).omit({ id: true, createdAt: true, updatedAt: true });

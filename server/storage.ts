@@ -2007,7 +2007,28 @@ export class DatabaseStorage implements IStorage {
   }
 
   async createEmployee(employee: InsertEmployee): Promise<Employee> {
-    const [created] = await db.insert(employees).values(employee).returning();
+    // Generate next sequential employee number
+    const existingEmployees = await db.select({ employeeNumber: employees.employeeNumber })
+      .from(employees)
+      .orderBy(desc(employees.employeeNumber));
+    
+    let nextEmployeeNumber = "EMP001";
+    if (existingEmployees.length > 0) {
+      const lastNumber = existingEmployees[0].employeeNumber;
+      if (lastNumber && lastNumber.startsWith("EMP")) {
+        const numPart = parseInt(lastNumber.substring(3));
+        if (!isNaN(numPart)) {
+          nextEmployeeNumber = `EMP${String(numPart + 1).padStart(3, '0')}`;
+        }
+      }
+    }
+
+    const employeeData = {
+      ...employee,
+      employeeNumber: nextEmployeeNumber
+    };
+
+    const [created] = await db.insert(employees).values(employeeData).returning();
     return created;
   }
 
