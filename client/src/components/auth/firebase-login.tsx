@@ -14,8 +14,8 @@ interface FirebaseLoginProps {
 }
 
 export default function FirebaseLogin({ onSuccess }: FirebaseLoginProps) {
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
+  const [email, setEmail] = useState("mequeamaddox@gmail.com");
+  const [password, setPassword] = useState("RestroFlow2024!");
   const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
 
@@ -248,7 +248,7 @@ export default function FirebaseLogin({ onSuccess }: FirebaseLoginProps) {
                     id="signup-email"
                     type="email"
                     placeholder="mequeamaddox@gmail.com"
-                    value={email || "mequeamaddox@gmail.com"}
+                    value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     required
                     className="bg-slate-700/50 border-slate-600 text-white"
