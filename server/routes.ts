@@ -338,6 +338,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Temporary bypass authentication for RestroFlow owner
+  app.post('/api/auth/bypass', async (req, res) => {
+    try {
+      // Get your user from database
+      const user = await storage.getUser('ekIc9CwRjJfTtAhBneB5VOIZODm2');
+      
+      if (user) {
+        // Set session
+        (req.session as any).user = user;
+        res.json({ user });
+      } else {
+        res.status(404).json({ message: 'User not found' });
+      }
+    } catch (error) {
+      console.error('Bypass authentication error:', error);
+      res.status(500).json({ message: 'Authentication failed' });
+    }
+  });
+
   // Invoice Processing Routes
   app.get('/api/invoices', isAuthenticated, async (req, res) => {
     try {
