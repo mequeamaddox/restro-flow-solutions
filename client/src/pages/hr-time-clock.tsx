@@ -932,17 +932,17 @@ export default function HRTimeClock() {
 
       {/* Manual Time Entry Dialog */}
       <Dialog open={showManualEntryDialog} onOpenChange={setShowManualEntryDialog}>
-        <DialogContent className="max-w-md">
+        <DialogContent className="max-w-md bg-slate-800/80 backdrop-blur-sm border-slate-700">
           <DialogHeader>
-            <DialogTitle>Add Manual Time Entry</DialogTitle>
-            <DialogDescription>
+            <DialogTitle className="text-white">Add Manual Time Entry</DialogTitle>
+            <DialogDescription className="text-slate-400">
               Create a time entry for an employee who missed clocking in/out.
             </DialogDescription>
           </DialogHeader>
           
           <div className="space-y-4">
             <div>
-              <Label htmlFor="manualEmployee">Employee</Label>
+              <Label htmlFor="manualEmployee" className="text-white">Employee</Label>
               <Select value={manualEntryForm.employeeId} onValueChange={(value) => setManualEntryForm({...manualEntryForm, employeeId: value})}>
                 <SelectTrigger data-testid="select-manual-employee">
                   <SelectValue placeholder="Select employee" />
@@ -958,7 +958,7 @@ export default function HRTimeClock() {
             </div>
             
             <div>
-              <Label htmlFor="manualClockIn">Clock In Time *</Label>
+              <Label htmlFor="manualClockIn" className="text-white">Clock In Time *</Label>
               <Input
                 id="manualClockIn"
                 type="datetime-local"
@@ -970,7 +970,7 @@ export default function HRTimeClock() {
             </div>
             
             <div>
-              <Label htmlFor="manualClockOut">Clock Out Time</Label>
+              <Label htmlFor="manualClockOut" className="text-white">Clock Out Time</Label>
               <Input
                 id="manualClockOut"
                 type="datetime-local"
@@ -981,7 +981,7 @@ export default function HRTimeClock() {
             </div>
             
             <div>
-              <Label htmlFor="manualBreakStart">Break Start</Label>
+              <Label htmlFor="manualBreakStart" className="text-white">Break Start</Label>
               <Input
                 id="manualBreakStart"
                 type="datetime-local"
@@ -992,7 +992,7 @@ export default function HRTimeClock() {
             </div>
             
             <div>
-              <Label htmlFor="manualBreakEnd">Break End</Label>
+              <Label htmlFor="manualBreakEnd" className="text-white">Break End</Label>
               <Input
                 id="manualBreakEnd"
                 type="datetime-local"
@@ -1003,7 +1003,7 @@ export default function HRTimeClock() {
             </div>
             
             <div>
-              <Label htmlFor="manualNotes">Notes</Label>
+              <Label htmlFor="manualNotes" className="text-white">Notes</Label>
               <Textarea
                 id="manualNotes"
                 value={manualEntryForm.notes}
@@ -1014,14 +1014,15 @@ export default function HRTimeClock() {
             </div>
           </div>
 
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setShowManualEntryDialog(false)}>
+          <DialogFooter className="gap-2">
+            <Button variant="outline" onClick={() => setShowManualEntryDialog(false)} className="border-slate-600 text-slate-300 hover:bg-slate-700">
               Cancel
             </Button>
             <Button 
               onClick={() => createManualEntryMutation.mutate(manualEntryForm)}
               disabled={createManualEntryMutation.isPending || !manualEntryForm.employeeId || !manualEntryForm.clockInTime}
               data-testid="button-create-manual-entry"
+              className="bg-blue-600 hover:bg-blue-700 text-white"
             >
               {createManualEntryMutation.isPending ? "Creating..." : "Create Entry"}
             </Button>

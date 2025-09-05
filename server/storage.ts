@@ -2179,14 +2179,15 @@ export class DatabaseStorage implements IStorage {
       return entries.map(entry => ({
         id: entry.id,
         employeeId: entry.employeeId,
-        clockInTime: entry.clockInTime || new Date().toISOString(),
-        clockOutTime: entry.clockOutTime || null,
-        breakStartTime: entry.breakStartTime || null,
-        breakEndTime: entry.breakEndTime || null,
-        totalHours: entry.totalHours || 0,
+        clockInTime: entry.clockInTime ? new Date(entry.clockInTime) : null,
+        clockOutTime: entry.clockOutTime ? new Date(entry.clockOutTime) : null,
+        breakStartTime: entry.breakStartTime ? new Date(entry.breakStartTime) : null,
+        breakEndTime: entry.breakEndTime ? new Date(entry.breakEndTime) : null,
+        totalHours: entry.totalHours || null,
         status: entry.status || 'clocked-in',
         notes: entry.notes,
-        createdAt: entry.createdAt || new Date().toISOString(),
+        createdAt: entry.createdAt ? new Date(entry.createdAt) : new Date(),
+        updatedAt: entry.createdAt ? new Date(entry.createdAt) : new Date(),
         employee: employeeMap.get(entry.employeeId)
       })) as (TimeEntry & { employee?: Employee })[];
     } catch (error) {
@@ -2196,13 +2197,18 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getActiveTimeEntry(employeeId: string): Promise<TimeEntry | undefined> {
-    const [entry] = await db.select().from(timeEntries)
-      .where(and(
-        eq(timeEntries.employeeId, employeeId),
-        isNull(timeEntries.clockOutTime)
-      ))
-      .orderBy(desc(timeEntries.clockInTime));
-    return entry;
+    try {
+      const [entry] = await db.select().from(timeEntries)
+        .where(and(
+          eq(timeEntries.employeeId, employeeId),
+          isNull(timeEntries.clockOutTime)
+        ))
+        .orderBy(desc(timeEntries.clockInTime));
+      return entry;
+    } catch (error) {
+      console.error('Error fetching active time entry:', error);
+      return undefined;
+    }
   }
 
   async clockIn(employeeId: string, shiftId?: string): Promise<TimeEntry> {
