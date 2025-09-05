@@ -54,23 +54,16 @@ export default function FirebaseAuth() {
   const handleCreateOwnerAccount = async () => {
     try {
       // Import Firebase auth functions
-      const { createUserWithEmailAndPassword, updateProfile } = await import('firebase/auth');
+      const { signInWithPopup, GoogleAuthProvider } = await import('firebase/auth');
       
-      console.log('🔥 Creating Firebase account...');
+      console.log('🔥 Signing in with Google...');
       
-      // Create user with Firebase Auth directly - use a completely fresh email
-      const timestamp = Date.now();
-      const email = `owner${timestamp}@restroflow.local`; // Guaranteed unique email
-      const userCredential = await createUserWithEmailAndPassword(auth, email, 'RestroFlow2024!');
+      // Use Google Sign-In instead of email/password
+      const provider = new GoogleAuthProvider();
+      const userCredential = await signInWithPopup(auth, provider);
       
-      console.log('✅ Firebase user created:', userCredential.user.uid);
-      
-      // Update profile with display name
-      await updateProfile(userCredential.user, {
-        displayName: 'Mequea Maddox'
-      });
-
-      console.log('✅ Profile updated');
+      console.log('✅ Google sign-in successful:', userCredential.user.email);
+      console.log('User UID:', userCredential.user.uid);
 
       // Create user in our local database with owner role
       try {
@@ -194,12 +187,12 @@ export default function FirebaseAuth() {
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="text-sm text-slate-300 space-y-2">
-                <p>This will create a Firebase account for:</p>
+                <p>This will sign you in with Google and set up your owner account:</p>
                 <ul className="list-disc list-inside text-slate-400 space-y-1">
-                  <li>Email: owner@restroflow.local (unique)</li>
-                  <li>Password: RestroFlow2024!</li>
+                  <li>Use your Google account: mequeamaddox@gmail.com</li>
                   <li>Role: Owner</li>
-                  <li className="text-xs text-slate-500">Note: Using unique email to avoid conflicts</li>
+                  <li>Auto-sync with database</li>
+                  <li className="text-xs text-slate-500">Uses Google Sign-In popup</li>
                 </ul>
               </div>
               
