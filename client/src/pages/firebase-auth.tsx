@@ -53,38 +53,39 @@ export default function FirebaseAuth() {
 
   const handleCreateOwnerAccount = async () => {
     try {
-      const response = await fetch('/api/auth/create-admin', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          email: 'mequeamaddox@gmail.com',
-          password: 'RestroFlow2024!',
-          displayName: 'Mequea Maddox',
-        }),
+      // Import Firebase auth functions
+      const { createUserWithEmailAndPassword, updateProfile } = await import('firebase/auth');
+      
+      // Create user with Firebase Auth directly
+      const userCredential = await createUserWithEmailAndPassword(auth, 'mequeamaddox@gmail.com', 'RestroFlow2024!');
+      
+      // Update profile with display name
+      await updateProfile(userCredential.user, {
+        displayName: 'Mequea Maddox'
       });
 
-      if (response.ok) {
+      // The useAuth hook will automatically handle the rest when user is created
+      toast({
+        title: "Owner account created!",
+        description: "Account created successfully. You are now logged in.",
+      });
+      setShowCreateOwner(false);
+    } catch (error: any) {
+      console.error('Error creating owner account:', error);
+      
+      if (error.code === 'auth/email-already-in-use') {
         toast({
-          title: "Owner account created!",
-          description: "You can now login with mequeamaddox@gmail.com and password: RestroFlow2024!",
+          title: "Account already exists",
+          description: "Please use the login form to sign in.",
+          variant: "destructive",
         });
-        setShowCreateOwner(false);
       } else {
-        const data = await response.json();
         toast({
-          title: "Account already exists or error occurred",
-          description: data.message,
+          title: "Error",
+          description: error.message || "Failed to create owner account",
           variant: "destructive",
         });
       }
-    } catch (error) {
-      toast({
-        title: "Error",
-        description: "Failed to create owner account",
-        variant: "destructive",
-      });
     }
   };
 
