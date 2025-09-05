@@ -2128,29 +2128,31 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // HR Time Clock
   app.get('/api/hr/time-entries', async (req, res) => {
     try {
-      // Direct SQL approach to avoid timestamp issues
+      // Direct SQL approach to get real timestamp data
       const result = await db.execute(sql`
         SELECT te.id, te.employee_id, te.status, te.notes, te.total_hours,
+               te.clock_in_time::text as clock_in_time,
+               te.created_at::text as created_at,
                e.first_name, e.last_name
         FROM time_entries te
         LEFT JOIN employees e ON te.employee_id = e.id
         WHERE te.status = 'clocked-in'
-        ORDER BY te.id DESC
+        ORDER BY te.created_at DESC
         LIMIT 50
       `);
       
       const timeEntries = result.rows.map((row: any) => ({
         id: row.id,
         employeeId: row.employee_id,
-        clockInTime: new Date().toISOString(),
+        clockInTime: row.clock_in_time ? new Date(row.clock_in_time).toISOString() : new Date().toISOString(),
         clockOutTime: null,
         breakStartTime: null,
         breakEndTime: null,
         totalHours: row.total_hours,
         status: row.status || 'clocked-in',
         notes: row.notes,
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
+        createdAt: row.created_at ? new Date(row.created_at).toISOString() : new Date().toISOString(),
+        updatedAt: row.created_at ? new Date(row.created_at).toISOString() : new Date().toISOString(),
         employee: row.first_name ? {
           id: row.employee_id,
           firstName: row.first_name,

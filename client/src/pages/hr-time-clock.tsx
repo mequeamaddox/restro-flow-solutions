@@ -168,8 +168,17 @@ export default function HRTimeClock() {
     },
   });
 
-  const currentTime = new Date().toLocaleTimeString();
+  const [currentTime, setCurrentTime] = useState(new Date().toLocaleTimeString());
   const currentDate = new Date().toLocaleDateString();
+
+  // Update clock every second
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setCurrentTime(new Date().toLocaleTimeString());
+    }, 1000);
+
+    return () => clearInterval(timer);
+  }, []);
 
   // Get active time entries (employees currently clocked in)
   const activeEntries = timeEntries.filter((entry: TimeEntry) => 
