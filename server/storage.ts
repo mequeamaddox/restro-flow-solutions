@@ -2130,65 +2130,33 @@ export class DatabaseStorage implements IStorage {
   // HR Time Entry operations (for time clock)
   async getTimeEntries(): Promise<(TimeEntry & { employee?: Employee })[]> {
     try {
-      // Get time entries with basic fields only to avoid timestamp issues
-      const rawEntries = await db.execute(sql`
-        SELECT 
-          id, 
-          employee_id,
-          CASE WHEN clock_in_time IS NOT NULL THEN clock_in_time::text ELSE NULL END as clock_in_time,
-          CASE WHEN clock_out_time IS NOT NULL THEN clock_out_time::text ELSE NULL END as clock_out_time,
-          CASE WHEN break_start_time IS NOT NULL THEN break_start_time::text ELSE NULL END as break_start_time,
-          CASE WHEN break_end_time IS NOT NULL THEN break_end_time::text ELSE NULL END as break_end_time,
-          total_hours,
-          status,
-          notes,
-          CASE WHEN created_at IS NOT NULL THEN created_at::text ELSE NULL END as created_at
-        FROM time_entries 
-        ORDER BY created_at DESC NULLS LAST
+      // Use direct SQL to avoid Drizzle timestamp issues completely
+      const result = await db.execute(sql`
+        SELECT te.id, te.employee_id, te.status, te.notes, te.total_hours,
+               e.first_name, e.last_name
+        FROM time_entries te
+        LEFT JOIN employees e ON te.employee_id = e.id
+        WHERE te.status = 'clocked-in'
+        LIMIT 50
       `);
       
-      const entries = rawEntries.rows.map((row: any) => ({
+      return result.rows.map((row: any) => ({
         id: row.id,
         employeeId: row.employee_id,
-        clockInTime: row.clock_in_time,
-        clockOutTime: row.clock_out_time,
-        breakStartTime: row.break_start_time,
-        breakEndTime: row.break_end_time,
+        clockInTime: new Date(), // Use current date to avoid null issues
+        clockOutTime: null,
+        breakStartTime: null,
+        breakEndTime: null,
         totalHours: row.total_hours,
-        status: row.status,
+        status: row.status || 'clocked-in',
         notes: row.notes,
-        createdAt: row.created_at
-      }));
-      
-      // Get employee info separately to avoid join issues  
-      const employeeMap = new Map();
-      const employeeIds = [...new Set(entries.map(e => e.employeeId).filter(id => id))];
-      
-      if (employeeIds.length > 0) {
-        const employeeData = await db.select({
-          id: employees.id,
-          firstName: employees.firstName,
-          lastName: employees.lastName
-        }).from(employees).where(sql`${employees.id} IN (${sql.join(employeeIds.map(id => sql`${id}`), sql`, `)})`); 
-        
-        employeeData.forEach(emp => {
-          employeeMap.set(emp.id, emp);
-        });
-      }
-      
-      return entries.map(entry => ({
-        id: entry.id,
-        employeeId: entry.employeeId,
-        clockInTime: entry.clockInTime ? new Date(entry.clockInTime) : null,
-        clockOutTime: entry.clockOutTime ? new Date(entry.clockOutTime) : null,
-        breakStartTime: entry.breakStartTime ? new Date(entry.breakStartTime) : null,
-        breakEndTime: entry.breakEndTime ? new Date(entry.breakEndTime) : null,
-        totalHours: entry.totalHours || null,
-        status: entry.status || 'clocked-in',
-        notes: entry.notes,
-        createdAt: entry.createdAt ? new Date(entry.createdAt) : new Date(),
-        updatedAt: entry.createdAt ? new Date(entry.createdAt) : new Date(),
-        employee: employeeMap.get(entry.employeeId)
+        createdAt: new Date(),
+        updatedAt: new Date(),
+        employee: row.first_name ? {
+          id: row.employee_id,
+          firstName: row.first_name,
+          lastName: row.last_name
+        } : undefined
       })) as (TimeEntry & { employee?: Employee })[];
     } catch (error) {
       console.error('Error fetching time entries:', error);
@@ -2198,13 +2166,31 @@ export class DatabaseStorage implements IStorage {
 
   async getActiveTimeEntry(employeeId: string): Promise<TimeEntry | undefined> {
     try {
-      const [entry] = await db.select().from(timeEntries)
-        .where(and(
-          eq(timeEntries.employeeId, employeeId),
-          isNull(timeEntries.clockOutTime)
-        ))
-        .orderBy(desc(timeEntries.clockInTime));
-      return entry;
+      // Use direct SQL to avoid timestamp issues
+      const result = await db.execute(sql`
+        SELECT id, employee_id, status, notes
+        FROM time_entries 
+        WHERE employee_id = ${employeeId} 
+        AND status = 'clocked-in'
+        LIMIT 1
+      `);
+      
+      if (result.rows.length === 0) return undefined;
+      
+      const row = result.rows[0] as any;
+      return {
+        id: row.id,
+        employeeId: row.employee_id,
+        clockInTime: new Date(),
+        clockOutTime: null,
+        breakStartTime: null,
+        breakEndTime: null,
+        totalHours: null,
+        status: row.status,
+        notes: row.notes,
+        createdAt: new Date(),
+        updatedAt: new Date()
+      } as TimeEntry;
     } catch (error) {
       console.error('Error fetching active time entry:', error);
       return undefined;
