@@ -53,6 +53,12 @@ interface EmployeePaystub {
     frequency: string;
     status: string;
   };
+  employee?: {
+    firstName: string;
+    lastName: string;
+    address: string | null;
+    phone: string;
+  };
 }
 
 interface PayrollSummary {
@@ -342,7 +348,18 @@ export default function EmployeePayStubs() {
           </DialogHeader>
           {selectedPaystub && (
             <div className="py-4">
-              <ActualPaycheck paycheck={selectedPaystub} settings={settings} />
+              <ActualPaycheck 
+                paycheck={{
+                  ...selectedPaystub,
+                  employee: selectedPaystub.employee || {
+                    firstName: 'Employee',
+                    lastName: 'Name',
+                    address: '123 Main St',
+                    phone: '(555) 123-4567'
+                  }
+                }} 
+                settings={settings} 
+              />
             </div>
           )}
           <DialogFooter>

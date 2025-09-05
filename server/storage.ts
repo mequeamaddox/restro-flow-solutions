@@ -3713,10 +3713,18 @@ export class DatabaseStorage implements IStorage {
           payDate: payPeriods.payDate,
           frequency: payPeriods.frequency,
           status: payPeriods.status
+        },
+        // Employee information
+        employee: {
+          firstName: employees.firstName,
+          lastName: employees.lastName,
+          address: employees.address,
+          phone: employees.phone
         }
       })
       .from(paystubs)
       .leftJoin(payPeriods, eq(paystubs.payPeriodId, payPeriods.id))
+      .leftJoin(employees, eq(paystubs.employeeId, employees.id))
       .where(eq(paystubs.employeeId, employeeId))
       .orderBy(desc(paystubs.createdAt));
 
