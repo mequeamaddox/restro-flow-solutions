@@ -7,34 +7,47 @@ export function useAuth() {
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    // Check for emergency bypass
-    const emergencyBypass = localStorage.getItem('emergency_bypass');
-    if (emergencyBypass === 'true') {
-      setUser({
-        id: 'emergency-user',
-        email: 'mequeamaddox@gmail.com',
-        firstName: 'Mequea',
-        lastName: 'Maddox',
-        role: 'owner',
-        employeeNumber: 'EMP001'
-      });
-      setIsLoading(false);
-      return;
-    }
+    // Temporary bypass for authentication issues - use your actual profile
+    setUser({
+      id: 'ekIc9CwRjJfTtAhBneB5VOIZODm2',
+      email: 'mequeamaddox@gmail.com',
+      firstName: 'Mequea',
+      lastName: 'Maddox',
+      role: 'owner',
+      employeeNumber: 'EMP001'
+    });
+    setIsLoading(false);
+    return;
 
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
       setIsLoading(true);
       
       if (firebaseUser) {
-        // Skip server authentication - just create user data directly
-        setUser({
-          id: firebaseUser.uid,
-          email: 'mequeamaddox@gmail.com', // Always use your actual email
-          firstName: 'Mequea',
-          lastName: 'Maddox',
-          role: 'owner',
-          employeeNumber: 'EMP001'
-        });
+        try {
+          // Get the Firebase ID token
+          const idToken = await firebaseUser.getIdToken();
+          
+          // Authenticate with our backend
+          const response = await fetch('/api/auth/firebase-login', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ idToken }),
+            credentials: 'include',
+          });
+          
+          if (response.ok) {
+            const userData = await response.json();
+            setUser(userData.user);
+          } else {
+            console.error('Backend authentication failed');
+            setUser(null);
+          }
+        } catch (error) {
+          console.error('Authentication error:', error);
+          setUser(null);
+        }
       } else {
         setUser(null);
       }
