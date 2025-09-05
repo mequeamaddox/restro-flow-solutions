@@ -206,30 +206,36 @@ export default function FirebaseLogin({ onSuccess }: FirebaseLoginProps) {
                 </Button>
                 
                 {/* Password Reset Option */}
-                <Button
-                  type="button"
-                  onClick={async () => {
-                    try {
-                      const { sendPasswordResetEmail } = await import('firebase/auth');
-                      await sendPasswordResetEmail(auth, 'mequeamaddox@gmail.com');
-                      toast({
-                        title: "Password reset sent!",
-                        description: "Check your email for reset instructions.",
-                      });
-                    } catch (error: any) {
-                      toast({
-                        title: "Reset failed",
-                        description: error.message,
-                        variant: "destructive",
-                      });
-                    }
-                  }}
-                  variant="ghost"
-                  size="sm"
-                  className="w-full text-slate-400 hover:text-white text-xs"
-                >
-                  Send Password Reset Email
-                </Button>
+                <div className="space-y-2">
+                  <Button
+                    type="button"
+                    onClick={async () => {
+                      try {
+                        const { sendPasswordResetEmail } = await import('firebase/auth');
+                        await sendPasswordResetEmail(auth, email);
+                        toast({
+                          title: "Password reset sent!",
+                          description: "Check your email for reset instructions.",
+                        });
+                      } catch (error: any) {
+                        toast({
+                          title: "Reset failed",
+                          description: error.message,
+                          variant: "destructive",
+                        });
+                      }
+                    }}
+                    variant="ghost"
+                    size="sm"
+                    className="w-full text-slate-400 hover:text-white text-xs"
+                  >
+                    Send Password Reset Email
+                  </Button>
+                  
+                  <div className="text-xs text-green-400 text-center p-2 bg-green-900/20 rounded">
+                    ✓ Account exists! Try logging in or use password reset above.
+                  </div>
+                </div>
               </form>
             </TabsContent>
             
