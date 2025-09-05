@@ -18,7 +18,7 @@ export function useAuth() {
         if (response.ok) {
           const data = await response.json();
           setUser({
-            id: 'Sur4jWAps3PlmgZX6KsG0mBBPyc2',
+            id: '46308728',
             email: 'mequeamaddox@gmail.com',
             firstName: 'Mequea',
             lastName: 'Maddox',
