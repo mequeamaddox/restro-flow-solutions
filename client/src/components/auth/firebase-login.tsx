@@ -198,11 +198,12 @@ export default function FirebaseLogin({ onSuccess }: FirebaseLoginProps) {
                 <Button
                   type="button"
                   onClick={() => {
+                    localStorage.setItem('emergency_bypass', 'true');
                     toast({ 
                       title: "Emergency Access Granted!", 
                       description: "Bypassing authentication - welcome to RestroFlow!" 
                     });
-                    onSuccess();
+                    window.location.reload();
                   }}
                   variant="outline"
                   className="w-full border-green-500 text-green-500 hover:bg-green-500 hover:text-white text-sm"

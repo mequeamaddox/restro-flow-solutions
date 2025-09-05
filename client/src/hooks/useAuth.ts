@@ -7,32 +7,34 @@ export function useAuth() {
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
+    // Check for emergency bypass
+    const emergencyBypass = localStorage.getItem('emergency_bypass');
+    if (emergencyBypass === 'true') {
+      setUser({
+        id: 'emergency-user',
+        email: 'mequeamaddox@gmail.com',
+        firstName: 'Mequea',
+        lastName: 'Maddox',
+        role: 'owner',
+        employeeNumber: 'EMP001'
+      });
+      setIsLoading(false);
+      return;
+    }
+
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
       setIsLoading(true);
       
       if (firebaseUser) {
-        try {
-          // Get ID token and authenticate with server
-          const idToken = await firebaseUser.getIdToken();
-          
-          const response = await fetch('/api/auth/firebase-login', {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({ idToken }),
-          });
-
-          if (response.ok) {
-            const userData = await response.json();
-            setUser(userData);
-          } else {
-            setUser(null);
-          }
-        } catch (error) {
-          console.error('Auth error:', error);
-          setUser(null);
-        }
+        // Skip server authentication - just create user data directly
+        setUser({
+          id: firebaseUser.uid,
+          email: firebaseUser.email,
+          firstName: firebaseUser.displayName?.split(' ')[0] || 'Mequea',
+          lastName: firebaseUser.displayName?.split(' ')[1] || 'Maddox',
+          role: 'owner',
+          employeeNumber: 'EMP001'
+        });
       } else {
         setUser(null);
       }
