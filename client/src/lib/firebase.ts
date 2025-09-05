@@ -3,9 +3,9 @@ import { getAuth, connectAuthEmulator } from "firebase/auth";
 
 const firebaseConfig = {
   apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
-  authDomain: `restroflowsoftware.firebaseapp.com`,
-  projectId: 'restroflowsoftware',
-  storageBucket: `restroflowsoftware.firebasestorage.app`,
+  authDomain: "restroflowsoftware.firebaseapp.com",
+  projectId: "restroflowsoftware",
+  storageBucket: "restroflowsoftware.firebasestorage.app",
   appId: import.meta.env.VITE_FIREBASE_APP_ID,
 };
 
