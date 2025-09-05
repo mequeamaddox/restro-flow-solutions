@@ -145,23 +145,28 @@ export default function FirebaseAuth() {
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="text-sm text-slate-300 space-y-2">
-                <p>Your owner account is ready! Use these credentials to login:</p>
+                <p>This will create a Firebase account for:</p>
                 <ul className="list-disc list-inside text-slate-400 space-y-1">
                   <li>Email: mequeamaddox@gmail.com</li>
-                  <li>Try these passwords:</li>
-                  <li className="ml-4">• RestroFlow2024!</li>
-                  <li className="ml-4">• TEMP1234!</li>
-                  <li className="ml-4">• Your usual password</li>
+                  <li>Password: RestroFlow2024!</li>
+                  <li>Role: Owner</li>
                 </ul>
-                <p className="text-xs text-slate-500 mt-2">Close this dialog and use the login form above.</p>
               </div>
               
               <div className="flex gap-2">
                 <Button
-                  onClick={() => setShowCreateOwner(false)}
+                  onClick={handleCreateOwnerAccount}
                   className="flex-1 bg-gradient-to-r from-orange-500 to-red-600 hover:from-orange-600 hover:to-red-700 text-white"
+                  data-testid="button-confirm-create-owner"
                 >
-                  Got It - Let Me Login
+                  Create Account
+                </Button>
+                <Button
+                  onClick={() => setShowCreateOwner(false)}
+                  variant="outline"
+                  className="flex-1 border-slate-600 text-slate-300"
+                >
+                  Cancel
                 </Button>
               </div>
             </CardContent>
