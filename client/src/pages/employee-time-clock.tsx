@@ -155,10 +155,10 @@ export default function EmployeeTimeClock() {
 
   const getStatusColor = (status?: string) => {
     switch (status) {
-      case 'clocked-in': return 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200';
-      case 'on-break': return 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200';
-      case 'clocked-out': return 'bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-200';
-      default: return 'bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-200';
+      case 'clocked-in': return 'bg-green-900/80 text-green-200 border-green-600';
+      case 'on-break': return 'bg-yellow-900/80 text-yellow-200 border-yellow-600';
+      case 'clocked-out': return 'bg-slate-700/80 text-slate-300 border-slate-500';
+      default: return 'bg-slate-700/80 text-slate-300 border-slate-500';
     }
   };
 
@@ -173,7 +173,7 @@ export default function EmployeeTimeClock() {
   return (
     <div className="max-w-7xl mx-auto p-6 space-y-6">
       {/* Header with live clock */}
-      <div className="bg-gradient-to-r from-slate-900 to-gray-900 dark:from-slate-800 dark:to-gray-800 rounded-xl p-6 text-white border border-slate-800 dark:border-slate-700">
+      <div className="bg-slate-800/80 backdrop-blur-sm rounded-xl p-6 text-white border border-slate-700">
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-3xl font-bold mb-2 text-white">My Time Clock</h1>
@@ -194,7 +194,7 @@ export default function EmployeeTimeClock() {
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         {/* Clock In/Out Card */}
-        <Card className="bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 shadow-lg">
+        <Card className="bg-slate-800/80 backdrop-blur-sm border-slate-700">
           <CardHeader className="pb-4">
             <CardTitle className="flex items-center text-slate-900 dark:text-white">
               <Clock className="h-5 w-5 mr-2" />
@@ -309,7 +309,7 @@ export default function EmployeeTimeClock() {
         </Card>
 
         {/* Today's Schedule Card */}
-        <Card className="bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 shadow-lg">
+        <Card className="bg-slate-800/80 backdrop-blur-sm border-slate-700">
           <CardHeader className="pb-4">
             <CardTitle className="flex items-center text-slate-900 dark:text-white">
               <Calendar className="h-5 w-5 mr-2" />
