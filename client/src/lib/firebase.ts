@@ -19,7 +19,14 @@ console.log('Firebase Config Status:', {
   envProjectId: import.meta.env.VITE_FIREBASE_PROJECT_ID
 });
 
-// Initialize Firebase
+// Initialize Firebase - clear any existing apps first
+import { getApps, deleteApp } from "firebase/app";
+
+// Clear any existing Firebase apps to prevent caching issues
+const existingApps = getApps();
+existingApps.forEach(app => deleteApp(app));
+
+// Initialize fresh Firebase instance
 const app = initializeApp(firebaseConfig);
 
 // Initialize Firebase Authentication
