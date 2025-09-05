@@ -327,12 +327,12 @@ export default function HRTimeClock() {
       </div>
 
       {/* Current Time Display */}
-      <Card className="mb-8 bg-gradient-to-r from-blue-50 to-indigo-50 border-blue-200">
+      <Card className="mb-8 bg-slate-800/80 backdrop-blur-sm border-slate-700">
         <CardHeader className="text-center">
-          <CardTitle className="text-2xl font-bold text-blue-800">
+          <CardTitle className="text-2xl font-bold text-white">
             {currentTime}
           </CardTitle>
-          <CardDescription className="text-blue-600 text-lg">
+          <CardDescription className="text-slate-400 text-lg">
             {currentDate}
           </CardDescription>
         </CardHeader>
@@ -340,17 +340,17 @@ export default function HRTimeClock() {
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
         {/* Currently Clocked In */}
-        <Card>
+        <Card className="bg-slate-800/80 backdrop-blur-sm border-slate-700">
           <CardHeader>
-            <CardTitle className="flex items-center gap-2">
+            <CardTitle className="flex items-center gap-2 text-white">
               <UserCheck className="h-5 w-5 text-green-600" />
               Currently Working ({activeEntries.length})
             </CardTitle>
-            <CardDescription>Employees currently clocked in or on break</CardDescription>
+            <CardDescription className="text-slate-400">Employees currently clocked in or on break</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             {activeEntries.length === 0 ? (
-              <div className="text-center py-8 text-gray-500">
+              <div className="text-center py-8 text-slate-400">
                 <Clock className="h-12 w-12 mx-auto mb-2 opacity-50" />
                 <p>No employees currently clocked in</p>
               </div>
@@ -400,13 +400,13 @@ export default function HRTimeClock() {
         </Card>
 
         {/* Clock In Interface */}
-        <Card>
+        <Card className="bg-slate-800/80 backdrop-blur-sm border-slate-700">
           <CardHeader>
-            <CardTitle className="flex items-center gap-2">
+            <CardTitle className="flex items-center gap-2 text-white">
               <Play className="h-5 w-5 text-blue-600" />
               Clock In Employee
             </CardTitle>
-            <CardDescription>Select an employee to clock them in</CardDescription>
+            <CardDescription className="text-slate-400">Select an employee to clock them in</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="grid grid-cols-1 gap-3 max-h-96 overflow-y-auto">
@@ -439,7 +439,7 @@ export default function HRTimeClock() {
             </div>
 
             {employees.filter((employee: Employee) => !getActiveEntry(employee.id)).length === 0 && (
-              <div className="text-center py-8 text-gray-500">
+              <div className="text-center py-8 text-slate-400">
                 <UserCheck className="h-12 w-12 mx-auto mb-2 opacity-50" />
                 <p>All employees are currently clocked in</p>
               </div>
@@ -463,15 +463,15 @@ export default function HRTimeClock() {
       </div>
 
       {/* Time Entry Management */}
-      <Card className="mt-8">
+      <Card className="mt-8 bg-slate-800/80 backdrop-blur-sm border-slate-700">
         <CardHeader>
           <div className="flex items-center justify-between">
             <div>
-              <CardTitle className="flex items-center gap-2">
-                <Timer className="h-5 w-5 text-gray-600" />
+              <CardTitle className="flex items-center gap-2 text-white">
+                <Timer className="h-5 w-5 text-gray-400" />
                 Time Entry Management
               </CardTitle>
-              <CardDescription>View and edit employee time punches from any date range</CardDescription>
+              <CardDescription className="text-slate-400">View and edit employee time punches from any date range</CardDescription>
             </div>
             <Button onClick={() => setShowManualEntryDialog(true)} data-testid="button-add-manual-entry">
               <Plus className="h-4 w-4 mr-2" />
@@ -505,7 +505,7 @@ export default function HRTimeClock() {
           {viewMode === 'list' && (
             <>
               {/* Filter Controls */}
-              <div className="flex flex-wrap gap-4 mb-6 p-4 bg-gray-50 rounded-lg">
+              <div className="flex flex-wrap gap-4 mb-6 p-4 bg-slate-700/50 rounded-lg border border-slate-600">
                 <div className="flex items-center gap-2">
                   <Calendar className="h-4 w-4 text-gray-600" />
                   <Label htmlFor="dateRange">Date Range:</Label>
