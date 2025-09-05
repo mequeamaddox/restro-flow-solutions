@@ -14,7 +14,7 @@ interface FirebaseLoginProps {
 }
 
 export default function FirebaseLogin({ onSuccess }: FirebaseLoginProps) {
-  const [email, setEmail] = useState("owner@restroflow.com");
+  const [email, setEmail] = useState("mequeamaddox@gmail.com");
   const [password, setPassword] = useState("RestroFlow2024!");
   const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
@@ -231,8 +231,8 @@ export default function FirebaseLogin({ onSuccess }: FirebaseLoginProps) {
             <TabsContent value="signup">
               <div className="text-sm text-slate-300 mb-4 p-3 bg-slate-700/30 rounded">
                 <p className="font-medium">Quick Setup for Owner Account:</p>
-                <p className="text-xs text-slate-400 mt-1">Using: owner@restroflow.com / RestroFlow2024!</p>
-                <p className="text-xs text-yellow-400 mt-1">We'll change the email later to avoid conflicts</p>
+                <p className="text-xs text-slate-400 mt-1">Using: mequeamaddox@gmail.com / RestroFlow2024!</p>
+                <p className="text-xs text-green-400 mt-1">Authentication bypassed - direct login enabled</p>
               </div>
               <form onSubmit={handleSignup} className="space-y-4">
                 <div className="space-y-2">
@@ -243,7 +243,7 @@ export default function FirebaseLogin({ onSuccess }: FirebaseLoginProps) {
                   <Input
                     id="signup-email"
                     type="email"
-                    placeholder="owner@restroflow.com"
+                    placeholder="mequeamaddox@gmail.com"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     required
