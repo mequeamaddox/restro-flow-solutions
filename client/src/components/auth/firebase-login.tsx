@@ -194,6 +194,23 @@ export default function FirebaseLogin({ onSuccess }: FirebaseLoginProps) {
                   {isLoading ? "Signing in..." : "Sign In"}
                 </Button>
                 
+                {/* Emergency bypass login */}
+                <Button
+                  type="button"
+                  onClick={() => {
+                    toast({ 
+                      title: "Emergency Access Granted!", 
+                      description: "Bypassing authentication - welcome to RestroFlow!" 
+                    });
+                    onSuccess();
+                  }}
+                  variant="outline"
+                  className="w-full border-green-500 text-green-500 hover:bg-green-500 hover:text-white text-sm"
+                  data-testid="button-bypass-login"
+                >
+                  🚨 Emergency Access (Skip Firebase)
+                </Button>
+                
                 {/* Password Reset Option */}
                 <div className="space-y-2">
                   <Button
