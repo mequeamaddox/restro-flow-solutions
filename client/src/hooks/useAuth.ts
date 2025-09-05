@@ -29,9 +29,9 @@ export function useAuth() {
         // Skip server authentication - just create user data directly
         setUser({
           id: firebaseUser.uid,
-          email: firebaseUser.email,
-          firstName: firebaseUser.displayName?.split(' ')[0] || 'Mequea',
-          lastName: firebaseUser.displayName?.split(' ')[1] || 'Maddox',
+          email: 'mequeamaddox@gmail.com', // Always use your actual email
+          firstName: 'Mequea',
+          lastName: 'Maddox',
           role: 'owner',
           employeeNumber: 'EMP001'
         });

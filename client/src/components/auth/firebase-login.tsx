@@ -71,8 +71,8 @@ export default function FirebaseLogin({ onSuccess }: FirebaseLoginProps) {
       
       // Skip server authentication for now and directly log in
       toast({ 
-        title: "Welcome back!", 
-        description: "You've successfully logged in." 
+        title: "Welcome back, Mequea!", 
+        description: "You've successfully logged in to RestroFlow." 
       });
       onSuccess();
     } catch (error: any) {
