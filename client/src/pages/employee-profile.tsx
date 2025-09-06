@@ -251,20 +251,71 @@ export default function EmployeePage() {
               <span className="text-sm text-gray-600">Hire Date:</span>
               <span className="text-sm">{formatDate(employee.hireDate)}</span>
             </div>
-            {onboardingData?.phone && (
+            {employee.phone && (
               <div className="flex items-center space-x-2">
                 <Phone className="w-4 h-4 text-gray-500" />
                 <span className="text-sm text-gray-600">Phone:</span>
-                <span className="text-sm">{onboardingData.phone}</span>
+                <span className="text-sm">{employee.phone}</span>
               </div>
             )}
-            {onboardingData?.dateOfBirth && (
+            {employee.dateOfBirth && (
               <div className="flex items-center space-x-2">
                 <Calendar className="w-4 h-4 text-gray-500" />
                 <span className="text-sm text-gray-600">Date of Birth:</span>
-                <span className="text-sm">{formatDate(onboardingData.dateOfBirth)}</span>
+                <span className="text-sm">{formatDate(employee.dateOfBirth)}</span>
               </div>
             )}
+            <div className="pt-2 border-t">
+              <div className="flex items-center justify-between">
+                <span className="text-sm text-gray-600">Time with Company:</span>
+                <span className="text-sm font-medium">
+                  {employee.hireDate ? 
+                    Math.floor((new Date().getTime() - new Date(employee.hireDate).getTime()) / (1000 * 60 * 60 * 24 * 30)) + ' months' : 
+                    'Not available'
+                  }
+                </span>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Employment Details */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center space-x-2">
+              <Shield className="w-5 h-5" />
+              <span>Employment Details</span>
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div>
+              <span className="text-sm text-gray-600">Position:</span>
+              <p className="text-sm font-medium">{employee.position?.title || employee.position}</p>
+            </div>
+            <div>
+              <span className="text-sm text-gray-600">Department:</span>
+              <p className="text-sm font-medium">{employee.department?.name || employee.department}</p>
+            </div>
+            {employee.hourlyRate && (
+              <div>
+                <span className="text-sm text-gray-600">Hourly Rate:</span>
+                <p className="text-sm font-medium">${parseFloat(employee.hourlyRate).toFixed(2)}/hour</p>
+              </div>
+            )}
+            {employee.salary && (
+              <div>
+                <span className="text-sm text-gray-600">Annual Salary:</span>
+                <p className="text-sm font-medium">${parseFloat(employee.salary).toLocaleString()}</p>
+              </div>
+            )}
+            <div>
+              <span className="text-sm text-gray-600">Pay Frequency:</span>
+              <p className="text-sm font-medium capitalize">{employee.payFrequency || 'biweekly'}</p>
+            </div>
+            <div>
+              <span className="text-sm text-gray-600">Employee ID:</span>
+              <p className="text-sm font-mono font-medium">{employee.employeeNumber}</p>
+            </div>
           </CardContent>
         </Card>
 
@@ -435,6 +486,73 @@ export default function EmployeePage() {
             </CardContent>
           </Card>
         )}
+
+        {/* Work History & Performance */}
+        <Card className="lg:col-span-3">
+          <CardHeader>
+            <CardTitle className="flex items-center space-x-2">
+              <Clock className="w-5 h-5" />
+              <span>Work History & Performance</span>
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              <div className="space-y-4">
+                <h4 className="font-medium text-gray-900">Employment Timeline</h4>
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between p-3 bg-green-50 rounded-lg">
+                    <div>
+                      <p className="text-sm font-medium text-green-900">Current Position</p>
+                      <p className="text-xs text-green-700">{employee.position?.title || employee.position}</p>
+                    </div>
+                    <Badge className="bg-green-100 text-green-800">Active</Badge>
+                  </div>
+                  <div className="text-xs text-gray-500">
+                    Started: {formatDate(employee.hireDate)}
+                  </div>
+                </div>
+              </div>
+              
+              <div className="space-y-4">
+                <h4 className="font-medium text-gray-900">Quick Stats</h4>
+                <div className="space-y-2">
+                  <div className="flex justify-between">
+                    <span className="text-sm text-gray-600">Days with Company:</span>
+                    <span className="text-sm font-medium">
+                      {employee.hireDate ? 
+                        Math.floor((new Date().getTime() - new Date(employee.hireDate).getTime()) / (1000 * 60 * 60 * 24)) + ' days' : 
+                        'N/A'
+                      }
+                    </span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-sm text-gray-600">Status:</span>
+                    <Badge className={getStatusColor(employee.status)}>
+                      {employee.status}
+                    </Badge>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-sm text-gray-600">Employee Type:</span>
+                    <span className="text-sm font-medium">
+                      {employee.hourlyRate ? 'Hourly' : employee.salary ? 'Salaried' : 'Not Set'}
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              <div className="space-y-4">
+                <h4 className="font-medium text-gray-900">Notes & Comments</h4>
+                <div className="p-3 bg-gray-50 rounded-lg min-h-[100px]">
+                  {employee.notes ? (
+                    <p className="text-sm text-gray-700">{employee.notes}</p>
+                  ) : (
+                    <p className="text-sm text-gray-500 italic">No notes available</p>
+                  )}
+                </div>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
 
         {/* Document Management Section */}
         <div className="lg:col-span-3">
