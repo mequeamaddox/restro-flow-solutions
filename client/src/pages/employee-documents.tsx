@@ -11,9 +11,10 @@ import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useAuth } from "@/hooks/useAuth";
 import { DigitalDocumentForm } from '@/components/employee/DigitalDocumentForm';
+import { ObjectUploader } from '@/components/ObjectUploader';
 import { 
   FileText, Download, CheckCircle, Clock, AlertTriangle,
-  Eye, ArrowLeft, Calendar, User, Target, Award, Star, PenTool
+  Eye, ArrowLeft, Calendar, User, Target, Award, Star, PenTool, Upload, Plus
 } from "lucide-react";
 import { format } from "date-fns";
 
@@ -42,6 +43,8 @@ export default function EmployeeDocuments() {
   const [showSignatureDialog, setShowSignatureDialog] = useState(false);
   const [showDigitalForm, setShowDigitalForm] = useState(false);
   const [filter, setFilter] = useState<string>('all');
+  const [showManagerUpload, setShowManagerUpload] = useState(false);
+  const [selectedDocumentForUpload, setSelectedDocumentForUpload] = useState<EmployeeDocument | null>(null);
 
   // Fetch employee documents
   const { data: documents = [], isLoading } = useQuery<EmployeeDocument[]>({
@@ -99,6 +102,38 @@ export default function EmployeeDocuments() {
     },
   });
 
+  // Manager paper upload mutation
+  const managerUploadMutation = useMutation({
+    mutationFn: async ({ documentId, filePath, fileSize, mimeType }: { 
+      documentId: string; 
+      filePath: string; 
+      fileSize: number; 
+      mimeType: string; 
+    }) => {
+      return await apiRequest('PUT', `/api/employee-documents/${documentId}/manager-upload`, {
+        filePath,
+        fileSize,
+        mimeType,
+      });
+    },
+    onSuccess: () => {
+      toast({
+        title: "Paper Copy Uploaded",
+        description: "Paper document has been uploaded successfully.",
+      });
+      queryClient.invalidateQueries({ queryKey: [`/api/employees/${user?.id}/documents`] });
+      setShowManagerUpload(false);
+      setSelectedDocumentForUpload(null);
+    },
+    onError: () => {
+      toast({
+        title: "Upload Failed",
+        description: "Failed to upload paper copy. Please try again.",
+        variant: "destructive",
+      });
+    },
+  });
+
   const handleSignature = async (signatureData: string, signedName: string) => {
     if (selectedDocument) {
       signatureMutation.mutate({
@@ -108,6 +143,21 @@ export default function EmployeeDocuments() {
       });
     }
   };
+
+  const handleManagerUpload = async (result: any) => {
+    const uploadedFile = result.successful[0];
+    if (uploadedFile && selectedDocumentForUpload) {
+      managerUploadMutation.mutate({
+        documentId: selectedDocumentForUpload.id,
+        filePath: uploadedFile.uploadURL,
+        fileSize: uploadedFile.size || 0,
+        mimeType: uploadedFile.type || 'application/octet-stream',
+      });
+    }
+  };
+
+  // Check if user is manager/owner for upload capabilities
+  const isManager = user?.role === 'owner' || user?.role === 'manager';
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -247,6 +297,70 @@ export default function EmployeeDocuments() {
               <p className="text-sm text-gray-600">
                 {stats.completed} of {stats.total} documents completed
               </p>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Manager Upload Section */}
+      {isManager && (
+        <Card className="bg-gradient-to-br from-emerald-50 to-emerald-100 border-emerald-200">
+          <CardHeader>
+            <CardTitle className="flex items-center text-emerald-800">
+              <Upload className="h-5 w-5 mr-2" />
+              Manager Functions - Upload Paper Copies
+            </CardTitle>
+            <p className="text-emerald-600 text-sm">
+              Upload paper copies of documents for employees who completed forms before digital transition
+            </p>
+          </CardHeader>
+          <CardContent>
+            <div className="flex gap-3">
+              {documents.filter(doc => ['completed', 'signed'].includes(doc.status)).length > 0 ? (
+                <>
+                  <select
+                    className="px-3 py-2 border rounded-md bg-white text-sm"
+                    value={selectedDocumentForUpload?.id || ''}
+                    onChange={(e) => {
+                      const doc = documents.find(d => d.id === e.target.value);
+                      setSelectedDocumentForUpload(doc || null);
+                    }}
+                  >
+                    <option value="">Select document to attach paper copy...</option>
+                    {documents
+                      .filter(doc => ['completed', 'signed'].includes(doc.status))
+                      .map(doc => (
+                        <option key={doc.id} value={doc.id}>
+                          {doc.template.name} - {doc.template.type}
+                        </option>
+                      ))
+                    }
+                  </select>
+                  
+                  {selectedDocumentForUpload && (
+                    <ObjectUploader
+                      maxNumberOfFiles={1}
+                      maxFileSize={10485760}
+                      onGetUploadParameters={async () => {
+                        const response = await apiRequest('POST', '/api/objects/upload');
+                        return {
+                          method: 'PUT' as const,
+                          url: response.uploadURL,
+                        };
+                      }}
+                      onComplete={handleManagerUpload}
+                      buttonClassName="bg-emerald-600 hover:bg-emerald-700 text-white"
+                    >
+                      <Upload className="h-4 w-4 mr-2" />
+                      Upload Paper Copy
+                    </ObjectUploader>
+                  )}
+                </>
+              ) : (
+                <p className="text-emerald-600 text-sm italic">
+                  No completed documents available for paper upload
+                </p>
+              )}
             </div>
           </CardContent>
         </Card>
