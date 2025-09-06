@@ -2008,7 +2008,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           
           // Send welcome email with login credentials
           try {
-            const { sendEmail } = await import('../sendgrid');
+            const { sendEmail } = await import('./sendgrid');
             await sendEmail({
               to: employee.email,
               from: 'mequeamaddox@gmail.com',
@@ -3183,7 +3183,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Send invitation based on method
       if (sendMethod === 'email' && email) {
         try {
-          const { sendEmail } = await import('../sendgrid');
+          const { sendEmail } = await import('./sendgrid');
           const employee = await storage.getEmployee(employeeId);
           
           await sendEmail({
@@ -3970,7 +3970,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // This duplicate route is removed - using the one above with proper permissions
+  // Test endpoint for SendGrid email functionality
+  app.post('/api/test/email', isAuthenticated, async (req, res) => {
+    try {
+      console.log('🧪 Testing SendGrid email functionality...');
+      const { sendEmail } = await import('./sendgrid');
+      
+      const testResult = await sendEmail({
+        to: 'mequeamaddox@gmail.com',
+        from: 'mequeamaddox@gmail.com',
+        subject: 'RestroFlow Email Test',
+        text: 'This is a test email from RestroFlow to verify SendGrid is working.',
+        html: '<p>This is a <strong>test email</strong> from RestroFlow to verify SendGrid is working.</p>'
+      });
+      
+      console.log('✅ Test email sent successfully!');
+      res.json({ success: true, message: 'Test email sent successfully!' });
+    } catch (error) {
+      console.error('❌ Test email failed:', error);
+      res.status(500).json({ success: false, error: error.message });
+    }
+  });
 
   // Calculate payroll hours from time entries for a pay period
   app.get('/api/payroll-periods/:periodId/calculated-hours', isAuthenticated, async (req, res) => {

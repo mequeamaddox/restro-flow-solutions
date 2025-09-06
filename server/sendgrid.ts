@@ -17,13 +17,26 @@ interface EmailParams {
 
 export async function sendEmail(params: EmailParams): Promise<boolean> {
   try {
-    await mailService.send({
+    const mailData: any = {
       to: params.to,
       from: params.from,
       subject: params.subject,
-      ...(params.text && { text: params.text }),
-      ...(params.html && { html: params.html }),
-    });
+    };
+    
+    if (params.text) {
+      mailData.text = params.text;
+    }
+    
+    if (params.html) {
+      mailData.html = params.html;
+    }
+    
+    // Ensure at least one content type is present
+    if (!params.text && !params.html) {
+      mailData.text = params.subject; // Fallback to subject as text
+    }
+
+    await mailService.send(mailData);
     return true;
   } catch (error) {
     console.error('SendGrid email error:', error);
