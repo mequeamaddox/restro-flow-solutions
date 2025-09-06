@@ -322,7 +322,7 @@ export default function HRTaxSettings() {
           </CardContent>
         </Card>
 
-        {/* Payroll Taxes (Fixed by Law) */}
+        {/* Payroll Taxes (Employee & Employer) */}
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center space-x-2">
@@ -333,50 +333,110 @@ export default function HRTaxSettings() {
               Social Security and Medicare rates (fixed by federal law)
             </CardDescription>
           </CardHeader>
-          <CardContent className="space-y-4">
-            <div>
-              <Label htmlFor="socialSecurityRate">Social Security Rate (%)</Label>
-              <Input
-                id="socialSecurityRate"
-                type="number"
-                step="0.001"
-                value={parseFloat(formData.socialSecurityRate) * 100}
-                onChange={(e) => handleInputChange('socialSecurityRate', (parseFloat(e.target.value) / 100).toString())}
-                placeholder="6.2"
-              />
-              <p className="text-xs text-gray-500 mt-1">
-                Standard rate: 6.2% (employee portion)
-              </p>
+          <CardContent className="space-y-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {/* Employee Portion */}
+              <div className="space-y-4">
+                <h4 className="font-medium text-gray-900 border-b pb-2">Employee Deductions</h4>
+                
+                <div>
+                  <Label htmlFor="socialSecurityRate">Social Security Rate (%)</Label>
+                  <Input
+                    id="socialSecurityRate"
+                    type="number"
+                    step="0.001"
+                    value={parseFloat(formData.socialSecurityRate) * 100}
+                    onChange={(e) => handleInputChange('socialSecurityRate', (parseFloat(e.target.value) / 100).toString())}
+                    placeholder="6.2"
+                  />
+                  <p className="text-xs text-gray-500 mt-1">
+                    Employee portion: {(parseFloat(formData.socialSecurityRate) * 100).toFixed(2)}%
+                  </p>
+                </div>
+
+                <div>
+                  <Label htmlFor="medicareRate">Medicare Rate (%)</Label>
+                  <Input
+                    id="medicareRate"
+                    type="number"
+                    step="0.001"
+                    value={parseFloat(formData.medicareRate) * 100}
+                    onChange={(e) => handleInputChange('medicareRate', (parseFloat(e.target.value) / 100).toString())}
+                    placeholder="1.45"
+                  />
+                  <p className="text-xs text-gray-500 mt-1">
+                    Employee portion: {(parseFloat(formData.medicareRate) * 100).toFixed(2)}%
+                  </p>
+                </div>
+              </div>
+
+              {/* Employer Portion */}
+              <div className="space-y-4">
+                <h4 className="font-medium text-red-900 border-b pb-2 border-red-200">Employer Costs</h4>
+                
+                <div className="bg-red-50 p-3 rounded-lg">
+                  <Label className="text-red-800 font-medium">Social Security (Employer Match)</Label>
+                  <p className="text-lg font-bold text-red-900 mt-1">
+                    {(parseFloat(formData.socialSecurityRate) * 100).toFixed(2)}%
+                  </p>
+                  <p className="text-xs text-red-700 mt-1">
+                    You pay matching {(parseFloat(formData.socialSecurityRate) * 100).toFixed(2)}% on top of wages
+                  </p>
+                </div>
+
+                <div className="bg-red-50 p-3 rounded-lg">
+                  <Label className="text-red-800 font-medium">Medicare (Employer Match)</Label>
+                  <p className="text-lg font-bold text-red-900 mt-1">
+                    {(parseFloat(formData.medicareRate) * 100).toFixed(2)}%
+                  </p>
+                  <p className="text-xs text-red-700 mt-1">
+                    You pay matching {(parseFloat(formData.medicareRate) * 100).toFixed(2)}% on top of wages
+                  </p>
+                </div>
+
+                <div className="bg-yellow-50 p-3 rounded-lg">
+                  <Label className="text-yellow-800 font-medium">SUTA (State Unemployment)</Label>
+                  <p className="text-lg font-bold text-yellow-900 mt-1">
+                    {(parseFloat(formData.stateUnemploymentRate) * 100).toFixed(3)}%
+                  </p>
+                  <p className="text-xs text-yellow-700 mt-1">
+                    100% employer cost - employees don't pay SUTA
+                  </p>
+                </div>
+              </div>
             </div>
 
-            <div>
-              <Label htmlFor="medicareRate">Medicare Rate (%)</Label>
-              <Input
-                id="medicareRate"
-                type="number"
-                step="0.001"
-                value={parseFloat(formData.medicareRate) * 100}
-                onChange={(e) => handleInputChange('medicareRate', (parseFloat(e.target.value) / 100).toString())}
-                placeholder="1.45"
-              />
-              <p className="text-xs text-gray-500 mt-1">
-                Standard rate: 1.45% (employee portion)
-              </p>
-            </div>
+            <Separator />
 
-            <div>
-              <Label htmlFor="workersCompRate">Workers' Compensation Rate (%)</Label>
-              <Input
-                id="workersCompRate"
-                type="number"
-                step="0.001"
-                value={parseFloat(formData.workersCompRate) * 100}
-                onChange={(e) => handleInputChange('workersCompRate', (parseFloat(e.target.value) / 100).toString())}
-                placeholder="0.5"
-              />
-              <p className="text-xs text-gray-500 mt-1">
-                Varies by industry and claims history
-              </p>
+            {/* Employer-Only Taxes */}
+            <div className="space-y-4">
+              <h4 className="font-medium text-red-900">Additional Employer-Only Taxes</h4>
+              
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="bg-red-50 p-3 rounded-lg">
+                  <Label className="text-red-800 font-medium">FUTA (Federal Unemployment)</Label>
+                  <p className="text-lg font-bold text-red-900 mt-1">0.600%</p>
+                  <p className="text-xs text-red-700 mt-1">
+                    On first $7,000 per employee per year
+                  </p>
+                </div>
+
+                <div>
+                  <Label htmlFor="workersCompRate">Workers' Compensation Rate (%)</Label>
+                  <Input
+                    id="workersCompRate"
+                    type="number"
+                    step="0.001"
+                    value={parseFloat(formData.workersCompRate) * 100}
+                    onChange={(e) => handleInputChange('workersCompRate', (parseFloat(e.target.value) / 100).toString())}
+                    placeholder="0.5"
+                    className="bg-red-50"
+                  />
+                  <p className="text-xs text-red-700 mt-1">
+                    100% employer cost - varies by industry
+                  </p>
+                </div>
+              </div>
             </div>
           </CardContent>
         </Card>
