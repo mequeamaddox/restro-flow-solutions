@@ -3588,6 +3588,29 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Manager paper upload endpoint
+  app.put('/api/employee-documents/:id/manager-upload', isAuthenticated, async (req, res) => {
+    try {
+      const userId = (req.user as any)?.claims?.sub;
+      const { filePath, fileSize, mimeType } = req.body;
+      
+      const assignment = await storage.updateDocumentAssignment(req.params.id, {
+        filePath,
+        fileSize,
+        mimeType,
+        uploadedAt: new Date(),
+        uploadedBy: userId,
+        status: 'uploaded',
+        notes: 'Paper copy uploaded by manager'
+      });
+      
+      res.json(assignment);
+    } catch (error) {
+      console.error('Error uploading paper copy:', error);
+      res.status(500).json({ message: 'Failed to upload paper copy' });
+    }
+  });
+
   // Upload document endpoint
   app.post('/api/employee-documents/:id/upload', async (req, res) => {
     try {

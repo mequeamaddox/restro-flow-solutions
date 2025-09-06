@@ -27,7 +27,7 @@ interface EmployeeDocument {
     description: string;
     requirements?: string;
   };
-  status: 'assigned' | 'in_progress' | 'completed' | 'signed' | 'approved' | 'rejected';
+  status: 'assigned' | 'in_progress' | 'completed' | 'signed' | 'uploaded' | 'approved' | 'rejected';
   deadline?: string;
   notes?: string;
   assignedAt: string;
@@ -162,6 +162,7 @@ export default function EmployeeDocuments() {
   const getStatusColor = (status: string) => {
     switch (status) {
       case 'approved': return 'bg-green-100 text-green-800 border-green-200';
+      case 'uploaded': return 'bg-cyan-100 text-cyan-800 border-cyan-200';
       case 'signed': return 'bg-purple-100 text-purple-800 border-purple-200';
       case 'completed': return 'bg-blue-100 text-blue-800 border-blue-200';
       case 'in_progress': return 'bg-yellow-100 text-yellow-800 border-yellow-200';
@@ -174,6 +175,7 @@ export default function EmployeeDocuments() {
   const getStatusIcon = (status: string) => {
     switch (status) {
       case 'approved': return <CheckCircle className="h-4 w-4 text-green-600" />;
+      case 'uploaded': return <Upload className="h-4 w-4 text-cyan-600" />;
       case 'signed': return <PenTool className="h-4 w-4 text-purple-600" />;
       case 'completed': return <Clock className="h-4 w-4 text-blue-600" />;
       case 'in_progress': return <Target className="h-4 w-4 text-yellow-600" />;
@@ -187,7 +189,7 @@ export default function EmployeeDocuments() {
     if (filter === 'all') return true;
     if (filter === 'pending') return ['assigned', 'in_progress'].includes(doc.status);
     if (filter === 'overdue') {
-      return doc.deadline && new Date(doc.deadline) < new Date() && !['completed', 'approved'].includes(doc.status);
+      return doc.deadline && new Date(doc.deadline) < new Date() && !['completed', 'signed', 'uploaded', 'approved'].includes(doc.status);
     }
     return doc.status === filter;
   });
@@ -195,9 +197,9 @@ export default function EmployeeDocuments() {
   const stats = {
     total: documents.length,
     pending: documents.filter(doc => ['assigned', 'in_progress'].includes(doc.status)).length,
-    completed: documents.filter(doc => ['completed', 'approved'].includes(doc.status)).length,
+    completed: documents.filter(doc => ['completed', 'signed', 'uploaded', 'approved'].includes(doc.status)).length,
     overdue: documents.filter(doc => 
-      doc.deadline && new Date(doc.deadline) < new Date() && !['completed', 'approved'].includes(doc.status)
+      doc.deadline && new Date(doc.deadline) < new Date() && !['completed', 'signed', 'uploaded', 'approved'].includes(doc.status)
     ).length,
   };
 
@@ -694,14 +696,20 @@ export default function EmployeeDocuments() {
                   </Button>
                 )}
 
-                {['completed', 'approved'].includes(selectedDocument.status) && selectedDocument.filePath && (
+                {['completed', 'signed', 'uploaded', 'approved'].includes(selectedDocument.status) && selectedDocument.filePath && (
                   <Button
                     variant="outline"
                     onClick={() => window.open(selectedDocument.filePath, '_blank')}
                   >
                     <Download className="h-4 w-4 mr-2" />
-                    Download
+                    {selectedDocument.status === 'uploaded' ? 'View Paper Copy' : 'Download'}
                   </Button>
+                )}
+                
+                {selectedDocument.status === 'uploaded' && isManager && (
+                  <div className="text-xs text-cyan-600 bg-cyan-50 px-2 py-1 rounded-md">
+                    📄 Paper copy uploaded by manager
+                  </div>
                 )}
               </div>
             </div>
