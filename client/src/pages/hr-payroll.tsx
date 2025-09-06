@@ -591,7 +591,7 @@ export default function HRPayroll() {
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2">
                     <DollarSign className="w-5 h-5" />
-                    Payroll Summary
+                    Employee Payroll Summary
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
@@ -606,7 +606,7 @@ export default function HRPayroll() {
                       <div className="text-2xl font-bold text-red-600">
                         ${periodTotals.deductions.toFixed(2)}
                       </div>
-                      <div className="text-sm text-muted-foreground">Total Deductions</div>
+                      <div className="text-sm text-muted-foreground">Employee Deductions</div>
                     </div>
                     <div className="text-center">
                       <div className="text-2xl font-bold text-blue-600">
@@ -614,6 +614,64 @@ export default function HRPayroll() {
                       </div>
                       <div className="text-sm text-muted-foreground">Net Pay</div>
                     </div>
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Employer Tax Summary Card */}
+              <Card className="border-red-200 bg-red-50">
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2 text-red-800">
+                    <Calculator className="w-5 h-5" />
+                    Your Employer Tax Costs
+                  </CardTitle>
+                  <CardDescription>
+                    Additional taxes you pay on top of wages (not deducted from employee pay)
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                    <div className="text-center">
+                      <div className="text-xl font-bold text-red-700">
+                        ${(periodTotals.grossPay * 0.062).toFixed(2)}
+                      </div>
+                      <div className="text-xs text-red-600">Social Security Match<br/>(6.2%)</div>
+                    </div>
+                    <div className="text-center">
+                      <div className="text-xl font-bold text-red-700">
+                        ${(periodTotals.grossPay * 0.0145).toFixed(2)}
+                      </div>
+                      <div className="text-xs text-red-600">Medicare Match<br/>(1.45%)</div>
+                    </div>
+                    <div className="text-center">
+                      <div className="text-xl font-bold text-yellow-700">
+                        ${(periodTotals.grossPay * 0.027).toFixed(2)}
+                      </div>
+                      <div className="text-xs text-yellow-600">SUTA<br/>(2.7%)</div>
+                    </div>
+                    <div className="text-center">
+                      <div className="text-xl font-bold text-orange-700">
+                        ${(periodTotals.grossPay * 0.005).toFixed(2)}
+                      </div>
+                      <div className="text-xs text-orange-600">Workers Comp<br/>(0.5%)</div>
+                    </div>
+                  </div>
+                  <div className="mt-4 pt-4 border-t border-red-200">
+                    <div className="flex justify-between items-center">
+                      <span className="font-semibold text-red-800">Total Employer Taxes:</span>
+                      <span className="text-2xl font-bold text-red-900">
+                        ${(periodTotals.grossPay * (0.062 + 0.0145 + 0.027 + 0.005)).toFixed(2)}
+                      </span>
+                    </div>
+                    <div className="flex justify-between items-center mt-2 pt-2 border-t border-red-300">
+                      <span className="font-bold text-gray-800">TOTAL PAYROLL COST:</span>
+                      <span className="text-2xl font-bold text-gray-900">
+                        ${(periodTotals.grossPay + (periodTotals.grossPay * (0.062 + 0.0145 + 0.027 + 0.005))).toFixed(2)}
+                      </span>
+                    </div>
+                    <p className="text-xs text-gray-600 mt-1">
+                      Gross Pay + Your Employer Taxes = True cost of employment
+                    </p>
                   </div>
                 </CardContent>
               </Card>
