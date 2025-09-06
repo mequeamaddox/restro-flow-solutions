@@ -3210,8 +3210,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
           // Don't fail the whole request if email fails - still return the link
         }
       } else if (sendMethod === 'text' && phone) {
-        // TODO: Implement SMS sending
-        console.log(`Would send text to ${phone} with link: ${inviteUrl}`);
+        try {
+          const { sendSms, formatPhoneNumber } = await import('../twilioSms');
+          const employee = await storage.getEmployee(employeeId);
+          const formattedPhone = formatPhoneNumber(phone);
+          
+          await sendSms({
+            to: formattedPhone,
+            from: process.env.TWILIO_PHONE_NUMBER || '+1234567890', // Your Twilio phone number
+            body: `Welcome to RestroFlow! Complete your onboarding here: ${inviteUrl} - This link expires in 3 days.`
+          });
+          console.log(`✅ SMS sent successfully to ${formattedPhone}`);
+        } catch (smsError) {
+          console.error(`❌ Failed to send SMS to ${phone}:`, smsError);
+          console.error(`Full SMS error details:`, JSON.stringify(smsError, null, 2));
+          // Don't fail the whole request if SMS fails - still return the link
+        }
       }
       
       res.status(201).json({ 
