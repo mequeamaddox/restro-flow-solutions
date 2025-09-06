@@ -2372,7 +2372,13 @@ export class DatabaseStorage implements IStorage {
   }
 
   async createMessage(message: InsertMessage): Promise<Message> {
-    const [created] = await db.insert(messages).values(message).returning();
+    // Ensure senderId is set - fallback to owner ID if missing
+    const messageWithSender = {
+      ...message,
+      senderId: message.senderId || '46308728'
+    };
+    console.log('Storage: Creating message with data:', messageWithSender);
+    const [created] = await db.insert(messages).values(messageWithSender).returning();
     return created;
   }
 

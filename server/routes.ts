@@ -2687,10 +2687,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post('/api/hr/messages', isAuthenticated, async (req, res) => {
     try {
+      // Get user ID from session or use owner default
+      let userId = '46308728'; // Default to owner ID
+      
+      if ((req.session as any)?.user?.id) {
+        userId = (req.session as any).user.id;
+      } else if ((req.user as any)?.id) {
+        userId = (req.user as any).id;
+      }
+      
       const messageData = {
         ...req.body,
-        senderId: (req.user as any)?.claims?.sub || (req.user as any)?.id,
+        senderId: userId,
       };
+      
+      console.log('Creating message with userId:', userId, 'and data:', messageData);
       const message = await storage.createMessage(messageData);
       res.status(201).json(message);
     } catch (error) {
