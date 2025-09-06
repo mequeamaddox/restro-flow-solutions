@@ -3519,7 +3519,36 @@ export async function registerRoutes(app: Express): Promise<Server> {
         sentAt: new Date(),
         status: 'assigned'
       };
+      
+      // Create the document assignment
       const assignment = await storage.createDocumentAssignment(assignmentData);
+      
+      // Check if employee has an active onboarding record, create if not
+      const employeeId = assignmentData.employeeId;
+      const existingOnboarding = await storage.getEmployeeOnboarding(employeeId);
+      
+      if (!existingOnboarding || existingOnboarding.length === 0) {
+        // Get the first available onboarding template
+        const templates = await storage.getOnboardingTemplates();
+        const defaultTemplate = templates.length > 0 ? templates[0] : null;
+        
+        if (defaultTemplate) {
+          // Create new onboarding record for this employee
+          const targetDate = new Date();
+          targetDate.setDate(targetDate.getDate() + 14); // 2 weeks to complete
+          
+          await storage.createEmployeeOnboarding({
+            employeeId,
+            templateId: defaultTemplate.id,
+            status: 'in-progress',
+            startDate: new Date(),
+            targetCompletionDate: targetDate,
+            assignedBy: userId,
+            notes: 'Auto-created from document assignment'
+          });
+        }
+      }
+      
       res.status(201).json(assignment);
     } catch (error) {
       console.error('Error assigning document:', error);
@@ -3566,6 +3595,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
         signedAt: new Date(),
         signaturePath: `/signatures/${signature.id}`
       });
+      
+      // Check if all documents for this employee are completed/signed
+      const allDocuments = await storage.getEmployeeDocuments(employeeId);
+      const completedStatuses = ['completed', 'signed', 'uploaded', 'approved'];
+      const allCompleted = allDocuments.every(doc => completedStatuses.includes(doc.status));
+      
+      if (allCompleted) {
+        // Update employee onboarding status to completed
+        const onboardingRecords = await storage.getEmployeeOnboarding(employeeId);
+        if (onboardingRecords && onboardingRecords.length > 0) {
+          const activeOnboarding = onboardingRecords.find(o => o.status === 'in-progress');
+          if (activeOnboarding) {
+            await storage.updateEmployeeOnboarding(activeOnboarding.id, {
+              status: 'completed',
+              actualCompletionDate: new Date()
+            });
+          }
+        }
+      }
       
       res.status(201).json(signature);
     } catch (error) {
