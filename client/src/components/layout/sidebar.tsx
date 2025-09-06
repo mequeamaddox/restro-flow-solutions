@@ -37,7 +37,8 @@ import {
   Home,
   BookOpen,
   Building,
-  Briefcase
+  Briefcase,
+  Calculator
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import logoImg from "@assets/IMG_20250812_004328_1754973838131.png";
@@ -69,6 +70,7 @@ const hrNavigation = [
   { name: 'Time Off', href: '/hr/time-off', icon: Calendar },
   { name: 'Payroll', href: '/hr/payroll', icon: DollarSign },
   { name: 'Paycheck Settings', href: '/hr/paycheck-settings', icon: Settings },
+  { name: 'Tax Settings', href: '/hr/tax-settings', icon: Calculator },
   { name: 'Tasks', href: '/hr/tasks', icon: CheckSquare },
   { name: 'Messaging', href: '/hr/messaging', icon: MessageSquare },
 ];
