@@ -2006,6 +2006,40 @@ export async function registerRoutes(app: Express): Promise<Server> {
           
           console.log('✅ Firebase user and local user account created successfully');
           
+          // Send welcome email with login credentials
+          try {
+            const { sendEmail } = await import('../sendgrid');
+            await sendEmail({
+              to: employee.email,
+              from: 'mequeamaddox@gmail.com',
+              subject: 'Welcome to RestroFlow - Your Account Details',
+              html: `
+                <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+                  <h2 style="color: #1f2937; text-align: center;">Welcome to RestroFlow!</h2>
+                  <p>Hi ${employee.firstName},</p>
+                  <p>Your employee account has been created successfully. Here are your login credentials:</p>
+                  
+                  <div style="background-color: #f3f4f6; padding: 20px; border-radius: 8px; margin: 20px 0;">
+                    <h3 style="margin-top: 0; color: #374151;">Login Information</h3>
+                    <p><strong>Email:</strong> ${employee.email}</p>
+                    <p><strong>Temporary Password:</strong> ${tempPassword}</p>
+                    <p><small style="color: #6b7280;">Please change this password after your first login</small></p>
+                  </div>
+                  
+                  <div style="text-align: center; margin: 30px 0;">
+                    <a href="${req.protocol}://${req.get('host')}" style="background-color: #f97316; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; display: inline-block;">Access RestroFlow</a>
+                  </div>
+                  
+                  <p>Your onboarding documents will be sent to you shortly. If you have any questions, please contact your manager.</p>
+                  <p>Best regards,<br>The RestroFlow Team</p>
+                </div>
+              `
+            });
+            console.log('✅ Welcome email sent to:', employee.email);
+          } catch (emailError) {
+            console.error('❌ Failed to send welcome email:', emailError);
+          }
+          
           // Return success with login instructions
           return res.status(201).json({
             ...employee,
