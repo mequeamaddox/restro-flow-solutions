@@ -6,14 +6,14 @@ import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Progress } from "@/components/ui/progress";
-import { ObjectUploader } from "@/components/ObjectUploader";
+import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useAuth } from "@/hooks/useAuth";
 import { DigitalDocumentForm } from '@/components/employee/DigitalDocumentForm';
 import { 
-  FileText, Download, Upload, CheckCircle, Clock, AlertTriangle,
-  Eye, ArrowLeft, Calendar, User, Target, Award, Star
+  FileText, Download, CheckCircle, Clock, AlertTriangle,
+  Eye, ArrowLeft, Calendar, User, Target, Award, Star, PenTool
 } from "lucide-react";
 import { format } from "date-fns";
 
@@ -26,7 +26,7 @@ interface EmployeeDocument {
     description: string;
     requirements?: string;
   };
-  status: 'assigned' | 'in_progress' | 'completed' | 'approved' | 'rejected';
+  status: 'assigned' | 'in_progress' | 'completed' | 'signed' | 'approved' | 'rejected';
   deadline?: string;
   notes?: string;
   assignedAt: string;
@@ -39,7 +39,7 @@ export default function EmployeeDocuments() {
   const { user } = useAuth();
   const { toast } = useToast();
   const [selectedDocument, setSelectedDocument] = useState<EmployeeDocument | null>(null);
-  const [showUploadDialog, setShowUploadDialog] = useState(false);
+  const [showSignatureDialog, setShowSignatureDialog] = useState(false);
   const [showDigitalForm, setShowDigitalForm] = useState(false);
   const [filter, setFilter] = useState<string>('all');
 
@@ -49,28 +49,30 @@ export default function EmployeeDocuments() {
     enabled: !!user?.id,
   });
 
-  // Upload mutation
-  const uploadMutation = useMutation({
-    mutationFn: async (data: { documentId: string; filePath: string; fileSize: number; mimeType: string }) => {
-      return await apiRequest('POST', `/api/employee-documents/${data.documentId}/upload`, {
-        filePath: data.filePath,
-        fileSize: data.fileSize,
-        mimeType: data.mimeType,
+  // Digital signature mutation
+  const signatureMutation = useMutation({
+    mutationFn: async (data: { documentId: string; signatureData: string; signedName: string }) => {
+      return await apiRequest('POST', `/api/employee-documents/${data.documentId}/signature`, {
+        body: {
+          signatureData: data.signatureData,
+          signedName: data.signedName,
+          employeeId: user?.id,
+        }
       });
     },
     onSuccess: () => {
       toast({
-        title: "Document Uploaded",
-        description: "Your document has been submitted for review.",
+        title: "Document Signed",
+        description: "Your digital signature has been recorded successfully.",
       });
       queryClient.invalidateQueries({ queryKey: [`/api/employees/${user?.id}/documents`] });
-      setShowUploadDialog(false);
+      setShowDigitalForm(false);
       setSelectedDocument(null);
     },
     onError: () => {
       toast({
-        title: "Upload Failed",
-        description: "Failed to upload document. Please try again.",
+        title: "Signature Failed",
+        description: "Failed to record digital signature. Please try again.",
         variant: "destructive",
       });
     },
@@ -97,14 +99,12 @@ export default function EmployeeDocuments() {
     },
   });
 
-  const handleUpload = async (result: any) => {
-    const uploadedFile = result.successful[0];
-    if (uploadedFile && selectedDocument) {
-      uploadMutation.mutate({
+  const handleSignature = async (signatureData: string, signedName: string) => {
+    if (selectedDocument) {
+      signatureMutation.mutate({
         documentId: selectedDocument.id,
-        filePath: uploadedFile.uploadURL,
-        fileSize: uploadedFile.size || 0,
-        mimeType: uploadedFile.type || 'application/octet-stream',
+        signatureData,
+        signedName,
       });
     }
   };
@@ -112,6 +112,7 @@ export default function EmployeeDocuments() {
   const getStatusColor = (status: string) => {
     switch (status) {
       case 'approved': return 'bg-green-100 text-green-800 border-green-200';
+      case 'signed': return 'bg-purple-100 text-purple-800 border-purple-200';
       case 'completed': return 'bg-blue-100 text-blue-800 border-blue-200';
       case 'in_progress': return 'bg-yellow-100 text-yellow-800 border-yellow-200';
       case 'assigned': return 'bg-gray-100 text-gray-800 border-gray-200';
@@ -123,6 +124,7 @@ export default function EmployeeDocuments() {
   const getStatusIcon = (status: string) => {
     switch (status) {
       case 'approved': return <CheckCircle className="h-4 w-4 text-green-600" />;
+      case 'signed': return <PenTool className="h-4 w-4 text-purple-600" />;
       case 'completed': return <Clock className="h-4 w-4 text-blue-600" />;
       case 'in_progress': return <Target className="h-4 w-4 text-yellow-600" />;
       case 'assigned': return <FileText className="h-4 w-4 text-gray-600" />;
@@ -408,41 +410,36 @@ export default function EmployeeDocuments() {
         </TabsContent>
       </Tabs>
 
-      {/* Upload Dialog */}
-      <Dialog open={showUploadDialog} onOpenChange={setShowUploadDialog}>
+      {/* Digital Signature Dialog */}
+      <Dialog open={showSignatureDialog} onOpenChange={setShowSignatureDialog}>
         <DialogContent className="max-w-md">
           <DialogHeader>
-            <DialogTitle>Upload Document</DialogTitle>
+            <DialogTitle>Digital Signature Required</DialogTitle>
           </DialogHeader>
           {selectedDocument && (
             <div className="space-y-4">
               <div className="p-4 bg-blue-50 border border-blue-200 rounded">
                 <p className="font-medium text-blue-900">{selectedDocument.template?.name || 'Document'}</p>
-                <p className="text-sm text-blue-700">{selectedDocument.template?.description || 'No description available'}</p>
+                <p className="text-sm text-blue-700">Complete your digital signature to finalize this document.</p>
               </div>
               
-              <ObjectUploader
-                maxNumberOfFiles={1}
-                maxFileSize={10485760}
-                onGetUploadParameters={async () => {
-                  const response = await fetch('/api/objects/upload', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                  });
-                  const data = await response.json();
-                  return { method: 'PUT' as const, url: data.uploadURL };
-                }}
-                onComplete={handleUpload}
-              >
-                <div className="flex items-center gap-2">
-                  <Upload className="w-4 h-4" />
-                  <span>Choose File to Upload</span>
+              <div className="border-2 border-dashed border-gray-300 rounded-lg p-4">
+                <div className="text-center space-y-2">
+                  <FileText className="h-8 w-8 text-gray-400 mx-auto" />
+                  <p className="text-sm text-gray-600">
+                    Click below to add your digital signature
+                  </p>
+                  <Button 
+                    onClick={() => {
+                      setShowSignatureDialog(false);
+                      setShowDigitalForm(true);
+                    }}
+                    className="w-full"
+                  >
+                    Sign Document
+                  </Button>
                 </div>
-              </ObjectUploader>
-              
-              <p className="text-xs text-gray-500">
-                Accepted formats: PDF, DOC, DOCX, JPG, PNG. Maximum file size: 10MB
-              </p>
+              </div>
             </div>
           )}
         </DialogContent>
@@ -575,11 +572,11 @@ export default function EmployeeDocuments() {
                 {selectedDocument.status === 'in_progress' && (
                   <Button
                     onClick={() => {
-                      setShowUploadDialog(true);
+                      setShowDigitalForm(true);
                     }}
                   >
-                    <Upload className="h-4 w-4 mr-2" />
-                    Upload File
+                    <FileText className="h-4 w-4 mr-2" />
+                    Complete Form
                   </Button>
                 )}
 
