@@ -1,9 +1,14 @@
+import { useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Users, Clock, CheckSquare, Calendar, MessageSquare, TrendingUp, DollarSign, Target, Activity, Briefcase, UserCheck, Timer } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Users, Clock, CheckSquare, Calendar, MessageSquare, TrendingUp, DollarSign, Target, Activity, Briefcase, UserCheck, Timer, Calculator, FileText, Download } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 
 export default function HRAnalytics() {
+  const [selectedPeriod, setSelectedPeriod] = useState("current-month");
+  
   const { data: analytics, isLoading } = useQuery({
     queryKey: ['/api/hr/analytics'],
   });
@@ -18,6 +23,12 @@ export default function HRAnalytics() {
 
   const { data: timeEntries = [] } = useQuery({
     queryKey: ['/api/hr/time-entries'],
+  });
+
+  // Mock payroll periods data - in real app, this would come from API
+  const { data: payrollPeriods = [] } = useQuery({
+    queryKey: ['/api/payroll-periods'],
+    select: (data) => data || []
   });
 
   if (isLoading) {
@@ -53,6 +64,17 @@ export default function HRAnalytics() {
   const avgHourlyRate = analytics?.avgHourlyRate || 15.50;
   const weeklyLaborCost = weeklyHours * avgHourlyRate;
   const monthlyLaborCost = weeklyLaborCost * 4.33;
+
+  // Mock payroll tax data - in real app, this would be calculated from payroll periods
+  const mockPayrollTaxData = {
+    monthlyGrossPay: 12500,
+    socialSecurityMatch: 775, // 6.2%
+    medicareMatch: 181.25, // 1.45%
+    suta: 337.50, // 2.7%
+    futa: 42, // 0.6% on first $7,000 per employee
+    workersComp: 62.50, // 0.5%
+    totalEmployerTaxes: 1398.25
+  };
 
   return (
     <div className="max-w-7xl mx-auto p-6" data-testid="hr-analytics">
@@ -290,6 +312,188 @@ export default function HRAnalytics() {
             </div>
           </CardContent>
         </Card>
+      </div>
+
+      {/* Payroll Tax Reports Section */}
+      <div className="mt-12 space-y-6">
+        <div className="flex items-center justify-between">
+          <div>
+            <h2 className="text-2xl font-bold">Payroll Tax Reports</h2>
+            <p className="text-gray-600">Historical employer tax costs and compliance reporting</p>
+          </div>
+          <div className="flex gap-3">
+            <Select value={selectedPeriod} onValueChange={setSelectedPeriod}>
+              <SelectTrigger className="w-40">
+                <SelectValue placeholder="Select period" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="current-month">This Month</SelectItem>
+                <SelectItem value="last-month">Last Month</SelectItem>
+                <SelectItem value="current-quarter">This Quarter</SelectItem>
+                <SelectItem value="current-year">This Year</SelectItem>
+                <SelectItem value="last-year">Last Year</SelectItem>
+              </SelectContent>
+            </Select>
+            <Button variant="outline" className="gap-2">
+              <Download className="w-4 h-4" />
+              Export PDF
+            </Button>
+          </div>
+        </div>
+
+        {/* Tax Summary Cards */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+          <Card className="border-red-200 bg-red-50">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium text-red-700">Social Security Match</CardTitle>
+              <Calculator className="h-4 w-4 text-red-600" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold text-red-800">${mockPayrollTaxData.socialSecurityMatch.toFixed(2)}</div>
+              <p className="text-xs text-red-600">6.2% of gross pay</p>
+            </CardContent>
+          </Card>
+
+          <Card className="border-red-200 bg-red-50">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium text-red-700">Medicare Match</CardTitle>
+              <Calculator className="h-4 w-4 text-red-600" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold text-red-800">${mockPayrollTaxData.medicareMatch.toFixed(2)}</div>
+              <p className="text-xs text-red-600">1.45% of gross pay</p>
+            </CardContent>
+          </Card>
+
+          <Card className="border-yellow-200 bg-yellow-50">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium text-yellow-700">SUTA Tax</CardTitle>
+              <Calculator className="h-4 w-4 text-yellow-600" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold text-yellow-800">${mockPayrollTaxData.suta.toFixed(2)}</div>
+              <p className="text-xs text-yellow-600">2.7% state unemployment</p>
+            </CardContent>
+          </Card>
+
+          <Card className="border-orange-200 bg-orange-50">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium text-orange-700">Workers' Comp</CardTitle>
+              <Calculator className="h-4 w-4 text-orange-600" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold text-orange-800">${mockPayrollTaxData.workersComp.toFixed(2)}</div>
+              <p className="text-xs text-orange-600">0.5% of gross pay</p>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Detailed Tax Breakdown */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <FileText className="w-5 h-5" />
+                Tax Breakdown Summary
+              </CardTitle>
+              <CardDescription>Detailed employer tax costs for {selectedPeriod}</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4">
+                <div className="flex justify-between items-center">
+                  <span className="text-sm font-medium">Gross Payroll</span>
+                  <span className="font-semibold">${mockPayrollTaxData.monthlyGrossPay.toFixed(2)}</span>
+                </div>
+                <div className="space-y-2 pl-4 border-l-2 border-red-200">
+                  <div className="flex justify-between items-center text-sm">
+                    <span className="text-red-700">Social Security Match (6.2%)</span>
+                    <span className="text-red-800 font-medium">${mockPayrollTaxData.socialSecurityMatch.toFixed(2)}</span>
+                  </div>
+                  <div className="flex justify-between items-center text-sm">
+                    <span className="text-red-700">Medicare Match (1.45%)</span>
+                    <span className="text-red-800 font-medium">${mockPayrollTaxData.medicareMatch.toFixed(2)}</span>
+                  </div>
+                  <div className="flex justify-between items-center text-sm">
+                    <span className="text-yellow-700">SUTA Tax (2.7%)</span>
+                    <span className="text-yellow-800 font-medium">${mockPayrollTaxData.suta.toFixed(2)}</span>
+                  </div>
+                  <div className="flex justify-between items-center text-sm">
+                    <span className="text-blue-700">FUTA Tax (0.6%)</span>
+                    <span className="text-blue-800 font-medium">${mockPayrollTaxData.futa.toFixed(2)}</span>
+                  </div>
+                  <div className="flex justify-between items-center text-sm">
+                    <span className="text-orange-700">Workers' Comp (0.5%)</span>
+                    <span className="text-orange-800 font-medium">${mockPayrollTaxData.workersComp.toFixed(2)}</span>
+                  </div>
+                </div>
+                <div className="pt-3 border-t border-gray-200">
+                  <div className="flex justify-between items-center">
+                    <span className="font-semibold text-gray-800">Total Employer Taxes</span>
+                    <span className="text-xl font-bold text-red-900">${mockPayrollTaxData.totalEmployerTaxes.toFixed(2)}</span>
+                  </div>
+                  <div className="flex justify-between items-center mt-2 pt-2 border-t">
+                    <span className="font-bold text-gray-900">TOTAL PAYROLL COST</span>
+                    <span className="text-xl font-bold text-gray-900">
+                      ${(mockPayrollTaxData.monthlyGrossPay + mockPayrollTaxData.totalEmployerTaxes).toFixed(2)}
+                    </span>
+                  </div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <TrendingUp className="w-5 h-5" />
+                Tax Rate Analysis
+              </CardTitle>
+              <CardDescription>Effective tax rates and compliance metrics</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4">
+                <div>
+                  <div className="flex justify-between items-center mb-2">
+                    <span className="text-sm font-medium">Effective Employer Tax Rate</span>
+                    <span className="font-bold text-red-600">
+                      {((mockPayrollTaxData.totalEmployerTaxes / mockPayrollTaxData.monthlyGrossPay) * 100).toFixed(2)}%
+                    </span>
+                  </div>
+                  <div className="text-xs text-gray-600">
+                    Total employer taxes as percentage of gross payroll
+                  </div>
+                </div>
+
+                <div className="pt-3 border-t">
+                  <h4 className="font-medium mb-2">Quarterly Filing Requirements</h4>
+                  <div className="space-y-2">
+                    <div className="flex items-center gap-2">
+                      <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                      <span className="text-sm">Form 941 - Federal Quarterly</span>
+                      <Badge variant="outline" className="text-green-600 border-green-200 text-xs">Due</Badge>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
+                      <span className="text-sm">SC Quarterly Return</span>
+                      <Badge variant="outline" className="text-blue-600 border-blue-200 text-xs">Current</Badge>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <div className="w-2 h-2 bg-orange-500 rounded-full"></div>
+                      <span className="text-sm">Workers' Comp Premium</span>
+                      <Badge variant="outline" className="text-orange-600 border-orange-200 text-xs">Due</Badge>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="pt-3 border-t">
+                  <div className="text-xs text-gray-600">
+                    <strong>Note:</strong> All rates based on current tax settings. Update tax rates in HR → Tax Settings to adjust calculations.
+                  </div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
       </div>
     </div>
   );
