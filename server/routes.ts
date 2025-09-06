@@ -3858,6 +3858,39 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Tax Settings Management
+  app.get('/api/tax-settings/:locationId', isAuthenticated, async (req, res) => {
+    try {
+      const { locationId } = req.params;
+      const settings = await storage.getTaxSettings(locationId);
+      res.json(settings);
+    } catch (error) {
+      console.error("Error fetching tax settings:", error);
+      res.status(500).json({ message: "Failed to fetch tax settings" });
+    }
+  });
+
+  app.post('/api/tax-settings', isAuthenticated, async (req, res) => {
+    try {
+      const settings = await storage.createTaxSettings(req.body);
+      res.status(201).json(settings);
+    } catch (error) {
+      console.error("Error creating tax settings:", error);
+      res.status(500).json({ message: "Failed to create tax settings" });
+    }
+  });
+
+  app.put('/api/tax-settings/:id', isAuthenticated, async (req, res) => {
+    try {
+      const { id } = req.params;
+      const settings = await storage.updateTaxSettings(id, req.body);
+      res.json(settings);
+    } catch (error) {
+      console.error("Error updating tax settings:", error);
+      res.status(500).json({ message: "Failed to update tax settings" });
+    }
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }
