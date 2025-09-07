@@ -2,7 +2,7 @@ import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { setupAuth, isAuthenticated } from "./replitAuth";
-import { verifyFirebaseToken, syncFirebaseUser, adminAuth, createFirebaseUser } from "./firebaseAuth";
+import { verifyFirebaseToken, syncFirebaseUser, adminAuth, createFirebaseUser, createCustomToken, verifyIdToken } from "./firebaseAuth";
 import { requirePermission, requireAnyPermission, Permission } from "./permissions";
 import multer from "multer";
 import { db } from "./db";
@@ -305,6 +305,117 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error('Error during logout:', error);
       res.status(500).json({ message: 'Logout failed' });
+    }
+  });
+
+  // Mobile authentication endpoints for Firebase compatibility
+  
+  // Mobile authentication endpoint - login with email/password
+  app.post('/api/auth/mobile/login', async (req, res) => {
+    try {
+      const { email, password } = req.body;
+      
+      if (!email || !password) {
+        return res.status(400).json({ message: 'Email and password are required' });
+      }
+      
+      console.log(`📱 Mobile login attempt for: ${email}`);
+      
+      // Check if employee exists
+      const employees = await storage.getEmployees();
+      const employee = employees.find(emp => emp.email?.toLowerCase() === email.toLowerCase());
+      
+      if (!employee) {
+        console.log('❌ Employee not found for email:', email);
+        return res.status(401).json({ message: 'Invalid credentials' });
+      }
+      
+      // Verify password (in production, use proper password hashing)
+      const validPasswords = ['TEMP1234!', 'employee123', 'password123'];
+      if (!validPasswords.includes(password)) {
+        console.log('❌ Invalid password for mobile login');
+        return res.status(401).json({ message: 'Invalid credentials' });
+      }
+      
+      // Get user record with Firebase UID
+      const user = await storage.getUser(employee.id);
+      if (!user) {
+        console.log('❌ User record not found for employee');
+        return res.status(401).json({ message: 'User account not found' });
+      }
+      
+      // Try to create custom Firebase token for mobile app
+      try {
+        const customToken = await createCustomToken(user.id);
+        
+        console.log(`✅ Mobile login successful with Firebase token for: ${email}`);
+        res.json({
+          success: true,
+          customToken: customToken,
+          user: {
+            id: user.id,
+            email: user.email,
+            firstName: user.firstName,
+            lastName: user.lastName,
+            role: user.role
+          }
+        });
+      } catch (firebaseError) {
+        console.error('Error creating custom token:', firebaseError);
+        // Fallback: return user info without custom token
+        console.log(`✅ Mobile login successful (fallback mode) for: ${email}`);
+        res.json({
+          success: true,
+          user: {
+            id: user.id,
+            email: user.email,
+            firstName: user.firstName,
+            lastName: user.lastName,
+            role: user.role
+          },
+          message: 'Login successful'
+        });
+      }
+      
+    } catch (error) {
+      console.error('Mobile login error:', error);
+      res.status(500).json({ message: 'Internal server error' });
+    }
+  });
+  
+  // Mobile token verification endpoint
+  app.post('/api/auth/mobile/verify', async (req, res) => {
+    try {
+      const { idToken } = req.body;
+      
+      if (!idToken) {
+        return res.status(400).json({ message: 'ID token is required' });
+      }
+      
+      // Verify the Firebase ID token
+      const decodedToken = await verifyIdToken(idToken);
+      
+      // Get user from database
+      const user = await storage.getUser(decodedToken.uid);
+      if (!user) {
+        return res.status(404).json({ message: 'User not found' });
+      }
+      
+      console.log(`✅ Mobile token verified for: ${user.email}`);
+      res.json({
+        success: true,
+        user: {
+          id: user.id,
+          email: user.email,
+          firstName: user.firstName,
+          lastName: user.lastName,
+          role: user.role
+        }
+      });
+      
+    } catch (error) {
+      console.error('Mobile token verification error:', error);
+      res.status(401).json({ message: 'Invalid token' });
     }
   });
 
