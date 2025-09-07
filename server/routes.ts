@@ -1966,6 +1966,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   app.post('/api/hr/employees', isAuthenticated, requirePermission(Permission.MANAGE_EMPLOYEES), async (req, res) => {
+    console.log('🚀 Employee creation endpoint called!');
+    console.log('🚀 Request body:', JSON.stringify(req.body, null, 2));
+    console.log('🚀 User:', req.user || req.session?.user);
     try {
       const employeeData = req.body;
       
