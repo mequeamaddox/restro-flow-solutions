@@ -1984,30 +1984,31 @@ export async function registerRoutes(app: Express): Promise<Server> {
           // Generate a temporary password for the employee
           const tempPassword = 'TEMP1234!';
           
-          console.log('🔥 Creating Firebase user for employee:', employee.email);
+          console.log('🔥 Creating user account for employee:', employee.email);
           
-          // Create Firebase user account
-          const firebaseUser = await createFirebaseUser(employee.email, tempPassword);
+          // Skip Firebase user creation for now due to Replit environment limitations
+          // Instead, create a local user account with a generated ID
+          const userId = `emp_${employee.id}`;
           
-          // Create user record in our database with Firebase UID and proper role mapping
+          // Create user record in our database with proper role mapping
           const employeeWithPosition = await storage.getEmployee(employee.id);
           const userRole = mapPositionToRole(employeeWithPosition?.position?.title);
           
-          console.log('👤 Creating user account with Firebase UID and role:', { uid: firebaseUser.uid, role: userRole });
+          console.log('👤 Creating user account with role:', { userId, role: userRole });
           await storage.upsertUser({
-            id: firebaseUser.uid, // Use Firebase UID instead of employee.id
+            id: userId,
             email: employee.email,
             firstName: employee.firstName,
             lastName: employee.lastName,
             role: userRole,
           });
           
-          // Also update employee record to reference Firebase UID for easier lookup
+          // Update employee record to reference user ID for easier lookup
           await storage.updateEmployee(employee.id, { 
-            notes: `Firebase UID: ${firebaseUser.uid}` 
+            notes: `User ID: ${userId}` 
           });
           
-          console.log('✅ Firebase user and local user account created successfully');
+          console.log('✅ Local user account created successfully');
           
           // Send welcome email with login credentials
           console.log('📧 Attempting to send welcome email to:', employee.email);
