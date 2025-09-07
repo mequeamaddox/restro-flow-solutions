@@ -2007,9 +2007,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
           console.log('✅ Firebase user and local user account created successfully');
           
           // Send welcome email with login credentials
+          console.log('📧 Attempting to send welcome email to:', employee.email);
           try {
+            console.log('📧 Importing SendGrid service...');
             const { sendEmail } = await import('./sendgrid');
-            await sendEmail({
+            console.log('📧 SendGrid service imported successfully');
+            
+            const emailParams = {
               to: employee.email,
               from: 'mequeamaddox@gmail.com',
               subject: 'Welcome to RestroFlow - Your Account Details',
@@ -2034,10 +2038,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
                   <p>Best regards,<br>The RestroFlow Team</p>
                 </div>
               `
-            });
-            console.log('✅ Welcome email sent to:', employee.email);
+            };
+            
+            console.log('📧 Calling sendEmail with params:', { to: emailParams.to, from: emailParams.from, subject: emailParams.subject });
+            await sendEmail(emailParams);
+            console.log('✅ Welcome email sent successfully to:', employee.email);
           } catch (emailError) {
             console.error('❌ Failed to send welcome email:', emailError);
+            console.error('❌ Full email error stack:', emailError.stack);
           }
           
           // Return success with login instructions
