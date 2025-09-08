@@ -15,7 +15,7 @@ import { useLocation } from "@/contexts/LocationContext";
 import { Checkbox } from "@/components/ui/checkbox";
 import { ScanLine, Camera } from "lucide-react";
 import BarcodeScanner from "@/components/barcode/barcode-scanner";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 
 interface AddItemDialogProps {
   isOpen: boolean;
@@ -50,9 +50,51 @@ export default function AddItemDialog({ isOpen, onClose, onSuccess, categories, 
     },
   });
 
+  // Populate form with editing item data
+  useEffect(() => {
+    if (editingItem) {
+      form.reset({
+        name: editingItem.name || "",
+        description: editingItem.description || undefined,
+        categoryId: editingItem.categoryId || undefined,
+        locationId: editingItem.locationId || currentLocation?.id || "",
+        quantity: editingItem.quantity?.toString() || "0",
+        unit: editingItem.unit || "lbs",
+        costPerUnit: editingItem.costPerUnit?.toString() || "0",
+        reorderLevel: editingItem.reorderLevel?.toString() || "0",
+        vendorId: editingItem.vendorId || undefined,
+        barcode: editingItem.barcode || undefined,
+        alcoholContent: editingItem.alcoholContent?.toString() || undefined,
+        isAlcoholic: editingItem.isAlcoholic || false,
+        bottleSize: editingItem.bottleSize || undefined,
+      });
+    } else {
+      // Reset to default values when not editing
+      form.reset({
+        name: "",
+        description: undefined,
+        categoryId: undefined,
+        locationId: currentLocation?.id || "",
+        quantity: "0",
+        unit: "lbs",
+        costPerUnit: "0",
+        reorderLevel: "0",
+        vendorId: undefined,
+        barcode: undefined,
+        alcoholContent: undefined,
+        isAlcoholic: false,
+        bottleSize: undefined,
+      });
+    }
+  }, [editingItem, currentLocation?.id, form]);
+
   const createItemMutation = useMutation({
     mutationFn: async (data: InsertInventoryItem) => {
-      await apiRequest('POST', '/api/inventory', data);
+      if (editingItem) {
+        await apiRequest('PUT', `/api/inventory/${editingItem.id}`, data);
+      } else {
+        await apiRequest('POST', '/api/inventory', data);
+      }
     },
     onSuccess: () => {
       onSuccess();
