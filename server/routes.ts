@@ -2266,7 +2266,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get('/api/hr/employees', isAuthenticated, requireAnyPermission([Permission.VIEW_ALL_EMPLOYEES, Permission.VIEW_EMPLOYEE_DETAILS]), async (req, res) => {
     try {
       const locationId = req.query.locationId as string;
-      const employees = await storage.getEmployees();
+      const employees = await storage.getEmployees(locationId);
       res.json(employees);
     } catch (error) {
       console.error('Error fetching employees:', error);
@@ -2416,7 +2416,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // HR Scheduling
   app.get('/api/hr/shifts', isAuthenticated, async (req, res) => {
     try {
-      const shifts = await storage.getShifts();
+      const locationId = req.query.locationId as string;
+      const shifts = await storage.getShifts(locationId);
       res.json(shifts);
     } catch (error) {
       console.error('Error fetching shifts:', error);
@@ -2489,7 +2490,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // HR Analytics and Reports
   app.get('/api/hr/analytics', async (req, res) => {
     try {
-      const analytics = await storage.getHRAnalytics();
+      const locationId = req.query.locationId as string;
+      const analytics = await storage.getHRAnalytics(locationId);
       res.json(analytics);
     } catch (error) {
       console.error('Error fetching HR analytics:', error);
@@ -2500,7 +2502,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // HR Tasks
   app.get('/api/hr/tasks', isAuthenticated, async (req, res) => {
     try {
-      const tasks = await storage.getTasks();
+      const locationId = req.query.locationId as string;
+      const tasks = await storage.getTasks(locationId);
       res.json(tasks);
     } catch (error) {
       console.error('Error fetching tasks:', error);

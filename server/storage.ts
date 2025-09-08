@@ -367,7 +367,7 @@ export interface IStorage {
   markMessageAsRead(messageId: string, userId: string): Promise<void>;
   
   // HR Analytics
-  getHRAnalytics(): Promise<any>;
+  getHRAnalytics(locationId?: string): Promise<any>;
 
   // HR Payroll operations - Comprehensive Restaurant Payroll System
   getPayPeriods(): Promise<PayPeriod[]>;
@@ -1990,16 +1990,22 @@ export class DatabaseStorage implements IStorage {
   }
 
   // HR Employee operations  
-  async getEmployees(): Promise<(Employee & { department?: Department; position?: Position })[]> {
-    const result = await db.select({
+  async getEmployees(locationId?: string): Promise<(Employee & { department?: Department; position?: Position })[]> {
+    let query = db.select({
       employee: employees,
       department: departments,
       position: positions,
     })
     .from(employees)
     .leftJoin(departments, eq(employees.departmentId, departments.id))
-    .leftJoin(positions, eq(employees.positionId, positions.id))
-    .orderBy(employees.lastName, employees.firstName);
+    .leftJoin(positions, eq(employees.positionId, positions.id));
+
+    // Filter by location if provided
+    if (locationId) {
+      query = query.where(eq(employees.locationId, locationId));
+    }
+    
+    const result = await query.orderBy(employees.lastName, employees.firstName);
     
     return result.map(r => ({ 
       ...r.employee, 
@@ -2457,19 +2463,43 @@ export class DatabaseStorage implements IStorage {
   }
 
   // HR Analytics
-  async getHRAnalytics(): Promise<any> {
+  async getHRAnalytics(locationId?: string): Promise<any> {
     try {
       // Get data safely without complex joins that might fail
-      const employees = await db.select().from(users).where(eq(users.role, 'employee'));
-      const allShifts = await db.select().from(shifts);
-      const allTasks = await db.select().from(tasks);
-      const allMessages = await db.select().from(messages);
+      let employeeQuery = db.select().from(users).where(eq(users.role, 'employee'));
+      let shiftsQuery = db.select().from(shifts);
+      let tasksQuery = db.select().from(tasks);
+      let messagesQuery = db.select().from(messages);
       
-      // Get time entries without breaking timestamps
-      const timeEntryCount = await db.select({ count: sql<number>`count(*)` }).from(timeEntries);
-      const currentlyWorkingCount = await db.select({ count: sql<number>`count(*)` })
+      // Filter by location if provided
+      if (locationId) {
+        shiftsQuery = shiftsQuery.where(eq(shifts.locationId, locationId));
+        tasksQuery = tasksQuery.where(eq(tasks.locationId, locationId));
+        messagesQuery = messagesQuery.where(eq(messages.locationId, locationId));
+      }
+      
+      const employees = await employeeQuery;
+      const allShifts = await shiftsQuery;
+      const allTasks = await tasksQuery;
+      const allMessages = await messagesQuery;
+      
+      // Get time entries without breaking timestamps - filter by location via employee
+      let timeEntryCountQuery = db.select({ count: sql<number>`count(*)` }).from(timeEntries);
+      let currentlyWorkingQuery = db.select({ count: sql<number>`count(*)` })
         .from(timeEntries)
         .where(sql`clock_out_time IS NULL`);
+        
+      if (locationId) {
+        timeEntryCountQuery = timeEntryCountQuery
+          .innerJoin(employees as any, eq(timeEntries.employeeId, (employees as any).id))
+          .where(eq((employees as any).locationId, locationId));
+        currentlyWorkingQuery = currentlyWorkingQuery
+          .innerJoin(employees as any, eq(timeEntries.employeeId, (employees as any).id))
+          .where(sql`clock_out_time IS NULL AND ${(employees as any).locationId} = ${locationId}`);
+      }
+      
+      const timeEntryCount = await timeEntryCountQuery;
+      const currentlyWorkingCount = await currentlyWorkingQuery;
 
       // Calculate analytics safely
       const today = new Date().toISOString().split('T')[0];

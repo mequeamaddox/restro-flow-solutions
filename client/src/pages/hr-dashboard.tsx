@@ -4,34 +4,44 @@ import { Badge } from "@/components/ui/badge";
 import { Users, Calendar, CheckSquare, Clock, MessageSquare, UserPlus, Building, Briefcase, TrendingUp, DollarSign, Target, AlertTriangle } from "lucide-react";
 import { Link } from "wouter";
 import { useQuery } from "@tanstack/react-query";
+import { useLocation } from "@/contexts/LocationContext";
 
 export default function HRDashboard() {
+  const { currentLocation } = useLocation();
+
   const { data: employees = [], isLoading: loadingEmployees } = useQuery({
-    queryKey: ['/api/hr/employees'],
+    queryKey: ['/api/hr/employees', currentLocation?.id],
+    enabled: !!currentLocation,
   });
 
   const { data: shifts = [], isLoading: loadingShifts } = useQuery({
-    queryKey: ['/api/hr/shifts'],
+    queryKey: ['/api/hr/shifts', currentLocation?.id],
+    enabled: !!currentLocation,
   });
 
   const { data: tasks = [], isLoading: loadingTasks } = useQuery({
-    queryKey: ['/api/hr/tasks'],
+    queryKey: ['/api/hr/tasks', currentLocation?.id],
+    enabled: !!currentLocation,
   });
 
   const { data: messages = [], isLoading: loadingMessages } = useQuery({
-    queryKey: ['/api/hr/messages'],
+    queryKey: ['/api/hr/messages', currentLocation?.id],
+    enabled: !!currentLocation,
   });
 
   const { data: timeEntries = [], isLoading: loadingTimeEntries } = useQuery({
-    queryKey: ['/api/hr/time-entries'],
+    queryKey: ['/api/hr/time-entries', currentLocation?.id],
+    enabled: !!currentLocation,
   });
 
   const { data: timeOffRequests = [], isLoading: loadingTimeOff } = useQuery({
-    queryKey: ['/api/hr/time-off-requests'],
+    queryKey: ['/api/hr/time-off-requests', currentLocation?.id],
+    enabled: !!currentLocation,
   });
 
   const { data: analytics, isLoading: loadingAnalytics } = useQuery({
-    queryKey: ['/api/hr/analytics'],
+    queryKey: ['/api/hr/analytics', currentLocation?.id],
+    enabled: !!currentLocation,
   });
 
   const isLoading = loadingEmployees || loadingShifts || loadingTasks || loadingMessages || 
