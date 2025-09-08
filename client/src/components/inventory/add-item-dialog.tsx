@@ -13,7 +13,7 @@ import { useToast } from "@/hooks/use-toast";
 import { isUnauthorizedError } from "@/lib/authUtils";
 import { useLocation } from "@/contexts/LocationContext";
 import { Checkbox } from "@/components/ui/checkbox";
-import { ScanLine, Camera } from "lucide-react";
+import { ScanLine, Camera, Calculator } from "lucide-react";
 import BarcodeScanner from "@/components/barcode/barcode-scanner";
 import { useState, useEffect } from "react";
 
@@ -47,6 +47,11 @@ export default function AddItemDialog({ isOpen, onClose, onSuccess, categories, 
       alcoholContent: undefined,
       isAlcoholic: false,
       bottleSize: undefined,
+      costPerPurchaseUnit: undefined,
+      purchaseUnit: undefined,
+      recipeUnit: undefined,
+      conversionFactor: undefined,
+      servingsPerPurchaseUnit: undefined,
     },
   });
 
@@ -67,6 +72,11 @@ export default function AddItemDialog({ isOpen, onClose, onSuccess, categories, 
         alcoholContent: editingItem.alcoholContent?.toString() ?? undefined,
         isAlcoholic: editingItem.isAlcoholic || false,
         bottleSize: editingItem.bottleSize ?? undefined,
+        costPerPurchaseUnit: editingItem.costPerPurchaseUnit?.toString() ?? undefined,
+        purchaseUnit: editingItem.purchaseUnit ?? undefined,
+        recipeUnit: editingItem.recipeUnit ?? undefined,
+        conversionFactor: editingItem.conversionFactor?.toString() ?? undefined,
+        servingsPerPurchaseUnit: editingItem.servingsPerPurchaseUnit?.toString() ?? undefined,
       });
     } else {
       // Reset to default values when not editing
@@ -84,6 +94,11 @@ export default function AddItemDialog({ isOpen, onClose, onSuccess, categories, 
         alcoholContent: undefined,
         isAlcoholic: false,
         bottleSize: undefined,
+        costPerPurchaseUnit: undefined,
+        purchaseUnit: undefined,
+        recipeUnit: undefined,
+        conversionFactor: undefined,
+        servingsPerPurchaseUnit: undefined,
       });
     }
   }, [editingItem, currentLocation?.id, form]);
@@ -248,6 +263,116 @@ export default function AddItemDialog({ isOpen, onClose, onSuccess, categories, 
                   </FormItem>
                 )}
               />
+            </div>
+
+            {/* Multi-Unit Inventory Tracking Section */}
+            <div className="space-y-4">
+              <div className="flex items-center gap-2 pt-4 border-t border-slate-700">
+                <Calculator className="h-4 w-4 text-slate-400" />
+                <h3 className="text-sm font-semibold text-slate-300">Multi-Unit Inventory Tracking</h3>
+                <span className="text-xs text-slate-500">(Optional - for advanced cost tracking)</span>
+              </div>
+              <p className="text-xs text-slate-400">
+                Track items in different units for purchasing vs recipes. Example: Buy chicken in 40lb cases, use in recipes by lbs/oz.
+              </p>
+              
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <FormField
+                  control={form.control}
+                  name="purchaseUnit"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Purchase Unit</FormLabel>
+                      <Select onValueChange={field.onChange} value={field.value}>
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="How you buy this item" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          <SelectItem value="case">case</SelectItem>
+                          <SelectItem value="box">box</SelectItem>
+                          <SelectItem value="bag">bag</SelectItem>
+                          <SelectItem value="bulk">bulk</SelectItem>
+                          <SelectItem value="pallet">pallet</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="costPerPurchaseUnit"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Cost per Purchase Unit</FormLabel>
+                      <FormControl>
+                        <Input type="number" step="0.01" placeholder="45.00" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+              
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <FormField
+                  control={form.control}
+                  name="recipeUnit"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Recipe Unit</FormLabel>
+                      <Select onValueChange={field.onChange} value={field.value}>
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="How recipes use this" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          <SelectItem value="lbs">lbs</SelectItem>
+                          <SelectItem value="oz">oz</SelectItem>
+                          <SelectItem value="kg">kg</SelectItem>
+                          <SelectItem value="g">g</SelectItem>
+                          <SelectItem value="cups">cups</SelectItem>
+                          <SelectItem value="tbsp">tbsp</SelectItem>
+                          <SelectItem value="tsp">tsp</SelectItem>
+                          <SelectItem value="pieces">pieces</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="conversionFactor"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Units per Purchase</FormLabel>
+                      <FormControl>
+                        <Input type="number" step="0.01" placeholder="40" {...field} />
+                      </FormControl>
+                      <p className="text-xs text-slate-500">How many recipe units in 1 purchase unit</p>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="servingsPerPurchaseUnit"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Servings per Purchase</FormLabel>
+                      <FormControl>
+                        <Input type="number" step="1" placeholder="160" {...field} />
+                      </FormControl>
+                      <p className="text-xs text-slate-500">Total servings from 1 purchase unit</p>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
             </div>
             
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">

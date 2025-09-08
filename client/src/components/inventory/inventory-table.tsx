@@ -201,8 +201,9 @@ export default function InventoryTable({ items, isLoading, showPagination = fals
                   </TableHead>
                   <TableHead className="text-slate-300">Item</TableHead>
                   <TableHead className="text-slate-300">Category</TableHead>
-                  <TableHead className="text-slate-300">Quantity</TableHead>
-                  <TableHead className="text-slate-300">Unit Cost</TableHead>
+                  <TableHead className="text-slate-300">Purchase Units</TableHead>
+                  <TableHead className="text-slate-300">Recipe Units</TableHead>
+                  <TableHead className="text-slate-300">Cost/Recipe Unit</TableHead>
                   <TableHead className="text-slate-300">Total Value</TableHead>
                   <TableHead className="text-slate-300">Status</TableHead>
                   <TableHead className="text-right text-slate-300">Actions</TableHead>
@@ -244,10 +245,46 @@ export default function InventoryTable({ items, isLoading, showPagination = fals
                         {item.category?.name || 'Uncategorized'}
                       </TableCell>
                       <TableCell className="text-slate-300">
-                        {item.quantity} {item.unit}
+                        <div>
+                          <div className="font-medium">{item.quantity} {item.purchaseUnit || item.unit}</div>
+                          {item.costPerPurchaseUnit && (
+                            <div className="text-xs text-slate-400">
+                              ${parseFloat(item.costPerPurchaseUnit).toFixed(2)}/{item.purchaseUnit}
+                            </div>
+                          )}
+                        </div>
                       </TableCell>
                       <TableCell className="text-slate-300">
-                        ${parseFloat(item.costPerUnit).toFixed(2)}/{item.unit}
+                        <div>
+                          {item.conversionFactor && item.purchaseUnit && item.recipeUnit ? (
+                            <>
+                              <div className="font-medium">
+                                {(parseFloat(item.quantity) * parseFloat(item.conversionFactor)).toFixed(1)} {item.recipeUnit}
+                              </div>
+                              <div className="text-xs text-slate-400">
+                                1 {item.purchaseUnit} = {parseFloat(item.conversionFactor).toFixed(1)} {item.recipeUnit}
+                              </div>
+                            </>
+                          ) : (
+                            <span className="text-slate-500">Standard units</span>
+                          )}
+                        </div>
+                      </TableCell>
+                      <TableCell className="text-slate-300">
+                        {item.conversionFactor && item.costPerPurchaseUnit ? (
+                          <div>
+                            <div className="font-medium">
+                              ${(parseFloat(item.costPerPurchaseUnit) / parseFloat(item.conversionFactor)).toFixed(2)}/{item.recipeUnit}
+                            </div>
+                            {item.servingsPerPurchaseUnit && (
+                              <div className="text-xs text-slate-400">
+                                ${(parseFloat(item.costPerPurchaseUnit) / parseInt(item.servingsPerPurchaseUnit.toString())).toFixed(2)}/serving
+                              </div>
+                            )}
+                          </div>
+                        ) : (
+                          <span>${parseFloat(item.costPerUnit).toFixed(2)}/{item.unit}</span>
+                        )}
                       </TableCell>
                       <TableCell className="text-slate-300">
                         ${totalValue.toFixed(2)}

@@ -46,6 +46,7 @@ import logoImg from "@assets/IMG_20250812_004328_1754973838131.png";
 const navigation = [
   { name: 'Dashboard', href: '/', icon: LayoutDashboard },
   { name: 'Inventory', href: '/inventory', icon: Package },
+  { name: 'Multi-Unit Tracking', href: '/multi-unit-dashboard', icon: Calculator, badge: 'MULTI-UNIT' },
   { name: 'Recipes', href: '/recipes', icon: ChefHat },
   { name: 'Purchase Orders', href: '/purchase-orders', icon: ShoppingCart },
   { name: 'Vendors', href: '/vendors', icon: Building2 },
