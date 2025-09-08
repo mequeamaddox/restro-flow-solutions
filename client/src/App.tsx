@@ -52,6 +52,7 @@ import EmployeeBuildSheets from "@/pages/employee-build-sheets";
 import EmployeePayStubs from "@/pages/employee-pay-stubs";
 import EmployeeTimeOff from "@/pages/employee-time-off";
 import PublicOnboarding from "@/pages/public-onboarding";
+import MultiUnitDashboard from "@/pages/multi-unit-dashboard";
 import Sidebar from "@/components/layout/sidebar";
 import Header from "@/components/layout/header";
 
@@ -116,6 +117,7 @@ function Router() {
                 <Route path="/automated-ordering" component={AutomatedOrdering} />
                 <Route path="/forecasting" component={Forecasting} />
                 <Route path="/barcode-test" component={BarcodeTest} />
+                <Route path="/multi-unit-dashboard" component={MultiUnitDashboard} />
                 <Route path="/settings" component={Settings} />
                 {/* HR Employee Management Add-on Routes */}
                 <Route path="/hr/dashboard" component={HRDashboard} />
