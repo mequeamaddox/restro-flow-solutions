@@ -85,6 +85,23 @@ export const vendors = pgTable("vendors", {
   createdAt: timestamp("created_at").defaultNow(),
 });
 
+// Vendor Price Catalog - tracks multiple vendor prices for the same item
+export const vendorPriceCatalog = pgTable("vendor_price_catalog", {
+  id: uuid("id").primaryKey().default(sql`gen_random_uuid()`),
+  inventoryItemId: uuid("inventory_item_id").references(() => inventoryItems.id).notNull(),
+  vendorId: uuid("vendor_id").references(() => vendors.id).notNull(),
+  costPerUnit: decimal("cost_per_unit", { precision: 10, scale: 2 }).notNull(),
+  unit: varchar("unit", { length: 20 }).notNull(),
+  minimumOrderQuantity: decimal("minimum_order_quantity", { precision: 10, scale: 2 }).default("1"),
+  leadTimeDays: integer("lead_time_days").default(0),
+  isPreferredVendor: boolean("is_preferred_vendor").default(false),
+  notes: text("notes"),
+  effectiveDate: timestamp("effective_date").defaultNow(),
+  expiryDate: timestamp("expiry_date"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
 // Inventory items
 export const inventoryItems = pgTable("inventory_items", {
   id: uuid("id").primaryKey().default(sql`gen_random_uuid()`),
@@ -1584,4 +1601,9 @@ export type Paycheck = typeof paychecks.$inferSelect;
 export type InsertPaycheck = z.infer<typeof insertPaycheckSchema>;
 export type PayStub = typeof payStubs.$inferSelect;
 export type InsertPayStub = z.infer<typeof insertPayStubSchema>;
+
+// Vendor price catalog types
+export const insertVendorPriceCatalogSchema = createInsertSchema(vendorPriceCatalog).omit({ id: true, createdAt: true, updatedAt: true });
+export type VendorPriceCatalog = typeof vendorPriceCatalog.$inferSelect;
+export type InsertVendorPriceCatalog = z.infer<typeof insertVendorPriceCatalogSchema>;
 
