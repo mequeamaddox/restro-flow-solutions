@@ -4379,6 +4379,167 @@ export class DatabaseStorage implements IStorage {
     const purchaseQuantity = parseFloat(item.quantity);
     return this.convertPurchaseToRecipeUnits(item, purchaseQuantity);
   }
+
+  // Sales Integration System
+
+  /**
+   * Record a sales transaction with automatic inventory deduction
+   */
+  async recordSalesTransaction(
+    locationId: string, 
+    totalAmount: number, 
+    paymentMethod: string,
+    customerName: string | null,
+    salesItems: Array<{
+      inventoryItemId: string;
+      quantitySold: number;
+      unitPrice: number;
+    }>,
+    createdBy: string
+  ): Promise<string> {
+    try {
+      // Create the sales transaction
+      const [salesTransaction] = await db.insert(salesTransactions).values({
+        locationId,
+        totalAmount: totalAmount.toString(),
+        paymentMethod,
+        customerName,
+        createdBy,
+        saleDate: new Date(),
+        createdAt: new Date()
+      }).returning();
+
+      const transactionId = salesTransaction.id;
+
+      // Process each sales item and deduct from inventory
+      for (const item of salesItems) {
+        const totalPrice = item.quantitySold * item.unitPrice;
+
+        // Create sales item record
+        await db.insert(salesItems).values({
+          salesTransactionId: transactionId,
+          inventoryItemId: item.inventoryItemId,
+          quantitySold: item.quantitySold.toString(),
+          unitPrice: item.unitPrice.toString(),
+          totalPrice: totalPrice.toString(),
+          createdAt: new Date()
+        });
+
+        // Get the inventory item to determine unit conversion
+        const [inventoryItem] = await db
+          .select()
+          .from(inventoryItems)
+          .where(eq(inventoryItems.id, item.inventoryItemId));
+
+        if (inventoryItem) {
+          // Convert sales quantity (in recipe units) to purchase units for inventory deduction
+          const purchaseUnitsToDeduct = this.convertRecipeToPurchaseUnits(inventoryItem, item.quantitySold);
+
+          // Update inventory quantity (subtract from purchase units)
+          const currentQuantity = parseFloat(inventoryItem.quantity);
+          const newQuantity = Math.max(0, currentQuantity - purchaseUnitsToDeduct);
+
+          await db
+            .update(inventoryItems)
+            .set({ 
+              quantity: newQuantity.toString(),
+              updatedAt: new Date() 
+            })
+            .where(eq(inventoryItems.id, item.inventoryItemId));
+
+          // Record inventory transaction for audit trail
+          await db.insert(inventoryTransactions).values({
+            inventoryItemId: item.inventoryItemId,
+            locationId,
+            type: 'sales_deduction',
+            quantity: (-purchaseUnitsToDeduct).toString(), // Negative for deduction
+            unitCost: inventoryItem.costPerPurchaseUnit || inventoryItem.costPerUnit,
+            totalCost: (-(purchaseUnitsToDeduct * parseFloat(inventoryItem.costPerPurchaseUnit || inventoryItem.costPerUnit))).toString(),
+            reference: `Sales Transaction: ${transactionId}`,
+            createdBy
+          });
+        }
+      }
+
+      return transactionId;
+    } catch (error) {
+      console.error('Error recording sales transaction:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Get sales transactions with items for a location
+   */
+  async getSalesTransactions(locationId: string, limit: number = 50) {
+    const transactions = await db
+      .select()
+      .from(salesTransactions)
+      .where(eq(salesTransactions.locationId, locationId))
+      .orderBy(desc(salesTransactions.saleDate))
+      .limit(limit);
+
+    const transactionsWithItems = await Promise.all(
+      transactions.map(async (transaction) => {
+        const items = await db
+          .select({
+            id: salesItems.id,
+            inventoryItemId: salesItems.inventoryItemId,
+            quantitySold: salesItems.quantitySold,
+            unitPrice: salesItems.unitPrice,
+            totalPrice: salesItems.totalPrice,
+            inventoryItem: {
+              id: inventoryItems.id,
+              name: inventoryItems.name,
+              recipeUnit: inventoryItems.recipeUnit,
+              purchaseUnit: inventoryItems.purchaseUnit
+            }
+          })
+          .from(salesItems)
+          .leftJoin(inventoryItems, eq(salesItems.inventoryItemId, inventoryItems.id))
+          .where(eq(salesItems.salesTransactionId, transaction.id));
+
+        return {
+          ...transaction,
+          items
+        };
+      })
+    );
+
+    return transactionsWithItems;
+  }
+
+  /**
+   * Get remaining stock levels with multi-unit conversion
+   */
+  async getRemainingStockLevels(locationId: string) {
+    const items = await db
+      .select()
+      .from(inventoryItems)
+      .where(eq(inventoryItems.locationId, locationId));
+
+    return items.map(item => {
+      const purchaseQuantity = parseFloat(item.quantity);
+      const availableRecipeUnits = this.getAvailableRecipeUnits(item);
+      const costPerRecipeUnit = this.calculateCostPerRecipeUnit(item);
+      const costPerServing = this.calculateCostPerServing(item);
+      
+      return {
+        id: item.id,
+        name: item.name,
+        purchaseQuantity,
+        purchaseUnit: item.purchaseUnit || 'case',
+        availableRecipeUnits,
+        recipeUnit: item.recipeUnit || 'lb',
+        servingsPerPurchaseUnit: item.servingsPerPurchaseUnit,
+        costPerRecipeUnit,
+        costPerServing,
+        totalValue: purchaseQuantity * parseFloat(item.costPerPurchaseUnit || item.costPerUnit),
+        reorderLevel: parseFloat(item.reorderLevel),
+        isLowStock: purchaseQuantity <= parseFloat(item.reorderLevel)
+      };
+    });
+  }
 }
 
 export const storage = new DatabaseStorage();
