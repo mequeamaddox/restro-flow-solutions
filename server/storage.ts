@@ -4325,6 +4325,60 @@ export class DatabaseStorage implements IStorage {
     const user = this.localAuthUsers.find(u => u.email === email && u.password === password);
     return user || null;
   }
+
+  // Multi-Unit Cost Calculation System
+  
+  /**
+   * Calculate cost per recipe unit for an inventory item
+   * Converts from purchase units (cases) to recipe units (lbs/oz) using conversion factor
+   */
+  calculateCostPerRecipeUnit(item: InventoryItem): number {
+    const costPerPurchaseUnit = parseFloat(item.costPerPurchaseUnit || '0');
+    const conversionFactor = parseFloat(item.conversionFactor || '1');
+    
+    // Cost per recipe unit = Cost per case / Recipe units per case
+    // Example: $80 per case / 40 lbs per case = $2 per lb
+    return costPerPurchaseUnit / conversionFactor;
+  }
+  
+  /**
+   * Calculate cost per serving for an inventory item (if servings are tracked)
+   */
+  calculateCostPerServing(item: InventoryItem): number | null {
+    if (!item.servingsPerPurchaseUnit) return null;
+    
+    const costPerPurchaseUnit = parseFloat(item.costPerPurchaseUnit || '0');
+    const servingsPerPurchaseUnit = item.servingsPerPurchaseUnit;
+    
+    return costPerPurchaseUnit / servingsPerPurchaseUnit;
+  }
+  
+  /**
+   * Convert quantity from purchase units to recipe units
+   * Example: 2 cases → 80 lbs (if conversion factor is 40 lbs per case)
+   */
+  convertPurchaseToRecipeUnits(item: InventoryItem, purchaseQuantity: number): number {
+    const conversionFactor = parseFloat(item.conversionFactor || '1');
+    return purchaseQuantity * conversionFactor;
+  }
+  
+  /**
+   * Convert quantity from recipe units to purchase units
+   * Example: 80 lbs → 2 cases (if conversion factor is 40 lbs per case)
+   */
+  convertRecipeToPurchaseUnits(item: InventoryItem, recipeQuantity: number): number {
+    const conversionFactor = parseFloat(item.conversionFactor || '1');
+    return recipeQuantity / conversionFactor;
+  }
+  
+  /**
+   * Get remaining recipe units available for an inventory item
+   * Converts from purchase units in inventory to recipe units available for use
+   */
+  getAvailableRecipeUnits(item: InventoryItem): number {
+    const purchaseQuantity = parseFloat(item.quantity);
+    return this.convertPurchaseToRecipeUnits(item, purchaseQuantity);
+  }
 }
 
 export const storage = new DatabaseStorage();
