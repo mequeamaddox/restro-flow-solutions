@@ -2429,8 +2429,36 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // HR access middleware
+  const requireHRAccess = async (req: any, res: any, next: any) => {
+    try {
+      const locationId = req.query.locationId as string;
+      if (!locationId) {
+        return res.status(400).json({ message: 'Location ID required', code: 'LOCATION_REQUIRED' });
+      }
+
+      const location = await storage.getLocation(locationId);
+      if (!location) {
+        return res.status(404).json({ message: 'Location not found' });
+      }
+
+      if (!location.hrAddonEnabled) {
+        return res.status(403).json({ 
+          message: 'HR add-on not enabled for this location', 
+          code: 'HR_ADDON_REQUIRED',
+          upgradeUrl: '/upgrade'
+        });
+      }
+
+      next();
+    } catch (error) {
+      console.error('Error checking HR access:', error);
+      res.status(500).json({ message: 'Failed to verify HR access' });
+    }
+  };
+
   // HR Employees
-  app.get('/api/hr/employees', isAuthenticated, requireAnyPermission([Permission.VIEW_ALL_EMPLOYEES, Permission.VIEW_EMPLOYEE_DETAILS]), async (req, res) => {
+  app.get('/api/hr/employees', isAuthenticated, requireAnyPermission([Permission.VIEW_ALL_EMPLOYEES, Permission.VIEW_EMPLOYEE_DETAILS]), requireHRAccess, async (req, res) => {
     try {
       const locationId = req.query.locationId as string;
       const employees = await storage.getEmployees(locationId);

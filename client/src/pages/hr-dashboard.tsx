@@ -5,9 +5,10 @@ import { Users, Calendar, CheckSquare, Clock, MessageSquare, UserPlus, Building,
 import { Link } from "wouter";
 import { useQuery } from "@tanstack/react-query";
 import { useLocation } from "@/contexts/LocationContext";
+import { HRUpgradePrompt } from "@/components/hr/hr-upgrade-prompt";
 
 export default function HRDashboard() {
-  const { currentLocation } = useLocation();
+  const { currentLocation, hasHRAccess } = useLocation();
 
   const { data: employees = [], isLoading: loadingEmployees } = useQuery({
     queryKey: ['/api/hr/employees', currentLocation?.id],
@@ -68,6 +69,11 @@ export default function HRDashboard() {
 
   const avgHourlyRate = analytics?.avgHourlyRate ?? 15.50;
   const estimatedWeeklyLabor = weeklyHours * avgHourlyRate;
+
+  // Show upgrade prompt if HR access is not enabled for this location
+  if (!hasHRAccess) {
+    return <HRUpgradePrompt locationName={currentLocation.name} />;
+  }
 
   return (
     <div className="max-w-7xl mx-auto p-6">

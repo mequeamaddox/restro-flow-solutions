@@ -36,6 +36,7 @@ export const locations = pgTable("locations", {
   phone: varchar("phone"),
   manager: varchar("manager"),
   isActive: boolean("is_active").default(true),
+  hrAddonEnabled: boolean("hr_addon_enabled").default(false), // HR add-on subscription status
   createdAt: timestamp("created_at").defaultNow(),
 });
 

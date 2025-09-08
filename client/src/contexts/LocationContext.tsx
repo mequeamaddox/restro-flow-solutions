@@ -7,6 +7,7 @@ interface LocationContextType {
   setCurrentLocation: (location: Location) => void;
   locations: Location[];
   isLoading: boolean;
+  hasHRAccess: boolean;
 }
 
 const LocationContext = createContext<LocationContextType | undefined>(undefined);
@@ -43,12 +44,15 @@ export function LocationProvider({ children }: { children: ReactNode }) {
     }
   }, []);
 
+  const hasHRAccess = currentLocation?.hrAddonEnabled ?? false;
+
   return (
     <LocationContext.Provider value={{
       currentLocation,
       setCurrentLocation,
       locations,
-      isLoading
+      isLoading,
+      hasHRAccess
     }}>
       {children}
     </LocationContext.Provider>
