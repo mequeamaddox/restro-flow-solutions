@@ -2272,6 +2272,52 @@ export class DatabaseStorage implements IStorage {
   }
 
   async deleteEmployee(id: string): Promise<void> {
+    // Handle foreign key constraints by cleaning up related records first
+    
+    // 1. Delete or update paystubs (set employee_id to null or delete if cascading is desired)
+    await db.delete(paystubs).where(eq(paystubs.employeeId, id));
+    
+    // 2. Delete time entries
+    await db.delete(timeEntries).where(eq(timeEntries.employeeId, id));
+    
+    // 3. Update tasks to remove employee assignment (don't delete tasks, just unassign)
+    await db.update(tasks)
+      .set({ assignedTo: null })
+      .where(eq(tasks.assignedTo, id));
+    
+    // 4. Delete shifts
+    await db.delete(shifts).where(eq(shifts.employeeId, id));
+    
+    // 5. Delete availability records
+    await db.delete(availability).where(eq(availability.employeeId, id));
+    
+    // 6. Delete time-off requests
+    await db.delete(timeOffRequests).where(eq(timeOffRequests.employeeId, id));
+    
+    // 7. Delete performance reviews
+    await db.delete(performanceReviews).where(eq(performanceReviews.employeeId, id));
+    
+    // 8. Delete task completions
+    await db.delete(taskCompletions).where(eq(taskCompletions.employeeId, id));
+    
+    // 9. Update messages to remove employee recipient (keep messages, just remove recipient reference)
+    await db.update(messages)
+      .set({ recipientId: null })
+      .where(eq(messages.recipientId, id));
+    
+    // 10. Delete employee onboarding records
+    await db.delete(employeeOnboarding).where(eq(employeeOnboarding.employeeId, id));
+    
+    // 11. Delete employee documents
+    await db.delete(employeeDocuments).where(eq(employeeDocuments.employeeId, id));
+    
+    // 12. Delete employee document assignments  
+    await db.delete(employeeDocumentAssignments).where(eq(employeeDocumentAssignments.employeeId, id));
+    
+    // 13. Delete recipe assignments
+    await db.delete(recipeAssignments).where(eq(recipeAssignments.employeeId, id));
+    
+    // Finally, delete the employee record
     await db.delete(employees).where(eq(employees.id, id));
   }
 

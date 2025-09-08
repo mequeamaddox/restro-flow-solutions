@@ -14,6 +14,7 @@ import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import { usePermissions, Permission } from "@/contexts/PermissionContext";
 import { useLocation } from "wouter";
+import { useLocation as useLocationContext } from "@/contexts/LocationContext";
 
 interface Employee {
   id: string;
@@ -42,9 +43,11 @@ export default function HREmployees() {
   const queryClient = useQueryClient();
   const { hasPermission, userRole, canManageUser } = usePermissions();
   const [, setLocation] = useLocation();
+  const { currentLocation } = useLocationContext();
 
   const { data: employees = [], isLoading } = useQuery<Employee[]>({
-    queryKey: ['/api/hr/employees'],
+    queryKey: ['/api/hr/employees', currentLocation?.id],
+    enabled: !!currentLocation,
   });
 
   const { data: departments = [] } = useQuery<Array<{ id: string; name: string }>>({
@@ -73,6 +76,7 @@ export default function HREmployees() {
         });
       }
       queryClient.invalidateQueries({ queryKey: ['/api/hr/employees'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/hr/employees', currentLocation?.id] });
       setIsDialogOpen(false);
       setEditingEmployee(null);
     },
