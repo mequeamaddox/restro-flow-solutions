@@ -5,27 +5,48 @@ import { storage } from './storage';
 // Initialize Firebase Admin SDK with proper service account credentials
 if (!getApps().length) {
   try {
-    // Use environment variables for service account credentials
-    const privateKey = process.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, '\n');
-    const clientEmail = process.env.FIREBASE_CLIENT_EMAIL;
-    const projectId = process.env.VITE_FIREBASE_PROJECT_ID || 'restroflowsoftware';
+    // Try to use the complete service account JSON first
+    const serviceAccountJson = process.env.FIREBASE_SERVICE_ACCOUNT_JSON;
+    
+    if (serviceAccountJson) {
+      console.log('🔑 Using Firebase service account JSON...');
+      const serviceAccount = JSON.parse(serviceAccountJson);
+      
+      initializeApp({
+        credential: cert(serviceAccount),
+        projectId: serviceAccount.project_id,
+      });
+      
+      console.log(`✅ Firebase Admin SDK initialized successfully for project: ${serviceAccount.project_id}`);
+      console.log(`✅ Service account email: ${serviceAccount.client_email}`);
+    } else {
+      // Fallback to individual environment variables
+      let privateKey = process.env.FIREBASE_PRIVATE_KEY;
+      const clientEmail = process.env.FIREBASE_CLIENT_EMAIL;
+      const projectId = process.env.VITE_FIREBASE_PROJECT_ID || 'restroflowsoftware';
 
-    if (!privateKey || !clientEmail) {
-      throw new Error('Missing Firebase service account credentials');
+      if (!privateKey || !clientEmail) {
+        throw new Error('Missing Firebase service account credentials');
+      }
+
+      // Handle different private key formats
+      if (privateKey.includes('\\n')) {
+        privateKey = privateKey.replace(/\\n/g, '\n');
+      }
+
+      const serviceAccount = {
+        projectId: projectId,
+        clientEmail: clientEmail,
+        privateKey: privateKey,
+      };
+
+      initializeApp({
+        credential: cert(serviceAccount),
+        projectId: projectId,
+      });
+
+      console.log(`✅ Firebase Admin SDK initialized successfully for project: ${projectId}`);
     }
-
-    const serviceAccount = {
-      projectId: projectId,
-      clientEmail: clientEmail,
-      privateKey: privateKey,
-    };
-
-    initializeApp({
-      credential: cert(serviceAccount),
-      projectId: projectId,
-    });
-
-    console.log(`✅ Firebase Admin SDK initialized successfully for project: ${projectId}`);
   } catch (error) {
     console.error('❌ Firebase Admin SDK initialization failed:', error);
     
