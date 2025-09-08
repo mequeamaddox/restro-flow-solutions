@@ -15,6 +15,7 @@ import { apiRequest } from "@/lib/queryClient";
 import { usePermissions, Permission } from "@/contexts/PermissionContext";
 import { useLocation } from "wouter";
 import { useLocation as useLocationContext } from "@/contexts/LocationContext";
+import { HRUpgradePrompt } from "@/components/hr/hr-upgrade-prompt";
 
 interface Employee {
   id: string;
@@ -43,7 +44,7 @@ export default function HREmployees() {
   const queryClient = useQueryClient();
   const { hasPermission, userRole, canManageUser } = usePermissions();
   const [, setLocation] = useLocation();
-  const { currentLocation } = useLocationContext();
+  const { currentLocation, hasHRAccess } = useLocationContext();
 
   const { data: employees = [], isLoading } = useQuery<Employee[]>({
     queryKey: ['/api/hr/employees', currentLocation?.id],
@@ -189,6 +190,11 @@ export default function HREmployees() {
   const getInitials = (firstName: string, lastName: string) => {
     return `${firstName.charAt(0)}${lastName.charAt(0)}`.toUpperCase();
   };
+
+  // Show upgrade prompt if HR access is not enabled for this location
+  if (!hasHRAccess) {
+    return <HRUpgradePrompt locationName={currentLocation?.name || 'this location'} />;
+  }
 
   if (isLoading) {
     return (

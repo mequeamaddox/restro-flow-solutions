@@ -2343,8 +2343,36 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // HR Employee Management Add-on API Endpoints (15 endpoints)
   
+  // HR access middleware
+  const requireHRAccess = async (req: any, res: any, next: any) => {
+    try {
+      const locationId = req.query.locationId as string;
+      if (!locationId) {
+        return res.status(400).json({ message: 'Location ID required', code: 'LOCATION_REQUIRED' });
+      }
+
+      const location = await storage.getLocation(locationId);
+      if (!location) {
+        return res.status(404).json({ message: 'Location not found' });
+      }
+
+      if (!location.hrAddonEnabled) {
+        return res.status(403).json({ 
+          message: 'HR add-on not enabled for this location', 
+          code: 'HR_ADDON_REQUIRED',
+          upgradeUrl: '/upgrade'
+        });
+      }
+
+      next();
+    } catch (error) {
+      console.error('Error checking HR access:', error);
+      res.status(500).json({ message: 'Failed to verify HR access' });
+    }
+  };
+  
   // HR Departments
-  app.get('/api/hr/departments', isAuthenticated, async (req, res) => {
+  app.get('/api/hr/departments', isAuthenticated, requireHRAccess, async (req, res) => {
     try {
       const departments = await storage.getDepartments();
       res.json(departments);
@@ -2354,7 +2382,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post('/api/hr/departments', isAuthenticated, async (req, res) => {
+  app.post('/api/hr/departments', isAuthenticated, requireHRAccess, async (req, res) => {
     try {
       const department = await storage.createDepartment(req.body);
       res.status(201).json(department);
@@ -2386,7 +2414,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // HR Positions
-  app.get('/api/hr/positions', isAuthenticated, async (req, res) => {
+  app.get('/api/hr/positions', isAuthenticated, requireHRAccess, async (req, res) => {
     try {
       const positions = await storage.getPositions();
       res.json(positions);
@@ -2396,7 +2424,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post('/api/hr/positions', isAuthenticated, async (req, res) => {
+  app.post('/api/hr/positions', isAuthenticated, requireHRAccess, async (req, res) => {
     try {
       const position = await storage.createPosition(req.body);
       res.status(201).json(position);
@@ -2429,34 +2457,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // HR access middleware
-  const requireHRAccess = async (req: any, res: any, next: any) => {
-    try {
-      const locationId = req.query.locationId as string;
-      if (!locationId) {
-        return res.status(400).json({ message: 'Location ID required', code: 'LOCATION_REQUIRED' });
-      }
-
-      const location = await storage.getLocation(locationId);
-      if (!location) {
-        return res.status(404).json({ message: 'Location not found' });
-      }
-
-      if (!location.hrAddonEnabled) {
-        return res.status(403).json({ 
-          message: 'HR add-on not enabled for this location', 
-          code: 'HR_ADDON_REQUIRED',
-          upgradeUrl: '/upgrade'
-        });
-      }
-
-      next();
-    } catch (error) {
-      console.error('Error checking HR access:', error);
-      res.status(500).json({ message: 'Failed to verify HR access' });
-    }
-  };
-
   // HR Employees
   app.get('/api/hr/employees', isAuthenticated, requireAnyPermission([Permission.VIEW_ALL_EMPLOYEES, Permission.VIEW_EMPLOYEE_DETAILS]), requireHRAccess, async (req, res) => {
     try {
@@ -2469,7 +2469,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post('/api/hr/employees', isAuthenticated, requirePermission(Permission.MANAGE_EMPLOYEES), async (req, res) => {
+  app.post('/api/hr/employees', isAuthenticated, requirePermission(Permission.MANAGE_EMPLOYEES), requireHRAccess, async (req, res) => {
     console.log('🚀 Employee creation endpoint called!');
     console.log('🚀 Request body:', JSON.stringify(req.body, null, 2));
     console.log('🚀 User:', req.user || req.session?.user);
@@ -2609,7 +2609,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // HR Scheduling
-  app.get('/api/hr/shifts', isAuthenticated, async (req, res) => {
+  app.get('/api/hr/shifts', isAuthenticated, requireHRAccess, async (req, res) => {
     try {
       const locationId = req.query.locationId as string;
       const shifts = await storage.getShifts(locationId);
@@ -2620,7 +2620,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post('/api/hr/shifts', isAuthenticated, async (req, res) => {
+  app.post('/api/hr/shifts', isAuthenticated, requireHRAccess, async (req, res) => {
     try {
       const shift = await storage.createShift(req.body);
       res.status(201).json(shift);
@@ -2651,7 +2651,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // HR Time-off Requests
-  app.get('/api/hr/time-off-requests', isAuthenticated, async (req, res) => {
+  app.get('/api/hr/time-off-requests', isAuthenticated, requireHRAccess, async (req, res) => {
     try {
       const requests = await storage.getTimeOffRequests();
       res.json(requests);
@@ -2683,7 +2683,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // HR Analytics and Reports
-  app.get('/api/hr/analytics', async (req, res) => {
+  app.get('/api/hr/analytics', isAuthenticated, requireHRAccess, async (req, res) => {
     try {
       const locationId = req.query.locationId as string;
       const analytics = await storage.getHRAnalytics(locationId);
@@ -2695,7 +2695,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // HR Tasks
-  app.get('/api/hr/tasks', isAuthenticated, async (req, res) => {
+  app.get('/api/hr/tasks', isAuthenticated, requireHRAccess, async (req, res) => {
     try {
       const locationId = req.query.locationId as string;
       const tasks = await storage.getTasks(locationId);
@@ -2738,7 +2738,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // HR Time Clock
-  app.get('/api/hr/time-entries', async (req, res) => {
+  app.get('/api/hr/time-entries', isAuthenticated, requireHRAccess, async (req, res) => {
     try {
       // Direct SQL approach to get real timestamp data
       const result = await db.execute(sql`
@@ -2918,7 +2918,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // HR Payroll
-  app.get('/api/hr/payroll/pay-periods', isAuthenticated, async (req, res) => {
+  app.get('/api/hr/payroll/pay-periods', isAuthenticated, requireHRAccess, async (req, res) => {
     try {
       const payPeriods = await storage.getPayPeriods();
       res.json(payPeriods);
@@ -3228,7 +3228,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // HR Messaging
-  app.get('/api/hr/messages', isAuthenticated, async (req, res) => {
+  app.get('/api/hr/messages', isAuthenticated, requireHRAccess, async (req, res) => {
     try {
       const locationId = req.query.locationId as string;
       const messages = await storage.getMessages(locationId);
