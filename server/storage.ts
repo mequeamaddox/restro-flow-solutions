@@ -741,6 +741,94 @@ export class DatabaseStorage implements IStorage {
     await db.delete(vendorPriceCatalog).where(eq(vendorPriceCatalog.id, id));
   }
 
+  // Price import methods
+  async createPriceImport(data: InsertPriceImport): Promise<PriceImport> {
+    const [priceImport] = await db
+      .insert(priceImports)
+      .values(data)
+      .returning();
+    return priceImport;
+  }
+
+  async getPriceImports(vendorId?: string): Promise<PriceImport[]> {
+    if (vendorId) {
+      return await db.select().from(priceImports)
+        .where(eq(priceImports.vendorId, vendorId))
+        .orderBy(desc(priceImports.createdAt));
+    }
+    return await db.select().from(priceImports)
+      .orderBy(desc(priceImports.createdAt));
+  }
+
+  async updatePriceImportStatus(
+    id: string,
+    status: 'processing' | 'completed' | 'failed',
+    stats?: {
+      totalRows?: number;
+      processedRows?: number;
+      matchedItems?: number;
+      newItems?: number;
+      priceUpdates?: number;
+      errorLog?: string;
+    }
+  ): Promise<PriceImport> {
+    const updateData: any = { 
+      status,
+      processingCompleted: status === 'completed' || status === 'failed' ? new Date() : null,
+    };
+    
+    if (stats) {
+      Object.assign(updateData, stats);
+    }
+
+    const [priceImport] = await db
+      .update(priceImports)
+      .set(updateData)
+      .where(eq(priceImports.id, id))
+      .returning();
+    return priceImport;
+  }
+
+  async findMatchingInventoryItem(
+    itemName: string, 
+    vendorSku?: string,
+    locationId?: string
+  ): Promise<InventoryItem | undefined> {
+    const query = db.select().from(inventoryItems);
+    
+    if (locationId) {
+      query.where(eq(inventoryItems.locationId, locationId));
+    }
+    
+    // Try exact name match first
+    const exactMatch = await query
+      .where(
+        and(
+          eq(inventoryItems.name, itemName),
+          locationId ? eq(inventoryItems.locationId, locationId) : undefined
+        )
+      );
+    
+    if (exactMatch.length > 0) {
+      return exactMatch[0];
+    }
+    
+    // Try case-insensitive match
+    const caseInsensitiveMatch = await query
+      .where(
+        and(
+          sql`LOWER(${inventoryItems.name}) = LOWER(${itemName})`,
+          locationId ? eq(inventoryItems.locationId, locationId) : undefined
+        )
+      );
+    
+    if (caseInsensitiveMatch.length > 0) {
+      return caseInsensitiveMatch[0];
+    }
+    
+    return undefined;
+  }
+
   // Auto-ordering rules
   async getAutoOrderRules(userId: string): Promise<any[]> {
     const rules = await db

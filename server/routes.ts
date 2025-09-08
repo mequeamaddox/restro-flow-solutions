@@ -6,6 +6,8 @@ import { verifyFirebaseToken, syncFirebaseUser, adminAuth, createFirebaseUser, c
 import { generateTokens, verifyToken, requireJWT, getCurrentUser } from './jwtAuth';
 import { requirePermission, requireAnyPermission, Permission } from "./permissions";
 import multer from "multer";
+import csv from "csv-parser";
+import { Readable } from "stream";
 import { db } from "./db";
 import { sql, eq, desc } from "drizzle-orm";
 import { 
@@ -52,6 +54,22 @@ const upload = multer({
       cb(null, true);
     } else {
       cb(new Error('Invalid file type. Only JPEG, PNG, and PDF files are allowed.'));
+    }
+  },
+});
+
+// Configure multer for CSV file uploads
+const csvUpload = multer({
+  storage: multer.memoryStorage(),
+  limits: {
+    fileSize: 5 * 1024 * 1024, // 5MB limit for CSV files
+  },
+  fileFilter: (req, file, cb) => {
+    const allowedTypes = ['text/csv', 'application/vnd.ms-excel', 'application/csv'];
+    if (allowedTypes.includes(file.mimetype) || file.originalname.endsWith('.csv')) {
+      cb(null, true);
+    } else {
+      cb(new Error('Invalid file type. Only CSV files are allowed.'));
     }
   },
 });
@@ -4569,6 +4587,145 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(500).json({ message: 'Failed to delete vendor price' });
     }
   });
+
+  // Price Import API
+  app.get('/api/price-imports', isAuthenticated, async (req, res) => {
+    try {
+      const { vendorId } = req.query;
+      const imports = await storage.getPriceImports(vendorId as string);
+      res.json(imports);
+    } catch (error) {
+      console.error('Error fetching price imports:', error);
+      res.status(500).json({ message: 'Failed to fetch price imports' });
+    }
+  });
+
+  app.post('/api/price-imports/upload', isAuthenticated, csvUpload.single('file'), async (req, res) => {
+    try {
+      const currentUser = await getCurrentUser(req);
+      if (!currentUser) {
+        return res.status(401).json({ message: 'User not found' });
+      }
+
+      if (!req.file) {
+        return res.status(400).json({ message: 'No file uploaded' });
+      }
+
+      const { vendorId } = req.body;
+      if (!vendorId) {
+        return res.status(400).json({ message: 'Vendor ID is required' });
+      }
+
+      // Create initial import record
+      const importRecord = await storage.createPriceImport({
+        vendorId,
+        importedBy: currentUser.id,
+        fileName: req.file.originalname,
+        fileSize: req.file.size,
+        importType: 'csv',
+        status: 'processing',
+      });
+
+      // Process CSV asynchronously
+      processCSVFile(req.file.buffer, importRecord.id, vendorId);
+
+      res.status(201).json({ 
+        message: 'File uploaded and processing started',
+        importId: importRecord.id 
+      });
+    } catch (error) {
+      console.error('Error uploading price import file:', error);
+      res.status(500).json({ message: 'Failed to upload file' });
+    }
+  });
+
+  async function processCSVFile(buffer: Buffer, importId: string, vendorId: string) {
+    let stats = {
+      totalRows: 0,
+      processedRows: 0,
+      matchedItems: 0,
+      newItems: 0,
+      priceUpdates: 0,
+      errorLog: '',
+    };
+
+    try {
+      const csvData: any[] = [];
+      const stream = Readable.from(buffer.toString());
+      
+      await new Promise((resolve, reject) => {
+        stream
+          .pipe(csv())
+          .on('data', (row) => {
+            csvData.push(row);
+            stats.totalRows++;
+          })
+          .on('end', resolve)
+          .on('error', reject);
+      });
+
+      // Process each row
+      for (const row of csvData) {
+        try {
+          const itemName = row.item_name || row.product_name || row.name || row.description;
+          const price = parseFloat(row.price || row.cost || row.unit_price || '0');
+          const unit = row.unit || row.uom || 'each';
+          const sku = row.sku || row.item_code || row.product_code;
+
+          if (!itemName || isNaN(price) || price <= 0) {
+            stats.errorLog += `Row ${stats.processedRows + 1}: Invalid item name or price\n`;
+            continue;
+          }
+
+          // Try to find matching inventory item
+          const inventoryItem = await storage.findMatchingInventoryItem(itemName, sku);
+          
+          if (inventoryItem) {
+            // Check if vendor price already exists
+            const existingPrices = await storage.getVendorPricesForItem(inventoryItem.id);
+            const existingVendorPrice = existingPrices.find(p => p.vendorId === vendorId);
+
+            if (existingVendorPrice) {
+              // Update existing price
+              await storage.updateVendorPrice(existingVendorPrice.id, {
+                costPerUnit: price.toString(),
+                unit,
+                effectiveDate: new Date(),
+              });
+              stats.priceUpdates++;
+            } else {
+              // Add new vendor price
+              await storage.addVendorPrice({
+                inventoryItemId: inventoryItem.id,
+                vendorId,
+                costPerUnit: price.toString(),
+                unit,
+                minimumOrderQuantity: '1',
+                leadTimeDays: 0,
+                isPreferredVendor: false,
+                effectiveDate: new Date(),
+              });
+              stats.newItems++;
+            }
+            stats.matchedItems++;
+          } else {
+            stats.errorLog += `Row ${stats.processedRows + 1}: No matching inventory item found for "${itemName}"\n`;
+          }
+
+          stats.processedRows++;
+        } catch (rowError) {
+          stats.errorLog += `Row ${stats.processedRows + 1}: ${rowError.message}\n`;
+        }
+      }
+
+      // Update import status to completed
+      await storage.updatePriceImportStatus(importId, 'completed', stats);
+    } catch (error) {
+      console.error('Error processing CSV file:', error);
+      stats.errorLog += `Processing error: ${error.message}\n`;
+      await storage.updatePriceImportStatus(importId, 'failed', stats);
+    }
+  }
 
   const httpServer = createServer(app);
   return httpServer;
