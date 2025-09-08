@@ -17,6 +17,7 @@ import {
 } from "@shared/schema";
 import { posService } from "./posService";
 import { OCRService } from "./ocrService";
+import { varianceService } from "./varianceService";
 import { ObjectStorageService, ObjectNotFoundError } from "./objectStorage";
 import fs from 'fs';
 import path from 'path';
@@ -1640,6 +1641,131 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error removing menu item ingredient:", error);
       res.status(400).json({ message: "Failed to remove menu item ingredient" });
+    }
+  });
+
+  // Enterprise Variance Reporting API Routes
+  app.get('/api/variance/summary', isAuthenticated, async (req, res) => {
+    try {
+      const locationId = req.query.locationId as string;
+      const days = parseInt(req.query.days as string) || 30;
+      
+      if (!locationId) {
+        return res.status(400).json({ message: "Location ID is required" });
+      }
+      
+      const summary = await varianceService.getVarianceSummary(locationId, days);
+      res.json(summary);
+    } catch (error) {
+      console.error("Error fetching variance summary:", error);
+      res.status(500).json({ message: "Failed to fetch variance summary" });
+    }
+  });
+
+  app.get('/api/variance/report', isAuthenticated, async (req, res) => {
+    try {
+      const locationId = req.query.locationId as string;
+      const startDate = new Date(req.query.startDate as string);
+      const endDate = new Date(req.query.endDate as string);
+      
+      if (!locationId || !startDate || !endDate) {
+        return res.status(400).json({ message: "Location ID, start date, and end date are required" });
+      }
+      
+      const report = await varianceService.generateVarianceReport(locationId, startDate, endDate);
+      res.json(report);
+    } catch (error) {
+      console.error("Error generating variance report:", error);
+      res.status(500).json({ message: "Failed to generate variance report" });
+    }
+  });
+
+  app.get('/api/variance/production', isAuthenticated, async (req, res) => {
+    try {
+      const locationId = req.query.locationId as string;
+      const startDate = new Date(req.query.startDate as string);
+      const endDate = new Date(req.query.endDate as string);
+      
+      if (!locationId || !startDate || !endDate) {
+        return res.status(400).json({ message: "Location ID, start date, and end date are required" });
+      }
+      
+      const variance = await varianceService.getProductionVariance(locationId, startDate, endDate);
+      res.json(variance);
+    } catch (error) {
+      console.error("Error fetching production variance:", error);
+      res.status(500).json({ message: "Failed to fetch production variance" });
+    }
+  });
+
+  app.post('/api/variance/production', isAuthenticated, async (req, res) => {
+    try {
+      const { recipeId, locationId, quantityProduced, batchNumber } = req.body;
+      const userId = (req.user as any)?.claims?.sub;
+      
+      if (!recipeId || !locationId || !quantityProduced) {
+        return res.status(400).json({ message: "Recipe ID, location ID, and quantity produced are required" });
+      }
+      
+      const productionId = await varianceService.recordRecipeProduction(
+        recipeId, 
+        locationId, 
+        parseFloat(quantityProduced),
+        userId,
+        batchNumber
+      );
+      
+      if (!productionId) {
+        return res.status(500).json({ message: "Failed to record production" });
+      }
+      
+      res.json({ id: productionId, message: "Production recorded successfully" });
+    } catch (error) {
+      console.error("Error recording production:", error);
+      res.status(500).json({ message: "Failed to record production" });
+    }
+  });
+
+  app.post('/api/variance/generate', isAuthenticated, async (req, res) => {
+    try {
+      const { locationId, startDate, endDate } = req.body;
+      
+      if (!locationId || !startDate || !endDate) {
+        return res.status(400).json({ message: "Location ID, start date, and end date are required" });
+      }
+      
+      const report = await varianceService.generateVarianceReport(
+        locationId, 
+        new Date(startDate), 
+        new Date(endDate)
+      );
+      
+      res.json({ message: "Variance report generated successfully", itemsAnalyzed: report.length });
+    } catch (error) {
+      console.error("Error generating variance report:", error);
+      res.status(500).json({ message: "Failed to generate variance report" });
+    }
+  });
+
+  // Recipe costing routes
+  app.get('/api/recipes/:id/costing', isAuthenticated, async (req, res) => {
+    try {
+      const { id } = req.params;
+      const locationId = req.query.locationId as string;
+      
+      if (!locationId) {
+        return res.status(400).json({ message: "Location ID is required" });
+      }
+      
+      const costing = await varianceService.calculateRecipeCost(id, locationId);
+      if (!costing) {
+        return res.status(404).json({ message: "Recipe not found or unable to calculate cost" });
+      }
+      
+      res.json(costing);
+    } catch (error) {
+      console.error("Error calculating recipe cost:", error);
+      res.status(500).json({ message: "Failed to calculate recipe cost" });
     }
   });
 

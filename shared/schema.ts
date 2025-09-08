@@ -270,7 +270,7 @@ export const recipeCostHistory = pgTable("recipe_cost_history", {
   costPerServing: decimal("cost_per_serving", { precision: 10, scale: 4 }).notNull(),
   margins: decimal("margin_percentage", { precision: 5, scale: 2 }),
   effectiveDate: timestamp("effective_date").defaultNow(),
-  ingredientSnapshot: json("ingredient_snapshot"), // Store ingredient costs at this time
+  ingredientSnapshot: text("ingredient_snapshot"), // Store ingredient costs JSON at this time
   createdAt: timestamp("created_at").defaultNow(),
 });
 
