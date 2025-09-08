@@ -154,6 +154,21 @@ import {
 import { db } from "./db";
 import { eq, sql, desc, and, gte, lte, lt, ilike, sum, isNull, isNotNull, asc } from "drizzle-orm";
 
+// Local authentication user interface
+export interface LocalAuthUser {
+  id: string;
+  email: string;
+  password: string;
+  createdAt: Date;
+}
+
+export interface InsertLocalAuthUser {
+  id: string;
+  email: string;
+  password: string;
+  createdAt: Date;
+}
+
 export interface IStorage {
   // User operations (required for Replit Auth)
   getUser(id: string): Promise<User | undefined>;
@@ -445,6 +460,11 @@ export interface IStorage {
   recalculatePayPeriodTotals(payrollPeriodId: string): Promise<void>;
   getPaycheckSettings(): Promise<any>;
   updatePaycheckSettings(settings: any): Promise<any>;
+  
+  // Local authentication methods (fallback when Firebase Admin SDK is unavailable)
+  createLocalAuthUser(user: InsertLocalAuthUser): Promise<LocalAuthUser>;
+  getLocalAuthUser(email: string): Promise<LocalAuthUser | null>;
+  verifyLocalAuthUser(email: string, password: string): Promise<LocalAuthUser | null>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -3979,6 +3999,37 @@ export class DatabaseStorage implements IStorage {
       console.error('Error updating paycheck settings:', error);
       throw error;
     }
+  }
+  
+  // In-memory storage for local authentication users (for fallback when Firebase Admin SDK is unavailable)
+  private localAuthUsers: LocalAuthUser[] = [];
+  
+  async createLocalAuthUser(user: InsertLocalAuthUser): Promise<LocalAuthUser> {
+    const existingUser = this.localAuthUsers.find(u => u.email === user.email);
+    if (existingUser) {
+      throw new Error('User with this email already exists');
+    }
+    
+    const newUser: LocalAuthUser = {
+      id: user.id,
+      email: user.email,
+      password: user.password, // In production, this should be hashed
+      createdAt: user.createdAt
+    };
+    
+    this.localAuthUsers.push(newUser);
+    console.log(`✅ Created local auth user: ${user.email} (${user.id})`);
+    return newUser;
+  }
+  
+  async getLocalAuthUser(email: string): Promise<LocalAuthUser | null> {
+    const user = this.localAuthUsers.find(user => user.email === email);
+    return user || null;
+  }
+  
+  async verifyLocalAuthUser(email: string, password: string): Promise<LocalAuthUser | null> {
+    const user = this.localAuthUsers.find(u => u.email === email && u.password === password);
+    return user || null;
   }
 }
 

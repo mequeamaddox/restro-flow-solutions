@@ -143,7 +143,33 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       console.log('🔑 Login attempt for:', email);
 
-      // Check if employee exists
+      // First try local authentication (fallback when Firebase Admin SDK is unavailable)
+      try {
+        const localUser = await storage.verifyLocalAuthUser(email, password);
+        if (localUser) {
+          console.log('✅ Local authentication successful for:', email);
+          
+          // Get the user record from our database
+          const user = await storage.getUser(localUser.id);
+          if (user) {
+            (req.session as any).user = user;
+            console.log('🎯 Login successful - User role:', user.role);
+            return res.json({ 
+              user: {
+                id: user.id,
+                email: user.email,
+                firstName: user.firstName,
+                lastName: user.lastName,
+                role: user.role
+              }
+            });
+          }
+        }
+      } catch (localAuthError) {
+        console.log('ℹ️ Local auth failed, trying employee lookup method');
+      }
+
+      // Check if employee exists (legacy method)
       const employees = await storage.getEmployees();
       console.log('📋 Found employees:', employees.map(e => ({ id: e.id.substring(0, 8), email: e.email })));
       
