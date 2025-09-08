@@ -1,5 +1,6 @@
 import { createContext, useContext, useState, ReactNode, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
+import { useAuth } from "@/hooks/useAuth";
 import type { Location } from "@shared/schema";
 
 interface LocationContextType {
@@ -14,6 +15,7 @@ const LocationContext = createContext<LocationContextType | undefined>(undefined
 
 export function LocationProvider({ children }: { children: ReactNode }) {
   const [currentLocation, setCurrentLocationState] = useState<Location | null>(null);
+  const { user } = useAuth();
 
   const { data: locations = [], isLoading } = useQuery<Location[]>({
     queryKey: ['/api/locations'],
@@ -44,7 +46,8 @@ export function LocationProvider({ children }: { children: ReactNode }) {
     }
   }, []);
 
-  const hasHRAccess = currentLocation?.hrAddonEnabled ?? false;
+  // Check if user has HR access (owners always have access, others need HR add-on)
+  const hasHRAccess = user?.role === 'owner' || currentLocation?.hrAddonEnabled || false;
 
   return (
     <LocationContext.Provider value={{

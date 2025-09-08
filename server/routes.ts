@@ -2351,6 +2351,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: 'Location ID required', code: 'LOCATION_REQUIRED' });
       }
 
+      // Get user from session
+      const user = req.user || req.session?.user;
+      
+      // Exempt owners from HR add-on restrictions
+      if (user?.role === 'owner') {
+        return next();
+      }
+
       const location = await storage.getLocation(locationId);
       if (!location) {
         return res.status(404).json({ message: 'Location not found' });
