@@ -1221,6 +1221,29 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.patch('/api/locations/:id', isAuthenticated, async (req, res) => {
+    try {
+      const { id } = req.params;
+      const locationData = insertLocationSchema.partial().parse(req.body);
+      const location = await storage.updateLocation(id, locationData);
+      res.json(location);
+    } catch (error) {
+      console.error("Error updating location:", error);
+      res.status(400).json({ message: "Failed to update location" });
+    }
+  });
+
+  app.delete('/api/locations/:id', isAuthenticated, async (req, res) => {
+    try {
+      const { id } = req.params;
+      await storage.deleteLocation(id);
+      res.status(204).send();
+    } catch (error) {
+      console.error("Error deleting location:", error);
+      res.status(400).json({ message: "Failed to delete location" });
+    }
+  });
+
   // Dashboard metrics
   app.get('/api/dashboard/metrics', isAuthenticated, async (req, res) => {
     try {

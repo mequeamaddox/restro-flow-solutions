@@ -487,6 +487,19 @@ export class DatabaseStorage implements IStorage {
     return location;
   }
 
+  async updateLocation(id: string, locationData: Partial<InsertLocation>): Promise<Location> {
+    const [location] = await db
+      .update(locations)
+      .set({ ...locationData, updatedAt: new Date() })
+      .where(eq(locations.id, id))
+      .returning();
+    return location;
+  }
+
+  async deleteLocation(id: string): Promise<void> {
+    await db.delete(locations).where(eq(locations.id, id));
+  }
+
   async upsertUser(userData: UpsertUser): Promise<User> {
     const [user] = await db
       .insert(users)
