@@ -8,6 +8,8 @@ import { sql, eq, and, desc, gte, lte, sum } from 'drizzle-orm';
 
 export interface RecipeCalculation {
   recipeId: string;
+  recipeName?: string;
+  servingSize?: number;
   totalCost: number;
   costPerServing: number;
   ingredients: Array<{
@@ -17,6 +19,11 @@ export interface RecipeCalculation {
     unit: string;
     unitCost: number;
     totalCost: number;
+    // Multi-unit fields
+    purchaseUnit?: string;
+    recipeUnit?: string;
+    costPerPurchaseUnit?: number;
+    conversionFactor?: number;
   }>;
 }
 
@@ -59,8 +66,15 @@ export class VarianceService {
           servingSize: recipes.servingSize,
           ingredientId: inventoryItems.id,
           ingredientName: inventoryItems.name,
-          quantity: recipeIngredients.quantity,
+          quantity: recipeIngredients.quantity, // Recipe quantity in recipe units (lbs, oz)
           unit: recipeIngredients.unit,
+          // Multi-unit inventory fields
+          purchaseUnit: inventoryItems.purchaseUnit,
+          recipeUnit: inventoryItems.recipeUnit,
+          conversionFactor: inventoryItems.conversionFactor,
+          costPerPurchaseUnit: inventoryItems.costPerPurchaseUnit,
+          servingsPerPurchaseUnit: inventoryItems.servingsPerPurchaseUnit,
+          // Legacy cost field (backup)
           costPerUnit: inventoryItems.costPerUnit,
         })
         .from(recipes)
@@ -77,28 +91,46 @@ export class VarianceService {
       const ingredients = result
         .filter(r => r.ingredientId)
         .map(r => {
-          const quantity = parseFloat(r.quantity || '0');
-          const unitCost = parseFloat(r.costPerUnit || '0');
-          const totalCost = quantity * unitCost;
+          const quantity = parseFloat(r.quantity || '0'); // Recipe quantity in recipe units
+          
+          // Calculate cost per recipe unit using multi-unit system
+          const costPerPurchaseUnit = parseFloat(r.costPerPurchaseUnit || '0');
+          const conversionFactor = parseFloat(r.conversionFactor || '1');
+          
+          let costPerRecipeUnit = costPerPurchaseUnit / conversionFactor;
+          
+          // Fallback to legacy cost if multi-unit cost is not available
+          if (costPerRecipeUnit === 0 && parseFloat(r.costPerUnit || '0') > 0) {
+            costPerRecipeUnit = parseFloat(r.costPerUnit || '0');
+          }
+          
+          const totalCost = quantity * costPerRecipeUnit;
           
           return {
             itemId: r.ingredientId!,
             name: r.ingredientName!,
             quantity,
             unit: r.unit!,
-            unitCost,
-            totalCost
+            purchaseUnit: r.purchaseUnit || 'case',
+            recipeUnit: r.recipeUnit || 'lb',
+            unitCost: costPerRecipeUnit,
+            totalCost,
+            costPerPurchaseUnit,
+            conversionFactor
           };
         });
 
       const totalCost = ingredients.reduce((sum, ing) => sum + ing.totalCost, 0);
-      const costPerServing = totalCost / parseFloat(recipe.servingSize?.toString() || '1');
+      const servingSize = parseFloat(recipe.servingSize?.toString() || '1');
+      const costPerServing = totalCost / servingSize;
 
       return {
         recipeId: recipe.recipeId!,
         totalCost,
         costPerServing,
-        ingredients
+        ingredients,
+        recipeName: recipe.recipeName!,
+        servingSize
       };
     } catch (error) {
       console.error('Error calculating recipe cost:', error);
