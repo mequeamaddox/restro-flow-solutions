@@ -2205,9 +2205,9 @@ export class DatabaseStorage implements IStorage {
     .leftJoin(departments, eq(employees.departmentId, departments.id))
     .leftJoin(positions, eq(employees.positionId, positions.id));
 
-    // Filter by location if provided
+    // Filter by location if provided (through department)
     if (locationId) {
-      query = query.where(eq(employees.locationId, locationId));
+      query = query.where(eq(departments.locationId, locationId));
     }
     
     const result = await query.orderBy(employees.lastName, employees.firstName);
@@ -2682,20 +2682,23 @@ export class DatabaseStorage implements IStorage {
   // HR Analytics
   async getHRAnalytics(locationId?: string): Promise<any> {
     try {
-      // Get data safely without complex joins that might fail
-      let employeeQuery = db.select().from(users).where(eq(users.role, 'employee'));
+      // Get employees first (with proper location filtering)
+      const employees = await this.getEmployees(locationId);
+      const employeeIds = employees.map(emp => emp.id);
+      
+      // Get related data filtered by employee location
       let shiftsQuery = db.select().from(shifts);
-      let tasksQuery = db.select().from(tasks);
+      let tasksQuery = db.select().from(tasks);  
       let messagesQuery = db.select().from(messages);
       
-      // Filter by location if provided
-      if (locationId) {
-        shiftsQuery = shiftsQuery.where(eq(shifts.locationId, locationId));
-        tasksQuery = tasksQuery.where(eq(tasks.locationId, locationId));
-        messagesQuery = messagesQuery.where(eq(messages.locationId, locationId));
+      // Filter by employees from the selected location
+      if (locationId && employeeIds.length > 0) {
+        shiftsQuery = shiftsQuery.where(sql`${shifts.employeeId} IN (${employeeIds.map(id => `'${id}'`).join(',')})`);
+        tasksQuery = tasksQuery.where(sql`${tasks.assignedTo} IN (${employeeIds.map(id => `'${id}'`).join(',')})`);
+        // Messages can be location-specific or employee-specific
+        messagesQuery = messagesQuery.where(sql`${messages.recipientId} IN (${employeeIds.map(id => `'${id}'`).join(',')}) OR (${messages.recipientType} = 'location' AND ${messages.recipientId} = ${locationId})`);
       }
       
-      const employees = await employeeQuery;
       const allShifts = await shiftsQuery;
       const allTasks = await tasksQuery;
       const allMessages = await messagesQuery;
@@ -2706,13 +2709,11 @@ export class DatabaseStorage implements IStorage {
         .from(timeEntries)
         .where(sql`clock_out_time IS NULL`);
         
-      if (locationId) {
+      if (locationId && employeeIds.length > 0) {
         timeEntryCountQuery = timeEntryCountQuery
-          .innerJoin(employees as any, eq(timeEntries.employeeId, (employees as any).id))
-          .where(eq((employees as any).locationId, locationId));
+          .where(sql`${timeEntries.employeeId} IN (${employeeIds.map(id => `'${id}'`).join(',')})`);
         currentlyWorkingQuery = currentlyWorkingQuery
-          .innerJoin(employees as any, eq(timeEntries.employeeId, (employees as any).id))
-          .where(sql`clock_out_time IS NULL AND ${(employees as any).locationId} = ${locationId}`);
+          .where(sql`clock_out_time IS NULL AND ${timeEntries.employeeId} IN (${employeeIds.map(id => `'${id}'`).join(',')})`);
       }
       
       const timeEntryCount = await timeEntryCountQuery;
@@ -2722,7 +2723,7 @@ export class DatabaseStorage implements IStorage {
       const today = new Date().toISOString().split('T')[0];
       
       const analytics = {
-        // Basic counts
+        // Basic counts (now location-filtered)
         totalEmployees: employees.length,
         activeEmployees: employees.filter((emp: any) => emp.status === 'active').length,
         currentlyWorking: currentlyWorkingCount[0]?.count || 0,
