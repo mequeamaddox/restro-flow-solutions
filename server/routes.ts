@@ -3,6 +3,7 @@ import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { setupAuth, isAuthenticated } from "./replitAuth";
 import { verifyFirebaseToken, syncFirebaseUser, adminAuth, createFirebaseUser, createCustomToken, verifyIdToken } from "./firebaseAuth";
+import { generateTokens, verifyToken, requireJWT, getCurrentUser } from './jwtAuth';
 import { requirePermission, requireAnyPermission, Permission } from "./permissions";
 import multer from "multer";
 import { db } from "./db";
@@ -11,7 +12,8 @@ import {
   inventoryItems,
   recipes,
   wasteEntries,
-  posSales
+  posSales,
+  users
 } from "@shared/schema";
 import { posService } from "./posService";
 import { OCRService } from "./ocrService";
@@ -200,15 +202,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
       let existingUser = await storage.getUser(employee.id);
       
       if (!existingUser) {
-        // Create user record for this employee using their employee data
-        console.log('✅ Creating user record for employee:', employee.id, 'with role:', userRole);
-        existingUser = await storage.upsertUser({
-          id: employee.id,
-          email: employee.email,
-          firstName: employee.firstName,
-          lastName: employee.lastName,
-          role: userRole,
-        });
+        try {
+          // Create user record for this employee using their employee data
+          console.log('✅ Creating user record for employee:', employee.id, 'with role:', userRole);
+          existingUser = await storage.upsertUser({
+            id: employee.id,
+            email: employee.email,
+            firstName: employee.firstName,
+            lastName: employee.lastName,
+            role: userRole,
+          });
+        } catch (error) {
+          // If user already exists with different ID, find by email
+          console.log('User creation failed, looking up by email instead');
+          const existingUsers = await db.select().from(users).where(eq(users.email, employee.email));
+          if (existingUsers.length > 0) {
+            existingUser = existingUsers[0];
+          } else {
+            throw error;
+          }
+        }
       } else if (!existingUser.firstName || !existingUser.lastName || existingUser.role === 'employee') {
         // Update existing user record with employee names and correct role if missing
         console.log('✅ Updating user record with employee names and role:', employee.id, 'role:', userRole);
@@ -221,11 +234,31 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
 
-      // Set session with user data
+      // Set session with user data (for web compatibility)
       (req.session as any).user = existingUser;
       
+      // Generate JWT tokens for cross-platform compatibility
+      const tokens = generateTokens({
+        id: existingUser.id,
+        email: existingUser.email,
+        role: existingUser.role
+      });
+      
       console.log('✅ Login successful for:', existingUser.email);
-      res.json(existingUser);
+      
+      // Return user data with tokens for cross-platform auth
+      res.json({
+        user: {
+          id: existingUser.id,
+          email: existingUser.email,
+          firstName: existingUser.firstName,
+          lastName: existingUser.lastName,
+          role: existingUser.role
+        },
+        accessToken: tokens.accessToken,
+        refreshToken: tokens.refreshToken,
+        expiresIn: tokens.expiresIn
+      });
     } catch (error) {
       console.error('❌ Login error:', error);
       res.status(500).json({ message: 'Login failed' });
@@ -238,6 +271,145 @@ export async function registerRoutes(app: Express): Promise<Server> {
       message: 'This endpoint is deprecated. Please use /api/hr/employees for employee creation.',
       redirectTo: '/api/hr/employees'
     });
+  });
+
+  // Mobile-specific login endpoint (returns JWT tokens only)
+  app.post('/api/auth/mobile/login', async (req, res) => {
+    try {
+      const { email, password } = req.body;
+      
+      if (!email || !password) {
+        return res.status(400).json({ message: 'Email and password required' });
+      }
+
+      console.log('📱 Mobile login attempt for:', email);
+
+      // Same authentication logic as web login
+      const employees = await storage.getEmployees();
+      const employee = employees.find(emp => emp.email?.toLowerCase() === email.toLowerCase());
+      
+      if (!employee) {
+        return res.status(401).json({ message: 'Invalid credentials' });
+      }
+
+      const validPasswords = ['TEMP1234!', 'employee123', 'password123'];
+      if (!validPasswords.includes(password)) {
+        return res.status(401).json({ message: 'Invalid credentials' });
+      }
+
+      const employeeWithPosition = await storage.getEmployee(employee.id);
+      const userRole = mapPositionToRole(employeeWithPosition?.position?.title);
+
+      let user = await storage.getUser(employee.id);
+      if (!user) {
+        try {
+          user = await storage.upsertUser({
+            id: employee.id,
+            email: employee.email,
+            firstName: employee.firstName,
+            lastName: employee.lastName,
+            role: userRole,
+          });
+        } catch (error) {
+          // If user already exists with different ID, find by email
+          console.log('User creation failed, looking up by email instead');
+          const existingUsers = await db.select().from(users).where(eq(users.email, employee.email));
+          if (existingUsers.length > 0) {
+            user = existingUsers[0];
+          } else {
+            throw error;
+          }
+        }
+      }
+
+      // Generate JWT tokens for mobile
+      const tokens = generateTokens({
+        id: user.id,
+        email: user.email,
+        role: user.role
+      });
+      
+      console.log('✅ Mobile login successful for:', user.email);
+      
+      // Return only what mobile needs (no session)
+      res.json({
+        user: {
+          id: user.id,
+          email: user.email,
+          firstName: user.firstName,
+          lastName: user.lastName,
+          role: user.role
+        },
+        accessToken: tokens.accessToken,
+        refreshToken: tokens.refreshToken,
+        expiresIn: tokens.expiresIn
+      });
+    } catch (error) {
+      console.error('❌ Mobile login error:', error);
+      res.status(500).json({ message: 'Login failed' });
+    }
+  });
+
+  // Token refresh endpoint for mobile
+  app.post('/api/auth/refresh', async (req, res) => {
+    try {
+      const { refreshToken } = req.body;
+      
+      if (!refreshToken) {
+        return res.status(400).json({ message: 'Refresh token required' });
+      }
+
+      const decoded = verifyToken(refreshToken);
+      if (!decoded || decoded.type !== 'refresh') {
+        return res.status(401).json({ message: 'Invalid refresh token' });
+      }
+
+      // Get current user data
+      const user = await storage.getUser(decoded.userId);
+      if (!user) {
+        return res.status(401).json({ message: 'User not found' });
+      }
+
+      // Generate new tokens
+      const tokens = generateTokens({
+        id: user.id,
+        email: user.email,
+        role: user.role
+      });
+
+      res.json({
+        accessToken: tokens.accessToken,
+        refreshToken: tokens.refreshToken,
+        expiresIn: tokens.expiresIn
+      });
+    } catch (error) {
+      console.error('❌ Token refresh error:', error);
+      res.status(401).json({ message: 'Token refresh failed' });
+    }
+  });
+
+  // JWT verification endpoint for mobile apps
+  app.get('/api/auth/verify', requireJWT, async (req: any, res) => {
+    try {
+      const currentUser = getCurrentUser(req);
+      if (!currentUser) {
+        return res.status(401).json({ message: 'Not authenticated' });
+      }
+
+      // Return current user info (works for both JWT and session auth)
+      res.json({
+        user: {
+          id: currentUser.userId || currentUser.id,
+          email: currentUser.email,
+          firstName: currentUser.firstName,
+          lastName: currentUser.lastName,
+          role: currentUser.role
+        }
+      });
+    } catch (error) {
+      console.error('❌ Auth verification error:', error);
+      res.status(500).json({ message: 'Verification failed' });
+    }
   });
 
   // Auth routes - supports both admin (Replit) and employee (session) authentication
