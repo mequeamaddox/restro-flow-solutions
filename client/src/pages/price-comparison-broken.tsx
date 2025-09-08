@@ -209,224 +209,189 @@ export default function PriceComparison() {
               </Button>
             </DialogTrigger>
             <DialogContent className="bg-slate-900 border-slate-700 text-white max-w-lg">
-              <DialogHeader>
-                <DialogTitle>Add Vendor Price</DialogTitle>
-              </DialogHeader>
-              
-              <Form {...form}>
-                <form onSubmit={form.handleSubmit((data) => addVendorPriceMutation.mutate(data))} className="space-y-4">
-                  <FormField
-                    control={form.control}
-                    name="inventoryItemId"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Inventory Item</FormLabel>
-                        <Select onValueChange={field.onChange} value={field.value}>
-                          <FormControl>
-                            <SelectTrigger className="bg-slate-800 border-slate-600">
-                              <SelectValue placeholder="Select item" />
-                            </SelectTrigger>
-                          </FormControl>
-                          <SelectContent className="bg-slate-800 border-slate-600">
-                            {inventoryItems?.map((item: any) => (
-                              <SelectItem key={item.id} value={item.id} className="text-slate-300">
-                                {item.name}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-
-                  <FormField
-                    control={form.control}
-                    name="vendorId"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Vendor</FormLabel>
-                        <Select onValueChange={field.onChange} value={field.value}>
-                          <FormControl>
-                            <SelectTrigger className="bg-slate-800 border-slate-600">
-                              <SelectValue placeholder="Select vendor" />
-                            </SelectTrigger>
-                          </FormControl>
-                          <SelectContent className="bg-slate-800 border-slate-600">
-                            {vendors?.map((vendor: any) => (
-                              <SelectItem key={vendor.id} value={vendor.id} className="text-slate-300">
-                                {vendor.name}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-
-                  <div className="grid grid-cols-2 gap-4">
-                    <FormField
-                      control={form.control}
-                      name="costPerUnit"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Cost Per Unit ($)</FormLabel>
-                          <FormControl>
-                            <Input
-                              {...field}
-                              type="number"
-                              step="0.01"
-                              min="0"
-                              className="bg-slate-800 border-slate-600"
-                              placeholder="0.00"
-                            />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-
-                    <FormField
-                      control={form.control}
-                      name="unit"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Unit</FormLabel>
-                          <Select onValueChange={field.onChange} value={field.value}>
-                            <FormControl>
-                              <SelectTrigger className="bg-slate-800 border-slate-600">
-                                <SelectValue placeholder="Select unit" />
-                              </SelectTrigger>
-                            </FormControl>
-                            <SelectContent className="bg-slate-800 border-slate-600">
-                              <SelectItem value="lbs" className="text-slate-300">lbs</SelectItem>
-                              <SelectItem value="oz" className="text-slate-300">oz</SelectItem>
-                              <SelectItem value="kg" className="text-slate-300">kg</SelectItem>
-                              <SelectItem value="g" className="text-slate-300">g</SelectItem>
-                              <SelectItem value="each" className="text-slate-300">each</SelectItem>
-                              <SelectItem value="case" className="text-slate-300">case</SelectItem>
-                              <SelectItem value="box" className="text-slate-300">box</SelectItem>
-                            </SelectContent>
-                          </Select>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-4">
-                    <FormField
-                      control={form.control}
-                      name="minimumOrderQuantity"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Min Order Quantity</FormLabel>
-                          <FormControl>
-                            <Input
-                              {...field}
-                              type="number"
-                              min="1"
-                              className="bg-slate-800 border-slate-600"
-                              placeholder="1"
-                            />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-
-                    <FormField
-                      control={form.control}
-                      name="leadTimeDays"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Lead Time (Days)</FormLabel>
-                          <FormControl>
-                            <Input
-                              {...field}
-                              type="number"
-                              min="0"
-                              className="bg-slate-800 border-slate-600"
-                              placeholder="0"
-                            />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                  </div>
-
-                  <FormField
-                    control={form.control}
-                    name="isPreferredVendor"
-                    render={({ field }) => (
-                      <FormItem className="flex flex-row items-start space-x-3 space-y-0">
+            <DialogHeader>
+              <DialogTitle>Add Vendor Price</DialogTitle>
+            </DialogHeader>
+            
+            <Form {...form}>
+              <form onSubmit={form.handleSubmit((data) => addVendorPriceMutation.mutate(data))} className="space-y-4">
+                <FormField
+                  control={form.control}
+                  name="inventoryItemId"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Inventory Item</FormLabel>
+                      <Select onValueChange={field.onChange} value={field.value}>
                         <FormControl>
-                          <Checkbox
-                            checked={field.value}
-                            onCheckedChange={field.onChange}
-                            className="border-slate-600 data-[state=checked]:bg-blue-600"
-                          />
+                          <SelectTrigger className="bg-slate-800 border-slate-600">
+                            <SelectValue placeholder="Select item" />
+                          </SelectTrigger>
                         </FormControl>
-                        <div className="space-y-1 leading-none">
-                          <FormLabel>
-                            Mark as preferred vendor
-                          </FormLabel>
-                        </div>
-                      </FormItem>
-                    )}
-                  />
+                        <SelectContent className="bg-slate-800 border-slate-600">
+                          {(inventoryItems as any[])?.map((item: any) => (
+                            <SelectItem key={item.id} value={item.id}>
+                              {item.name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
 
+                <FormField
+                  control={form.control}
+                  name="vendorId"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Vendor</FormLabel>
+                      <Select onValueChange={field.onChange} value={field.value}>
+                        <FormControl>
+                          <SelectTrigger className="bg-slate-800 border-slate-600">
+                            <SelectValue placeholder="Select vendor" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent className="bg-slate-800 border-slate-600">
+                          {(vendors as any[])?.map((vendor: any) => (
+                            <SelectItem key={vendor.id} value={vendor.id}>
+                              {vendor.name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <div className="grid grid-cols-2 gap-4">
                   <FormField
                     control={form.control}
-                    name="notes"
+                    name="costPerUnit"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Notes</FormLabel>
+                        <FormLabel>Cost per Unit ($)</FormLabel>
                         <FormControl>
-                          <Textarea {...field} className="bg-slate-800 border-slate-600" />
+                          <Input {...field} type="number" step="0.01" className="bg-slate-800 border-slate-600" />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
                     )}
                   />
 
-                  <DialogFooter>
-                    <Button 
-                      type="submit" 
-                      disabled={addVendorPriceMutation.isPending}
-                      className="bg-blue-600 hover:bg-blue-700"
-                    >
-                      {addVendorPriceMutation.isPending ? "Adding..." : "Add Price"}
-                    </Button>
-                  </DialogFooter>
-                </form>
-              </Form>
-            </DialogContent>
-          </Dialog>
+                  <FormField
+                    control={form.control}
+                    name="unit"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Unit</FormLabel>
+                        <FormControl>
+                          <Input {...field} className="bg-slate-800 border-slate-600" />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
 
-          {/* Import Button */}
-          <Button 
-            onClick={() => setIsImportDialogOpen(true)}
-            className="bg-green-600 hover:bg-green-700 text-white" 
-            data-testid="button-import-prices"
-          >
-            <Upload className="h-4 w-4 mr-2" />
-            Import Prices
-          </Button>
+                <div className="grid grid-cols-2 gap-4">
+                  <FormField
+                    control={form.control}
+                    name="minimumOrderQuantity"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Minimum Order</FormLabel>
+                        <FormControl>
+                          <Input {...field} type="number" className="bg-slate-800 border-slate-600" />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
 
-          {/* Import History Button */}
-          <Button 
-            onClick={() => setShowImportHistory(!showImportHistory)}
-            variant="outline"
-            className="border-slate-600 text-slate-300 hover:bg-slate-800" 
-            data-testid="button-import-history"
-          >
-            <History className="h-4 w-4 mr-2" />
-            Import History
-          </Button>
-        </div>
+                  <FormField
+                    control={form.control}
+                    name="leadTimeDays"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Lead Time (days)</FormLabel>
+                        <FormControl>
+                          <Input {...field} type="number" className="bg-slate-800 border-slate-600" />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
+
+                <FormField
+                  control={form.control}
+                  name="isPreferredVendor"
+                  render={({ field }) => (
+                    <FormItem className="flex flex-row items-start space-x-3 space-y-0">
+                      <FormControl>
+                        <Checkbox
+                          checked={field.value}
+                          onCheckedChange={field.onChange}
+                          className="border-slate-600"
+                        />
+                      </FormControl>
+                      <div className="space-y-1 leading-none">
+                        <FormLabel>Preferred Vendor</FormLabel>
+                      </div>
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="notes"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Notes</FormLabel>
+                      <FormControl>
+                        <Textarea {...field} className="bg-slate-800 border-slate-600" />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <DialogFooter>
+                  <Button 
+                    type="submit" 
+                    disabled={addVendorPriceMutation.isPending}
+                    className="bg-blue-600 hover:bg-blue-700"
+                  >
+                    {addVendorPriceMutation.isPending ? "Adding..." : "Add Price"}
+                  </Button>
+                </DialogFooter>
+              </form>
+            </Form>
+          </DialogContent>
+        </Dialog>
+
+        {/* Import Button */}
+        <Button 
+          onClick={() => setIsImportDialogOpen(true)}
+          className="bg-green-600 hover:bg-green-700 text-white" 
+          data-testid="button-import-prices"
+        >
+          <Upload className="h-4 w-4 mr-2" />
+          Import Prices
+        </Button>
+
+        {/* Import History Button */}
+        <Button 
+          onClick={() => setShowImportHistory(!showImportHistory)}
+          variant="outline"
+          className="border-slate-600 text-slate-300 hover:bg-slate-800" 
+          data-testid="button-import-history"
+        >
+          <History className="h-4 w-4 mr-2" />
+          Import History
+        </Button>
       </div>
 
       {/* Summary Cards */}
@@ -468,18 +433,20 @@ export default function PriceComparison() {
         </Card>
       </div>
 
-      {/* Search */}
+      {/* Search and Filters */}
       <Card className="bg-slate-900/50 border-slate-700">
         <CardContent className="p-6">
-          <div className="flex items-center space-x-2">
-            <Search className="h-4 w-4 text-slate-400" />
-            <Input
-              placeholder="Search items or categories..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="bg-slate-800 border-slate-600 text-white placeholder-slate-400"
-              data-testid="input-search-items"
-            />
+          <div className="flex items-center gap-4">
+            <div className="relative flex-1">
+              <Search className="absolute left-3 top-3 h-4 w-4 text-slate-400" />
+              <Input
+                placeholder="Search items..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="pl-10 bg-slate-800 border-slate-600 text-white placeholder:text-slate-400"
+                data-testid="input-search"
+              />
+            </div>
           </div>
         </CardContent>
       </Card>
@@ -487,45 +454,63 @@ export default function PriceComparison() {
       {/* Price Comparison Table */}
       <Card className="bg-slate-900/50 border-slate-700">
         <CardHeader>
-          <CardTitle className="text-white flex items-center gap-2">
-            <DollarSign className="h-5 w-5" />
-            Price Comparison
-          </CardTitle>
+          <CardTitle className="text-white">Price Comparison</CardTitle>
         </CardHeader>
         <CardContent>
           {isLoading ? (
             <div className="flex items-center justify-center py-8">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"></div>
+              <div className="text-slate-400">Loading price comparison...</div>
             </div>
           ) : (
             <div className="overflow-x-auto">
               <Table>
                 <TableHeader>
-                  <TableRow className="border-slate-700">
+                  <TableRow className="border-slate-700 hover:bg-slate-800/50">
                     <TableHead className="text-slate-300">Item</TableHead>
                     <TableHead className="text-slate-300">Category</TableHead>
-                    <TableHead className="text-slate-300">Current Cost</TableHead>
+                    <TableHead className="text-slate-300">Current Price</TableHead>
                     <TableHead className="text-slate-300">Current Vendor</TableHead>
-                    <TableHead className="text-slate-300">Best Price</TableHead>
+                    <TableHead className="text-slate-300">Alternative Prices</TableHead>
                     <TableHead className="text-slate-300">Potential Savings</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {filteredComparison.map((item: any) => (
-                    <TableRow key={item.itemId} className="border-slate-700">
-                      <TableCell className="text-white font-medium">{item.itemName}</TableCell>
-                      <TableCell className="text-slate-300">{item.categoryName || "-"}</TableCell>
+                    <TableRow key={item.itemId} className="border-slate-700 hover:bg-slate-800/50">
+                      <TableCell className="font-medium text-white">{item.itemName}</TableCell>
                       <TableCell className="text-slate-300">
-                        ${parseFloat(item.currentCost).toFixed(2)}/{item.itemUnit}
+                        {item.categoryName && (
+                          <Badge variant="secondary" className="bg-slate-800 text-slate-300">
+                            {item.categoryName}
+                          </Badge>
+                        )}
                       </TableCell>
-                      <TableCell className="text-slate-300">{item.currentVendor || "-"}</TableCell>
+                      <TableCell className="text-slate-300">
+                        ${parseFloat(item.currentCost || 0).toFixed(2)} / {item.itemUnit}
+                      </TableCell>
+                      <TableCell className="text-slate-300">{item.currentVendor || "No vendor"}</TableCell>
                       <TableCell>
-                        {item.vendorPrices && item.vendorPrices.length > 0 ? (
-                          <div className="text-green-400 font-medium">
-                            ${Math.min(...item.vendorPrices.map((p: any) => parseFloat(p.costPerUnit))).toFixed(2)}
+                        {item.vendorPrices?.length > 0 ? (
+                          <div className="space-y-1">
+                            {item.vendorPrices.slice(0, 3).map((price: any, index: number) => (
+                              <div key={index} className="flex items-center gap-2 text-sm">
+                                <span className="text-slate-300">
+                                  ${parseFloat(price.costPerUnit).toFixed(2)} / {price.unit}
+                                </span>
+                                <span className="text-slate-400">({price.vendorName})</span>
+                                {price.isPreferredVendor && (
+                                  <Star className="h-3 w-3 text-yellow-500" />
+                                )}
+                              </div>
+                            ))}
+                            {item.vendorPrices.length > 3 && (
+                              <div className="text-xs text-slate-400">
+                                +{item.vendorPrices.length - 3} more
+                              </div>
+                            )}
                           </div>
                         ) : (
-                          <span className="text-slate-400">No alternatives</span>
+                          <span className="text-slate-400">No alternative prices</span>
                         )}
                       </TableCell>
                       <TableCell>
@@ -588,7 +573,7 @@ export default function PriceComparison() {
                 Upload CSV File
               </label>
               <div 
-                className="relative border-2 border-dashed border-slate-600 rounded-lg p-6 text-center hover:border-slate-500 transition-colors"
+                className="border-2 border-dashed border-slate-600 rounded-lg p-6 text-center hover:border-slate-500 transition-colors"
                 onDrop={(e) => {
                   e.preventDefault();
                   const files = Array.from(e.dataTransfer.files);
