@@ -4763,6 +4763,104 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   }
 
+  // Sales Integration API endpoints
+
+  // Record a sales transaction with automatic inventory deduction
+  app.post('/api/sales/transactions', isAuthenticated, async (req, res) => {
+    try {
+      const { 
+        locationId, 
+        totalAmount, 
+        paymentMethod,
+        customerName, 
+        salesItems 
+      } = req.body;
+
+      if (!locationId || !totalAmount || !salesItems || !Array.isArray(salesItems)) {
+        return res.status(400).json({ message: 'Missing required fields' });
+      }
+
+      const transactionId = await storage.recordSalesTransaction(
+        locationId,
+        parseFloat(totalAmount),
+        paymentMethod || 'cash',
+        customerName || null,
+        salesItems,
+        (req.user as any)?.claims?.sub || req.user?.id
+      );
+
+      res.json({ transactionId, message: 'Sales transaction recorded successfully' });
+    } catch (error) {
+      console.error('Error recording sales transaction:', error);
+      res.status(500).json({ message: 'Failed to record sales transaction' });
+    }
+  });
+
+  // Get sales transactions for a location
+  app.get('/api/sales/transactions/:locationId', isAuthenticated, async (req, res) => {
+    try {
+      const { locationId } = req.params;
+      const limit = parseInt(req.query.limit as string) || 50;
+
+      const transactions = await storage.getSalesTransactions(locationId, limit);
+      res.json(transactions);
+    } catch (error) {
+      console.error('Error fetching sales transactions:', error);
+      res.status(500).json({ message: 'Failed to fetch sales transactions' });
+    }
+  });
+
+  // Get remaining stock levels with multi-unit conversion
+  app.get('/api/inventory/stock-levels/:locationId', isAuthenticated, async (req, res) => {
+    try {
+      const { locationId } = req.params;
+      
+      const stockLevels = await storage.getRemainingStockLevels(locationId);
+      res.json(stockLevels);
+    } catch (error) {
+      console.error('Error fetching stock levels:', error);
+      res.status(500).json({ message: 'Failed to fetch stock levels' });
+    }
+  });
+
+  // Get sales analytics and profitability data
+  app.get('/api/sales/analytics/:locationId', isAuthenticated, async (req, res) => {
+    try {
+      const { locationId } = req.params;
+
+      // Get sales transactions for the period
+      const transactions = await storage.getSalesTransactions(locationId, 1000);
+      
+      // Calculate analytics
+      const totalRevenue = transactions.reduce((sum, t) => sum + parseFloat(t.totalAmount), 0);
+      const totalTransactions = transactions.length;
+      const averageTransaction = totalTransactions > 0 ? totalRevenue / totalTransactions : 0;
+
+      // Get inventory impact data
+      const stockLevels = await storage.getRemainingStockLevels(locationId);
+      const totalInventoryValue = stockLevels.reduce((sum, item) => sum + item.totalValue, 0);
+      const lowStockItems = stockLevels.filter(item => item.isLowStock);
+
+      res.json({
+        salesSummary: {
+          totalRevenue,
+          totalTransactions,
+          averageTransaction
+        },
+        inventorySummary: {
+          totalInventoryValue,
+          totalItems: stockLevels.length,
+          lowStockItems: lowStockItems.length
+        },
+        stockLevels,
+        recentTransactions: transactions.slice(0, 10)
+      });
+    } catch (error) {
+      console.error('Error fetching sales analytics:', error);
+      res.status(500).json({ message: 'Failed to fetch sales analytics' });
+    }
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }
