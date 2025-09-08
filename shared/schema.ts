@@ -199,7 +199,7 @@ export const wasteEntries = pgTable("waste_entries", {
 });
 
 // Inventory transactions
-export const transactionTypeEnum = pgEnum("transaction_type", ["in", "out", "adjustment"]);
+export const transactionTypeEnum = pgEnum("transaction_type", ["in", "out", "adjustment", "production_usage", "recipe_consumption"]);
 
 export const inventoryTransactions = pgTable("inventory_transactions", {
   id: uuid("id").primaryKey().default(sql`gen_random_uuid()`),
@@ -207,9 +207,83 @@ export const inventoryTransactions = pgTable("inventory_transactions", {
   locationId: uuid("location_id").references(() => locations.id).notNull(),
   type: transactionTypeEnum("type").notNull(),
   quantity: decimal("quantity", { precision: 10, scale: 2 }).notNull(),
-  reference: varchar("reference"), // PO number, recipe name, etc.
+  unitCost: decimal("unit_cost", { precision: 10, scale: 2 }),
+  totalCost: decimal("total_cost", { precision: 10, scale: 2 }),
+  reference: varchar("reference"), // PO number, recipe name, production batch, etc.
   notes: text("notes"),
   createdBy: varchar("created_by").references(() => users.id),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+// Recipe Production Tracking - Enterprise level production monitoring
+export const recipeProductions = pgTable("recipe_productions", {
+  id: uuid("id").primaryKey().default(sql`gen_random_uuid()`),
+  recipeId: uuid("recipe_id").references(() => recipes.id).notNull(),
+  locationId: uuid("location_id").references(() => locations.id).notNull(),
+  quantityProduced: decimal("quantity_produced", { precision: 10, scale: 2 }).notNull(),
+  actualCost: decimal("actual_cost", { precision: 10, scale: 4 }), // Cost when produced
+  theoreticalCost: decimal("theoretical_cost", { precision: 10, scale: 4 }), // Cost based on recipe
+  variance: decimal("variance", { precision: 10, scale: 4 }), // Actual vs theoretical
+  variancePercentage: decimal("variance_percentage", { precision: 5, scale: 2 }),
+  batchNumber: varchar("batch_number"),
+  producedBy: varchar("produced_by").references(() => users.id),
+  productionDate: timestamp("production_date").defaultNow(),
+  notes: text("notes"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+// Unit Conversion System for Enterprise Multi-Unit Management
+export const unitConversions = pgTable("unit_conversions", {
+  id: uuid("id").primaryKey().default(sql`gen_random_uuid()`),
+  inventoryItemId: uuid("inventory_item_id").references(() => inventoryItems.id).notNull(),
+  fromUnit: varchar("from_unit", { length: 20 }).notNull(), // Purchase unit
+  toUnit: varchar("to_unit", { length: 20 }).notNull(), // Usage unit
+  conversionFactor: decimal("conversion_factor", { precision: 10, scale: 6 }).notNull(),
+  isActive: boolean("is_active").default(true),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// Variance Analysis - Enterprise reporting for theoretical vs actual
+export const varianceAnalysis = pgTable("variance_analysis", {
+  id: uuid("id").primaryKey().default(sql`gen_random_uuid()`),
+  locationId: uuid("location_id").references(() => locations.id).notNull(),
+  inventoryItemId: uuid("inventory_item_id").references(() => inventoryItems.id),
+  recipeId: uuid("recipe_id").references(() => recipes.id),
+  analysisDate: date("analysis_date").notNull(),
+  theoreticalUsage: decimal("theoretical_usage", { precision: 10, scale: 4 }).notNull(),
+  actualUsage: decimal("actual_usage", { precision: 10, scale: 4 }).notNull(),
+  variance: decimal("variance", { precision: 10, scale: 4 }).notNull(),
+  variancePercentage: decimal("variance_percentage", { precision: 5, scale: 2 }).notNull(),
+  varianceCost: decimal("variance_cost", { precision: 10, scale: 2 }).notNull(),
+  varianceCategory: varchar("variance_category", { length: 50 }), // waste, theft, over_portioning, etc
+  notes: text("notes"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+// Recipe Costing History - Track cost changes over time
+export const recipeCostHistory = pgTable("recipe_cost_history", {
+  id: uuid("id").primaryKey().default(sql`gen_random_uuid()`),
+  recipeId: uuid("recipe_id").references(() => recipes.id).notNull(),
+  locationId: uuid("location_id").references(() => locations.id).notNull(),
+  totalCost: decimal("total_cost", { precision: 10, scale: 4 }).notNull(),
+  costPerServing: decimal("cost_per_serving", { precision: 10, scale: 4 }).notNull(),
+  margins: decimal("margin_percentage", { precision: 5, scale: 2 }),
+  effectiveDate: timestamp("effective_date").defaultNow(),
+  ingredientSnapshot: json("ingredient_snapshot"), // Store ingredient costs at this time
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+// Inventory Valuation Methods - FIFO, LIFO, Weighted Average
+export const inventoryValuations = pgTable("inventory_valuations", {
+  id: uuid("id").primaryKey().default(sql`gen_random_uuid()`),
+  inventoryItemId: uuid("inventory_item_id").references(() => inventoryItems.id).notNull(),
+  locationId: uuid("location_id").references(() => locations.id).notNull(),
+  valuationDate: date("valuation_date").notNull(),
+  fifoValue: decimal("fifo_value", { precision: 12, scale: 2 }),
+  lifoValue: decimal("lifo_value", { precision: 12, scale: 2 }),
+  weightedAvgValue: decimal("weighted_avg_value", { precision: 12, scale: 2 }),
+  currentQuantity: decimal("current_quantity", { precision: 10, scale: 2 }).notNull(),
   createdAt: timestamp("created_at").defaultNow(),
 });
 
@@ -283,6 +357,9 @@ export const inventoryItemsRelations = relations(inventoryItems, ({ one, many })
   purchaseOrderItems: many(purchaseOrderItems),
   wasteEntries: many(wasteEntries),
   transactions: many(inventoryTransactions),
+  unitConversions: many(unitConversions),
+  varianceAnalysis: many(varianceAnalysis),
+  valuations: many(inventoryValuations),
 }));
 
 export const menuItemsRelations = relations(menuItems, ({ one, many }) => ({
@@ -304,8 +381,15 @@ export const menuItemIngredientsRelations = relations(menuItemIngredients, ({ on
   }),
 }));
 
-export const recipesRelations = relations(recipes, ({ many }) => ({
+export const recipesRelations = relations(recipes, ({ one, many }) => ({
+  location: one(locations, {
+    fields: [recipes.locationId],
+    references: [locations.id],
+  }),
   ingredients: many(recipeIngredients),
+  productions: many(recipeProductions),
+  costHistory: many(recipeCostHistory),
+  varianceAnalysis: many(varianceAnalysis),
 }));
 
 export const recipeIngredientsRelations = relations(recipeIngredients, ({ one }) => ({
@@ -383,6 +467,11 @@ export const insertVendorSchema = createInsertSchema(vendors).omit({ id: true, c
 export const insertInventoryItemSchema = createInsertSchema(inventoryItems).omit({ id: true, createdAt: true, updatedAt: true });
 export const insertRecipeSchema = createInsertSchema(recipes).omit({ id: true, createdAt: true, updatedAt: true });
 export const insertRecipeIngredientSchema = createInsertSchema(recipeIngredients).omit({ id: true });
+export const insertRecipeProductionSchema = createInsertSchema(recipeProductions).omit({ id: true, createdAt: true });
+export const insertUnitConversionSchema = createInsertSchema(unitConversions).omit({ id: true, createdAt: true, updatedAt: true });
+export const insertVarianceAnalysisSchema = createInsertSchema(varianceAnalysis).omit({ id: true, createdAt: true });
+export const insertRecipeCostHistorySchema = createInsertSchema(recipeCostHistory).omit({ id: true, createdAt: true });
+export const insertInventoryValuationSchema = createInsertSchema(inventoryValuations).omit({ id: true, createdAt: true });
 export const insertMenuItemSchema = createInsertSchema(menuItems).omit({ id: true, createdAt: true, updatedAt: true });
 export const insertMenuItemIngredientSchema = createInsertSchema(menuItemIngredients).omit({ id: true });
 export const insertPurchaseOrderSchema = createInsertSchema(purchaseOrders).omit({ id: true, createdAt: true, updatedAt: true });
@@ -1227,6 +1316,16 @@ export type Recipe = typeof recipes.$inferSelect;
 export type InsertRecipe = z.infer<typeof insertRecipeSchema>;
 export type RecipeIngredient = typeof recipeIngredients.$inferSelect;
 export type InsertRecipeIngredient = z.infer<typeof insertRecipeIngredientSchema>;
+export type RecipeProduction = typeof recipeProductions.$inferSelect;
+export type InsertRecipeProduction = z.infer<typeof insertRecipeProductionSchema>;
+export type UnitConversion = typeof unitConversions.$inferSelect;
+export type InsertUnitConversion = z.infer<typeof insertUnitConversionSchema>;
+export type VarianceAnalysis = typeof varianceAnalysis.$inferSelect;
+export type InsertVarianceAnalysis = z.infer<typeof insertVarianceAnalysisSchema>;
+export type RecipeCostHistory = typeof recipeCostHistory.$inferSelect;
+export type InsertRecipeCostHistory = z.infer<typeof insertRecipeCostHistorySchema>;
+export type InventoryValuation = typeof inventoryValuations.$inferSelect;
+export type InsertInventoryValuation = z.infer<typeof insertInventoryValuationSchema>;
 export type MenuItem = typeof menuItems.$inferSelect;
 export type InsertMenuItem = z.infer<typeof insertMenuItemSchema>;
 export type MenuItemIngredient = typeof menuItemIngredients.$inferSelect;
