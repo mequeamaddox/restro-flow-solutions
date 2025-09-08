@@ -131,8 +131,20 @@ export const inventoryItems = pgTable("inventory_items", {
   categoryId: uuid("category_id").references(() => categories.id),
   locationId: uuid("location_id").references(() => locations.id).notNull(),
   quantity: decimal("quantity", { precision: 10, scale: 2 }).notNull().default("0"),
-  unit: varchar("unit", { length: 20 }).notNull(), // lbs, kg, L, pieces, bottles, cases, etc.
-  costPerUnit: decimal("cost_per_unit", { precision: 10, scale: 2 }).notNull(),
+  
+  // Multi-unit inventory tracking
+  purchaseUnit: varchar("purchase_unit", { length: 20 }).notNull().default("case"), // Unit for ordering/inventory (case, box, bag)
+  recipeUnit: varchar("recipe_unit", { length: 20 }).notNull().default("lbs"), // Unit for recipes (lbs, oz, cups)
+  conversionFactor: decimal("conversion_factor", { precision: 10, scale: 4 }).notNull().default("1"), // Recipe units per purchase unit (40 lbs per case)
+  
+  // Cost calculations
+  costPerPurchaseUnit: decimal("cost_per_purchase_unit", { precision: 10, scale: 2 }).notNull().default("0"), // Cost per case
+  servingsPerPurchaseUnit: integer("servings_per_purchase_unit"), // How many servings per case (optional)
+  
+  // Legacy fields (backward compatibility)
+  unit: varchar("unit", { length: 20 }).notNull().default("each"), // lbs, kg, L, pieces, bottles, cases, etc.
+  costPerUnit: decimal("cost_per_unit", { precision: 10, scale: 2 }).notNull().default("0"),
+  
   reorderLevel: decimal("reorder_level", { precision: 10, scale: 2 }).notNull().default("0"),
   vendorId: uuid("vendor_id").references(() => vendors.id),
   barcode: varchar("barcode"),
@@ -157,6 +169,12 @@ export const recipes = pgTable("recipes", {
   instructions: text("instructions").notNull(),
   sellingPrice: decimal("selling_price", { precision: 10, scale: 2 }),
   imageUrl: varchar("image_url", { length: 500 }), // Path to recipe photo
+  
+  // Cost analysis fields
+  totalCost: decimal("total_cost", { precision: 10, scale: 2 }), // Total ingredient cost for recipe
+  costPerServing: decimal("cost_per_serving", { precision: 10, scale: 4 }), // Cost per single serving
+  profitMargin: decimal("profit_margin", { precision: 5, scale: 2 }), // Profit margin percentage
+  
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
@@ -166,8 +184,9 @@ export const recipeIngredients = pgTable("recipe_ingredients", {
   id: uuid("id").primaryKey().default(sql`gen_random_uuid()`),
   recipeId: uuid("recipe_id").references(() => recipes.id, { onDelete: "cascade" }),
   inventoryItemId: uuid("inventory_item_id").references(() => inventoryItems.id),
-  quantity: decimal("quantity", { precision: 10, scale: 2 }).notNull(),
-  unit: varchar("unit", { length: 20 }).notNull(),
+  quantity: decimal("quantity", { precision: 10, scale: 4 }).notNull(), // Quantity in recipe units (lbs, oz)
+  unit: varchar("unit", { length: 20 }).notNull(), // Recipe unit (lbs, oz, cups, etc.)
+  portionCost: decimal("portion_cost", { precision: 10, scale: 4 }), // Calculated cost for this ingredient portion
 });
 
 // Bar menu items (cocktails, beers, wines)
@@ -234,6 +253,34 @@ export const wasteEntries = pgTable("waste_entries", {
   notes: text("notes"),
   reportedBy: varchar("reported_by").references(() => users.id),
   createdAt: timestamp("created_at").defaultNow(),
+});
+
+// Sales tracking - for recording sales and automatic inventory deduction
+export const sales = pgTable("sales", {
+  id: uuid("id").primaryKey().default(sql`gen_random_uuid()`),
+  locationId: uuid("location_id").references(() => locations.id).notNull(),
+  saleDate: timestamp("sale_date").defaultNow().notNull(),
+  totalAmount: decimal("total_amount", { precision: 10, scale: 2 }).notNull(),
+  customerCount: integer("customer_count").default(1),
+  paymentMethod: varchar("payment_method", { length: 50 }), // cash, card, mobile, etc.
+  posTransactionId: varchar("pos_transaction_id", { length: 100 }), // POS system transaction ID
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// Sales items - individual items sold (for inventory deduction and cost analysis)
+export const salesItems = pgTable("sales_items", {
+  id: uuid("id").primaryKey().default(sql`gen_random_uuid()`),
+  saleId: uuid("sale_id").references(() => sales.id, { onDelete: "cascade" }).notNull(),
+  menuItemId: uuid("menu_item_id").references(() => menuItems.id), // For menu items
+  recipeId: uuid("recipe_id").references(() => recipes.id), // For recipes
+  itemName: varchar("item_name", { length: 200 }).notNull(), // Item name at time of sale
+  quantity: integer("quantity").notNull().default(1),
+  unitPrice: decimal("unit_price", { precision: 10, scale: 2 }).notNull(),
+  totalPrice: decimal("total_price", { precision: 10, scale: 2 }).notNull(),
+  costOfGoods: decimal("cost_of_goods", { precision: 10, scale: 4 }), // Calculated ingredient cost
+  profitAmount: decimal("profit_amount", { precision: 10, scale: 4 }), // Profit for this item
+  profitMargin: decimal("profit_margin", { precision: 5, scale: 2 }), // Profit margin percentage
 });
 
 // Inventory transactions
@@ -515,6 +562,8 @@ export const insertMenuItemIngredientSchema = createInsertSchema(menuItemIngredi
 export const insertPurchaseOrderSchema = createInsertSchema(purchaseOrders).omit({ id: true, createdAt: true, updatedAt: true });
 export const insertPurchaseOrderItemSchema = createInsertSchema(purchaseOrderItems).omit({ id: true });
 export const insertWasteEntrySchema = createInsertSchema(wasteEntries).omit({ id: true, createdAt: true });
+export const insertSaleSchema = createInsertSchema(sales).omit({ id: true, createdAt: true, updatedAt: true });
+export const insertSalesItemSchema = createInsertSchema(salesItems).omit({ id: true });
 export const insertInventoryTransactionSchema = createInsertSchema(inventoryTransactions).omit({ id: true, createdAt: true });
 
 // HR Enums (needed for tables)
