@@ -3035,7 +3035,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // HR Messaging
   app.get('/api/hr/messages', isAuthenticated, async (req, res) => {
     try {
-      const messages = await storage.getMessages();
+      const locationId = req.query.locationId as string;
+      const messages = await storage.getMessages(locationId);
       res.json(messages);
     } catch (error) {
       console.error('Error fetching messages:', error);

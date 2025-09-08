@@ -337,7 +337,7 @@ export interface IStorage {
   deleteEmployee(id: string): Promise<void>;
 
   // HR Shift operations
-  getShifts(): Promise<(Shift & { employee?: Employee })[]>;
+  getShifts(locationId?: string): Promise<(Shift & { employee?: Employee })[]>;
   getEmployeeShifts(employeeId: string): Promise<Shift[]>;
   getShift(id: string): Promise<(Shift & { employee?: Employee }) | undefined>;
   createShift(shift: InsertShift): Promise<Shift>;
@@ -345,7 +345,7 @@ export interface IStorage {
   deleteShift(id: string): Promise<void>;
 
   // HR Task operations
-  getTasks(): Promise<(Task & { assignedEmployee?: Employee })[]>;
+  getTasks(locationId?: string): Promise<(Task & { assignedEmployee?: Employee })[]>;
   getTask(id: string): Promise<(Task & { assignedEmployee?: Employee }) | undefined>;
   createTask(task: InsertTask): Promise<Task>;
   updateTask(id: string, task: Partial<InsertTask>): Promise<Task>;
@@ -2071,14 +2071,20 @@ export class DatabaseStorage implements IStorage {
   }
 
   // HR Shift operations
-  async getShifts(): Promise<(Shift & { employee?: Employee })[]> {
-    const result = await db.select({
+  async getShifts(locationId?: string): Promise<(Shift & { employee?: Employee })[]> {
+    let query = db.select({
       shift: shifts,
       employee: employees,
     })
     .from(shifts)
-    .leftJoin(employees, eq(shifts.employeeId, employees.id))
-    .orderBy(shifts.startTime);
+    .leftJoin(employees, eq(shifts.employeeId, employees.id));
+    
+    // Filter by location if provided
+    if (locationId) {
+      query = query.where(eq(shifts.locationId, locationId));
+    }
+    
+    const result = await query.orderBy(shifts.startTime);
     
     return result.map(r => ({ ...r.shift, employee: r.employee || undefined }));
   }
@@ -2119,14 +2125,20 @@ export class DatabaseStorage implements IStorage {
   }
 
   // HR Task operations
-  async getTasks(): Promise<(Task & { assignedEmployee?: Employee })[]> {
-    const result = await db.select({
+  async getTasks(locationId?: string): Promise<(Task & { assignedEmployee?: Employee })[]> {
+    let query = db.select({
       task: tasks,
       assignedEmployee: employees,
     })
     .from(tasks)
-    .leftJoin(employees, eq(tasks.assignedTo, employees.id))
-    .orderBy(tasks.dueDate);
+    .leftJoin(employees, eq(tasks.assignedTo, employees.id));
+    
+    // Filter by location if provided
+    if (locationId) {
+      query = query.where(eq(tasks.locationId, locationId));
+    }
+    
+    const result = await query.orderBy(tasks.dueDate);
     
     return result.map(r => ({ ...r.task, assignedEmployee: r.assignedEmployee || undefined }));
   }
