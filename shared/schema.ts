@@ -102,6 +102,26 @@ export const vendorPriceCatalog = pgTable("vendor_price_catalog", {
   updatedAt: timestamp("updated_at").defaultNow(),
 });
 
+// Price Import History - tracks CSV/email imports and processing results
+export const priceImports = pgTable("price_imports", {
+  id: uuid("id").primaryKey().default(sql`gen_random_uuid()`),
+  vendorId: uuid("vendor_id").references(() => vendors.id).notNull(),
+  importedBy: varchar("imported_by").references(() => users.id).notNull(),
+  fileName: varchar("file_name", { length: 255 }).notNull(),
+  fileSize: integer("file_size").notNull(),
+  importType: varchar("import_type", { length: 20 }).notNull(), // csv, excel, email
+  status: varchar("status", { length: 20 }).default("processing"), // processing, completed, failed
+  totalRows: integer("total_rows").default(0),
+  processedRows: integer("processed_rows").default(0),
+  matchedItems: integer("matched_items").default(0),
+  newItems: integer("new_items").default(0),
+  priceUpdates: integer("price_updates").default(0),
+  errorLog: text("error_log"),
+  processingStarted: timestamp("processing_started").defaultNow(),
+  processingCompleted: timestamp("processing_completed"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
 // Inventory items
 export const inventoryItems = pgTable("inventory_items", {
   id: uuid("id").primaryKey().default(sql`gen_random_uuid()`),
@@ -1606,4 +1626,9 @@ export type InsertPayStub = z.infer<typeof insertPayStubSchema>;
 export const insertVendorPriceCatalogSchema = createInsertSchema(vendorPriceCatalog).omit({ id: true, createdAt: true, updatedAt: true });
 export type VendorPriceCatalog = typeof vendorPriceCatalog.$inferSelect;
 export type InsertVendorPriceCatalog = z.infer<typeof insertVendorPriceCatalogSchema>;
+
+// Price import types
+export const insertPriceImportSchema = createInsertSchema(priceImports).omit({ id: true, createdAt: true });
+export type PriceImport = typeof priceImports.$inferSelect;
+export type InsertPriceImport = z.infer<typeof insertPriceImportSchema>;
 
