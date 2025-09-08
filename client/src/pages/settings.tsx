@@ -39,6 +39,8 @@ export default function Settings() {
     timezone: "America/New_York",
   });
 
+  const [businessName, setBusinessName] = useState("");
+
   const { toast } = useToast();
   const { isLoading: userLoading } = useAuth();
   const queryClient = useQueryClient();
@@ -48,6 +50,19 @@ export default function Settings() {
     queryKey: ["/api/locations"],
     retry: false,
   });
+
+  // Fetch business settings
+  const { data: businessSettings, isLoading: businessSettingsLoading } = useQuery({
+    queryKey: ["/api/payroll/paycheck-settings"],
+    retry: false,
+  });
+
+  // Update business name when settings load
+  useEffect(() => {
+    if (businessSettings?.businessName) {
+      setBusinessName(businessSettings.businessName);
+    }
+  }, [businessSettings]);
 
   // Add location form
   const addLocationForm = useForm<InsertLocation>({
@@ -135,6 +150,29 @@ export default function Settings() {
     },
   });
 
+  // Update business name mutation
+  const updateBusinessNameMutation = useMutation({
+    mutationFn: async (name: string) => {
+      await apiRequest('PUT', '/api/payroll/paycheck-settings', {
+        businessName: name,
+      });
+    },
+    onSuccess: () => {
+      toast({
+        title: "Success",
+        description: "Business name updated successfully",
+      });
+      queryClient.invalidateQueries({ queryKey: ["/api/payroll/paycheck-settings"] });
+    },
+    onError: (error) => {
+      toast({
+        title: "Error",
+        description: "Failed to update business name",
+        variant: "destructive",
+      });
+    },
+  });
+
   const onAddLocation = (data: InsertLocation) => {
     addLocationMutation.mutate(data);
   };
@@ -187,6 +225,46 @@ export default function Settings() {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* Business Settings */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center">
+              <Building2 className="h-5 w-5 mr-2" />
+              Business Settings
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            {businessSettingsLoading ? (
+              <div className="animate-pulse space-y-3">
+                <div className="h-4 bg-gray-200 rounded w-24"></div>
+                <div className="h-10 bg-gray-200 rounded"></div>
+                <div className="h-8 bg-gray-200 rounded w-20"></div>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                <div>
+                  <Label htmlFor="business-name">Restaurant Name</Label>
+                  <Input
+                    id="business-name"
+                    value={businessName}
+                    onChange={(e) => setBusinessName(e.target.value)}
+                    placeholder="Enter restaurant name"
+                    className="mt-1"
+                  />
+                </div>
+                <Button
+                  onClick={() => updateBusinessNameMutation.mutate(businessName)}
+                  disabled={updateBusinessNameMutation.isPending || businessName === businessSettings?.businessName}
+                  size="sm"
+                  className="w-full"
+                >
+                  {updateBusinessNameMutation.isPending ? "Saving..." : "Save Business Name"}
+                </Button>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
         {/* User Profile */}
         <Card>
           <CardHeader>

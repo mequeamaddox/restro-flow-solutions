@@ -39,7 +39,7 @@ export default function MetricsCards({ metrics, isLoading }: MetricsCardsProps) 
   const cards = [
     {
       title: "Total Inventory Value",
-      value: `$${Number(metrics?.totalInventoryValue || 0).toLocaleString()}`,
+      value: `$${Number(metrics?.totalInventoryValue || 0).toFixed(2)}`,
       icon: DollarSign,
       iconColor: "text-blue-400",
       bgColor: "bg-gradient-to-br from-blue-500/20 to-cyan-500/20",
