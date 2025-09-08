@@ -55,18 +55,18 @@ export default function AddItemDialog({ isOpen, onClose, onSuccess, categories, 
     if (editingItem) {
       form.reset({
         name: editingItem.name || "",
-        description: editingItem.description || undefined,
-        categoryId: editingItem.categoryId || undefined,
+        description: editingItem.description ?? undefined,
+        categoryId: editingItem.categoryId ?? undefined,
         locationId: editingItem.locationId || currentLocation?.id || "",
         quantity: editingItem.quantity?.toString() || "0",
         unit: editingItem.unit || "lbs",
         costPerUnit: editingItem.costPerUnit?.toString() || "0",
         reorderLevel: editingItem.reorderLevel?.toString() || "0",
-        vendorId: editingItem.vendorId || undefined,
-        barcode: editingItem.barcode || undefined,
-        alcoholContent: editingItem.alcoholContent?.toString() || undefined,
+        vendorId: editingItem.vendorId ?? undefined,
+        barcode: editingItem.barcode ?? undefined,
+        alcoholContent: editingItem.alcoholContent?.toString() ?? undefined,
         isAlcoholic: editingItem.isAlcoholic || false,
-        bottleSize: editingItem.bottleSize || undefined,
+        bottleSize: editingItem.bottleSize ?? undefined,
       });
     } else {
       // Reset to default values when not editing
