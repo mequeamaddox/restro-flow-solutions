@@ -23,7 +23,13 @@ import {
   AlertTriangle,
   Star,
   Calendar,
-  Truck
+  Truck,
+  Upload,
+  FileText,
+  CheckCircle,
+  XCircle,
+  Clock,
+  History
 } from "lucide-react";
 import { useLocation } from "@/contexts/LocationContext";
 import { useToast } from "@/hooks/use-toast";
@@ -46,6 +52,10 @@ type AddVendorPriceForm = z.infer<typeof addVendorPriceSchema>;
 export default function PriceComparison() {
   const [searchTerm, setSearchTerm] = useState("");
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
+  const [isImportDialogOpen, setIsImportDialogOpen] = useState(false);
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [selectedVendorForImport, setSelectedVendorForImport] = useState("");
+  const [showImportHistory, setShowImportHistory] = useState(false);
   const { currentLocation } = useLocation();
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -82,6 +92,12 @@ export default function PriceComparison() {
     enabled: !!currentLocation?.id,
   });
 
+  // Fetch price import history
+  const { data: priceImports, refetch: refetchImports } = useQuery({
+    queryKey: ['/api/price-imports'],
+    enabled: showImportHistory,
+  });
+
   const addVendorPriceMutation = useMutation({
     mutationFn: async (data: AddVendorPriceForm) => {
       return apiRequest('POST', '/api/vendor-prices', {
@@ -104,6 +120,44 @@ export default function PriceComparison() {
       toast({
         title: "Error",
         description: "Failed to add vendor price",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const uploadPriceImportMutation = useMutation({
+    mutationFn: async ({ file, vendorId }: { file: File; vendorId: string }) => {
+      const formData = new FormData();
+      formData.append('file', file);
+      formData.append('vendorId', vendorId);
+      
+      const response = await fetch('/api/price-imports/upload', {
+        method: 'POST',
+        body: formData,
+        credentials: 'include',
+      });
+      
+      if (!response.ok) {
+        throw new Error(`Upload failed: ${response.statusText}`);
+      }
+      
+      return response.json();
+    },
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ['/api/price-comparison'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/price-imports'] });
+      setIsImportDialogOpen(false);
+      setSelectedFile(null);
+      setSelectedVendorForImport("");
+      toast({
+        title: "Success",
+        description: `Price import started successfully. Import ID: ${data.importId}`,
+      });
+    },
+    onError: (error) => {
+      toast({
+        title: "Error",
+        description: `Failed to upload price import: ${error.message}`,
         variant: "destructive",
       });
     },
@@ -146,14 +200,15 @@ export default function PriceComparison() {
           <p className="text-slate-400 mt-1">Compare prices across vendors to optimize costs</p>
         </div>
         
-        <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
-          <DialogTrigger asChild>
-            <Button className="bg-blue-600 hover:bg-blue-700 text-white" data-testid="button-add-vendor-price">
-              <Plus className="h-4 w-4 mr-2" />
-              Add Vendor Price
-            </Button>
-          </DialogTrigger>
-          <DialogContent className="bg-slate-900 border-slate-700 text-white max-w-lg">
+        <div className="flex gap-3">
+          <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
+            <DialogTrigger asChild>
+              <Button className="bg-blue-600 hover:bg-blue-700 text-white" data-testid="button-add-vendor-price">
+                <Plus className="h-4 w-4 mr-2" />
+                Add Vendor Price
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="bg-slate-900 border-slate-700 text-white max-w-lg">
             <DialogHeader>
               <DialogTitle>Add Vendor Price</DialogTitle>
             </DialogHeader>
@@ -316,6 +371,27 @@ export default function PriceComparison() {
             </Form>
           </DialogContent>
         </Dialog>
+
+        {/* Import Button */}
+        <Button 
+          onClick={() => setIsImportDialogOpen(true)}
+          className="bg-green-600 hover:bg-green-700 text-white" 
+          data-testid="button-import-prices"
+        >
+          <Upload className="h-4 w-4 mr-2" />
+          Import Prices
+        </Button>
+
+        {/* Import History Button */}
+        <Button 
+          onClick={() => setShowImportHistory(!showImportHistory)}
+          variant="outline"
+          className="border-slate-600 text-slate-300 hover:bg-slate-800" 
+          data-testid="button-import-history"
+        >
+          <History className="h-4 w-4 mr-2" />
+          Import History
+        </Button>
       </div>
 
       {/* Summary Cards */}
@@ -465,6 +541,156 @@ export default function PriceComparison() {
           )}
         </CardContent>
       </Card>
+
+      {/* Price Import Dialog */}
+      <Dialog open={isImportDialogOpen} onOpenChange={setIsImportDialogOpen}>
+        <DialogContent className="bg-slate-900 border-slate-700 text-white max-w-lg">
+          <DialogHeader>
+            <DialogTitle>Import Vendor Prices</DialogTitle>
+          </DialogHeader>
+          
+          <div className="space-y-4">
+            <div>
+              <label className="block text-sm font-medium text-slate-300 mb-2">
+                Select Vendor
+              </label>
+              <Select value={selectedVendorForImport} onValueChange={setSelectedVendorForImport}>
+                <SelectTrigger className="bg-slate-800 border-slate-600">
+                  <SelectValue placeholder="Select vendor" />
+                </SelectTrigger>
+                <SelectContent className="bg-slate-800 border-slate-600">
+                  {vendors?.map((vendor: any) => (
+                    <SelectItem key={vendor.id} value={vendor.id} className="text-slate-300">
+                      {vendor.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-slate-300 mb-2">
+                Upload CSV File
+              </label>
+              <div 
+                className="border-2 border-dashed border-slate-600 rounded-lg p-6 text-center hover:border-slate-500 transition-colors"
+                onDrop={(e) => {
+                  e.preventDefault();
+                  const files = Array.from(e.dataTransfer.files);
+                  const csvFile = files.find(f => f.name.endsWith('.csv'));
+                  if (csvFile) setSelectedFile(csvFile);
+                }}
+                onDragOver={(e) => e.preventDefault()}
+              >
+                {selectedFile ? (
+                  <div className="flex items-center justify-center gap-2">
+                    <FileText className="h-8 w-8 text-green-500" />
+                    <div className="text-left">
+                      <p className="text-slate-300 font-medium">{selectedFile.name}</p>
+                      <p className="text-slate-500 text-sm">
+                        {(selectedFile.size / 1024).toFixed(2)} KB
+                      </p>
+                    </div>
+                  </div>
+                ) : (
+                  <div>
+                    <Upload className="h-12 w-12 text-slate-400 mx-auto mb-4" />
+                    <p className="text-slate-300">Drop CSV file here or click to browse</p>
+                    <p className="text-slate-500 text-sm mt-1">CSV format with columns: item_name, price, unit</p>
+                  </div>
+                )}
+                <input
+                  type="file"
+                  accept=".csv"
+                  onChange={(e) => {
+                    const file = e.target.files?.[0];
+                    if (file) setSelectedFile(file);
+                  }}
+                  className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                />
+              </div>
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button
+              onClick={() => {
+                if (selectedFile && selectedVendorForImport) {
+                  uploadPriceImportMutation.mutate({
+                    file: selectedFile,
+                    vendorId: selectedVendorForImport
+                  });
+                }
+              }}
+              disabled={!selectedFile || !selectedVendorForImport || uploadPriceImportMutation.isPending}
+              className="bg-green-600 hover:bg-green-700"
+            >
+              {uploadPriceImportMutation.isPending ? "Importing..." : "Import Prices"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Import History */}
+      {showImportHistory && (
+        <Card className="bg-slate-900/50 border-slate-700 mt-6">
+          <CardHeader>
+            <CardTitle className="text-white flex items-center gap-2">
+              <History className="h-5 w-5" />
+              Price Import History
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-3">
+              {priceImports?.map((importRecord: any) => (
+                <div key={importRecord.id} className="flex items-center justify-between p-3 bg-slate-800/50 rounded-lg">
+                  <div className="flex items-center gap-3">
+                    <div className="flex-shrink-0">
+                      {importRecord.status === 'completed' && (
+                        <CheckCircle className="h-5 w-5 text-green-500" />
+                      )}
+                      {importRecord.status === 'failed' && (
+                        <XCircle className="h-5 w-5 text-red-500" />
+                      )}
+                      {importRecord.status === 'processing' && (
+                        <Clock className="h-5 w-5 text-yellow-500" />
+                      )}
+                    </div>
+                    <div>
+                      <p className="text-slate-300 font-medium">{importRecord.fileName}</p>
+                      <p className="text-slate-500 text-sm">
+                        {new Date(importRecord.createdAt).toLocaleString()}
+                      </p>
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    <Badge 
+                      variant={
+                        importRecord.status === 'completed' ? 'default' : 
+                        importRecord.status === 'failed' ? 'destructive' : 
+                        'secondary'
+                      }
+                      className="text-xs"
+                    >
+                      {importRecord.status}
+                    </Badge>
+                    {importRecord.status === 'completed' && (
+                      <p className="text-slate-400 text-sm mt-1">
+                        {importRecord.matchedItems} matched, {importRecord.priceUpdates} updated
+                      </p>
+                    )}
+                  </div>
+                </div>
+              )) || (
+                <div className="text-center py-8">
+                  <FileText className="h-12 w-12 text-slate-400 mx-auto mb-4" />
+                  <p className="text-slate-400">No import history found</p>
+                </div>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+      )}
     </div>
   );
 }
