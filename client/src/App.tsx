@@ -51,7 +51,6 @@ import EmployeeBuildSheets from "@/pages/employee-build-sheets";
 import EmployeePayStubs from "@/pages/employee-pay-stubs";
 import EmployeeTimeOff from "@/pages/employee-time-off";
 import PublicOnboarding from "@/pages/public-onboarding";
-import VarianceReports from "@/pages/variance-reports";
 import Sidebar from "@/components/layout/sidebar";
 import Header from "@/components/layout/header";
 
@@ -111,7 +110,6 @@ function Router() {
                 <Route path="/waste-tracking" component={WasteTracking} />
                 <Route path="/pos-integration" component={PosIntegration} />
                 <Route path="/analytics" component={Analytics} />
-                <Route path="/variance-reports" component={VarianceReports} />
                 <Route path="/invoice-processing" component={InvoiceProcessing} />
                 <Route path="/automated-ordering" component={AutomatedOrdering} />
                 <Route path="/forecasting" component={Forecasting} />

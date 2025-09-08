@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -7,6 +7,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Progress } from "@/components/ui/progress";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { useLocation } from "@/contexts/LocationContext";
 import { 
   TrendingUp, 
@@ -24,7 +26,10 @@ import {
   Clock,
   Zap,
   Eye,
-  CheckCircle
+  CheckCircle,
+  Package,
+  ChefHat,
+  RefreshCw
 } from "lucide-react";
 import { format, subDays, startOfWeek, endOfWeek, startOfMonth, endOfMonth } from "date-fns";
 import { apiRequest } from "@/lib/queryClient";
@@ -92,12 +97,49 @@ interface PLReport {
   };
 }
 
+interface VarianceReport {
+  itemId: string;
+  itemName: string;
+  theoreticalUsage: number;
+  actualUsage: number;
+  variance: number;
+  variancePercentage: number;
+  varianceCost: number;
+  category: 'acceptable' | 'high' | 'critical';
+}
+
+interface ProductionVariance {
+  recipeId: string;
+  recipeName: string;
+  quantityProduced: number;
+  theoreticalCost: number;
+  actualCost: number;
+  variance: number;
+  variancePercentage: number;
+}
+
+interface VarianceSummary {
+  totalVarianceCost: number;
+  criticalVariances: number;
+  highVariances: number;
+  totalAnalyzedItems: number;
+}
+
 export default function Analytics() {
   const { currentLocation } = useLocation();
+  const queryClient = useQueryClient();
   const [selectedPeriod, setSelectedPeriod] = useState<string>("today");
   const [timeRange, setTimeRange] = useState("30d");
   const [locationFilter, setLocationFilter] = useState("all");
   const [currentTime, setCurrentTime] = useState(new Date());
+  
+  // Variance analysis state
+  const [varianceDateRange, setVarianceDateRange] = useState({
+    startDate: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+    endDate: new Date().toISOString().split('T')[0]
+  });
+  const [selectedRecipe, setSelectedRecipe] = useState<string>('');
+  const [productionQuantity, setProductionQuantity] = useState<string>('');
 
   // Update time every second for real-time feel
   useEffect(() => {
@@ -228,6 +270,65 @@ export default function Analytics() {
     queryFn: () => apiRequest("GET", "/api/locations").then(r => r.json()),
   });
 
+  // Variance analysis queries
+  const { data: recipes = [] } = useQuery({
+    queryKey: ['/api/recipes'],
+  });
+
+  const { data: varianceSummary } = useQuery<VarianceSummary>({
+    queryKey: ['/api/variance/summary', currentLocation?.id],
+    enabled: !!currentLocation?.id,
+  });
+
+  const { data: varianceReport = [], isLoading: isVarianceLoading } = useQuery<VarianceReport[]>({
+    queryKey: ['/api/variance/report', currentLocation?.id, varianceDateRange.startDate, varianceDateRange.endDate],
+    enabled: !!currentLocation?.id,
+  });
+
+  const { data: productionVariance = [] } = useQuery<ProductionVariance[]>({
+    queryKey: ['/api/variance/production', currentLocation?.id, varianceDateRange.startDate, varianceDateRange.endDate],
+    enabled: !!currentLocation?.id,
+  });
+
+  // Record recipe production mutation
+  const recordProductionMutation = useMutation({
+    mutationFn: async (data: { recipeId: string; quantity: number; batchNumber?: string }) => {
+      return apiRequest('/api/variance/production', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          recipeId: data.recipeId,
+          locationId: currentLocation?.id,
+          quantityProduced: data.quantity,
+          batchNumber: data.batchNumber
+        }),
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/variance'] });
+      setSelectedRecipe('');
+      setProductionQuantity('');
+    },
+  });
+
+  // Generate variance report mutation
+  const generateReportMutation = useMutation({
+    mutationFn: async () => {
+      return apiRequest('/api/variance/generate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          locationId: currentLocation?.id,
+          startDate: varianceDateRange.startDate,
+          endDate: varianceDateRange.endDate
+        }),
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/variance'] });
+    },
+  });
+
   if (!currentLocation) {
     return (
       <div className="p-6">
@@ -298,6 +399,22 @@ export default function Analytics() {
     if (variance > 0) return "text-orange-400";
     if (variance > -5) return "text-green-400";
     return "text-emerald-400";
+  };
+
+  const getCategoryColor = (category: string) => {
+    switch (category) {
+      case 'critical': return 'bg-red-100 text-red-800';
+      case 'high': return 'bg-yellow-100 text-yellow-800';
+      default: return 'bg-green-100 text-green-800';
+    }
+  };
+
+  const getCategoryIcon = (category: string) => {
+    switch (category) {
+      case 'critical': return <AlertTriangle className="h-4 w-4 text-red-600" />;
+      case 'high': return <TrendingUp className="h-4 w-4 text-yellow-600" />;
+      default: return <Package className="h-4 w-4 text-green-600" />;
+    }
   };
 
   const COLORS = ['#F97316', '#10B981', '#3B82F6', '#8B5CF6', '#EF4444', '#F59E0B', '#06B6D4', '#84CC16'];
@@ -403,6 +520,7 @@ export default function Analytics() {
             <TabsTrigger value="profit-loss" className="whitespace-nowrap px-4 py-2 text-sm">P&L Report</TabsTrigger>
             <TabsTrigger value="cost-analysis" className="whitespace-nowrap px-4 py-2 text-sm">Cost Analysis</TabsTrigger>
             <TabsTrigger value="business-intelligence" className="whitespace-nowrap px-4 py-2 text-sm">Business Intelligence</TabsTrigger>
+            <TabsTrigger value="variance-analysis" className="whitespace-nowrap px-4 py-2 text-sm">Variance Analysis</TabsTrigger>
             <TabsTrigger value="trends" className="whitespace-nowrap px-4 py-2 text-sm">Trends</TabsTrigger>
           </TabsList>
         </div>
@@ -1353,6 +1471,285 @@ export default function Analytics() {
               </CardContent>
             </Card>
           </div>
+        </TabsContent>
+
+        {/* Variance Analysis Tab */}
+        <TabsContent value="variance-analysis" className="space-y-6">
+          {/* Date Range Controls */}
+          <Card>
+            <CardContent className="p-4">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div>
+                  <Label>Start Date</Label>
+                  <Input
+                    type="date"
+                    value={varianceDateRange.startDate}
+                    onChange={(e) => setVarianceDateRange(prev => ({ ...prev, startDate: e.target.value }))}
+                    data-testid="input-start-date"
+                  />
+                </div>
+                <div>
+                  <Label>End Date</Label>
+                  <Input
+                    type="date"
+                    value={varianceDateRange.endDate}
+                    onChange={(e) => setVarianceDateRange(prev => ({ ...prev, endDate: e.target.value }))}
+                    data-testid="input-end-date"
+                  />
+                </div>
+                <div className="flex items-end">
+                  <Button 
+                    onClick={() => generateReportMutation.mutate()}
+                    disabled={generateReportMutation.isPending}
+                    variant="outline"
+                    className="w-full"
+                  >
+                    <RefreshCw className={`h-4 w-4 mr-2 ${generateReportMutation.isPending ? 'animate-spin' : ''}`} />
+                    Generate Report
+                  </Button>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Summary Cards */}
+          {varianceSummary && (
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+              <Card>
+                <CardContent className="p-4">
+                  <div className="flex items-center gap-2">
+                    <DollarSign className="h-5 w-5 text-red-600" />
+                    <div>
+                      <p className="text-sm font-medium">Total Variance Cost</p>
+                      <p className="text-2xl font-bold text-red-600">
+                        ${varianceSummary.totalVarianceCost.toFixed(2)}
+                      </p>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+              
+              <Card>
+                <CardContent className="p-4">
+                  <div className="flex items-center gap-2">
+                    <AlertTriangle className="h-5 w-5 text-red-500" />
+                    <div>
+                      <p className="text-sm font-medium">Critical Variances</p>
+                      <p className="text-2xl font-bold text-red-500">
+                        {varianceSummary.criticalVariances}
+                      </p>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+              
+              <Card>
+                <CardContent className="p-4">
+                  <div className="flex items-center gap-2">
+                    <TrendingUp className="h-5 w-5 text-yellow-500" />
+                    <div>
+                      <p className="text-sm font-medium">High Variances</p>
+                      <p className="text-2xl font-bold text-yellow-500">
+                        {varianceSummary.highVariances}
+                      </p>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+              
+              <Card>
+                <CardContent className="p-4">
+                  <div className="flex items-center gap-2">
+                    <Package className="h-5 w-5 text-blue-500" />
+                    <div>
+                      <p className="text-sm font-medium">Items Analyzed</p>
+                      <p className="text-2xl font-bold text-blue-500">
+                        {varianceSummary.totalAnalyzedItems}
+                      </p>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+          )}
+
+          <Tabs defaultValue="inventory" className="w-full">
+            <TabsList>
+              <TabsTrigger value="inventory">Inventory Variance</TabsTrigger>
+              <TabsTrigger value="production">Production Variance</TabsTrigger>
+              <TabsTrigger value="record">Record Production</TabsTrigger>
+            </TabsList>
+
+            {/* Inventory Variance Tab */}
+            <TabsContent value="inventory">
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Package className="h-5 w-5" />
+                    Inventory Usage Variance
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  {isVarianceLoading ? (
+                    <div className="space-y-3">
+                      {[...Array(5)].map((_, i) => (
+                        <div key={i} className="h-16 bg-gray-100 rounded animate-pulse" />
+                      ))}
+                    </div>
+                  ) : varianceReport.length === 0 ? (
+                    <div className="text-center py-8 text-gray-500">
+                      No variance data available for the selected period
+                    </div>
+                  ) : (
+                    <div className="space-y-4">
+                      {varianceReport.map((item) => (
+                        <div key={item.itemId} className="border rounded-lg p-4">
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-3">
+                              {getCategoryIcon(item.category)}
+                              <div>
+                                <h3 className="font-medium">{item.itemName}</h3>
+                                <div className="flex gap-4 text-sm text-gray-600">
+                                  <span>Theoretical: {item.theoreticalUsage.toFixed(2)}</span>
+                                  <span>Actual: {item.actualUsage.toFixed(2)}</span>
+                                </div>
+                              </div>
+                            </div>
+                            
+                            <div className="flex items-center gap-4">
+                              <div className="text-right">
+                                <Badge className={getCategoryColor(item.category)}>
+                                  {item.variancePercentage > 0 ? '+' : ''}{item.variancePercentage.toFixed(1)}%
+                                </Badge>
+                                <p className="text-sm mt-1">
+                                  Cost Impact: <span className={item.varianceCost > 0 ? 'text-red-600' : 'text-green-600'}>
+                                    ${Math.abs(item.varianceCost).toFixed(2)}
+                                  </span>
+                                </p>
+                              </div>
+                            </div>
+                          </div>
+                          
+                          <div className="mt-3">
+                            <div className="flex justify-between text-xs text-gray-500 mb-1">
+                              <span>Usage Progress</span>
+                              <span>{((item.actualUsage / item.theoreticalUsage) * 100).toFixed(0)}%</span>
+                            </div>
+                            <Progress 
+                              value={Math.min((item.actualUsage / item.theoreticalUsage) * 100, 100)}
+                              className="h-2"
+                            />
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            </TabsContent>
+
+            {/* Production Variance Tab */}
+            <TabsContent value="production">
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <ChefHat className="h-5 w-5" />
+                    Recipe Production Variance
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  {productionVariance.length === 0 ? (
+                    <div className="text-center py-8 text-gray-500">
+                      No production data available for the selected period
+                    </div>
+                  ) : (
+                    <div className="space-y-4">
+                      {productionVariance.map((recipe) => (
+                        <div key={recipe.recipeId} className="border rounded-lg p-4">
+                          <div className="flex items-center justify-between">
+                            <div>
+                              <h3 className="font-medium">{recipe.recipeName}</h3>
+                              <p className="text-sm text-gray-600">
+                                Produced: {recipe.quantityProduced} servings
+                              </p>
+                            </div>
+                            
+                            <div className="text-right">
+                              <div className="flex gap-4 text-sm">
+                                <span>Theoretical: ${recipe.theoreticalCost.toFixed(2)}</span>
+                                <span>Actual: ${recipe.actualCost.toFixed(2)}</span>
+                              </div>
+                              <Badge className={recipe.variancePercentage > 5 ? 'bg-red-100 text-red-800' : 'bg-green-100 text-green-800'}>
+                                {recipe.variancePercentage > 0 ? '+' : ''}{recipe.variancePercentage.toFixed(1)}%
+                              </Badge>
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            </TabsContent>
+
+            {/* Record Production Tab */}
+            <TabsContent value="record">
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <ChefHat className="h-5 w-5" />
+                    Record Recipe Production
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div>
+                      <Label>Recipe</Label>
+                      <Select value={selectedRecipe} onValueChange={setSelectedRecipe}>
+                        <SelectTrigger data-testid="select-recipe">
+                          <SelectValue placeholder="Select recipe" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {recipes.map((recipe: any) => (
+                            <SelectItem key={recipe.id} value={recipe.id}>
+                              {recipe.name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    
+                    <div>
+                      <Label>Quantity Produced</Label>
+                      <Input
+                        type="number"
+                        min="1"
+                        step="0.1"
+                        value={productionQuantity}
+                        onChange={(e) => setProductionQuantity(e.target.value)}
+                        placeholder="Servings produced"
+                        data-testid="input-production-quantity"
+                      />
+                    </div>
+                    
+                    <div className="flex items-end">
+                      <Button
+                        onClick={() => recordProductionMutation.mutate({
+                          recipeId: selectedRecipe,
+                          quantity: parseFloat(productionQuantity)
+                        })}
+                        disabled={!selectedRecipe || !productionQuantity || recordProductionMutation.isPending}
+                        className="w-full"
+                        data-testid="button-record-production"
+                      >
+                        {recordProductionMutation.isPending ? 'Recording...' : 'Record Production'}
+                      </Button>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </TabsContent>
+          </Tabs>
         </TabsContent>
 
         {/* Trends Tab */}
