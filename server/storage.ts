@@ -4,6 +4,7 @@ import {
   locations,
   categories,
   vendors,
+  vendorPriceCatalog,
   inventoryItems,
   recipes,
   recipeIngredients,
@@ -30,6 +31,8 @@ import {
   type InsertCategory,
   type Vendor,
   type InsertVendor,
+  type VendorPriceCatalog,
+  type InsertVendorPriceCatalog,
   type InventoryItem,
   type InsertInventoryItem,
   type Recipe,
@@ -635,6 +638,104 @@ export class DatabaseStorage implements IStorage {
 
   async deleteVendor(id: string): Promise<void> {
     await db.delete(vendors).where(eq(vendors.id, id));
+  }
+
+  // Vendor price catalog operations
+  async getVendorPricesForItem(inventoryItemId: string): Promise<any[]> {
+    const prices = await db
+      .select({
+        id: vendorPriceCatalog.id,
+        inventoryItemId: vendorPriceCatalog.inventoryItemId,
+        vendorId: vendorPriceCatalog.vendorId,
+        costPerUnit: vendorPriceCatalog.costPerUnit,
+        unit: vendorPriceCatalog.unit,
+        minimumOrderQuantity: vendorPriceCatalog.minimumOrderQuantity,
+        leadTimeDays: vendorPriceCatalog.leadTimeDays,
+        isPreferredVendor: vendorPriceCatalog.isPreferredVendor,
+        notes: vendorPriceCatalog.notes,
+        effectiveDate: vendorPriceCatalog.effectiveDate,
+        expiryDate: vendorPriceCatalog.expiryDate,
+        vendorName: vendors.name,
+        vendorEmail: vendors.email,
+        vendorPhone: vendors.phone,
+        itemName: inventoryItems.name,
+        currentCostPerUnit: inventoryItems.costPerUnit,
+      })
+      .from(vendorPriceCatalog)
+      .leftJoin(vendors, eq(vendorPriceCatalog.vendorId, vendors.id))
+      .leftJoin(inventoryItems, eq(vendorPriceCatalog.inventoryItemId, inventoryItems.id))
+      .where(eq(vendorPriceCatalog.inventoryItemId, inventoryItemId))
+      .orderBy(vendorPriceCatalog.costPerUnit);
+    
+    return prices;
+  }
+
+  async getPriceComparison(locationId?: string): Promise<any[]> {
+    const query = db
+      .select({
+        itemId: inventoryItems.id,
+        itemName: inventoryItems.name,
+        itemUnit: inventoryItems.unit,
+        currentCost: inventoryItems.costPerUnit,
+        currentVendor: vendors.name,
+        categoryName: categories.name,
+        vendorPrices: sql`json_agg(
+          json_build_object(
+            'vendorId', ${vendorPriceCatalog.vendorId},
+            'vendorName', ${vendors.name},
+            'costPerUnit', ${vendorPriceCatalog.costPerUnit},
+            'unit', ${vendorPriceCatalog.unit},
+            'minimumOrderQuantity', ${vendorPriceCatalog.minimumOrderQuantity},
+            'leadTimeDays', ${vendorPriceCatalog.leadTimeDays},
+            'isPreferredVendor', ${vendorPriceCatalog.isPreferredVendor},
+            'effectiveDate', ${vendorPriceCatalog.effectiveDate}
+          )
+        ) filter (where ${vendorPriceCatalog.id} is not null)`,
+      })
+      .from(inventoryItems)
+      .leftJoin(vendors, eq(inventoryItems.vendorId, vendors.id))
+      .leftJoin(categories, eq(inventoryItems.categoryId, categories.id))
+      .leftJoin(vendorPriceCatalog, eq(inventoryItems.id, vendorPriceCatalog.inventoryItemId))
+      .leftJoin(vendors.as('catalogVendors'), eq(vendorPriceCatalog.vendorId, vendors.id))
+      .groupBy(
+        inventoryItems.id,
+        inventoryItems.name,
+        inventoryItems.unit,
+        inventoryItems.costPerUnit,
+        vendors.name,
+        categories.name
+      );
+
+    if (locationId) {
+      query.where(eq(inventoryItems.locationId, locationId));
+    }
+
+    const results = await query;
+    return results.map(item => ({
+      ...item,
+      vendorPrices: item.vendorPrices || [],
+      potentialSavings: item.vendorPrices?.length > 0 
+        ? Math.max(0, parseFloat(item.currentCost) - Math.min(...item.vendorPrices.map((p: any) => parseFloat(p.costPerUnit))))
+        : 0
+    }));
+  }
+
+  async addVendorPrice(priceData: InsertVendorPriceCatalog): Promise<VendorPriceCatalog> {
+    const [result] = await db.insert(vendorPriceCatalog).values(priceData).returning();
+    return result;
+  }
+
+  async updateVendorPrice(id: string, priceData: Partial<InsertVendorPriceCatalog>): Promise<VendorPriceCatalog> {
+    const [result] = await db
+      .update(vendorPriceCatalog)
+      .set({ ...priceData, updatedAt: new Date() })
+      .where(eq(vendorPriceCatalog.id, id))
+      .returning();
+    return result;
+  }
+
+  async deleteVendorPrice(id: string): Promise<void> {
+    await db.delete(vendorPriceCatalog).where(eq(vendorPriceCatalog.id, id));
   }
 
   // Auto-ordering rules

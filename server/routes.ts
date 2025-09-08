@@ -4515,6 +4515,61 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Vendor Price Comparison API
+  app.get('/api/price-comparison', isAuthenticated, async (req, res) => {
+    try {
+      const { locationId } = req.query;
+      const comparison = await storage.getPriceComparison(locationId as string);
+      res.json(comparison);
+    } catch (error) {
+      console.error('Error fetching price comparison:', error);
+      res.status(500).json({ message: 'Failed to fetch price comparison' });
+    }
+  });
+
+  app.get('/api/inventory/:itemId/vendor-prices', isAuthenticated, async (req, res) => {
+    try {
+      const { itemId } = req.params;
+      const prices = await storage.getVendorPricesForItem(itemId);
+      res.json(prices);
+    } catch (error) {
+      console.error('Error fetching vendor prices:', error);
+      res.status(500).json({ message: 'Failed to fetch vendor prices' });
+    }
+  });
+
+  app.post('/api/vendor-prices', isAuthenticated, async (req, res) => {
+    try {
+      const vendorPrice = await storage.addVendorPrice(req.body);
+      res.status(201).json(vendorPrice);
+    } catch (error) {
+      console.error('Error adding vendor price:', error);
+      res.status(500).json({ message: 'Failed to add vendor price' });
+    }
+  });
+
+  app.put('/api/vendor-prices/:id', isAuthenticated, async (req, res) => {
+    try {
+      const { id } = req.params;
+      const vendorPrice = await storage.updateVendorPrice(id, req.body);
+      res.json(vendorPrice);
+    } catch (error) {
+      console.error('Error updating vendor price:', error);
+      res.status(500).json({ message: 'Failed to update vendor price' });
+    }
+  });
+
+  app.delete('/api/vendor-prices/:id', isAuthenticated, async (req, res) => {
+    try {
+      const { id } = req.params;
+      await storage.deleteVendorPrice(id);
+      res.status(204).send();
+    } catch (error) {
+      console.error('Error deleting vendor price:', error);
+      res.status(500).json({ message: 'Failed to delete vendor price' });
+    }
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }
