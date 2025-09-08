@@ -7,35 +7,35 @@ export function useAuth() {
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    // Bypass authentication for RestroFlow owner
-    const authenticateBypass = async () => {
+    // Check for existing authentication session
+    const checkAuth = async () => {
       try {
-        const response = await fetch('/api/auth/bypass', {
-          method: 'POST',
+        const response = await fetch('/api/auth/user', {
+          method: 'GET',
           credentials: 'include',
         });
         
         if (response.ok) {
-          const data = await response.json();
+          const userData = await response.json();
           setUser({
-            id: '46308728',
-            email: 'mequeamaddox@gmail.com',
-            firstName: 'Mequea',
-            lastName: 'Maddox',
-            role: 'owner',
-            employeeNumber: 'EMP001'
+            id: userData.id,
+            email: userData.email,
+            firstName: userData.firstName,
+            lastName: userData.lastName,
+            role: userData.role,
+            employeeNumber: userData.employeeNumber || 'EMP001'
           });
         } else {
           setUser(null);
         }
       } catch (error) {
-        console.error('Authentication bypass error:', error);
+        console.error('Authentication check error:', error);
         setUser(null);
       }
       setIsLoading(false);
     };
 
-    authenticateBypass();
+    checkAuth();
     return;
 
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
