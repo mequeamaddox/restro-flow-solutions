@@ -733,7 +733,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.get('/api/invoices/stats', isAuthenticated, async (req, res) => {
     try {
-      const stats = await storage.getInvoiceStats();
+      const { locationId } = req.query;
+      const stats = await storage.getInvoiceStats(locationId as string);
       res.json(stats);
     } catch (error) {
       console.error("Error fetching invoice stats:", error);

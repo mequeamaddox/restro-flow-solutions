@@ -37,6 +37,7 @@ import { format } from "date-fns";
 import { SubscriptionBanner } from "@/components/subscription/subscription-banner";
 import { InvoiceReviewDialog } from "@/components/invoice-review-dialog";
 import { useLocation } from "@/contexts/LocationContext";
+import LocationBanner from "@/components/location/location-banner";
 
 const invoiceSchema = z.object({
   vendorId: z.string().min(1, "Vendor is required"),
@@ -82,8 +83,12 @@ export default function InvoiceProcessing() {
   });
 
   const { data: processingStats } = useQuery({
-    queryKey: ["/api/invoices/stats"],
-    queryFn: () => apiRequest("GET", "/api/invoices/stats").then(r => r.json()),
+    queryKey: ["/api/invoices/stats", currentLocation?.id],
+    queryFn: () => {
+      const params = currentLocation?.id ? `?locationId=${currentLocation.id}` : "";
+      return apiRequest("GET", `/api/invoices/stats${params}`).then(r => r.json());
+    },
+    enabled: !!currentLocation,
   });
 
   // Mutations
@@ -365,6 +370,7 @@ export default function InvoiceProcessing() {
 
   return (
     <div className="space-y-8">
+      <LocationBanner />
       {/* Header */}
       <div className="flex justify-between items-center">
         <div>

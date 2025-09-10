@@ -298,7 +298,7 @@ export interface IStorage {
   createInvoice(invoice: any): Promise<any>;
   updateInvoiceStatus(id: string, status: string): Promise<any>;
   updateInvoice(id: string, data: any): Promise<any>;
-  getInvoiceStats(): Promise<any>;
+  getInvoiceStats(locationId?: string): Promise<any>;
 
   // Cost Monitoring & Alerts
   getCostAlerts(locationId?: string): Promise<any[]>;
@@ -1864,24 +1864,34 @@ export class DatabaseStorage implements IStorage {
     }
   }
 
-  async getInvoiceStats(): Promise<any> {
+  async getInvoiceStats(locationId?: string): Promise<any> {
     try {
+      // Base where conditions
+      const whereConditions = locationId ? [eq(invoiceProcessing.locationId, locationId)] : [];
+      const pendingConditions = locationId ? 
+        [eq(invoiceProcessing.status, 'pending'), eq(invoiceProcessing.locationId, locationId)] : 
+        [eq(invoiceProcessing.status, 'pending')];
+      const overdueConditions = locationId ? 
+        [eq(invoiceProcessing.status, 'overdue'), eq(invoiceProcessing.locationId, locationId)] : 
+        [eq(invoiceProcessing.status, 'overdue')];
+
       const [totalResult] = await db
         .select({
           count: sql`COUNT(*)`,
           total: sql`COALESCE(SUM(CAST(total AS DECIMAL)), 0)`,
         })
-        .from(invoiceProcessing);
+        .from(invoiceProcessing)
+        .where(whereConditions.length > 0 ? whereConditions[0] : undefined);
 
       const [pendingResult] = await db
         .select({ count: sql`COUNT(*)` })
         .from(invoiceProcessing)
-        .where(eq(invoiceProcessing.status, 'pending'));
+        .where(and(...pendingConditions));
 
       const [overdueResult] = await db
         .select({ count: sql`COUNT(*)` })
         .from(invoiceProcessing)
-        .where(eq(invoiceProcessing.status, 'overdue'));
+        .where(and(...overdueConditions));
 
       return {
         totalInvoices: parseInt(totalResult.count as string) || 0,
