@@ -893,12 +893,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
           }
         } else {
           // Create new vendor with all extracted information
+          // Get current location from request body or session
+          const locationId = req.body.locationId || (req.session as any)?.user?.defaultLocationId;
+          if (!locationId) {
+            throw new Error("Location ID is required to create vendor");
+          }
+          
           const newVendor = await storage.createVendor({
             name: parsedData.vendorName,
             contactPerson: null,
             email: null,
             phone: parsedData.vendorPhone || null,
-            address: parsedData.vendorAddress || null
+            address: parsedData.vendorAddress || null,
+            locationId: locationId
           });
           vendorId = newVendor.id;
           console.log(`Created new vendor: ${newVendor.name} with phone: ${parsedData.vendorPhone}, address: ${parsedData.vendorAddress} (${newVendor.id})`);

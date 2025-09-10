@@ -94,8 +94,13 @@ export default function InvoiceProcessing() {
   // Mutations
   const uploadInvoiceMutation = useMutation({
     mutationFn: async (file: File) => {
+      if (!currentLocation) {
+        throw new Error("Please select a location before uploading");
+      }
+      
       const formData = new FormData();
       formData.append("invoice", file);
+      formData.append("locationId", currentLocation.id);
 
       const response = await fetch("/api/invoices/upload", {
         method: "POST",
