@@ -752,10 +752,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.log('Processing file:', req.file.originalname, 'Type:', req.file.mimetype);
       
       // Check OCR access for current user
+      console.log('User object:', req.user);
+      console.log('Session:', req.session);
+      
       const userId = (req.user as any)?.claims?.sub;
       if (!userId) {
+        console.log('Authentication failed - userId not found');
+        console.log('req.user:', req.user);
         return res.status(401).json({ message: "User not authenticated" });
       }
+      
+      console.log('Authenticated user ID:', userId);
       
       const ocrAccess = await storage.checkOcrAccess(userId);
       console.log('OCR access check:', ocrAccess);
