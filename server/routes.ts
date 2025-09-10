@@ -932,6 +932,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const calculatedTax = taxAmount >= 0 ? taxAmount : 0;
       
       // Create invoice with OCR data
+      const locationId = req.body.locationId || (req.session as any)?.user?.defaultLocationId;
+      if (!locationId) {
+        throw new Error("Location ID is required to save invoice");
+      }
+      
       const invoiceData = {
         invoiceNumber: parsedData.invoiceNumber,
         vendorId: vendorId, // Use the resolved vendor ID
@@ -947,6 +952,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         attachmentPath: filePath, // Store path to original invoice file
         originalText: sanitizedText,
         processedAt: new Date(),
+        locationId: locationId, // Add location ID for filtering
       };
 
       // Create the invoice in storage
