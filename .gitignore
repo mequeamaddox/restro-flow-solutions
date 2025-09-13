@@ -53,6 +53,10 @@ temp/
 # Uploads (may contain sensitive invoice data)
 uploads/
 attachments/
+attached_assets/
+
+# Sensitive data files
+cookies.txt
 
 # Session storage
 sessions/
