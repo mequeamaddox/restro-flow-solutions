@@ -52,7 +52,7 @@ export default function InventoryTable({ items, isLoading, showPagination = fals
           variant: "destructive",
         });
         setTimeout(() => {
-          window.location.href = "/api/login";
+          window.location.href = "/auth";
         }, 500);
         return;
       }

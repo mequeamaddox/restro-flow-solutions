@@ -123,7 +123,7 @@ export default function AddItemDialog({ isOpen, onClose, onSuccess, categories, 
           variant: "destructive",
         });
         setTimeout(() => {
-          window.location.href = "/api/login";
+          window.location.href = "/auth";
         }, 500);
         return;
       }

@@ -7,37 +7,6 @@ export function useAuth() {
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    // Check for existing authentication session
-    const checkAuth = async () => {
-      try {
-        const response = await fetch('/api/auth/user', {
-          method: 'GET',
-          credentials: 'include',
-        });
-        
-        if (response.ok) {
-          const userData = await response.json();
-          setUser({
-            id: userData.id,
-            email: userData.email,
-            firstName: userData.firstName,
-            lastName: userData.lastName,
-            role: userData.role,
-            employeeNumber: userData.employeeNumber || 'EMP001'
-          });
-        } else {
-          setUser(null);
-        }
-      } catch (error) {
-        console.error('Authentication check error:', error);
-        setUser(null);
-      }
-      setIsLoading(false);
-    };
-
-    checkAuth();
-    return;
-
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
       setIsLoading(true);
       
@@ -73,6 +42,9 @@ export function useAuth() {
       
       setIsLoading(false);
     });
+
+    // Initialize auth state check
+    setIsLoading(false);
 
     return () => unsubscribe();
   }, []);

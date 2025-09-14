@@ -7,7 +7,7 @@ import helmet from 'helmet';
 export async function logSecurityEvent(req: any, action: string, severity: 'low' | 'medium' | 'high' | 'critical', metadata?: any) {
   try {
     await storage.createSecurityLog({
-      userId: req.user?.claims?.sub || null,
+      userId: req.user?.id || null,
       action,
       resource: req.route?.path || req.path,
       ipAddress: req.ip || req.connection.remoteAddress,
@@ -54,7 +54,7 @@ export async function logAuditEvent(
 
 // Enhanced authentication middleware with logging
 export function enhancedAuth(req: any, res: Response, next: NextFunction) {
-  if (!req.isAuthenticated() || !req.user?.claims?.sub) {
+  if (!req.user?.id) {
     logSecurityEvent(req, 'access_denied', 'medium', { 
       reason: 'unauthenticated_access',
       attempted_resource: req.path 
@@ -64,7 +64,7 @@ export function enhancedAuth(req: any, res: Response, next: NextFunction) {
 
   // Log successful authentication
   logSecurityEvent(req, 'authenticated_access', 'low', {
-    user_id: req.user.claims.sub,
+    user_id: req.user.id,
     resource: req.path,
     method: req.method
   });
@@ -76,7 +76,7 @@ export function enhancedAuth(req: any, res: Response, next: NextFunction) {
 export function requireRole(roles: string[]) {
   return async (req: any, res: Response, next: NextFunction) => {
     try {
-      const userId = req.user?.claims?.sub;
+      const userId = req.user?.id;
       if (!userId) {
         await logSecurityEvent(req, 'authorization_failed', 'medium', { 
           reason: 'no_user_id',
@@ -191,7 +191,7 @@ export function validateInput(schema: any) {
 export function requireLocationAccess(locationId?: string) {
   return async (req: any, res: Response, next: NextFunction) => {
     try {
-      const userId = req.user?.claims?.sub;
+      const userId = req.user?.id;
       const targetLocationId = locationId || req.params.locationId || req.query.locationId;
       
       if (!targetLocationId) {

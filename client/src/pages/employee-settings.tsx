@@ -40,7 +40,7 @@ export default function EmployeeSettings() {
       return apiRequest('PUT', `/api/employees/${(user as any)?.id}/profile`, data);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/auth/user'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/auth/me'] });
       setIsEditingProfile(false);
       toast({
         title: "Profile Updated",

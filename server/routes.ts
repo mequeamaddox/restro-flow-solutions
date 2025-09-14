@@ -1,9 +1,8 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
-import { setupAuth, isAuthenticated } from "./replitAuth";
 import { verifyFirebaseToken, syncFirebaseUser, adminAuth, createFirebaseUser, createCustomToken, verifyIdToken } from "./firebaseAuth";
-import { generateTokens, verifyToken, requireJWT, getCurrentUser } from './jwtAuth';
+import { requireFirebaseAuth, optionalFirebaseAuth, type AuthenticatedRequest } from './firebaseAuthMiddleware';
 import { requirePermission, requireAnyPermission, Permission } from "./permissions";
 import multer from "multer";
 import csv from "csv-parser";
@@ -39,6 +38,9 @@ import {
   insertTeamResourceSchema,
   teamResources,
 } from "@shared/schema";
+
+// Temporary middleware bridge for Firebase-only authentication
+const isAuthenticated = requireFirebaseAuth;
 
 // File upload configuration
 
@@ -108,149 +110,112 @@ function mapPositionToRole(positionTitle: string | null | undefined): string {
 }
 
 export async function registerRoutes(app: Express): Promise<Server> {
-  // Auth middleware
-  await setupAuth(app);
+  // Firebase-only authentication - no session setup required
 
+  // Firebase Authentication Routes
 
-  // Simple Employee Login Route
-  app.post('/api/auth/login', async (req, res) => {
+  // Firebase login - verify token and check user invitation status
+  app.post('/api/auth/firebase-login', async (req, res) => {
     try {
-      const { email, password } = req.body;
+      const { idToken } = req.body;
       
-      if (!email || !password) {
-        return res.status(400).json({ message: 'Email and password required' });
+      if (!idToken) {
+        return res.status(400).json({ message: 'Firebase ID token required' });
       }
 
-      console.log('🔑 Login attempt for:', email);
-
-      // First try local authentication (fallback when Firebase Admin SDK is unavailable)
-      try {
-        const localUser = await storage.verifyLocalAuthUser(email, password);
-        if (localUser) {
-          console.log('✅ Local authentication successful for:', email);
-          
-          // Get the user record from our database
-          const user = await storage.getUser(localUser.id);
-          if (user) {
-            (req.session as any).user = user;
-            console.log('🎯 Login successful - User role:', user.role);
-            return res.json({ 
-              user: {
-                id: user.id,
-                email: user.email,
-                firstName: user.firstName,
-                lastName: user.lastName,
-                role: user.role
-              }
-            });
-          }
-        }
-      } catch (localAuthError) {
-        console.log('ℹ️ Local auth failed, trying employee lookup method');
-      }
-
-      // Check if employee exists (legacy method)
-      const employees = await storage.getEmployees();
-      console.log('📋 Found employees:', employees.map(e => ({ id: e.id.substring(0, 8), email: e.email })));
+      // Verify Firebase token
+      const decodedToken = await verifyFirebaseToken(idToken);
       
-      const employee = employees.find(emp => emp.email?.toLowerCase() === email.toLowerCase());
+      // Check if user exists in our database
+      let user = await storage.getUser(decodedToken.uid);
       
-      if (!employee) {
-        console.log('❌ Employee not found for email:', email);
-        return res.status(401).json({ message: 'Invalid credentials' });
-      }
-
-      console.log('✅ Found employee:', { id: employee.id.substring(0, 8), email: employee.email });
-
-      // Verify password using proper authentication method
-      try {
-        const isValidPassword = await storage.verifyLocalAuthUser(email, password);
-        if (!isValidPassword) {
-          console.log('❌ Invalid password for:', email);
-          return res.status(401).json({ message: 'Invalid credentials' });
-        }
-      } catch (error) {
-        console.log('❌ Password verification failed for:', email);
-        return res.status(401).json({ message: 'Invalid credentials' });
-      }
-
-      console.log('✅ Password accepted');
-
-
-      // Get employee with position details
-      const employeeWithPosition = await storage.getEmployee(employee.id);
-      const userRole = mapPositionToRole(employeeWithPosition?.position?.title);
-
-      // Get existing user record for this employee
-      let existingUser = await storage.getUser(employee.id);
-      
-      if (!existingUser) {
-        try {
-          // Create user record for this employee using their employee data
-          console.log('✅ Creating user record for employee:', employee.id, 'with role:', userRole);
-          existingUser = await storage.upsertUser({
-            id: employee.id,
-            email: employee.email,
-            firstName: employee.firstName,
-            lastName: employee.lastName,
-            role: userRole,
+      // If user doesn't exist, check if they're invited
+      if (!user) {
+        console.log('🔍 User not found in database, checking for employee/invitation:', decodedToken.email);
+        
+        // Check if this email exists as an employee (invited user)
+        const employees = await storage.getEmployees();
+        const invitedEmployee = employees.find(emp => 
+          emp.email?.toLowerCase() === decodedToken.email?.toLowerCase()
+        );
+        
+        if (!invitedEmployee) {
+          console.log('❌ User not invited:', decodedToken.email);
+          return res.status(403).json({ 
+            message: 'Not invited', 
+            error: 'This user has not been invited to access the system' 
           });
-        } catch (error) {
-          // If user already exists with different ID, find by email
-          console.log('User creation failed, looking up by email instead');
-          if (employee.email) {
-            const existingUsers = await db.select().from(users).where(eq(users.email, employee.email));
-            if (existingUsers.length > 0) {
-              existingUser = existingUsers[0];
-            } else {
-              throw error;
-            }
-          } else {
-            throw error;
-          }
         }
-      } else if (!existingUser.firstName || !existingUser.lastName || existingUser.role === 'employee') {
-        // Update existing user record with employee names and correct role if missing
-        console.log('✅ Updating user record with employee names and role:', employee.id, 'role:', userRole);
-        existingUser = await storage.upsertUser({
-          id: employee.id,
-          email: existingUser.email,
-          firstName: employee.firstName,
-          lastName: employee.lastName,
-          role: userRole,
+
+        // Sync Firebase user and create user record for invited employee
+        console.log('✅ Creating user record for invited employee:', decodedToken.email);
+        user = await syncFirebaseUser({
+          uid: decodedToken.uid,
+          email: decodedToken.email || null,
+          displayName: decodedToken.name || null,
+          photoURL: null
         });
       }
 
-      // Set session with user data (for web compatibility)
-      (req.session as any).user = existingUser;
-      
-      // Generate JWT tokens for cross-platform compatibility
-      const tokens = generateTokens({
-        id: existingUser.id,
-        email: existingUser.email || '',
-        role: existingUser.role || 'employee'
-      });
-      
-      console.log('✅ Login successful for:', existingUser.email);
-      
-      // Return user data with tokens for cross-platform auth
+      // Check if user is active
+      if (!user) {
+        return res.status(403).json({ 
+          message: 'Access denied', 
+          error: 'User account not found or inactive' 
+        });
+      }
+
+      console.log('✅ Firebase login successful for:', user.email, 'role:', user.role);
       res.json({
         user: {
-          id: existingUser.id,
-          email: existingUser.email,
-          firstName: existingUser.firstName,
-          lastName: existingUser.lastName,
-          role: existingUser.role
-        },
-        accessToken: tokens.accessToken,
-        refreshToken: tokens.refreshToken,
-        expiresIn: tokens.expiresIn
+          id: user.id,
+          email: user.email,
+          firstName: user.firstName,
+          lastName: user.lastName,
+          role: user.role
+        }
       });
     } catch (error) {
-      console.error('❌ Login error:', error);
-      res.status(500).json({ message: 'Login failed' });
+      console.error('❌ Firebase authentication error:', error);
+      res.status(401).json({ message: 'Authentication failed' });
     }
   });
+
+  // Get current user info (Firebase-only)
+  app.get('/api/auth/me', requireFirebaseAuth, async (req, res) => {
+    try {
+      if (!req.user) {
+        return res.status(401).json({ message: 'User not authenticated' });
+      }
+
+      res.json({
+        id: req.user.id,
+        email: req.user.email,
+        firstName: req.user.firstName,
+        lastName: req.user.lastName,
+        role: req.user.role
+      });
+    } catch (error) {
+      console.error('❌ Error getting user info:', error);
+      res.status(500).json({ message: 'Failed to get user info' });
+    }
+  });
+
+  // Logout (stateless - client handles Firebase signOut)
+  app.post('/api/auth/logout', (req, res) => {
+    try {
+      // Firebase auth is stateless, so logout is handled on client side
+      // Just return success response
+      res.json({ 
+        success: true, 
+        message: 'Logout successful. Please sign out from Firebase on the client.' 
+      });
+    } catch (error) {
+      console.error('❌ Logout error:', error);
+      res.status(500).json({ message: 'Logout failed' });
+    }
+  });
+
 
   // Legacy admin employee creation route - now redirects to unified HR system
   app.post('/api/admin/create-employee', isAuthenticated, async (req, res) => {
@@ -262,308 +227,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // Note: Mobile login endpoint moved to Firebase compatibility section below
 
-  // Token refresh endpoint for mobile
-  app.post('/api/auth/refresh', async (req, res) => {
-    try {
-      const { refreshToken } = req.body;
-      
-      if (!refreshToken) {
-        return res.status(400).json({ message: 'Refresh token required' });
-      }
-
-      const decoded = verifyToken(refreshToken);
-      if (!decoded || decoded.type !== 'refresh') {
-        return res.status(401).json({ message: 'Invalid refresh token' });
-      }
-
-      // Get current user data
-      const user = await storage.getUser(decoded.userId);
-      if (!user) {
-        return res.status(401).json({ message: 'User not found' });
-      }
-
-      // Generate new tokens
-      const tokens = generateTokens({
-        id: user.id,
-        email: user.email || '',
-        role: user.role || 'employee'
-      });
-
-      res.json({
-        accessToken: tokens.accessToken,
-        refreshToken: tokens.refreshToken,
-        expiresIn: tokens.expiresIn
-      });
-    } catch (error) {
-      console.error('❌ Token refresh error:', error);
-      res.status(401).json({ message: 'Token refresh failed' });
-    }
-  });
-
-  // JWT verification endpoint for mobile apps
-  app.get('/api/auth/verify', requireJWT, async (req: any, res) => {
-    try {
-      const currentUser = getCurrentUser(req);
-      if (!currentUser) {
-        return res.status(401).json({ message: 'Not authenticated' });
-      }
-
-      // Return current user info (works for both JWT and session auth)
-      res.json({
-        user: {
-          id: currentUser.userId || currentUser.id,
-          email: currentUser.email,
-          firstName: currentUser.firstName,
-          lastName: currentUser.lastName,
-          role: currentUser.role
-        }
-      });
-    } catch (error) {
-      console.error('❌ Auth verification error:', error);
-      res.status(500).json({ message: 'Verification failed' });
-    }
-  });
-
-  // Auth routes - supports both admin (Replit) and employee (session) authentication
-  app.get('/api/auth/user', async (req: any, res) => {
-    try {
-      // Check for employee session first
-      if ((req.session as any)?.user) {
-        return res.json((req.session as any).user);
-      }
-
-      // Check for Replit admin authentication
-      if (req.user) {
-        console.log('🔍 Replit user detected:', {
-          id: req.user.id,
-          email: req.user.email,
-          name: req.user.name,
-          firstName: req.user.firstName,
-          lastName: req.user.lastName
-        });
 
 
-        // For other users, check if they exist first
-        let existingUser = null;
-        try {
-          existingUser = await storage.getUser(req.user.id);
-        } catch (error) {
-          // User doesn't exist yet
-        }
 
-        if (existingUser) {
-          return res.json(existingUser);
-        }
 
-        // Only create admin user if they have valid email and name
-        if (!req.user.email || req.user.email.trim() === '') {
-          console.log('❌ Rejecting admin creation - no email provided');
-          return res.status(401).json({ message: 'Unauthorized - incomplete profile' });
-        }
 
-        // Create new user with appropriate role based on authentication source
-        // Replit OIDC users get admin access only if they have valid Replit email or specific criteria
-        let role = 'employee'; // Default to least privileged
-        
-        // Check if this is a legitimate Replit admin (you may want to add more specific criteria)
-        if (req.user.email && (
-          req.user.email.endsWith('@replit.com') || 
-          req.user.email.endsWith('@repl.it') ||
-          // Add other trusted admin email domains here
-          process.env.ADMIN_EMAIL_DOMAINS?.split(',').some(domain => req.user.email.endsWith(domain))
-        )) {
-          role = 'admin';
-        }
-        
-        console.log(`🔐 Creating Replit user with role: ${role} for email: ${req.user.email}`);
-        const user = await storage.upsertUser({
-          id: req.user.id,
-          email: req.user.email,
-          firstName: req.user.firstName || req.user.name || '',
-          lastName: req.user.lastName || '',
-          role: role,
-        });
-        return res.json(user);
-      }
-
-      // No authentication found
-      res.status(401).json({ message: 'Unauthorized' });
-    } catch (error) {
-      console.error("Error fetching user:", error);
-      res.status(500).json({ message: "Failed to fetch user" });
-    }
-  });
-
-  // Logout route to clear session
-  app.post('/api/auth/logout', (req, res) => {
-    try {
-      // Clear employee session
-      if ((req.session as any)?.user) {
-        (req.session as any).user = null;
-      }
-      
-      // Destroy the entire session
-      req.session.destroy((err: any) => {
-        if (err) {
-          console.error('Error destroying session:', err);
-          return res.status(500).json({ message: 'Logout failed' });
-        }
-        
-        // Clear the session cookie
-        res.clearCookie('connect.sid');
-        res.json({ message: 'Logout successful' });
-      });
-    } catch (error) {
-      console.error('Error during logout:', error);
-      res.status(500).json({ message: 'Logout failed' });
-    }
-  });
-
-  // Mobile authentication endpoints for Firebase compatibility
-  
-  // Mobile authentication endpoint - login with email/password
-  app.post('/api/auth/mobile/login', async (req, res) => {
-    try {
-      const { email, password } = req.body;
-      
-      if (!email || !password) {
-        return res.status(400).json({ message: 'Email and password are required' });
-      }
-      
-      console.log(`📱 Mobile login attempt for: ${email}`);
-      
-      // Check if employee exists
-      const employees = await storage.getEmployees();
-      const employee = employees.find(emp => emp.email?.toLowerCase() === email.toLowerCase());
-      
-      if (!employee) {
-        console.log('❌ Employee not found for email:', email);
-        return res.status(401).json({ message: 'Invalid credentials' });
-      }
-      
-      // Verify password using proper authentication method
-      try {
-        const isValidPassword = await storage.verifyLocalAuthUser(email, password);
-        if (!isValidPassword) {
-          console.log('❌ Invalid password for mobile login');
-          return res.status(401).json({ message: 'Invalid credentials' });
-        }
-      } catch (error) {
-        console.log('❌ Password verification failed for mobile login');
-        return res.status(401).json({ message: 'Invalid credentials' });
-      }
-      
-      // Get user record with Firebase UID
-      const user = await storage.getUser(employee.id);
-      if (!user) {
-        console.log('❌ User record not found for employee');
-        return res.status(401).json({ message: 'User account not found' });
-      }
-      
-      // Try to create custom Firebase token for mobile app
-      try {
-        const customToken = await createCustomToken(user.id);
-        
-        console.log(`✅ Mobile login successful with Firebase token for: ${email}`);
-        res.json({
-          success: true,
-          customToken: customToken,
-          user: {
-            id: user.id,
-            email: user.email,
-            firstName: user.firstName,
-            lastName: user.lastName,
-            role: user.role
-          }
-        });
-      } catch (firebaseError) {
-        console.error('Error creating custom token:', firebaseError);
-        // Fallback: return user info without custom token
-        console.log(`✅ Mobile login successful (fallback mode) for: ${email}`);
-        res.json({
-          success: true,
-          user: {
-            id: user.id,
-            email: user.email,
-            firstName: user.firstName,
-            lastName: user.lastName,
-            role: user.role
-          },
-          message: 'Login successful'
-        });
-      }
-      
-    } catch (error) {
-      console.error('Mobile login error:', error);
-      res.status(500).json({ message: 'Internal server error' });
-    }
-  });
-  
-  // Mobile token verification endpoint
-  app.post('/api/auth/mobile/verify', async (req, res) => {
-    try {
-      const { idToken } = req.body;
-      
-      if (!idToken) {
-        return res.status(400).json({ message: 'ID token is required' });
-      }
-      
-      // Verify the Firebase ID token
-      const decodedToken = await verifyIdToken(idToken);
-      
-      // Get user from database
-      const user = await storage.getUser(decodedToken.uid);
-      if (!user) {
-        return res.status(404).json({ message: 'User not found' });
-      }
-      
-      console.log(`✅ Mobile token verified for: ${user.email}`);
-      res.json({
-        success: true,
-        user: {
-          id: user.id,
-          email: user.email,
-          firstName: user.firstName,
-          lastName: user.lastName,
-          role: user.role
-        }
-      });
-      
-    } catch (error) {
-      console.error('Mobile token verification error:', error);
-      res.status(401).json({ message: 'Invalid token' });
-    }
-  });
-
-  // Firebase Authentication Route
-  app.post('/api/auth/firebase-login', async (req, res) => {
-    try {
-      const { idToken } = req.body;
-      
-      if (!idToken) {
-        return res.status(400).json({ message: 'ID token required' });
-      }
-
-      // Verify Firebase token
-      const decodedToken = await verifyFirebaseToken(idToken);
-      
-      // Sync user to our database
-      const user = await syncFirebaseUser({
-        uid: decodedToken.uid,
-        email: decodedToken.email || null,
-        displayName: decodedToken.name || null,
-        photoURL: decodedToken.picture || null,
-      });
-
-      // Set session
-      (req.session as any).user = user;
-      
-      res.json(user);
-    } catch (error) {
-      console.error('Firebase authentication error:', error);
-      res.status(401).json({ message: 'Authentication failed' });
-    }
-  });
 
 
   // Invoice Processing Routes
@@ -633,7 +301,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.log('Processing file:', req.file.originalname, 'Type:', req.file.mimetype);
       
       // Check OCR access for current user - fix for session-based auth
-      const userId = (req.user as any)?.claims?.sub || (req.session as any)?.user?.id;
+      const userId = req.user.id;
       if (!userId) {
         console.log('Authentication failed - userId not found');
         return res.status(401).json({ message: "User not authenticated" });
@@ -775,7 +443,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         } else {
           // Create new vendor with all extracted information
           // Get current location from request body or session
-          const locationId = req.body.locationId || (req.session as any)?.user?.defaultLocationId;
+          const locationId = req.body.locationId;
           if (!locationId) {
             throw new Error("Location ID is required to create vendor");
           }
@@ -813,7 +481,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const calculatedTax = taxAmount >= 0 ? taxAmount : 0;
       
       // Create invoice with OCR data
-      const locationId = req.body.locationId || (req.session as any)?.user?.defaultLocationId;
+      const locationId = req.body.locationId;
       if (!locationId) {
         throw new Error("Location ID is required to save invoice");
       }
@@ -902,7 +570,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Invoice approval route - for saving reviewed/edited invoices
-  app.put('/api/invoices/:id/approve', isAuthenticated, async (req: any, res) => {
+  app.put('/api/invoices/:id/approve', isAuthenticated, async (req, res) => {
     try {
       const invoiceId = req.params.id;
       console.log('🔍 Approve request received for invoice:', invoiceId);
@@ -937,7 +605,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Subscription and OCR Management Routes
   app.get('/api/user/subscription', isAuthenticated, async (req, res) => {
     try {
-      const userId = (req.user as any)?.claims?.sub;
+      const userId = req.user.id;
       if (!userId) {
         return res.status(401).json({ message: "User not authenticated" });
       }
@@ -962,7 +630,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post('/api/user/upgrade-plan', isAuthenticated, async (req, res) => {
     try {
-      const userId = (req.user as any)?.claims?.sub;
+      const userId = req.user.id;
       if (!userId) {
         return res.status(401).json({ message: "User not authenticated" });
       }
@@ -995,7 +663,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post('/api/user/reset-credits', isAuthenticated, async (req, res) => {
     try {
-      const userId = (req.user as any)?.claims?.sub;
+      const userId = req.user.id;
       if (!userId) {
         return res.status(401).json({ message: "User not authenticated" });
       }
@@ -1317,7 +985,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post('/api/inventory/import-from-invoice', isAuthenticated, async (req, res) => {
     try {
       const { items, locationId } = req.body;
-      const userId = (req.user as any)?.claims?.sub;
+      const userId = req.user.id;
       
       if (!items || !Array.isArray(items)) {
         return res.status(400).json({ message: "Invalid items data" });
@@ -1399,7 +1067,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         type: "in",
         quantity: itemData.quantity?.toString() || "0",
         reference: "Initial stock",
-        createdBy: (req.user as any)?.claims?.sub || "system",
+        createdBy: req.user.id || "system",
       });
       
       res.status(201).json(item);
@@ -1615,7 +1283,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post('/api/variance/production', isAuthenticated, async (req, res) => {
     try {
       const { recipeId, locationId, quantityProduced, batchNumber } = req.body;
-      const userId = (req.user as any)?.claims?.sub;
+      const userId = req.user.id;
       
       if (!recipeId || !locationId || !quantityProduced) {
         return res.status(400).json({ message: "Recipe ID, location ID, and quantity produced are required" });
@@ -1724,7 +1392,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         expectedDeliveryDate: req.body.expectedDeliveryDate && req.body.expectedDeliveryDate.trim() !== '' ? new Date(req.body.expectedDeliveryDate) : null,
         totalAmount: req.body.totalAmount,
         notes: req.body.notes || null,
-        createdBy: (req.user as any)?.claims?.sub,
+        createdBy: req.user.id,
       };
       
       const order = await storage.createPurchaseOrder(orderData);
@@ -1776,7 +1444,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
                   quantity: item.quantity.toString(),
                   reference: `PO-${currentOrder.orderNumber}`,
                   notes: `Received from purchase order ${currentOrder.orderNumber}`,
-                  createdBy: (req.user as any)?.claims?.sub || 'system'
+                  createdBy: req.user.id || 'system'
                 });
                 
                 // Update inventory quantity
@@ -1850,7 +1518,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         expectedDeliveryDate: null,
         totalAmount: totalAmount.toString(),
         notes: `Auto-generated from ${lowStockItems.length} low stock items`,
-        createdBy: (req.user as any)?.claims?.sub || 'system',
+        createdBy: req.user.id || 'system',
       };
       
       const order = await storage.createPurchaseOrder(orderData);
@@ -1918,7 +1586,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const wasteData = insertWasteEntrySchema.parse({
         ...req.body,
-        reportedBy: (req.user as any)?.claims?.sub,
+        reportedBy: req.user.id,
       });
       const entry = await storage.createWasteEntry(wasteData);
       
@@ -1930,7 +1598,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         quantity: wasteData.quantity,
         reference: `Waste: ${wasteData.reason}`,
         notes: wasteData.notes,
-        createdBy: (req.user as any)?.claims?.sub,
+        createdBy: req.user.id,
       });
       
       res.status(201).json(entry);
@@ -1969,7 +1637,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const transactionData = insertInventoryTransactionSchema.parse({
         ...req.body,
-        createdBy: (req.user as any)?.claims?.sub,
+        createdBy: req.user.id,
       });
       const transaction = await storage.createInventoryTransaction(transactionData);
       res.status(201).json(transaction);
@@ -2379,7 +2047,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post('/api/hr/employees', isAuthenticated, requirePermission(Permission.MANAGE_EMPLOYEES), requireHRAccess, async (req, res) => {
     console.log('🚀 Employee creation endpoint called!');
     console.log('🚀 Request body:', JSON.stringify(req.body, null, 2));
-    console.log('🚀 User:', req.user || (req.session as any)?.user);
+    console.log('🚀 User:', req.user);
     try {
       const employeeData = req.body;
       
@@ -2581,7 +2249,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.put('/api/hr/time-off-requests/:id/status', isAuthenticated, async (req, res) => {
     try {
       const { status, notes } = req.body;
-      const request = await storage.updateTimeOffRequestStatus(req.params.id, status, notes, (req.user as any)?.claims?.sub);
+      const request = await storage.updateTimeOffRequestStatus(req.params.id, status, notes, req.user.id);
       res.json(request);
     } catch (error) {
       console.error('Error updating time-off request status:', error);
@@ -2711,7 +2379,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get('/api/employees/:employeeId/time-entries', isAuthenticated, async (req, res) => {
     try {
       // Get user ID from either employee session or Replit auth
-      const userId = (req.session as any)?.user?.id || (req.user as any)?.claims?.sub;
+      const userId = req.user.id;
       console.log('🕐 Time entries request - userId:', userId, 'employeeId:', req.params.employeeId);
       
       // Allow owners/admins to view any employee's time entries, employees can only view their own
@@ -2733,7 +2401,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get('/api/employees/:employeeId/shifts', isAuthenticated, async (req, res) => {
     try {
       // Get user ID from either employee session or Replit auth
-      const userId = (req.session as any)?.user?.id || (req.user as any)?.claims?.sub;
+      const userId = req.user.id;
       // Ensure employees can only access their own shifts
       if (req.params.employeeId !== userId) {
         return res.status(403).json({ message: 'Access denied - can only view your own shifts' });
@@ -2749,7 +2417,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post('/api/employees/:employeeId/clock-in', isAuthenticated, async (req, res) => {
     try {
       // Get user ID from either employee session or Replit auth
-      const userId = (req.session as any)?.user?.id || (req.user as any)?.claims?.sub;
+      const userId = req.user.id;
       // Ensure employees can only clock in for themselves
       if (req.params.employeeId !== userId) {
         return res.status(403).json({ message: 'Access denied - can only clock in for yourself' });
@@ -2765,7 +2433,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post('/api/employees/:employeeId/clock-out', isAuthenticated, async (req, res) => {
     try {
       // Get user ID from either employee session or Replit auth
-      const userId = (req.session as any)?.user?.id || (req.user as any)?.claims?.sub;
+      const userId = req.user.id;
       // Ensure employees can only clock out for themselves
       if (req.params.employeeId !== userId) {
         return res.status(403).json({ message: 'Access denied - can only clock out for yourself' });
@@ -2787,7 +2455,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post('/api/employees/:employeeId/break-start', isAuthenticated, async (req, res) => {
     try {
       // Get user ID from either employee session or Replit auth
-      const userId = (req.session as any)?.user?.id || (req.user as any)?.claims?.sub;
+      const userId = req.user.id;
       if (req.params.employeeId !== userId) {
         return res.status(403).json({ message: 'Access denied - can only start break for yourself' });
       }
@@ -2807,7 +2475,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post('/api/employees/:employeeId/break-end', isAuthenticated, async (req, res) => {
     try {
       // Get user ID from either employee session or Replit auth
-      const userId = (req.session as any)?.user?.id || (req.user as any)?.claims?.sub;
+      const userId = req.user.id;
       if (req.params.employeeId !== userId) {
         return res.status(403).json({ message: 'Access denied - can only end break for yourself' });
       }
@@ -2867,7 +2535,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post('/api/hr/payroll/pay-periods/:id/approve', async (req, res) => {
     try {
-      const payPeriod = await storage.approvePayroll(req.params.id, (req.user as any)?.claims?.sub);
+      const payPeriod = await storage.approvePayroll(req.params.id, req.user.id);
       res.json(payPeriod);
     } catch (error) {
       console.error('Error approving payroll:', error);
@@ -2982,7 +2650,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post('/api/hr/team-resources', isAuthenticated, async (req, res) => {
     try {
-      const userId = (req.user as any).claims.sub;
+      const userId = req.user.id;
       const resourceData = insertTeamResourceSchema.parse({
         ...req.body,
         uploadedBy: userId,
@@ -3096,7 +2764,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Create manual time entry (for supervisors to add missed clock-ins)
   app.post('/api/hr/time-entries/manual', isAuthenticated, async (req, res) => {
     try {
-      const userId = (req.user as any)?.id || (req.user as any)?.claims?.sub;
+      const userId = req.user.id;
       const { employeeId, clockInTime, clockOutTime, breakStartTime, breakEndTime, notes } = req.body;
 
       // Validate required fields
@@ -3148,14 +2816,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post('/api/hr/messages', isAuthenticated, async (req, res) => {
     try {
-      // Get user ID from session or use owner default
-      let userId = '46308728'; // Default to owner ID
-      
-      if ((req.session as any)?.user?.id) {
-        userId = (req.session as any).user.id;
-      } else if ((req.user as any)?.id) {
-        userId = (req.user as any).id;
-      }
+      // Get user ID from authenticated request
+      const userId = req.user.id;
       
       const messageData = {
         ...req.body,
@@ -3405,7 +3067,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post("/api/hr/documents", isAuthenticated, async (req, res) => {
     try {
-      const userId = (req.user as any)?.claims?.sub;
+      const userId = req.user.id;
       const documentData = {
         ...req.body,
         uploadedBy: userId
@@ -3421,7 +3083,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.put("/api/hr/documents/:id", isAuthenticated, async (req, res) => {
     try {
       const { id } = req.params;
-      const userId = (req.user as any)?.claims?.sub;
+      const userId = req.user.id;
       const updateData = {
         ...req.body,
         reviewedBy: userId,
@@ -3488,7 +3150,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post("/api/hr/onboarding/templates", isAuthenticated, async (req, res) => {
     try {
-      const userId = (req.user as any)?.claims?.sub;
+      const userId = req.user.id;
       const templateData = {
         ...req.body,
         createdBy: userId
@@ -3569,7 +3231,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.put("/api/hr/onboarding/steps/:id", isAuthenticated, async (req, res) => {
     try {
       const { id } = req.params;
-      const userId = (req.user as any)?.claims?.sub;
+      const userId = req.user.id;
       const updateData = {
         ...req.body,
         completedBy: userId,
@@ -3795,7 +3457,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.put("/api/employees/:id/profile", isAuthenticated, async (req, res) => {
     try {
       const { id } = req.params;
-      const userId = (req.session as any)?.user?.id || (req.user as any)?.claims?.sub;
+      const userId = req.user.id;
       
       // Only allow employees to update their own profile
       if (id !== userId) {
@@ -3836,7 +3498,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.put("/api/employees/:id/password", isAuthenticated, async (req, res) => {
     try {
       const { id } = req.params;
-      const userId = (req.session as any)?.user?.id || (req.user as any)?.claims?.sub;
+      const userId = req.user.id;
       
       // Only allow employees to change their own password
       if (id !== userId) {
@@ -3947,7 +3609,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post('/api/document-templates', isAuthenticated, async (req, res) => {
     try {
-      const userId = (req.user as any)?.claims?.sub;
+      const userId = req.user.id;
       const templateData = { ...req.body, createdBy: userId };
       const template = await storage.createDocumentTemplate(templateData);
       res.status(201).json(template);
@@ -3987,7 +3649,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post('/api/employee-documents/assign', isAuthenticated, async (req, res) => {
     try {
-      const userId = (req.user as any)?.claims?.sub;
+      const userId = req.user.id;
       const assignmentData = { 
         ...req.body, 
         sentBy: userId, 
@@ -4113,7 +3775,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Manager paper upload endpoint
   app.put('/api/employee-documents/:id/manager-upload', isAuthenticated, async (req, res) => {
     try {
-      const userId = (req.user as any)?.claims?.sub;
+      const userId = req.user.id;
       const { filePath, fileSize, mimeType } = req.body;
       
       const assignment = await storage.updateDocumentAssignment(req.params.id, {
@@ -4212,7 +3874,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Create payroll period
   app.post("/api/payroll-periods", async (req, res) => {
     try {
-      const userId = (req.user as any)?.claims?.sub || (req.session as any)?.user?.id;
+      const userId = req.user.id;
       
       console.log('Received payroll period request body:', JSON.stringify(req.body, null, 2));
       
@@ -4526,7 +4188,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post('/api/price-imports/upload', isAuthenticated, csvUpload.single('file'), async (req, res) => {
     try {
-      const currentUser = await getCurrentUser(req);
+      const currentUser = (req as any).user;
       if (!currentUser) {
         return res.status(401).json({ message: 'User not found' });
       }
@@ -4674,7 +4336,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         paymentMethod || 'cash',
         customerName || null,
         salesItems,
-        (req.user as any)?.claims?.sub || (req.user as any)?.id
+req.user.id
       );
 
       res.json({ transactionId, message: 'Sales transaction recorded successfully' });
