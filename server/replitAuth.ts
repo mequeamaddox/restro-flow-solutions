@@ -130,12 +130,20 @@ export async function setupAuth(app: Express) {
 
   app.get("/api/logout", (req, res) => {
     req.logout(() => {
-      res.redirect(
-        client.buildEndSessionUrl(config, {
-          client_id: process.env.REPL_ID!,
-          post_logout_redirect_uri: `${req.protocol}://${req.hostname}`,
-        }).href
-      );
+      // Clear session data
+      if ((req.session as any)?.user) {
+        (req.session as any).user = null;
+      }
+      
+      req.session.destroy((err: any) => {
+        if (err) {
+          console.error('Error destroying session during logout:', err);
+        }
+        // Clear the session cookie
+        res.clearCookie('connect.sid');
+        // Redirect to home page instead of Replit OIDC
+        res.redirect('/');
+      });
     });
   });
 }
