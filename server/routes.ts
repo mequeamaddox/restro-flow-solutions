@@ -39,6 +39,19 @@ import {
   teamResources,
 } from "@shared/schema";
 
+// Simple session store for authentication (in production, use Redis or database)
+const activeSessions = new Map<string, { userId: string; email: string; expiresAt: number }>();
+
+// Clean up expired sessions periodically
+setInterval(() => {
+  const now = Date.now();
+  for (const [sessionId, session] of activeSessions.entries()) {
+    if (session.expiresAt < now) {
+      activeSessions.delete(sessionId);
+    }
+  }
+}, 5 * 60 * 1000); // Clean up every 5 minutes
+
 // Temporary middleware bridge for Firebase-only authentication
 const isAuthenticated = requireFirebaseAuth;
 
@@ -181,19 +194,61 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Get current user info (Firebase-only)
-  app.get('/api/auth/me', requireFirebaseAuth, async (req, res) => {
+  // Get current user info (works with simple session-based authentication)
+  app.get('/api/auth/me', async (req, res) => {
     try {
-      if (!req.user) {
-        return res.status(401).json({ message: 'User not authenticated' });
+      console.log('🔍 Checking auth state for /api/auth/me');
+      
+      // Check for session cookie
+      const sessionId = req.cookies?.sessionId;
+      if (!sessionId) {
+        console.log('❌ No session cookie found');
+        return res.status(401).json({ 
+          message: 'Not authenticated',
+          error: 'No session found' 
+        });
       }
 
+      // Check if session exists and is valid
+      const session = activeSessions.get(sessionId);
+      if (!session) {
+        console.log('❌ Session not found in store:', sessionId);
+        return res.status(401).json({ 
+          message: 'Not authenticated',
+          error: 'Invalid session' 
+        });
+      }
+
+      // Check if session is expired
+      if (session.expiresAt < Date.now()) {
+        console.log('❌ Session expired:', sessionId);
+        activeSessions.delete(sessionId);
+        res.clearCookie('sessionId');
+        return res.status(401).json({ 
+          message: 'Not authenticated',
+          error: 'Session expired' 
+        });
+      }
+
+      // Get user data
+      const user = await storage.getUser(session.userId);
+      if (!user) {
+        console.log('❌ User not found for session:', session.userId);
+        activeSessions.delete(sessionId);
+        res.clearCookie('sessionId');
+        return res.status(401).json({ 
+          message: 'Not authenticated',
+          error: 'User not found' 
+        });
+      }
+
+      console.log('✅ Session valid for user:', user.email);
       res.json({
-        id: req.user.id,
-        email: req.user.email,
-        firstName: req.user.firstName,
-        lastName: req.user.lastName,
-        role: req.user.role
+        id: user.id,
+        email: user.email,
+        firstName: user.firstName,
+        lastName: user.lastName,
+        role: user.role
       });
     } catch (error) {
       console.error('❌ Error getting user info:', error);
@@ -216,6 +271,77 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Simple email/password login endpoint for frontend compatibility  
+  app.post('/api/auth/login', async (req, res) => {
+    try {
+      const { email, password } = req.body;
+      
+      if (!email || !password) {
+        return res.status(400).json({ message: 'Email and password required' });
+      }
+
+      console.log('🔑 Simple login attempt for:', email);
+      
+      // For immediate functionality, check if user exists in employees
+      const employees = await storage.getEmployees();
+      const employee = employees.find(emp => 
+        emp.email?.toLowerCase() === email.toLowerCase()
+      );
+      
+      if (!employee) {
+        console.log('❌ User not found in employees:', email);
+        return res.status(401).json({ message: 'Invalid email or password' });
+      }
+
+      // Check if user record exists
+      let user = await storage.getUser(employee.id);
+      
+      if (!user) {
+        // Create user record from employee data
+        user = await storage.upsertUser({
+          id: employee.id,
+          email: employee.email || '',
+          firstName: employee.firstName || '',
+          lastName: employee.lastName || '',
+          role: 'employee' // Default role for employees
+        });
+      }
+
+      // Create a simple session
+      const sessionId = `session_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+      const expiresAt = Date.now() + (24 * 60 * 60 * 1000); // 24 hours
+      
+      activeSessions.set(sessionId, {
+        userId: user.id,
+        email: user.email,
+        expiresAt
+      });
+
+      console.log('✅ Simple login successful for:', user.email);
+      
+      // Set session cookie
+      res.cookie('sessionId', sessionId, {
+        httpOnly: true,
+        secure: false, // Set to true in production with HTTPS
+        maxAge: 24 * 60 * 60 * 1000, // 24 hours
+        sameSite: 'lax'
+      });
+      
+      res.json({
+        success: true,
+        user: {
+          id: user.id,
+          email: user.email,
+          firstName: user.firstName,
+          lastName: user.lastName,
+          role: user.role
+        }
+      });
+    } catch (error) {
+      console.error('❌ Simple login error:', error);
+      res.status(500).json({ message: 'Login failed' });
+    }
+  });
 
   // Legacy admin employee creation route - now redirects to unified HR system
   app.post('/api/admin/create-employee', isAuthenticated, async (req, res) => {

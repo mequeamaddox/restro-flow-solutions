@@ -2,6 +2,42 @@ import { Request, Response, NextFunction, RequestHandler } from 'express';
 import { verifyFirebaseToken, syncFirebaseUser } from './firebaseAuth';
 import { storage } from './storage';
 
+// Extend Express Request interface to include authentication data
+declare global {
+  namespace Express {
+    interface Request {
+      user?: {
+        id: string;
+        email: string;
+        firstName: string;
+        lastName: string;
+        role: string;
+      };
+      firebaseUser?: {
+        uid: string;
+        email: string;
+        name?: string;
+      };
+    }
+  }
+}
+
+// Type for authenticated requests
+export interface AuthenticatedRequest extends Request {
+  user: {
+    id: string;
+    email: string;
+    firstName: string;
+    lastName: string;
+    role: string;
+  };
+  firebaseUser: {
+    uid: string;
+    email: string;
+    name?: string;
+  };
+}
+
 // Simple in-memory invitation system
 interface Invitation {
   id: string;

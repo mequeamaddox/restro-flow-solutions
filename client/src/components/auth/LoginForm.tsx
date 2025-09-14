@@ -32,12 +32,21 @@ export function LoginForm({ onToggleMode }: LoginFormProps) {
         headers: {
           'Content-Type': 'application/json',
         },
+        credentials: 'include', // CRITICAL: Include cookies for session management
         body: JSON.stringify({ email, password }),
       });
 
       if (response.ok) {
         const userData = await response.json();
-        window.location.reload(); // Simple refresh to update auth state
+        // Trigger auth refresh for other components
+        localStorage.setItem('authRefresh', Date.now().toString());
+        localStorage.removeItem('authRefresh'); // Trigger storage event
+        
+        // Small delay then reload to ensure auth state updates
+        setTimeout(() => {
+          window.location.reload();
+        }, 100);
+        
         return { user: userData, error: null };
       } else {
         const errorData = await response.json();
