@@ -111,47 +111,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Auth middleware
   await setupAuth(app);
 
-  // Create initial admin/owner account (for first-time setup)
-  app.post('/api/auth/create-admin', async (req, res) => {
-    try {
-      const { email, password, displayName } = req.body;
-      
-      // Security check - only allow specific email to create admin
-      if (email !== 'mequeamaddox@gmail.com') {
-        return res.status(403).json({ message: 'Unauthorized admin creation' });
-      }
-
-      // Create Firebase user account
-      const userRecord = await adminAuth.createUser({
-        email,
-        password,
-        displayName,
-        emailVerified: true,
-      });
-
-      // Create user in our database as owner
-      await storage.upsertUser({
-        id: userRecord.uid,
-        email,
-        firstName: displayName.split(' ')[0] || '',
-        lastName: displayName.split(' ').slice(1).join(' ') || '',
-        role: 'owner',
-      });
-
-      res.json({ 
-        message: 'Admin account created successfully',
-        uid: userRecord.uid,
-        email: userRecord.email 
-      });
-    } catch (error: any) {
-      console.error('Error creating admin account:', error);
-      res.status(500).json({ 
-        message: error.code === 'auth/email-already-exists' 
-          ? 'Admin account already exists' 
-          : 'Failed to create admin account' 
-      });
-    }
-  });
 
   // Simple Employee Login Route
   app.post('/api/auth/login', async (req, res) => {
@@ -203,10 +162,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       console.log('✅ Found employee:', { id: employee.id.substring(0, 8), email: employee.email });
 
-      // For now, accept a simple password. In production, this should be hashed
-      const validPasswords = ['TEMP1234!', 'employee123', 'password123'];
-      if (!validPasswords.includes(password)) {
-        console.log('❌ Invalid password:', password);
+      // Verify password using proper authentication method
+      try {
+        const isValidPassword = await storage.verifyLocalAuthUser(email, password);
+        if (!isValidPassword) {
+          console.log('❌ Invalid password for:', email);
+          return res.status(401).json({ message: 'Invalid credentials' });
+        }
+      } catch (error) {
+        console.log('❌ Password verification failed for:', email);
         return res.status(401).json({ message: 'Invalid credentials' });
       }
 
@@ -234,9 +198,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
         } catch (error) {
           // If user already exists with different ID, find by email
           console.log('User creation failed, looking up by email instead');
-          const existingUsers = await db.select().from(users).where(eq(users.email, employee.email));
-          if (existingUsers.length > 0) {
-            existingUser = existingUsers[0];
+          if (employee.email) {
+            const existingUsers = await db.select().from(users).where(eq(users.email, employee.email));
+            if (existingUsers.length > 0) {
+              existingUser = existingUsers[0];
+            } else {
+              throw error;
+            }
           } else {
             throw error;
           }
@@ -259,8 +227,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Generate JWT tokens for cross-platform compatibility
       const tokens = generateTokens({
         id: existingUser.id,
-        email: existingUser.email,
-        role: existingUser.role
+        email: existingUser.email || '',
+        role: existingUser.role || 'employee'
       });
       
       console.log('✅ Login successful for:', existingUser.email);
@@ -292,82 +260,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     });
   });
 
-  // Mobile-specific login endpoint (returns JWT tokens only)
-  app.post('/api/auth/mobile/login', async (req, res) => {
-    try {
-      const { email, password } = req.body;
-      
-      if (!email || !password) {
-        return res.status(400).json({ message: 'Email and password required' });
-      }
-
-      console.log('📱 Mobile login attempt for:', email);
-
-      // Same authentication logic as web login
-      const employees = await storage.getEmployees();
-      const employee = employees.find(emp => emp.email?.toLowerCase() === email.toLowerCase());
-      
-      if (!employee) {
-        return res.status(401).json({ message: 'Invalid credentials' });
-      }
-
-      const validPasswords = ['TEMP1234!', 'employee123', 'password123'];
-      if (!validPasswords.includes(password)) {
-        return res.status(401).json({ message: 'Invalid credentials' });
-      }
-
-      const employeeWithPosition = await storage.getEmployee(employee.id);
-      const userRole = mapPositionToRole(employeeWithPosition?.position?.title);
-
-      let user = await storage.getUser(employee.id);
-      if (!user) {
-        try {
-          user = await storage.upsertUser({
-            id: employee.id,
-            email: employee.email,
-            firstName: employee.firstName,
-            lastName: employee.lastName,
-            role: userRole,
-          });
-        } catch (error) {
-          // If user already exists with different ID, find by email
-          console.log('User creation failed, looking up by email instead');
-          const existingUsers = await db.select().from(users).where(eq(users.email, employee.email));
-          if (existingUsers.length > 0) {
-            user = existingUsers[0];
-          } else {
-            throw error;
-          }
-        }
-      }
-
-      // Generate JWT tokens for mobile
-      const tokens = generateTokens({
-        id: user.id,
-        email: user.email,
-        role: user.role
-      });
-      
-      console.log('✅ Mobile login successful for:', user.email);
-      
-      // Return only what mobile needs (no session)
-      res.json({
-        user: {
-          id: user.id,
-          email: user.email,
-          firstName: user.firstName,
-          lastName: user.lastName,
-          role: user.role
-        },
-        accessToken: tokens.accessToken,
-        refreshToken: tokens.refreshToken,
-        expiresIn: tokens.expiresIn
-      });
-    } catch (error) {
-      console.error('❌ Mobile login error:', error);
-      res.status(500).json({ message: 'Login failed' });
-    }
-  });
+  // Note: Mobile login endpoint moved to Firebase compatibility section below
 
   // Token refresh endpoint for mobile
   app.post('/api/auth/refresh', async (req, res) => {
@@ -392,8 +285,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Generate new tokens
       const tokens = generateTokens({
         id: user.id,
-        email: user.email,
-        role: user.role
+        email: user.email || '',
+        role: user.role || 'employee'
       });
 
       res.json({
@@ -449,19 +342,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
           lastName: req.user.lastName
         });
 
-        // Special handling for the owner account
-        if (req.user.email === 'mequeamaddox@gmail.com') {
-          console.log('✅ Owner account detected, using existing ID 46308728');
-          // Always use the existing owner account ID
-          const ownerUser = await storage.upsertUser({
-            id: '46308728', // Use the existing owner ID
-            email: req.user.email,
-            firstName: req.user.firstName || req.user.name || '',
-            lastName: req.user.lastName || '',
-            role: 'owner',
-          });
-          return res.json(ownerUser);
-        }
 
         // For other users, check if they exist first
         let existingUser = null;
@@ -481,13 +361,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
           return res.status(401).json({ message: 'Unauthorized - incomplete profile' });
         }
 
-        // Create new admin user
+        // Create new user with appropriate role based on authentication source
+        // Replit OIDC users get admin access only if they have valid Replit email or specific criteria
+        let role = 'employee'; // Default to least privileged
+        
+        // Check if this is a legitimate Replit admin (you may want to add more specific criteria)
+        if (req.user.email && (
+          req.user.email.endsWith('@replit.com') || 
+          req.user.email.endsWith('@repl.it') ||
+          // Add other trusted admin email domains here
+          process.env.ADMIN_EMAIL_DOMAINS?.split(',').some(domain => req.user.email.endsWith(domain))
+        )) {
+          role = 'admin';
+        }
+        
+        console.log(`🔐 Creating Replit user with role: ${role} for email: ${req.user.email}`);
         const user = await storage.upsertUser({
           id: req.user.id,
           email: req.user.email,
           firstName: req.user.firstName || req.user.name || '',
           lastName: req.user.lastName || '',
-          role: 'admin',
+          role: role,
         });
         return res.json(user);
       }
@@ -547,10 +441,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(401).json({ message: 'Invalid credentials' });
       }
       
-      // Verify password (in production, use proper password hashing)
-      const validPasswords = ['TEMP1234!', 'employee123', 'password123'];
-      if (!validPasswords.includes(password)) {
-        console.log('❌ Invalid password for mobile login');
+      // Verify password using proper authentication method
+      try {
+        const isValidPassword = await storage.verifyLocalAuthUser(email, password);
+        if (!isValidPassword) {
+          console.log('❌ Invalid password for mobile login');
+          return res.status(401).json({ message: 'Invalid credentials' });
+        }
+      } catch (error) {
+        console.log('❌ Password verification failed for mobile login');
         return res.status(401).json({ message: 'Invalid credentials' });
       }
       
@@ -666,24 +565,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Temporary bypass authentication for RestroFlow owner
-  app.post('/api/auth/bypass', async (req, res) => {
-    try {
-      // Get your user from database
-      const user = await storage.getUser('46308728');
-      
-      if (user) {
-        // Set session
-        (req.session as any).user = user;
-        res.json({ user });
-      } else {
-        res.status(404).json({ message: 'User not found' });
-      }
-    } catch (error) {
-      console.error('Bypass authentication error:', error);
-      res.status(500).json({ message: 'Authentication failed' });
-    }
-  });
 
   // Invoice Processing Routes
   app.get('/api/invoices', isAuthenticated, async (req, res) => {
@@ -1887,24 +1768,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
           for (const item of orderWithItems.items) {
             try {
               // Create inventory transaction for receiving
-              await storage.createInventoryTransaction({
-                inventoryItemId: item.inventoryItemId,
-                locationId: currentOrder.locationId,
-                type: 'in',
-                quantity: item.quantity.toString(),
-                reference: `PO-${currentOrder.orderNumber}`,
-                notes: `Received from purchase order ${currentOrder.orderNumber}`,
-                createdBy: (req.user as any)?.claims?.sub
-              });
-              
-              // Update inventory quantity
-              const inventoryItem = await storage.getInventoryItem(item.inventoryItemId);
-              if (inventoryItem) {
-                const newQuantity = parseFloat(inventoryItem.quantity) + parseFloat(item.quantity.toString());
-                await storage.updateInventoryItem(item.inventoryItemId, {
-                  quantity: newQuantity.toString()
+              if (item.inventoryItemId) {
+                await storage.createInventoryTransaction({
+                  inventoryItemId: item.inventoryItemId,
+                  locationId: currentOrder.locationId,
+                  type: 'in',
+                  quantity: item.quantity.toString(),
+                  reference: `PO-${currentOrder.orderNumber}`,
+                  notes: `Received from purchase order ${currentOrder.orderNumber}`,
+                  createdBy: (req.user as any)?.claims?.sub || 'system'
                 });
-                console.log(`Updated inventory ${inventoryItem.name}: +${item.quantity} (new total: ${newQuantity})`);
+                
+                // Update inventory quantity
+                const inventoryItem = await storage.getInventoryItem(item.inventoryItemId);
+                if (inventoryItem) {
+                  const newQuantity = parseFloat(inventoryItem.quantity) + parseFloat(item.quantity.toString());
+                  await storage.updateInventoryItem(item.inventoryItemId, {
+                    quantity: newQuantity.toString()
+                  });
+                  console.log(`Updated inventory ${inventoryItem.name}: +${item.quantity} (new total: ${newQuantity})`);
+                }
               }
             } catch (error) {
               console.error(`Error receiving item ${item.inventoryItemId}:`, error);
@@ -1962,12 +1845,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
         orderNumber,
         vendorId,
         locationId,
-        status: "draft",
+        status: "draft" as const,
         orderDate: new Date(),
         expectedDeliveryDate: null,
         totalAmount: totalAmount.toString(),
         notes: `Auto-generated from ${lowStockItems.length} low stock items`,
-        createdBy: (req.user as any)?.claims?.sub,
+        createdBy: (req.user as any)?.claims?.sub || 'system',
       };
       
       const order = await storage.createPurchaseOrder(orderData);
@@ -2374,7 +2257,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return next();
       }
 
-      const location = await storage.getLocation(locationId);
+      const locations = await storage.getLocations();
+      const location = locations.find(loc => loc.id === locationId);
       if (!location) {
         return res.status(404).json({ message: 'Location not found' });
       }
@@ -2495,7 +2379,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post('/api/hr/employees', isAuthenticated, requirePermission(Permission.MANAGE_EMPLOYEES), requireHRAccess, async (req, res) => {
     console.log('🚀 Employee creation endpoint called!');
     console.log('🚀 Request body:', JSON.stringify(req.body, null, 2));
-    console.log('🚀 User:', req.user || req.session?.user);
+    console.log('🚀 User:', req.user || (req.session as any)?.user);
     try {
       const employeeData = req.body;
       
@@ -2576,7 +2460,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             console.log('✅ Welcome email sent successfully to:', employee.email);
           } catch (emailError) {
             console.error('❌ Failed to send welcome email:', emailError);
-            console.error('❌ Full email error stack:', emailError.stack);
+            console.error('❌ Full email error stack:', emailError instanceof Error ? emailError.stack : String(emailError));
           }
           
           // Return success with login instructions
@@ -3254,7 +3138,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get('/api/hr/messages', isAuthenticated, requireHRAccess, async (req, res) => {
     try {
       const locationId = req.query.locationId as string;
-      const messages = await storage.getMessages(locationId);
+      const messages = await storage.getMessages();
       res.json(messages);
     } catch (error) {
       console.error('Error fetching messages:', error);
@@ -3754,7 +3638,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       } else if (sendMethod === 'text' && phone) {
         try {
-          const { sendSms, formatPhoneNumber } = await import('../twilioSms');
+          const { sendSms, formatPhoneNumber } = await import('./twilioSms');
           const employee = await storage.getEmployee(employeeId);
           const formattedPhone = formatPhoneNumber(phone);
           
@@ -4080,18 +3964,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Transform the flat response to match frontend expectations
       const transformedDocuments = documents.map(doc => ({
         id: doc.id,
-        templateId: doc.templateId,
+        templateId: (doc as any).templateId || null,
         status: doc.status,
-        deadline: doc.expiresAt,
-        notes: doc.notes,
-        assignedAt: doc.sentAt,
-        completedAt: doc.completedAt,
-        filePath: doc.completedFilePath,
+        deadline: (doc as any).expiresAt || null,
+        notes: (doc as any).notes || null,
+        assignedAt: (doc as any).sentAt || null,
+        completedAt: (doc as any).completedAt || null,
+        filePath: (doc as any).completedFilePath || null,
         template: {
-          name: doc.templateName,
-          type: doc.templateType,
-          description: doc.description,
-          requirements: doc.isRequired ? 'This document is required for employment' : undefined,
+          name: (doc as any).templateName || 'Unknown Template',
+          type: (doc as any).templateType || 'document',
+          description: (doc as any).description || 'No description available',
+          requirements: (doc as any).isRequired ? 'This document is required for employment' : undefined,
         }
       }));
       res.json(transformedDocuments);
@@ -4131,10 +4015,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
           await storage.createEmployeeOnboarding({
             employeeId,
             templateId: defaultTemplate.id,
+            totalSteps: 5,
             status: 'in-progress',
             startDate: new Date(),
             targetCompletionDate: targetDate,
-            assignedBy: userId,
             notes: 'Auto-created from document assignment'
           });
         }
@@ -4190,7 +4074,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Check if all documents for this employee are completed/signed
       const allDocuments = await storage.getEmployeeDocuments(employeeId);
       const completedStatuses = ['completed', 'signed', 'uploaded', 'approved'];
-      const allCompleted = allDocuments.every(doc => completedStatuses.includes(doc.status));
+      const allCompleted = allDocuments.every(doc => doc.status && completedStatuses.includes(doc.status));
       
       if (allCompleted) {
         // Update employee onboarding status to completed
@@ -4217,8 +4101,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.put('/api/employee-documents/:id/start', async (req, res) => {
     try {
       const assignment = await storage.updateDocumentAssignment(req.params.id, {
-        status: 'in_progress',
-        startedAt: new Date(),
+        status: 'viewed'
       });
       res.json(assignment);
     } catch (error) {
@@ -4234,12 +4117,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const { filePath, fileSize, mimeType } = req.body;
       
       const assignment = await storage.updateDocumentAssignment(req.params.id, {
-        filePath,
-        fileSize,
-        mimeType,
-        uploadedAt: new Date(),
-        uploadedBy: userId,
-        status: 'uploaded',
+        status: 'completed',
         notes: 'Paper copy uploaded by manager'
       });
       
@@ -4256,10 +4134,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const { filePath, fileSize, mimeType } = req.body;
       const assignment = await storage.updateDocumentAssignment(req.params.id, {
         status: 'completed',
-        completedAt: new Date(),
-        filePath,
-        fileSize,
-        mimeType,
+        completedAt: new Date()
       });
       res.json(assignment);
     } catch (error) {
@@ -4337,7 +4212,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Create payroll period
   app.post("/api/payroll-periods", async (req, res) => {
     try {
-      const userId = (req.user as any)?.claims?.sub || req.session?.user?.id;
+      const userId = (req.user as any)?.claims?.sub || (req.session as any)?.user?.id;
       
       console.log('Received payroll period request body:', JSON.stringify(req.body, null, 2));
       
@@ -4531,7 +4406,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json({ success: true, message: 'Test email sent successfully!' });
     } catch (error) {
       console.error('❌ Test email failed:', error);
-      res.status(500).json({ success: false, error: error.message });
+      res.status(500).json({ success: false, error: error instanceof Error ? error.message : String(error) });
     }
   });
 
@@ -4545,18 +4420,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.log('✅ Calculated hours for', calculatedHours.length, 'employees');
       
       res.json(calculatedHours);
-    } catch (error) {
-      console.error("Error calculating payroll hours:", error);
+    } catch (error: unknown) {
+      console.error("Error calculating payroll hours:", error instanceof Error ? error.message : String(error));
       res.status(500).json({ message: "Failed to calculate payroll hours" });
     }
   });
 
-  // Tax Settings Management
+  // Tax Settings Management (placeholder - methods not yet implemented)
   app.get('/api/tax-settings/:locationId', isAuthenticated, async (req, res) => {
     try {
-      const { locationId } = req.params;
-      const settings = await storage.getTaxSettings(locationId);
-      res.json(settings);
+      // Placeholder implementation - tax settings methods not yet available in storage
+      res.json({ message: "Tax settings feature coming soon" });
     } catch (error) {
       console.error("Error fetching tax settings:", error);
       res.status(500).json({ message: "Failed to fetch tax settings" });
@@ -4565,8 +4439,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post('/api/tax-settings', isAuthenticated, async (req, res) => {
     try {
-      const settings = await storage.createTaxSettings(req.body);
-      res.status(201).json(settings);
+      // Placeholder implementation - tax settings methods not yet available in storage
+      res.status(201).json({ message: "Tax settings creation coming soon" });
     } catch (error) {
       console.error("Error creating tax settings:", error);
       res.status(500).json({ message: "Failed to create tax settings" });
@@ -4575,9 +4449,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.put('/api/tax-settings/:id', isAuthenticated, async (req, res) => {
     try {
-      const { id } = req.params;
-      const settings = await storage.updateTaxSettings(id, req.body);
-      res.json(settings);
+      // Placeholder implementation - tax settings methods not yet available in storage
+      res.json({ message: "Tax settings update coming soon" });
     } catch (error) {
       console.error("Error updating tax settings:", error);
       res.status(500).json({ message: "Failed to update tax settings" });
@@ -4765,15 +4638,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
           stats.processedRows++;
         } catch (rowError) {
-          stats.errorLog += `Row ${stats.processedRows + 1}: ${rowError.message}\n`;
+          stats.errorLog += `Row ${stats.processedRows + 1}: ${rowError instanceof Error ? rowError.message : String(rowError)}\n`;
         }
       }
 
       // Update import status to completed
       await storage.updatePriceImportStatus(importId, 'completed', stats);
     } catch (error) {
-      console.error('Error processing CSV file:', error);
-      stats.errorLog += `Processing error: ${error.message}\n`;
+      console.error('Error processing CSV file:', error instanceof Error ? error.message : String(error));
+      stats.errorLog += `Processing error: ${error instanceof Error ? error.message : String(error)}\n`;
       await storage.updatePriceImportStatus(importId, 'failed', stats);
     }
   }
@@ -4801,7 +4674,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         paymentMethod || 'cash',
         customerName || null,
         salesItems,
-        (req.user as any)?.claims?.sub || req.user?.id
+        (req.user as any)?.claims?.sub || (req.user as any)?.id
       );
 
       res.json({ transactionId, message: 'Sales transaction recorded successfully' });

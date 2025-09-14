@@ -157,8 +157,8 @@ export async function syncFirebaseUser(firebaseUser: {
     let user = await storage.getUser(firebaseUser.uid);
     
     if (!user) {
-      // Create new user with appropriate role
-      const role = (firebaseUser.email === 'mequeamaddox@gmail.com' || firebaseUser.email === 'owner@restroflow.com') ? 'owner' : 'employee';
+      // Create new user with least-privileged role (employee) by default
+      const role = 'employee';
       console.log('👤 Creating new user with role:', role);
       
       user = await storage.upsertUser({

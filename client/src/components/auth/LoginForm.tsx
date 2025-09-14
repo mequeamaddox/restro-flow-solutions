@@ -23,9 +23,7 @@ interface LoginFormProps {
 
 export function LoginForm({ onToggleMode }: LoginFormProps) {
   const [isLoading, setIsLoading] = useState(false);
-  const [isCreatingAdmin, setIsCreatingAdmin] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [emailValue, setEmailValue] = useState("");
   // Simple authentication function
   const signIn = async (email: string, password: string) => {
     try {
@@ -71,45 +69,6 @@ export function LoginForm({ onToggleMode }: LoginFormProps) {
     setIsLoading(false);
   };
 
-  const createAdminAccount = async () => {
-    if (emailValue !== 'mequeamaddox@gmail.com') {
-      setError('Admin account creation is restricted');
-      return;
-    }
-
-    setIsCreatingAdmin(true);
-    setError(null);
-
-    try {
-      const formData = form.getValues();
-      const response = await fetch('/api/auth/create-admin', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          email: formData.email,
-          password: formData.password,
-          displayName: 'Admin User',
-        }),
-      });
-
-      if (response.ok) {
-        // Now try to sign in with the created account
-        const { error: signInError } = await signIn(formData.email, formData.password);
-        if (signInError) {
-          setError(signInError);
-        }
-      } else {
-        const errorData = await response.json();
-        setError(errorData.message || 'Failed to create admin account');
-      }
-    } catch (error) {
-      setError('Failed to create admin account');
-    } finally {
-      setIsCreatingAdmin(false);
-    }
-  };
 
   return (
     <Card className="w-full max-w-md mx-auto">
@@ -135,11 +94,7 @@ export function LoginForm({ onToggleMode }: LoginFormProps) {
                         placeholder="Enter your email" 
                         className="pl-10"
                         data-testid="input-email"
-                        {...field} 
-                        onChange={(e) => {
-                          field.onChange(e);
-                          setEmailValue(e.target.value);
-                        }}
+                        {...field}
                       />
                     </div>
                   </FormControl>
@@ -178,26 +133,12 @@ export function LoginForm({ onToggleMode }: LoginFormProps) {
               <Button 
                 type="submit" 
                 className="w-full" 
-                disabled={isLoading || isCreatingAdmin}
+                disabled={isLoading}
                 data-testid="button-sign-in"
               >
                 {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                 Sign In
               </Button>
-              
-              {emailValue === 'mequeamaddox@gmail.com' && (
-                <Button 
-                  type="button" 
-                  variant="outline"
-                  className="w-full" 
-                  disabled={isLoading || isCreatingAdmin}
-                  onClick={createAdminAccount}
-                  data-testid="button-create-admin"
-                >
-                  {isCreatingAdmin && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                  Create Admin Account & Sign In
-                </Button>
-              )}
             </div>
           </form>
         </Form>

@@ -14,8 +14,8 @@ interface FirebaseLoginProps {
 }
 
 export default function FirebaseLogin({ onSuccess }: FirebaseLoginProps) {
-  const [email, setEmail] = useState("mequeamaddox@gmail.com");
-  const [password, setPassword] = useState("RestroFlow2024!");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
 
@@ -69,12 +69,24 @@ export default function FirebaseLogin({ onSuccess }: FirebaseLoginProps) {
       // Get ID token and send to server
       const idToken = await user.getIdToken();
       
-      // Skip server authentication for now and directly log in
-      toast({ 
-        title: "Welcome back, Mequea!", 
-        description: "You've successfully logged in to RestroFlow." 
+      // Get ID token and send to server
+      const response = await fetch('/api/auth/firebase-login', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ idToken }),
       });
-      onSuccess();
+
+      if (response.ok) {
+        toast({ 
+          title: "Welcome back!", 
+          description: "You've successfully logged in to RestroFlow." 
+        });
+        onSuccess();
+      } else {
+        throw new Error('Server authentication failed');
+      }
     } catch (error: any) {
       console.error('Login error:', error);
       toast({ 
@@ -194,23 +206,6 @@ export default function FirebaseLogin({ onSuccess }: FirebaseLoginProps) {
                   {isLoading ? "Signing in..." : "Sign In"}
                 </Button>
                 
-                {/* Emergency bypass login */}
-                <Button
-                  type="button"
-                  onClick={() => {
-                    localStorage.setItem('emergency_bypass', 'true');
-                    toast({ 
-                      title: "Emergency Access Granted!", 
-                      description: "Bypassing authentication - welcome to RestroFlow!" 
-                    });
-                    window.location.reload();
-                  }}
-                  variant="outline"
-                  className="w-full border-green-500 text-green-500 hover:bg-green-500 hover:text-white text-sm"
-                  data-testid="button-bypass-login"
-                >
-                  🚨 Emergency Access (Skip Firebase)
-                </Button>
                 
                 {/* Password Reset Option */}
                 <div className="space-y-2">
@@ -239,19 +234,11 @@ export default function FirebaseLogin({ onSuccess }: FirebaseLoginProps) {
                     Send Password Reset Email
                   </Button>
                   
-                  <div className="text-xs text-green-400 text-center p-2 bg-green-900/20 rounded">
-                    ✓ Account exists! Try logging in or use password reset above.
-                  </div>
                 </div>
               </form>
             </TabsContent>
             
             <TabsContent value="signup">
-              <div className="text-sm text-slate-300 mb-4 p-3 bg-slate-700/30 rounded">
-                <p className="font-medium">Quick Setup for Owner Account:</p>
-                <p className="text-xs text-slate-400 mt-1">Using: mequeamaddox@gmail.com / RestroFlow2024!</p>
-                <p className="text-xs text-green-400 mt-1">Authentication bypassed - direct login enabled</p>
-              </div>
               <form onSubmit={handleSignup} className="space-y-4">
                 <div className="space-y-2">
                   <Label htmlFor="signup-email" className="text-slate-300">
@@ -261,7 +248,7 @@ export default function FirebaseLogin({ onSuccess }: FirebaseLoginProps) {
                   <Input
                     id="signup-email"
                     type="email"
-                    placeholder="mequeamaddox@gmail.com"
+                    placeholder="your@email.com"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     required

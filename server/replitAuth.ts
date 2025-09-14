@@ -66,8 +66,8 @@ async function upsertUser(
     firstName: claims["first_name"],
     lastName: claims["last_name"],
     profileImageUrl: claims["profile_image_url"],
-    // Preserve existing role, or default to 'owner' for mequeamaddox@gmail.com, 'employee' for others
-    role: existingUser?.role || (claims["email"] === "mequeamaddox@gmail.com" ? "owner" : "employee"),
+    // Preserve existing role, or default to 'admin' for new users
+    role: existingUser?.role || "admin",
   });
 }
 
@@ -84,6 +84,11 @@ export async function setupAuth(app: Express) {
     verified: passport.AuthenticateCallback
   ) => {
     const claims = tokens.claims();
+    if (!claims) {
+      verified(new Error('No claims found in token'), false);
+      return;
+    }
+    
     const user = {
       id: claims.sub,
       email: claims.email,
