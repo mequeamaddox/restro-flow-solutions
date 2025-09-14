@@ -141,8 +141,8 @@ export async function setupAuth(app: Express) {
         }
         // Clear the session cookie
         res.clearCookie('connect.sid');
-        // Redirect to home page instead of Replit OIDC
-        res.redirect('/');
+        // Return JSON response instead of redirect to avoid 404
+        res.json({ success: true, message: 'Logged out successfully' });
       });
     });
   });
