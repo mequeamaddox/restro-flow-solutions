@@ -1,61 +1,90 @@
 import { useState, useEffect } from 'react';
-import { onAuthStateChanged, type User } from 'firebase/auth';
-import { auth } from '@/lib/firebase';
+
+type User = {
+  id: string;
+  email: string;
+  firstName?: string;
+  lastName?: string;
+  role: string;
+};
 
 export function useAuth() {
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [isInitialized, setIsInitialized] = useState(false);
 
-  const syncWithBackend = async (firebaseUser: User | null) => {
-    if (firebaseUser) {
-      try {
-        const idToken = await firebaseUser.getIdToken();
-        const response = await fetch('/api/auth/me', {
-          headers: {
-            'Authorization': `Bearer ${idToken}`,
-            'Content-Type': 'application/json',
-          },
-        });
-        
-        if (!response.ok) {
-          console.warn('Backend sync failed during auth check');
+  const checkAuthState = async () => {
+    try {
+      console.log('🔍 Checking authentication state via session cookie...');
+      
+      const response = await fetch('/api/auth/me', {
+        credentials: 'include',
+        cache: 'no-store', // Prevent 304 Not Modified responses
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+      
+      if (response.ok) {
+        const data = await response.json();
+        if (data.ok && data.user) {
+          console.log('✅ Authentication successful:', data.user.email);
+          setUser(data.user);
+          return data.user;
         }
-      } catch (error) {
-        console.warn('Backend sync error:', error);
-        // Continue even if backend sync fails - Firebase auth is primary
       }
+      
+      // Only clear auth on actual auth failures (401/403), not on server errors or 304
+      if (response.status === 401 || response.status === 403) {
+        console.log('❌ Authentication failed or no session found (401/403)');
+        setUser(null);
+        return null;
+      } else if (response.status >= 500) {
+        console.log('⚠️ Server error during auth check, preserving current auth state');
+        return user; // Preserve current user if server error
+      } else {
+        console.log('⚠️ Unexpected response status:', response.status, 'preserving current auth state');
+        return user; // Preserve current user for other non-success responses
+      }
+    } catch (error) {
+      console.error('❌ Error checking auth state:', error);
+      // Network errors - preserve current auth state
+      console.log('⚠️ Network error during auth check, preserving current auth state');
+      return user;
     }
   };
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
+    const initializeAuth = async () => {
       setIsLoading(true);
-      
-      if (firebaseUser) {
-        // User is signed in
-        setUser(firebaseUser);
-        await syncWithBackend(firebaseUser);
-      } else {
-        // User is signed out
-        setUser(null);
-      }
-      
+      await checkAuthState();
       setIsLoading(false);
-    });
+      setIsInitialized(true);
+    };
 
-    // Clean up subscription on unmount
-    return () => unsubscribe();
+    initializeAuth();
   }, []);
 
   const checkAuth = async () => {
-    // For compatibility with existing code, return the current auth state
+    if (!isInitialized) {
+      await checkAuthState();
+    }
     return !!user;
+  };
+
+  const refreshAuth = async () => {
+    setIsLoading(true);
+    const authUser = await checkAuthState();
+    setIsLoading(false);
+    return authUser;
   };
 
   return {
     user,
     isLoading,
     isAuthenticated: !!user,
+    isInitialized,
     checkAuth,
+    refreshAuth,
   };
 }

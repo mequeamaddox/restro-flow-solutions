@@ -9,6 +9,7 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Loader2, Mail, Lock } from "lucide-react";
+import { useAuth } from "@/hooks/useAuth";
 // Server-side authentication - no client-side Firebase imports needed
 
 const loginSchema = z.object({
@@ -27,7 +28,9 @@ export function LoginForm({ onToggleMode }: LoginFormProps) {
   const [error, setError] = useState<string | null>(null);
   const [resetEmailSent, setResetEmailSent] = useState(false);
   const [, setLocation] = useLocation();
-  // Server-side authentication function
+  const { refreshAuth } = useAuth();
+  
+  // Server-side authentication function with session cookies
   const signIn = async (email: string, password: string) => {
     try {
       console.log('🔐 Attempting server-side authentication for:', email);
@@ -35,6 +38,7 @@ export function LoginForm({ onToggleMode }: LoginFormProps) {
       // Call the server-side authentication endpoint
       const response = await fetch('/api/auth/login', {
         method: 'POST',
+        credentials: 'include', // Include cookies for session management
         headers: {
           'Content-Type': 'application/json',
         },
@@ -50,10 +54,8 @@ export function LoginForm({ onToggleMode }: LoginFormProps) {
       const data = await response.json();
       console.log('✅ Server authentication successful for:', data.user.email);
       
-      // Store the ID token in localStorage for subsequent requests
-      if (data.idToken) {
-        localStorage.setItem('firebaseIdToken', data.idToken);
-      }
+      // Refresh authentication state to load user data from session cookie
+      await refreshAuth();
       
       // Redirect to dashboard after successful login
       console.log('✅ Login successful, redirecting to dashboard...');

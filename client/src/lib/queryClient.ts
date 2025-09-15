@@ -65,7 +65,8 @@ export const getQueryFn: <T>(options: {
     const authHeaders = await getAuthHeaders();
     const res = await fetch(url, {
       headers: authHeaders,
-      credentials: "include",
+      credentials: "include", // Ensure cookies are always sent
+      cache: url.includes('/api/auth/me') ? 'no-store' : 'default', // Prevent caching for auth checks
     });
 
     if (unauthorizedBehavior === "returnNull" && res.status === 401) {

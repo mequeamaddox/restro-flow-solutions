@@ -1,5 +1,5 @@
 import { Request, Response, NextFunction, RequestHandler } from 'express';
-import { verifyFirebaseToken, syncFirebaseUser } from './firebaseAuth';
+import { verifyFirebaseToken, syncFirebaseUser, adminAuth } from './firebaseAuth';
 import { storage } from './storage';
 
 // Extend Express Request interface to include authentication data
@@ -91,8 +91,8 @@ export function getAllInvitations(): Invitation[] {
 }
 
 /**
- * Firebase-only authentication middleware
- * Verifies Firebase ID tokens and loads user data from database
+ * Firebase authentication middleware that supports both Bearer tokens and session cookies
+ * Verifies Firebase ID tokens or session cookies and loads user data from database
  */
 export async function requireFirebaseAuth(
   req: Request,
@@ -100,33 +100,50 @@ export async function requireFirebaseAuth(
   next: NextFunction
 ) {
   try {
-    // Extract Firebase ID token from Authorization header
-    const authHeader = req.headers.authorization;
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
-      return res.status(401).json({ 
-        message: 'Unauthorized', 
-        error: 'Missing or invalid Authorization header' 
-      });
-    }
-
-    const idToken = authHeader.substring(7);
-    if (!idToken) {
-      return res.status(401).json({ 
-        message: 'Unauthorized', 
-        error: 'No Firebase ID token provided' 
-      });
-    }
-
-    // Verify Firebase ID token
     let decodedToken;
-    try {
-      decodedToken = await verifyFirebaseToken(idToken);
-    } catch (error) {
-      console.error('❌ Firebase token verification failed:', error);
-      return res.status(401).json({ 
-        message: 'Unauthorized', 
-        error: 'Invalid Firebase ID token' 
-      });
+    
+    // Try session cookie first (preferred for browser requests)
+    const sessionCookie = req.cookies?.__session;
+    if (sessionCookie) {
+      try {
+        console.log('🍪 Verifying session cookie for protected route');
+        decodedToken = await adminAuth.verifySessionCookie(sessionCookie, true);
+        console.log('✅ Session cookie verified for user:', decodedToken.uid);
+      } catch (error) {
+        console.log('❌ Session cookie verification failed:', error.message);
+        // Fall through to try Bearer token
+      }
+    }
+
+    // If session cookie failed or not present, try Bearer token
+    if (!decodedToken) {
+      const authHeader = req.headers.authorization;
+      if (!authHeader || !authHeader.startsWith('Bearer ')) {
+        return res.status(401).json({ 
+          message: 'Unauthorized', 
+          error: 'No valid authentication found (Bearer token or session cookie)' 
+        });
+      }
+
+      const idToken = authHeader.substring(7);
+      if (!idToken) {
+        return res.status(401).json({ 
+          message: 'Unauthorized', 
+          error: 'No Firebase ID token provided' 
+        });
+      }
+
+      // Verify Firebase ID token
+      try {
+        decodedToken = await verifyFirebaseToken(idToken);
+        console.log('✅ Bearer token verified for user:', decodedToken.uid);
+      } catch (error) {
+        console.error('❌ Firebase token verification failed:', error);
+        return res.status(401).json({ 
+          message: 'Unauthorized', 
+          error: 'Invalid Firebase ID token' 
+        });
+      }
     }
 
     // Set Firebase user info on request
@@ -197,7 +214,8 @@ export async function requireFirebaseAuth(
 }
 
 /**
- * Optional Firebase authentication middleware (for public endpoints that can work with or without auth)
+ * Optional Firebase authentication middleware that supports both Bearer tokens and session cookies
+ * (for public endpoints that can work with or without auth)
  */
 export async function optionalFirebaseAuth(
   req: Request,
@@ -205,39 +223,62 @@ export async function optionalFirebaseAuth(
   next: NextFunction
 ) {
   try {
-    const authHeader = req.headers.authorization;
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
-      // No auth header, continue without authentication
-      return next();
-    }
-
-    const idToken = authHeader.substring(7);
-    if (!idToken) {
-      return next();
-    }
-
-    try {
-      // Try to verify and load user, but don't fail if it doesn't work
-      const decodedToken = await verifyFirebaseToken(idToken);
-      const user = await storage.getUser(decodedToken.uid);
-      
-      if (user) {
-        req.firebaseUser = {
-          uid: decodedToken.uid,
-          email: decodedToken.email || '',
-          name: decodedToken.name
-        };
-        req.user = {
-          id: user.id,
-          email: user.email || '',
-          firstName: user.firstName || '',
-          lastName: user.lastName || '',
-          role: user.role || 'employee'
-        };
+    let decodedToken;
+    
+    // Try session cookie first
+    const sessionCookie = req.cookies?.__session;
+    if (sessionCookie) {
+      try {
+        decodedToken = await adminAuth.verifySessionCookie(sessionCookie, true);
+      } catch (error) {
+        // Fall through to try Bearer token
       }
-    } catch (error) {
-      // Authentication failed, but continue without auth for optional endpoints
-      console.log('ℹ️ Optional Firebase auth failed, continuing without authentication');
+    }
+
+    // If session cookie failed or not present, try Bearer token
+    if (!decodedToken) {
+      const authHeader = req.headers.authorization;
+      if (!authHeader || !authHeader.startsWith('Bearer ')) {
+        // No auth, continue without authentication
+        return next();
+      }
+
+      const idToken = authHeader.substring(7);
+      if (!idToken) {
+        return next();
+      }
+
+      try {
+        decodedToken = await verifyFirebaseToken(idToken);
+      } catch (error) {
+        // Authentication failed, but continue without auth for optional endpoints
+        console.log('ℹ️ Optional Firebase auth failed, continuing without authentication');
+        return next();
+      }
+    }
+
+    // Load user data if we have a valid token
+    if (decodedToken) {
+      try {
+        const user = await storage.getUser(decodedToken.uid);
+        
+        if (user) {
+          req.firebaseUser = {
+            uid: decodedToken.uid,
+            email: decodedToken.email || '',
+            name: decodedToken.name
+          };
+          req.user = {
+            id: user.id,
+            email: user.email || '',
+            firstName: user.firstName || '',
+            lastName: user.lastName || '',
+            role: user.role || 'employee'
+          };
+        }
+      } catch (error) {
+        console.log('ℹ️ Failed to load user data in optional auth, continuing without user data');
+      }
     }
 
     next();

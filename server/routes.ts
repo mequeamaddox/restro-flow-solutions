@@ -259,6 +259,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       console.log('✅ Server-side login successful for:', user.email, 'role:', user.role);
       
+      // Create Firebase session cookie for secure authentication
+      const expiresIn = 60 * 60 * 24 * 5 * 1000; // 5 days
+      const sessionCookie = await adminAuth.createSessionCookie(firebaseData.idToken, { expiresIn });
+      
+      // Determine secure flag based on request
+      const isSecure = req.secure || req.get('x-forwarded-proto') === 'https';
+      
+      // Set session cookie with proper flags for Replit cross-origin
+      res.cookie('__session', sessionCookie, {
+        maxAge: expiresIn,
+        httpOnly: true,
+        secure: isSecure,
+        sameSite: isSecure ? 'none' : 'lax',
+        path: '/'
+      });
+      
+      console.log('🍪 Session cookie set successfully for:', user.email);
+      
       res.json({
         success: true,
         user: {
@@ -267,9 +285,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           firstName: user.firstName,
           lastName: user.lastName,
           role: user.role
-        },
-        idToken: firebaseData.idToken,
-        refreshToken: firebaseData.refreshToken,
+        }
       });
     } catch (error) {
       console.error('❌ Server-side authentication error:', error);
@@ -344,70 +360,50 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Get current user info (Firebase authentication)
+  // Get current user info (Firebase session cookie authentication)
   app.get('/api/auth/me', async (req, res) => {
     try {
       console.log('🔍 Checking auth state for /api/auth/me');
       
-      // Extract Firebase ID token from Authorization header
-      const authHeader = req.headers.authorization;
-      if (!authHeader || !authHeader.startsWith('Bearer ')) {
-        console.log('❌ No Authorization header found');
+      // Prevent caching to avoid 304 Not Modified responses that cause auth issues
+      res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
+      res.setHeader('Pragma', 'no-cache');
+      res.setHeader('Expires', '0');
+      res.setHeader('Surrogate-Control', 'no-store');
+      
+      // Extract session cookie
+      const sessionCookie = req.cookies.__session;
+      if (!sessionCookie) {
+        console.log('❌ No session cookie found');
         return res.status(401).json({ 
+          ok: false,
           message: 'Not authenticated',
-          error: 'Missing or invalid Authorization header' 
+          error: 'No session cookie found' 
         });
       }
 
-      const idToken = authHeader.substring(7);
-      if (!idToken) {
-        console.log('❌ No Firebase ID token provided');
-        return res.status(401).json({ 
-          message: 'Not authenticated',
-          error: 'No Firebase ID token provided' 
-        });
-      }
-
-      // Verify Firebase ID token
+      // Verify Firebase session cookie
       let decodedToken;
       try {
-        decodedToken = await verifyFirebaseToken(idToken);
+        decodedToken = await adminAuth.verifySessionCookie(sessionCookie, true);
       } catch (error) {
-        console.error('❌ Firebase token verification failed:', error);
+        console.error('❌ Firebase session cookie verification failed:', error);
         return res.status(401).json({ 
+          ok: false,
           message: 'Not authenticated',
-          error: 'Invalid Firebase ID token' 
+          error: 'Invalid session cookie' 
         });
       }
 
-      // Load user data from database
-      let user = await storage.getUser(decodedToken.uid);
+      // Load user data from database - user should already exist from login
+      const user = await storage.getUser(decodedToken.uid);
       
-      // If user doesn't exist in our database, check if they're invited
       if (!user) {
-        console.log('🔍 User not found in database, checking for employee/invitation:', decodedToken.email);
-        
-        // Check if this email exists as an employee (invited user)
-        const employees = await storage.getEmployees();
-        const invitedEmployee = employees.find(emp => 
-          emp.email?.toLowerCase() === decodedToken.email?.toLowerCase()
-        );
-        
-        if (!invitedEmployee) {
-          console.log('❌ User not invited:', decodedToken.email);
-          return res.status(403).json({ 
-            message: 'Not invited', 
-            error: 'This user has not been invited to access the system' 
-          });
-        }
-
-        // Sync Firebase user and create user record
-        console.log('✅ Creating user record for invited employee:', decodedToken.email);
-        user = await syncFirebaseUser({
-          uid: decodedToken.uid,
-          email: decodedToken.email || null,
-          displayName: decodedToken.name || null,
-          photoURL: null
+        console.log('❌ User not found in database for session check:', decodedToken.email);
+        return res.status(401).json({ 
+          ok: false,
+          message: 'User not found', 
+          error: 'User must log in through the proper login flow first' 
         });
       }
 
@@ -421,11 +417,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       console.log('✅ Firebase authentication successful for:', user.email);
       res.json({
-        id: user.id,
-        email: user.email,
-        firstName: user.firstName,
-        lastName: user.lastName,
-        role: user.role
+        ok: true,
+        user: {
+          id: user.id,
+          email: user.email,
+          firstName: user.firstName,
+          lastName: user.lastName,
+          role: user.role
+        }
       });
     } catch (error) {
       console.error('❌ Error getting user info:', error);
@@ -433,14 +432,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Logout (stateless - client handles Firebase signOut)
+  // Logout endpoint - clear session cookie
   app.post('/api/auth/logout', (req, res) => {
     try {
-      // Firebase auth is stateless, so logout is handled on client side
-      // Just return success response
+      // Clear the session cookie
+      res.clearCookie('__session', {
+        httpOnly: true,
+        secure: req.secure || req.get('x-forwarded-proto') === 'https',
+        sameSite: (req.secure || req.get('x-forwarded-proto') === 'https') ? 'none' : 'lax',
+        path: '/'
+      });
+      
+      console.log('🍪 Session cookie cleared successfully');
       res.json({ 
         success: true, 
-        message: 'Logout successful. Please sign out from Firebase on the client.' 
+        message: 'Logout successful' 
       });
     } catch (error) {
       console.error('❌ Logout error:', error);
