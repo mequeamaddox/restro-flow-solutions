@@ -9,7 +9,7 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Loader2, Mail, Lock } from "lucide-react";
-import { signInWithEmailAndPassword } from "firebase/auth";
+import { signInWithEmailAndPassword, sendPasswordResetEmail } from "firebase/auth";
 import { auth } from "@/lib/firebase";
 
 const loginSchema = z.object({
@@ -26,6 +26,7 @@ interface LoginFormProps {
 export function LoginForm({ onToggleMode }: LoginFormProps) {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [resetEmailSent, setResetEmailSent] = useState(false);
   const [, setLocation] = useLocation();
   // Firebase authentication function
   const signIn = async (email: string, password: string) => {
@@ -113,15 +114,71 @@ export function LoginForm({ onToggleMode }: LoginFormProps) {
     setIsLoading(true);
     setError(null);
 
-    const { error: signInError } = await signIn(data.email, data.password);
+    // Enhanced debugging for the exact credentials being sent
+    console.log('🔍 LOGIN ATTEMPT DEBUG:');
+    console.log('📧 Email length:', data.email.length);
+    console.log('📧 Email (exact):', `"${data.email}"`);
+    console.log('📧 Email trimmed:', `"${data.email.trim()}"`);
+    console.log('📧 Email has leading/trailing spaces:', data.email !== data.email.trim());
+    console.log('🔐 Password length:', data.password.length);
+    console.log('🔐 Password first 3 chars:', data.password.substring(0, 3));
+    console.log('🔐 Password last 3 chars:', data.password.slice(-3));
+    console.log('🔐 Password has leading/trailing spaces:', data.password !== data.password.trim());
+    
+    // Check for special characters or encoding issues
+    const emailBytes = new TextEncoder().encode(data.email);
+    const passwordBytes = new TextEncoder().encode(data.password);
+    console.log('🔢 Email byte length:', emailBytes.length);
+    console.log('🔢 Password byte length:', passwordBytes.length);
+    
+    // Test with exact values that should work
+    const testEmail = 'mequeamaddox@gmail.com';
+    const testPassword = 'Temp1234!';
+    
+    console.log('🎯 Testing with exact credentials:');
+    console.log('📧 Test email matches form email:', data.email === testEmail);
+    console.log('🔐 Test password matches form password:', data.password === testPassword);
+
+    const { error: signInError } = await signIn(data.email.trim(), data.password.trim());
     
     if (signInError) {
       setError(signInError);
+      
+      // If the exact test credentials fail, try them directly
+      if (data.email.trim() === testEmail && data.password.trim() === testPassword) {
+        console.log('🚨 EXACT TEST CREDENTIALS FAILED - this indicates a configuration issue');
+        console.log('🔧 Firebase config check:', {
+          hasApiKey: !!import.meta.env.VITE_FIREBASE_API_KEY,
+          hasAppId: !!import.meta.env.VITE_FIREBASE_APP_ID,
+          projectId: 'restroflowsoftware',
+          authDomain: 'restroflowsoftware.firebaseapp.com'
+        });
+      }
     }
     
     setIsLoading(false);
   };
 
+  const handlePasswordReset = async () => {
+    const email = form.getValues('email');
+    if (!email) {
+      setError('Please enter your email address first');
+      return;
+    }
+
+    try {
+      setIsLoading(true);
+      setError(null);
+      await sendPasswordResetEmail(auth, email);
+      setResetEmailSent(true);
+      console.log('✅ Password reset email sent to:', email);
+    } catch (error: any) {
+      console.error('❌ Password reset failed:', error);
+      setError(`Failed to send reset email: ${error.message}`);
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   return (
     <Card className="w-full max-w-md mx-auto">
@@ -182,6 +239,13 @@ export function LoginForm({ onToggleMode }: LoginFormProps) {
                 <AlertDescription>{error}</AlertDescription>
               </Alert>
             )}
+            {resetEmailSent && (
+              <Alert>
+                <AlertDescription>
+                  Password reset email sent! Check your inbox and follow the instructions to reset your password.
+                </AlertDescription>
+              </Alert>
+            )}
             <div className="space-y-2">
               <Button 
                 type="submit" 
@@ -191,6 +255,16 @@ export function LoginForm({ onToggleMode }: LoginFormProps) {
               >
                 {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                 Sign In
+              </Button>
+              <Button 
+                type="button" 
+                variant="link" 
+                onClick={handlePasswordReset}
+                disabled={isLoading || resetEmailSent}
+                className="w-full text-sm"
+                data-testid="button-forgot-password"
+              >
+                Forgot Password?
               </Button>
             </div>
           </form>
