@@ -512,18 +512,58 @@ export class DatabaseStorage implements IStorage {
   }
 
   async upsertUser(userData: UpsertUser): Promise<User> {
-    const [user] = await db
-      .insert(users)
-      .values(userData)
-      .onConflictDoUpdate({
-        target: users.email,  // Fix: conflict is on email, not id
-        set: {
-          ...userData,
-          updatedAt: new Date(),
-        },
-      })
+    // Always normalize email
+    const email = (userData.email || '').toLowerCase();
+    if (!email) throw new Error('upsertUser: email is required');
+
+    // 1) Find by email (this is the canonical identity key)
+    const existing = await db.select().from(users).where(eq(users.email, email)).limit(1);
+
+    // 2) If not found → insert a new row
+    if (existing.length === 0) {
+      const toInsert = {
+        ...userData,
+        email,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      };
+      const [inserted] = await db.insert(users).values(toInsert).returning();
+      return inserted;
+    }
+
+    // 3) If found → update only safe fields; NEVER change `id`
+    const existingUser = existing[0];
+    const updates: any = { updatedAt: new Date() };
+
+    // Optionally fill firstName/lastName the first time
+    if (userData.firstName && !existingUser.firstName) {
+      updates.firstName = userData.firstName;
+    }
+    if (userData.lastName && !existingUser.lastName) {
+      updates.lastName = userData.lastName;
+    }
+
+    // Optionally fill profileImageUrl
+    if (userData.profileImageUrl && !existingUser.profileImageUrl) {
+      updates.profileImageUrl = userData.profileImageUrl;
+    }
+
+    // Optionally relax role upgrades, but don't downgrade existing roles
+    if (userData.role && (existingUser.role === 'employee' || !existingUser.role)) {
+      updates.role = userData.role;
+    }
+
+    // If there's nothing meaningful to change, return existing
+    const onlyUpdatedAt = Object.keys(updates).length === 1;
+    if (onlyUpdatedAt) return existingUser;
+
+    const [updated] = await db
+      .update(users)
+      .set(updates)                  // ← no `id`, no `email` change here
+      .where(eq(users.id, existingUser.id))
       .returning();
-    return user;
+
+    return updated;
   }
 
   // Subscription operations
