@@ -114,46 +114,10 @@ export function LoginForm({ onToggleMode }: LoginFormProps) {
     setIsLoading(true);
     setError(null);
 
-    // Enhanced debugging for the exact credentials being sent
-    console.log('🔍 LOGIN ATTEMPT DEBUG:');
-    console.log('📧 Email length:', data.email.length);
-    console.log('📧 Email (exact):', `"${data.email}"`);
-    console.log('📧 Email trimmed:', `"${data.email.trim()}"`);
-    console.log('📧 Email has leading/trailing spaces:', data.email !== data.email.trim());
-    console.log('🔐 Password length:', data.password.length);
-    console.log('🔐 Password first 3 chars:', data.password.substring(0, 3));
-    console.log('🔐 Password last 3 chars:', data.password.slice(-3));
-    console.log('🔐 Password has leading/trailing spaces:', data.password !== data.password.trim());
-    
-    // Check for special characters or encoding issues
-    const emailBytes = new TextEncoder().encode(data.email);
-    const passwordBytes = new TextEncoder().encode(data.password);
-    console.log('🔢 Email byte length:', emailBytes.length);
-    console.log('🔢 Password byte length:', passwordBytes.length);
-    
-    // Test with exact values that should work
-    const testEmail = 'mequeamaddox@gmail.com';
-    const testPassword = 'Temp1234!';
-    
-    console.log('🎯 Testing with exact credentials:');
-    console.log('📧 Test email matches form email:', data.email === testEmail);
-    console.log('🔐 Test password matches form password:', data.password === testPassword);
-
     const { error: signInError } = await signIn(data.email.trim(), data.password.trim());
     
     if (signInError) {
       setError(signInError);
-      
-      // If the exact test credentials fail, try them directly
-      if (data.email.trim() === testEmail && data.password.trim() === testPassword) {
-        console.log('🚨 EXACT TEST CREDENTIALS FAILED - this indicates a configuration issue');
-        console.log('🔧 Firebase config check:', {
-          hasApiKey: !!import.meta.env.VITE_FIREBASE_API_KEY,
-          hasAppId: !!import.meta.env.VITE_FIREBASE_APP_ID,
-          projectId: 'restroflowsoftware',
-          authDomain: 'restroflowsoftware.firebaseapp.com'
-        });
-      }
     }
     
     setIsLoading(false);
