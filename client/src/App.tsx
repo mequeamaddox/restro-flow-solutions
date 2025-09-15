@@ -58,8 +58,9 @@ import Sidebar from "@/components/layout/sidebar";
 import Header from "@/components/layout/header";
 
 function Router() {
-  const { isAuthenticated, isLoading, user } = useAuth();
+  // Always call useState hooks first to maintain consistent order
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const { isAuthenticated, isLoading, user } = useAuth();
 
   // Always call hooks in the same order, handle conditions in JSX
   if (isLoading) {

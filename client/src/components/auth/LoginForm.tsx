@@ -8,7 +8,8 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Loader2, Mail, Lock } from "lucide-react";
-// Removed Firebase import
+import { signInWithEmailAndPassword } from "firebase/auth";
+import { auth } from "@/lib/firebase";
 
 const loginSchema = z.object({
   email: z.string().email("Please enter a valid email address"),
@@ -24,36 +25,57 @@ interface LoginFormProps {
 export function LoginForm({ onToggleMode }: LoginFormProps) {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  // Simple authentication function
+  // Firebase authentication function
   const signIn = async (email: string, password: string) => {
     try {
-      const response = await fetch('/api/auth/login', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        credentials: 'include', // CRITICAL: Include cookies for session management
-        body: JSON.stringify({ email, password }),
-      });
-
-      if (response.ok) {
-        const userData = await response.json();
-        // Trigger auth refresh for other components
-        localStorage.setItem('authRefresh', Date.now().toString());
-        localStorage.removeItem('authRefresh'); // Trigger storage event
+      const userCredential = await signInWithEmailAndPassword(auth, email, password);
+      const user = userCredential.user;
+      
+      // Get Firebase ID token
+      const idToken = await user.getIdToken();
+      
+      // Sync with backend by sending Firebase token
+      try {
+        const response = await fetch('/api/auth/firebase-login', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${idToken}`,
+          },
+          body: JSON.stringify({ idToken }),
+        });
         
-        // Small delay then reload to ensure auth state updates
-        setTimeout(() => {
-          window.location.reload();
-        }, 100);
-        
-        return { user: userData, error: null };
-      } else {
-        const errorData = await response.json();
-        return { user: null, error: errorData.message || 'Login failed' };
+        if (!response.ok) {
+          console.warn('Backend sync failed, but Firebase auth succeeded');
+        }
+      } catch (syncError) {
+        console.warn('Backend sync error:', syncError);
+        // Continue even if backend sync fails - Firebase auth succeeded
       }
-    } catch (error) {
-      return { user: null, error: 'Network error' };
+      
+      // Firebase auth state change will be handled by useAuth hook
+      return { user: user, error: null };
+    } catch (error: any) {
+      let errorMessage = 'Login failed';
+      
+      if (error.code) {
+        switch (error.code) {
+          case 'auth/user-not-found':
+          case 'auth/wrong-password':
+            errorMessage = 'Invalid email or password';
+            break;
+          case 'auth/invalid-email':
+            errorMessage = 'Invalid email address';
+            break;
+          case 'auth/too-many-requests':
+            errorMessage = 'Too many login attempts. Please try again later.';
+            break;
+          default:
+            errorMessage = error.message || 'Login failed';
+        }
+      }
+      
+      return { user: null, error: errorMessage };
     }
   };
 

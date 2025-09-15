@@ -1,51 +1,56 @@
 import { useState, useEffect } from 'react';
+import { onAuthStateChanged, type User } from 'firebase/auth';
+import { auth } from '@/lib/firebase';
 
 export function useAuth() {
-  const [user, setUser] = useState<any>(null);
+  const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
-  const checkAuth = async () => {
-    try {
-      const response = await fetch('/api/auth/me', {
-        credentials: 'include',
-      });
-      
-      if (response.ok) {
-        const userData = await response.json();
-        setUser(userData);
-        return true;
-      } else {
-        setUser(null);
-        return false;
+  const syncWithBackend = async (firebaseUser: User | null) => {
+    if (firebaseUser) {
+      try {
+        const idToken = await firebaseUser.getIdToken();
+        const response = await fetch('/api/auth/me', {
+          headers: {
+            'Authorization': `Bearer ${idToken}`,
+            'Content-Type': 'application/json',
+          },
+        });
+        
+        if (!response.ok) {
+          console.warn('Backend sync failed during auth check');
+        }
+      } catch (error) {
+        console.warn('Backend sync error:', error);
+        // Continue even if backend sync fails - Firebase auth is primary
       }
-    } catch (error) {
-      console.error('Auth check error:', error);
-      setUser(null);
-      return false;
     }
   };
 
   useEffect(() => {
-    const initAuth = async () => {
+    const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
       setIsLoading(true);
-      await checkAuth();
-      setIsLoading(false);
-    };
-
-    initAuth();
-  }, []);
-
-  // Listen for storage events to detect login from other tabs
-  useEffect(() => {
-    const handleStorageChange = (e: StorageEvent) => {
-      if (e.key === 'authRefresh') {
-        checkAuth();
+      
+      if (firebaseUser) {
+        // User is signed in
+        setUser(firebaseUser);
+        await syncWithBackend(firebaseUser);
+      } else {
+        // User is signed out
+        setUser(null);
       }
-    };
+      
+      setIsLoading(false);
+    });
 
-    window.addEventListener('storage', handleStorageChange);
-    return () => window.removeEventListener('storage', handleStorageChange);
+    // Clean up subscription on unmount
+    return () => unsubscribe();
   }, []);
+
+  const checkAuth = async () => {
+    // For compatibility with existing code, return the current auth state
+    return !!user;
+  };
 
   return {
     user,
