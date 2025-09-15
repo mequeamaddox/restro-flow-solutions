@@ -52,8 +52,61 @@ setInterval(() => {
   }
 }, 5 * 60 * 1000); // Clean up every 5 minutes
 
-// Temporary middleware bridge for Firebase-only authentication
-const isAuthenticated = requireFirebaseAuth;
+// Session-based authentication middleware
+const requireSessionAuth = async (req: any, res: any, next: any) => {
+  try {
+    console.log('🔍 Checking auth state for', req.path);
+    const sessionId = req.cookies.sessionId;
+    
+    if (!sessionId) {
+      console.log('❌ No session cookie found');
+      return res.status(401).json({ 
+        message: 'Unauthorized', 
+        error: 'Missing or invalid session cookie' 
+      });
+    }
+
+    const session = activeSessions.get(sessionId);
+    if (!session || session.expiresAt < Date.now()) {
+      console.log('❌ Invalid or expired session');
+      if (session) {
+        activeSessions.delete(sessionId); // Clean up expired session
+      }
+      return res.status(401).json({ 
+        message: 'Unauthorized', 
+        error: 'Invalid or expired session' 
+      });
+    }
+
+    // Get user from database
+    const user = await storage.getUserByEmail(session.email);
+    if (!user) {
+      console.log('❌ User not found for session:', session.email);
+      return res.status(401).json({ 
+        message: 'Not authenticated', 
+        error: 'User not found' 
+      });
+    }
+
+    // Set user on request object for compatibility with existing code
+    req.user = {
+      id: user.id,
+      email: user.email,
+      firstName: user.firstName,
+      lastName: user.lastName,
+      role: user.role
+    };
+
+    console.log('✅ Session valid for user:', user.email);
+    next();
+  } catch (error) {
+    console.error('❌ Session auth error:', error);
+    res.status(500).json({ message: 'Authentication failed' });
+  }
+};
+
+// Use session-based authentication instead of Firebase-only
+const isAuthenticated = requireSessionAuth;
 
 // File upload configuration
 
