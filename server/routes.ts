@@ -395,8 +395,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
 
-      // Load user data from database - user should already exist from login
-      const user = await storage.getUser(decodedToken.uid);
+      // Load user data from database by email (not UID)
+      const user = await storage.getUserByEmail(decodedToken.email || '');
       
       if (!user) {
         console.log('❌ User not found in database for session check:', decodedToken.email);
