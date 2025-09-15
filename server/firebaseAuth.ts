@@ -10,25 +10,75 @@ if (!getApps().length) {
     
     if (serviceAccountJson) {
       console.log('🔑 Using Firebase service account JSON...');
-      const serviceAccount = JSON.parse(serviceAccountJson);
+      console.log('📊 JSON length:', serviceAccountJson.length, 'characters');
+      console.log('🔍 JSON preview (first 100 chars):', serviceAccountJson.substring(0, 100));
+      console.log('🔍 JSON preview (last 50 chars):', serviceAccountJson.slice(-50));
       
-      initializeApp({
-        credential: cert(serviceAccount),
-        projectId: serviceAccount.project_id,
-      });
+      // Validate and clean the JSON string before parsing
+      let cleanedJson = serviceAccountJson.trim();
       
-      console.log(`✅ Firebase Admin SDK initialized successfully for project: ${serviceAccount.project_id}`);
-      console.log(`✅ Service account email: ${serviceAccount.client_email}`);
-    } else {
-      // Fallback to individual environment variables
+      // Check if it's a valid JSON string format
+      if (!cleanedJson.startsWith('{') || !cleanedJson.endsWith('}')) {
+        console.error('❌ JSON validation failed:');
+        console.error('   - Starts with "{":', cleanedJson.startsWith('{'));
+        console.error('   - Ends with "}":', cleanedJson.endsWith('}'));
+        console.error('   - First 20 characters:', cleanedJson.substring(0, 20));
+        console.error('   - Last 20 characters:', cleanedJson.slice(-20));
+        
+        // The JSON is invalid, skip to individual environment variables
+        console.log('🔄 Switching to individual environment variables due to invalid JSON format...');
+        // Skip parsing and continue to fallback logic
+      } else {
+        // Try to parse with better error handling
+        let serviceAccount;
+        try {
+          serviceAccount = JSON.parse(cleanedJson);
+        } catch (parseError) {
+          console.error('❌ Failed to parse FIREBASE_SERVICE_ACCOUNT_JSON:', parseError);
+          console.error('❌ JSON starts with:', cleanedJson.substring(0, 50) + '...');
+          console.log('🔄 Switching to individual environment variables due to parse error...');
+          // Continue to fallback logic instead of throwing
+        }
+        
+        // If we successfully parsed, validate and use it
+        if (serviceAccount) {
+          // Validate required fields
+          if (!serviceAccount.project_id || !serviceAccount.client_email || !serviceAccount.private_key) {
+            console.error('❌ Missing required fields in service account JSON (project_id, client_email, private_key)');
+            console.log('🔄 Switching to individual environment variables due to missing fields...');
+          } else {
+            try {
+              initializeApp({
+                credential: cert(serviceAccount),
+                projectId: serviceAccount.project_id,
+              });
+              
+              console.log(`✅ Firebase Admin SDK initialized successfully for project: ${serviceAccount.project_id}`);
+              console.log(`✅ Service account email: ${serviceAccount.client_email}`);
+              
+              // Successfully initialized, set flag to skip fallback
+              let firebaseInitialized = true;
+            } catch (initError) {
+              console.error('❌ Firebase Admin SDK initialization failed with service account JSON:', initError);
+              console.log('🔄 Switching to individual environment variables due to initialization error...');
+            }
+          }
+        }
+      }
+    }
+    
+    // Fallback to individual environment variables (either no JSON provided or invalid JSON)
+    // Only attempt fallback if Firebase wasn't already initialized successfully
+    if (getApps().length === 0) {
+      console.log('🔄 Attempting individual environment variable configuration...');
       let privateKey = process.env.FIREBASE_PRIVATE_KEY;
       const clientEmail = process.env.FIREBASE_CLIENT_EMAIL;
       const projectId = process.env.VITE_FIREBASE_PROJECT_ID || 'restroflowsoftware';
+      
+      if (privateKey && clientEmail) {
 
-      if (!privateKey || !clientEmail) {
-        throw new Error('Missing Firebase service account credentials');
-      }
-
+      console.log('🔑 Using individual Firebase environment variables...');
+      
       // Handle different private key formats
       if (privateKey.includes('\\n')) {
         privateKey = privateKey.replace(/\\n/g, '\n');
@@ -45,7 +95,12 @@ if (!getApps().length) {
         projectId: projectId,
       });
 
-      console.log(`✅ Firebase Admin SDK initialized successfully for project: ${projectId}`);
+        console.log(`✅ Firebase Admin SDK initialized successfully for project: ${projectId}`);
+        console.log(`✅ Service account email: ${clientEmail}`);
+      } else {
+        console.warn('⚠️ Missing individual Firebase environment variables (FIREBASE_PRIVATE_KEY or FIREBASE_CLIENT_EMAIL)');
+        throw new Error('Missing Firebase service account credentials');
+      }
     }
   } catch (error) {
     console.error('❌ Firebase Admin SDK initialization failed:', error);

@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
+import { useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
@@ -25,6 +26,7 @@ interface LoginFormProps {
 export function LoginForm({ onToggleMode }: LoginFormProps) {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [, setLocation] = useLocation();
   // Firebase authentication function
   const signIn = async (email: string, password: string) => {
     try {
@@ -54,6 +56,9 @@ export function LoginForm({ onToggleMode }: LoginFormProps) {
       }
       
       // Firebase auth state change will be handled by useAuth hook
+      // Redirect to dashboard after successful login
+      console.log('✅ Login successful, redirecting to dashboard...');
+      setLocation('/');
       return { user: user, error: null };
     } catch (error: any) {
       let errorMessage = 'Login failed';
