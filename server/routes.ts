@@ -293,8 +293,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(401).json({ message: 'Invalid email or password' });
       }
 
-      // Check if user record exists
-      let user = await storage.getUser(employee.id);
+      // Check if user record exists by email 
+      let user = await storage.getUserByEmail(email);
       
       if (!user) {
         // Create user record from employee data
