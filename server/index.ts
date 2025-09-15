@@ -17,8 +17,8 @@ process.on('unhandledRejection', (reason, promise) => {
 
 const app = express();
 
-// Configure trust proxy for Replit environment
-app.set('trust proxy', true);
+// Configure trust proxy for Replit environment (fix rate limiting warning)
+app.set('trust proxy', 1);
 
 // Apply enterprise security middleware
 app.use(securityHeaders);
