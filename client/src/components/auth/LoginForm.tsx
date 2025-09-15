@@ -9,8 +9,7 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Loader2, Mail, Lock } from "lucide-react";
-import { signInWithEmailAndPassword, sendPasswordResetEmail } from "firebase/auth";
-import { auth } from "@/lib/firebase";
+// Server-side authentication - no client-side Firebase imports needed
 
 const loginSchema = z.object({
   email: z.string().email("Please enter a valid email address"),
@@ -28,77 +27,41 @@ export function LoginForm({ onToggleMode }: LoginFormProps) {
   const [error, setError] = useState<string | null>(null);
   const [resetEmailSent, setResetEmailSent] = useState(false);
   const [, setLocation] = useLocation();
-  // Firebase authentication function
+  // Server-side authentication function
   const signIn = async (email: string, password: string) => {
     try {
-      const userCredential = await signInWithEmailAndPassword(auth, email, password);
-      const user = userCredential.user;
+      console.log('🔐 Attempting server-side authentication for:', email);
       
-      // Get Firebase ID token
-      const idToken = await user.getIdToken();
+      // Call the server-side authentication endpoint
+      const response = await fetch('/api/auth/login', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ email, password }),
+      });
       
-      // Sync with backend by sending Firebase token
-      try {
-        const response = await fetch('/api/auth/firebase-login', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${idToken}`,
-          },
-          body: JSON.stringify({ idToken }),
-        });
-        
-        if (!response.ok) {
-          console.warn('Backend sync failed, but Firebase auth succeeded');
-        }
-      } catch (syncError) {
-        console.warn('Backend sync error:', syncError);
-        // Continue even if backend sync fails - Firebase auth succeeded
+      if (!response.ok) {
+        const errorData = await response.json();
+        console.error('❌ Server authentication failed:', errorData);
+        return { user: null, error: errorData.message || 'Authentication failed' };
       }
       
-      // Firebase auth state change will be handled by useAuth hook
+      const data = await response.json();
+      console.log('✅ Server authentication successful for:', data.user.email);
+      
+      // Store the ID token in localStorage for subsequent requests
+      if (data.idToken) {
+        localStorage.setItem('firebaseIdToken', data.idToken);
+      }
+      
       // Redirect to dashboard after successful login
       console.log('✅ Login successful, redirecting to dashboard...');
       setLocation('/');
-      return { user: user, error: null };
+      return { user: data.user, error: null };
     } catch (error: any) {
-      // Enhanced error logging for debugging Firebase authentication issues
-      console.error('🚨 Firebase authentication error:', {
-        error: error,
-        code: error?.code,
-        message: error?.message,
-        stack: error?.stack,
-        email: email, // Safe to log email for debugging
-        timestamp: new Date().toISOString(),
-      });
-      
-      let errorMessage = 'Login failed';
-      
-      if (error.code) {
-        switch (error.code) {
-          case 'auth/user-not-found':
-          case 'auth/wrong-password':
-            errorMessage = 'Invalid email or password';
-            break;
-          case 'auth/invalid-email':
-            errorMessage = 'Invalid email address';
-            break;
-          case 'auth/too-many-requests':
-            errorMessage = 'Too many login attempts. Please try again later.';
-            break;
-          case 'auth/network-request-failed':
-            errorMessage = 'Network error. Please check your connection and try again.';
-            break;
-          case 'auth/invalid-credential':
-            errorMessage = 'Invalid email or password';
-            break;
-          default:
-            errorMessage = error.message || 'Login failed';
-            console.error('🚨 Unhandled Firebase error code:', error.code);
-        }
-      }
-      
-      return { user: null, error: errorMessage };
+      console.error('🚨 Server authentication error:', error);
+      return { user: null, error: 'Network error. Please check your connection and try again.' };
     }
   };
 
@@ -124,24 +87,8 @@ export function LoginForm({ onToggleMode }: LoginFormProps) {
   };
 
   const handlePasswordReset = async () => {
-    const email = form.getValues('email');
-    if (!email) {
-      setError('Please enter your email address first');
-      return;
-    }
-
-    try {
-      setIsLoading(true);
-      setError(null);
-      await sendPasswordResetEmail(auth, email);
-      setResetEmailSent(true);
-      console.log('✅ Password reset email sent to:', email);
-    } catch (error: any) {
-      console.error('❌ Password reset failed:', error);
-      setError(`Failed to send reset email: ${error.message}`);
-    } finally {
-      setIsLoading(false);
-    }
+    // Password reset functionality disabled - requires client-side Firebase
+    setError('Password reset is currently unavailable. Please contact your administrator.');
   };
 
   return (

@@ -114,6 +114,129 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // Firebase Authentication Routes
 
+  // Server-side Firebase authentication to bypass client-side domain restrictions
+  app.post('/api/auth/login', async (req, res) => {
+    try {
+      const { email, password } = req.body;
+      
+      if (!email || !password) {
+        return res.status(400).json({ message: 'Email and password required' });
+      }
+
+      console.log('🔐 Server-side authentication attempt for:', email);
+
+      // Use Firebase REST API to authenticate user server-side
+      const firebaseApiKey = process.env.VITE_FIREBASE_API_KEY;
+      if (!firebaseApiKey) {
+        console.error('❌ Firebase API key not configured');
+        return res.status(500).json({ message: 'Firebase configuration error' });
+      }
+
+      const firebaseAuthUrl = `https://identitytoolkit.googleapis.com/v1/accounts:signInWithPassword?key=${firebaseApiKey}`;
+      
+      const authResponse = await fetch(firebaseAuthUrl, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          email: email,
+          password: password,
+          returnSecureToken: true,
+        }),
+      });
+
+      if (!authResponse.ok) {
+        const errorData = await authResponse.json();
+        console.error('❌ Firebase authentication failed:', errorData);
+        
+        let errorMessage = 'Authentication failed';
+        if (errorData.error?.message) {
+          switch (errorData.error.message) {
+            case 'EMAIL_NOT_FOUND':
+            case 'INVALID_PASSWORD':
+            case 'INVALID_LOGIN_CREDENTIALS':
+              errorMessage = 'Invalid email or password';
+              break;
+            case 'USER_DISABLED':
+              errorMessage = 'Account has been disabled';
+              break;
+            case 'TOO_MANY_ATTEMPTS_TRY_LATER':
+              errorMessage = 'Too many failed attempts. Please try again later.';
+              break;
+            default:
+              errorMessage = errorData.error.message;
+          }
+        }
+        
+        return res.status(401).json({ message: errorMessage });
+      }
+
+      const firebaseData = await authResponse.json();
+      console.log('✅ Firebase authentication successful for:', email);
+
+      // Verify the ID token using Firebase Admin SDK
+      const decodedToken = await verifyFirebaseToken(firebaseData.idToken);
+      
+      // Check if user exists in our database
+      let user = await storage.getUser(decodedToken.uid);
+      
+      // If user doesn't exist, check if they're invited
+      if (!user) {
+        console.log('🔍 User not found in database, checking for employee/invitation:', decodedToken.email);
+        
+        // Check if this email exists as an employee (invited user)
+        const employees = await storage.getEmployees();
+        const invitedEmployee = employees.find(emp => 
+          emp.email?.toLowerCase() === decodedToken.email?.toLowerCase()
+        );
+        
+        if (!invitedEmployee) {
+          console.log('❌ User not invited:', decodedToken.email);
+          return res.status(403).json({ 
+            message: 'Not invited', 
+            error: 'This user has not been invited to access the system' 
+          });
+        }
+
+        // Sync Firebase user and create user record for invited employee
+        console.log('✅ Creating user record for invited employee:', decodedToken.email);
+        user = await syncFirebaseUser({
+          uid: decodedToken.uid,
+          email: decodedToken.email || null,
+          displayName: decodedToken.name || null,
+          photoURL: null
+        });
+      }
+
+      // Check if user is active
+      if (!user) {
+        return res.status(403).json({ 
+          message: 'Access denied', 
+          error: 'User account not found or inactive' 
+        });
+      }
+
+      console.log('✅ Server-side login successful for:', user.email, 'role:', user.role);
+      
+      res.json({
+        success: true,
+        user: {
+          id: user.id,
+          email: user.email,
+          firstName: user.firstName,
+          lastName: user.lastName,
+          role: user.role
+        },
+        idToken: firebaseData.idToken,
+        refreshToken: firebaseData.refreshToken,
+      });
+    } catch (error) {
+      console.error('❌ Server-side authentication error:', error);
+      res.status(500).json({ message: 'Authentication failed' });
+    }
+  });
+
   // Firebase login - verify token and check user invitation status
   app.post('/api/auth/firebase-login', async (req, res) => {
     try {
