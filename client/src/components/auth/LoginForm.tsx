@@ -61,6 +61,16 @@ export function LoginForm({ onToggleMode }: LoginFormProps) {
       setLocation('/');
       return { user: user, error: null };
     } catch (error: any) {
+      // Enhanced error logging for debugging Firebase authentication issues
+      console.error('🚨 Firebase authentication error:', {
+        error: error,
+        code: error?.code,
+        message: error?.message,
+        stack: error?.stack,
+        email: email, // Safe to log email for debugging
+        timestamp: new Date().toISOString(),
+      });
+      
       let errorMessage = 'Login failed';
       
       if (error.code) {
@@ -75,8 +85,15 @@ export function LoginForm({ onToggleMode }: LoginFormProps) {
           case 'auth/too-many-requests':
             errorMessage = 'Too many login attempts. Please try again later.';
             break;
+          case 'auth/network-request-failed':
+            errorMessage = 'Network error. Please check your connection and try again.';
+            break;
+          case 'auth/invalid-credential':
+            errorMessage = 'Invalid email or password';
+            break;
           default:
             errorMessage = error.message || 'Login failed';
+            console.error('🚨 Unhandled Firebase error code:', error.code);
         }
       }
       

@@ -19,15 +19,11 @@ console.log('Firebase Config Status:', {
   envProjectId: "restroflowsoftware (FIXED)"
 });
 
-// Initialize Firebase - clear any existing apps first
-import { getApps, deleteApp } from "firebase/app";
+// Initialize Firebase using singleton pattern to prevent race conditions
+import { getApps } from "firebase/app";
 
-// Clear any existing Firebase apps to prevent caching issues
-const existingApps = getApps();
-existingApps.forEach(app => deleteApp(app));
-
-// Initialize fresh Firebase instance
-const app = initializeApp(firebaseConfig);
+// Use singleton pattern - reuse existing app or create new one
+const app = getApps().length ? getApps()[0] : initializeApp(firebaseConfig);
 
 // Initialize Firebase Authentication
 export const auth = getAuth(app);
