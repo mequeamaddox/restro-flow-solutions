@@ -76,7 +76,7 @@ function Router() {
         <Route path="/landing" component={Landing} />
         <Route path="/pricing" component={Pricing} />
         <Route path="/onboarding/:token" component={PublicOnboarding} />
-        <Route path="/login" component={FirebaseAuth} />
+        <Route path="/login" component={Auth} />
         <Route path="/" component={Landing} />
         <Route component={Landing} />
       </Switch>
