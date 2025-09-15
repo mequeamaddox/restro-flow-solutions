@@ -121,7 +121,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Input sanitization - trim whitespace that could cause issues
       email = email?.trim();
-      password = password?.trim();
+      // Do not trim password - preserve exact user input including whitespace
       
       if (!email || !password) {
         return res.status(400).json({ message: 'Email and password required' });
