@@ -79,10 +79,51 @@ if (!getApps().length) {
 
       console.log('🔑 Using individual Firebase environment variables...');
       
+      // Enhanced PEM formatting for Firebase private keys
+      console.log('🔧 Fixing private key PEM formatting...');
+      console.log('📊 Original key length:', privateKey.length);
+      console.log('🔍 Key starts with:', privateKey.substring(0, 30));
+      console.log('🔍 Key ends with:', privateKey.slice(-30));
+      
       // Handle different private key formats
       if (privateKey.includes('\\n')) {
+        console.log('🔄 Converting literal \\n to actual newlines...');
         privateKey = privateKey.replace(/\\n/g, '\n');
       }
+      
+      // Ensure proper PEM format
+      if (!privateKey.startsWith('-----BEGIN PRIVATE KEY-----')) {
+        console.log('🔧 Adding missing PEM header...');
+        privateKey = '-----BEGIN PRIVATE KEY-----\n' + privateKey;
+      }
+      
+      if (!privateKey.endsWith('-----END PRIVATE KEY-----')) {
+        console.log('🔧 Adding missing PEM footer...');
+        if (!privateKey.endsWith('\n')) {
+          privateKey += '\n';
+        }
+        privateKey += '-----END PRIVATE KEY-----';
+      }
+      
+      // Ensure proper line breaks in PEM body
+      if (!privateKey.includes('\n') && privateKey.length > 100) {
+        console.log('🔧 Adding line breaks to PEM body...');
+        const header = '-----BEGIN PRIVATE KEY-----';
+        const footer = '-----END PRIVATE KEY-----';
+        let body = privateKey.replace(header, '').replace(footer, '').replace(/\s/g, '');
+        
+        // Split into 64-character lines (standard PEM format)
+        const lines = [];
+        for (let i = 0; i < body.length; i += 64) {
+          lines.push(body.substr(i, 64));
+        }
+        
+        privateKey = header + '\n' + lines.join('\n') + '\n' + footer;
+      }
+      
+      console.log('✅ PEM formatting completed');
+      console.log('📊 Final key length:', privateKey.length);
+      console.log('🔍 Final key preview:', privateKey.substring(0, 50) + '...');
 
       const serviceAccount = {
         projectId: projectId,
@@ -123,7 +164,56 @@ export async function verifyFirebaseToken(idToken: string) {
     return decodedToken;
   } catch (error) {
     console.error('❌ Error verifying Firebase token:', error);
+    console.error('❌ Admin SDK initialization status:', !!adminAuth);
+    console.error('❌ Error details:', {
+      name: error.name,
+      message: error.message,
+      code: error.code
+    });
     throw new Error('Invalid token');
+  }
+}
+
+// Diagnostic function to check if user exists in Firebase project
+export async function checkUserExistsInProject(email: string): Promise<{exists: boolean, uid?: string, project?: string}> {
+  try {
+    console.log(`🔍 Checking if user ${email} exists in Firebase project...`);
+    
+    // Get user by email using Firebase Admin SDK
+    const userRecord = await adminAuth.getUserByEmail(email);
+    
+    console.log(`✅ User ${email} found in project:`, {
+      uid: userRecord.uid,
+      email: userRecord.email,
+      disabled: userRecord.disabled,
+      emailVerified: userRecord.emailVerified,
+      creationTime: userRecord.metadata.creationTime
+    });
+    
+    return {
+      exists: true,
+      uid: userRecord.uid,
+      project: process.env.VITE_FIREBASE_PROJECT_ID || 'restroflowsoftware'
+    };
+  } catch (error) {
+    console.log(`❌ User ${email} not found in project or error occurred:`, {
+      errorCode: error.code,
+      errorMessage: error.message,
+      project: process.env.VITE_FIREBASE_PROJECT_ID || 'restroflowsoftware'
+    });
+    
+    if (error.code === 'auth/user-not-found') {
+      return {
+        exists: false,
+        project: process.env.VITE_FIREBASE_PROJECT_ID || 'restroflowsoftware'
+      };
+    }
+    
+    // If it's an Admin SDK error, return with error details
+    return {
+      exists: false,
+      project: process.env.VITE_FIREBASE_PROJECT_ID || 'restroflowsoftware'
+    };
   }
 }
 

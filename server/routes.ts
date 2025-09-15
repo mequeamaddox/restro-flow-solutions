@@ -1,7 +1,7 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
-import { verifyFirebaseToken, syncFirebaseUser, adminAuth, createFirebaseUser, createCustomToken, verifyIdToken } from "./firebaseAuth";
+import { verifyFirebaseToken, syncFirebaseUser, adminAuth, createFirebaseUser, createCustomToken, verifyIdToken, checkUserExistsInProject } from "./firebaseAuth";
 import { requireFirebaseAuth, optionalFirebaseAuth, type AuthenticatedRequest } from './firebaseAuthMiddleware';
 import { requirePermission, requireAnyPermission, Permission } from "./permissions";
 import multer from "multer";
@@ -117,7 +117,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Server-side Firebase authentication to bypass client-side domain restrictions
   app.post('/api/auth/login', async (req, res) => {
     try {
-      const { email, password } = req.body;
+      let { email, password } = req.body;
+      
+      // Input sanitization - trim whitespace that could cause issues
+      email = email?.trim();
+      password = password?.trim();
       
       if (!email || !password) {
         return res.status(400).json({ message: 'Email and password required' });
@@ -125,14 +129,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       console.log('🔐 Server-side authentication attempt for:', email);
 
-      // Use Firebase REST API to authenticate user server-side
+      // API Key Diagnostic - verify server API key
       const firebaseApiKey = process.env.VITE_FIREBASE_API_KEY;
       if (!firebaseApiKey) {
         console.error('❌ Firebase API key not configured');
         return res.status(500).json({ message: 'Firebase configuration error' });
       }
 
+      // Log API key info for debugging (safe - only first/last 6 chars)
+      console.log('🔑 API Key Diagnostic:', {
+        hasApiKey: !!firebaseApiKey,
+        keyLength: firebaseApiKey.length,
+        keyStart: firebaseApiKey.substring(0, 6),
+        keyEnd: firebaseApiKey.slice(-6),
+        expectedProjectId: 'restroflowsoftware'
+      });
+
       const firebaseAuthUrl = `https://identitytoolkit.googleapis.com/v1/accounts:signInWithPassword?key=${firebaseApiKey}`;
+      
+      console.log('🌐 Firebase Auth URL:', firebaseAuthUrl.replace(firebaseApiKey, 'API_KEY_HIDDEN'));
       
       const authResponse = await fetch(firebaseAuthUrl, {
         method: 'POST',
@@ -148,7 +163,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       if (!authResponse.ok) {
         const errorData = await authResponse.json();
-        console.error('❌ Firebase authentication failed:', errorData);
+        
+        // Enhanced error logging for debugging
+        console.error('❌ Firebase authentication failed:', {
+          status: authResponse.status,
+          statusText: authResponse.statusText,
+          error: errorData,
+          email: email,
+          apiKeyUsed: firebaseApiKey ? `${firebaseApiKey.substring(0, 6)}...${firebaseApiKey.slice(-6)}` : 'None'
+        });
+        
+        // Check if this might be a project mismatch issue
+        if (errorData.error?.message === 'INVALID_LOGIN_CREDENTIALS') {
+          console.log('🔍 INVALID_LOGIN_CREDENTIALS detected - this could indicate:');
+          console.log('   1. Wrong Firebase project (API key mismatch)');
+          console.log('   2. User does not exist in this project');
+          console.log('   3. Incorrect password');
+          console.log('   4. Account disabled in this project');
+          console.log('💡 Suggestion: Verify API key points to correct Firebase project');
+        }
         
         let errorMessage = 'Authentication failed';
         if (errorData.error?.message) {
@@ -169,7 +202,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
           }
         }
         
-        return res.status(401).json({ message: errorMessage });
+        return res.status(401).json({ 
+          message: errorMessage,
+          debug: {
+            originalError: errorData.error?.message,
+            possibleCause: errorData.error?.message === 'INVALID_LOGIN_CREDENTIALS' ? 
+              'API key might point to wrong Firebase project' : 'Authentication failure'
+          }
+        });
       }
 
       const firebaseData = await authResponse.json();
@@ -405,6 +445,73 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error('❌ Logout error:', error);
       res.status(500).json({ message: 'Logout failed' });
+    }
+  });
+
+  // Diagnostic endpoint to check if user exists in current Firebase project
+  app.post('/api/auth/diagnostic/check-user', async (req, res) => {
+    try {
+      const { email } = req.body;
+      
+      if (!email) {
+        return res.status(400).json({ message: 'Email required for diagnostic' });
+      }
+
+      console.log('🔬 Firebase User Diagnostic for:', email);
+
+      // Check API key configuration
+      const firebaseApiKey = process.env.VITE_FIREBASE_API_KEY;
+      
+      const diagnosticInfo = {
+        timestamp: new Date().toISOString(),
+        email: email,
+        apiKey: {
+          hasKey: !!firebaseApiKey,
+          keyLength: firebaseApiKey?.length || 0,
+          keyStart: firebaseApiKey?.substring(0, 6) || 'None',
+          keyEnd: firebaseApiKey?.slice(-6) || 'None'
+        },
+        project: {
+          expected: 'restroflowsoftware',
+          configured: process.env.VITE_FIREBASE_PROJECT_ID || 'Not set'
+        }
+      };
+
+      console.log('🔍 Diagnostic Info:', diagnosticInfo);
+
+      // Check if user exists in current Firebase project using Admin SDK
+      const userExistenceCheck = await checkUserExistsInProject(email);
+      
+      const response = {
+        success: true,
+        diagnostics: diagnosticInfo,
+        userExists: userExistenceCheck,
+        adminSdkWorking: !!adminAuth,
+        suggestions: []
+      };
+
+      // Add suggestions based on findings
+      if (!userExistenceCheck.exists) {
+        response.suggestions.push('User does not exist in current Firebase project');
+        response.suggestions.push('Verify API key points to correct Firebase project');
+        response.suggestions.push('Check if user was created in different Firebase project');
+      }
+
+      if (diagnosticInfo.apiKey.keyStart === 'AIzaSy' && !userExistenceCheck.exists) {
+        response.suggestions.push('API key format appears correct but user not found - likely wrong project');
+      }
+
+      console.log('✅ Diagnostic completed:', response);
+      res.json(response);
+
+    } catch (error) {
+      console.error('❌ Diagnostic endpoint error:', error);
+      res.status(500).json({ 
+        success: false,
+        message: 'Diagnostic failed',
+        error: error.message,
+        adminSdkError: !adminAuth ? 'Admin SDK not properly initialized' : null
+      });
     }
   });
 
