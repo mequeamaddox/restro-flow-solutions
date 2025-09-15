@@ -153,8 +153,8 @@ export async function requireFirebaseAuth(
       name: decodedToken.name
     };
 
-    // Load user data from database
-    let user = await storage.getUser(decodedToken.uid);
+    // Load user data from database by email (not UID)
+    let user = await storage.getUserByEmail(decodedToken.email || '');
     
     // If user doesn't exist in our database, check if they're invited
     if (!user) {
@@ -260,7 +260,7 @@ export async function optionalFirebaseAuth(
     // Load user data if we have a valid token
     if (decodedToken) {
       try {
-        const user = await storage.getUser(decodedToken.uid);
+        const user = await storage.getUserByEmail(decodedToken.email || '');
         
         if (user) {
           req.firebaseUser = {
