@@ -17,6 +17,9 @@ process.on('unhandledRejection', (reason, promise) => {
 
 const app = express();
 
+// Configure trust proxy for Replit environment
+app.set('trust proxy', true);
+
 // Apply enterprise security middleware
 app.use(securityHeaders);
 app.use('/api/', apiLimiter);
