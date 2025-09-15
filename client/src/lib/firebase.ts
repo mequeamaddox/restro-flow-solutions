@@ -3,9 +3,10 @@ import { getAuth, connectAuthEmulator } from "firebase/auth";
 
 const firebaseConfig = {
   apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
-  authDomain: "restroflowsoftware.firebaseapp.com",
-  projectId: "restroflowsoftware",
-  storageBucket: "restroflowsoftware.firebasestorage.app",
+  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
+  projectId: "restroflowsoftware", // Temporarily hardcoded to fix env caching issue
+  storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET,
+  messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID,
   appId: import.meta.env.VITE_FIREBASE_APP_ID,
 };
 
@@ -15,8 +16,14 @@ console.log('Firebase Config Status:', {
   hasProjectId: !!firebaseConfig.projectId,
   hasAppId: !!firebaseConfig.appId,
   authDomain: firebaseConfig.authDomain,
+  storageBucket: firebaseConfig.storageBucket,
   projectId: firebaseConfig.projectId,
-  envProjectId: "restroflowsoftware (FIXED)"
+  envProjectId: import.meta.env.VITE_FIREBASE_PROJECT_ID,
+  envVarValues: {
+    VITE_FIREBASE_PROJECT_ID: import.meta.env.VITE_FIREBASE_PROJECT_ID,
+    VITE_FIREBASE_AUTH_DOMAIN: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
+    VITE_FIREBASE_STORAGE_BUCKET: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET,
+  }
 });
 
 // Initialize Firebase using singleton pattern to prevent race conditions
