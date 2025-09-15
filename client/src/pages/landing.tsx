@@ -43,7 +43,7 @@ export default function Landing() {
             <Button 
               variant="outline"
               className="bg-transparent border-2 border-orange-400 text-orange-400 hover:bg-orange-400 hover:text-white px-6 py-2 font-semibold rounded-full transition-all duration-300"
-              onClick={() => window.location.href = '/api/login'}
+              onClick={() => window.location.href = '/login'}
             >
               Login
             </Button>
@@ -394,7 +394,7 @@ export default function Landing() {
                   <Button 
                     size="lg" 
                     className="bg-gradient-to-r from-orange-500 to-red-600 hover:from-orange-600 hover:to-red-700 text-white px-16 py-6 text-xl font-black rounded-full shadow-2xl transform hover:scale-105 transition-all duration-300 border-2 border-orange-400"
-                    onClick={() => window.location.href = '/api/login'}
+                    onClick={() => window.location.href = '/login'}
                   >
                     GET STARTED NOW →
                   </Button>
