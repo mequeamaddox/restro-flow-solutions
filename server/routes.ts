@@ -39,74 +39,8 @@ import {
   teamResources,
 } from "@shared/schema";
 
-// Simple session store for authentication (in production, use Redis or database)
-const activeSessions = new Map<string, { userId: string; email: string; expiresAt: number }>();
-
-// Clean up expired sessions periodically
-setInterval(() => {
-  const now = Date.now();
-  for (const [sessionId, session] of activeSessions.entries()) {
-    if (session.expiresAt < now) {
-      activeSessions.delete(sessionId);
-    }
-  }
-}, 5 * 60 * 1000); // Clean up every 5 minutes
-
-// Session-based authentication middleware
-const requireSessionAuth = async (req: any, res: any, next: any) => {
-  try {
-    console.log('🔍 Checking auth state for', req.path);
-    const sessionId = req.cookies.sessionId;
-    
-    if (!sessionId) {
-      console.log('❌ No session cookie found');
-      return res.status(401).json({ 
-        message: 'Unauthorized', 
-        error: 'Missing or invalid session cookie' 
-      });
-    }
-
-    const session = activeSessions.get(sessionId);
-    if (!session || session.expiresAt < Date.now()) {
-      console.log('❌ Invalid or expired session');
-      if (session) {
-        activeSessions.delete(sessionId); // Clean up expired session
-      }
-      return res.status(401).json({ 
-        message: 'Unauthorized', 
-        error: 'Invalid or expired session' 
-      });
-    }
-
-    // Get user from database
-    const user = await storage.getUserByEmail(session.email);
-    if (!user) {
-      console.log('❌ User not found for session:', session.email);
-      return res.status(401).json({ 
-        message: 'Not authenticated', 
-        error: 'User not found' 
-      });
-    }
-
-    // Set user on request object for compatibility with existing code
-    req.user = {
-      id: user.id,
-      email: user.email,
-      firstName: user.firstName,
-      lastName: user.lastName,
-      role: user.role
-    };
-
-    console.log('✅ Session valid for user:', user.email);
-    next();
-  } catch (error) {
-    console.error('❌ Session auth error:', error);
-    res.status(500).json({ message: 'Authentication failed' });
-  }
-};
-
-// Use session-based authentication instead of Firebase-only
-const isAuthenticated = requireSessionAuth;
+// Use Firebase-only authentication
+const isAuthenticated = requireFirebaseAuth;
 
 // File upload configuration
 
@@ -247,55 +181,82 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Get current user info (works with simple session-based authentication)
+  // Get current user info (Firebase authentication)
   app.get('/api/auth/me', async (req, res) => {
     try {
       console.log('🔍 Checking auth state for /api/auth/me');
       
-      // Check for session cookie
-      const sessionId = req.cookies?.sessionId;
-      if (!sessionId) {
-        console.log('❌ No session cookie found');
+      // Extract Firebase ID token from Authorization header
+      const authHeader = req.headers.authorization;
+      if (!authHeader || !authHeader.startsWith('Bearer ')) {
+        console.log('❌ No Authorization header found');
         return res.status(401).json({ 
           message: 'Not authenticated',
-          error: 'No session found' 
+          error: 'Missing or invalid Authorization header' 
         });
       }
 
-      // Check if session exists and is valid
-      const session = activeSessions.get(sessionId);
-      if (!session) {
-        console.log('❌ Session not found in store:', sessionId);
+      const idToken = authHeader.substring(7);
+      if (!idToken) {
+        console.log('❌ No Firebase ID token provided');
         return res.status(401).json({ 
           message: 'Not authenticated',
-          error: 'Invalid session' 
+          error: 'No Firebase ID token provided' 
         });
       }
 
-      // Check if session is expired
-      if (session.expiresAt < Date.now()) {
-        console.log('❌ Session expired:', sessionId);
-        activeSessions.delete(sessionId);
-        res.clearCookie('sessionId');
+      // Verify Firebase ID token
+      let decodedToken;
+      try {
+        decodedToken = await verifyFirebaseToken(idToken);
+      } catch (error) {
+        console.error('❌ Firebase token verification failed:', error);
         return res.status(401).json({ 
           message: 'Not authenticated',
-          error: 'Session expired' 
+          error: 'Invalid Firebase ID token' 
         });
       }
 
-      // Get user data
-      const user = await storage.getUser(session.userId);
+      // Load user data from database
+      let user = await storage.getUser(decodedToken.uid);
+      
+      // If user doesn't exist in our database, check if they're invited
       if (!user) {
-        console.log('❌ User not found for session:', session.userId);
-        activeSessions.delete(sessionId);
-        res.clearCookie('sessionId');
-        return res.status(401).json({ 
-          message: 'Not authenticated',
-          error: 'User not found' 
+        console.log('🔍 User not found in database, checking for employee/invitation:', decodedToken.email);
+        
+        // Check if this email exists as an employee (invited user)
+        const employees = await storage.getEmployees();
+        const invitedEmployee = employees.find(emp => 
+          emp.email?.toLowerCase() === decodedToken.email?.toLowerCase()
+        );
+        
+        if (!invitedEmployee) {
+          console.log('❌ User not invited:', decodedToken.email);
+          return res.status(403).json({ 
+            message: 'Not invited', 
+            error: 'This user has not been invited to access the system' 
+          });
+        }
+
+        // Sync Firebase user and create user record
+        console.log('✅ Creating user record for invited employee:', decodedToken.email);
+        user = await syncFirebaseUser({
+          uid: decodedToken.uid,
+          email: decodedToken.email || null,
+          displayName: decodedToken.name || null,
+          photoURL: null
         });
       }
 
-      console.log('✅ Session valid for user:', user.email);
+      // Check if user is active
+      if (!user) {
+        return res.status(403).json({ 
+          message: 'Access denied', 
+          error: 'User account not found or inactive' 
+        });
+      }
+
+      console.log('✅ Firebase authentication successful for:', user.email);
       res.json({
         id: user.id,
         email: user.email,
@@ -324,77 +285,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Simple email/password login endpoint for frontend compatibility  
-  app.post('/api/auth/login', async (req, res) => {
-    try {
-      const { email, password } = req.body;
-      
-      if (!email || !password) {
-        return res.status(400).json({ message: 'Email and password required' });
-      }
-
-      console.log('🔑 Simple login attempt for:', email);
-      
-      // For immediate functionality, check if user exists in employees
-      const employees = await storage.getEmployees();
-      const employee = employees.find(emp => 
-        emp.email?.toLowerCase() === email.toLowerCase()
-      );
-      
-      if (!employee) {
-        console.log('❌ User not found in employees:', email);
-        return res.status(401).json({ message: 'Invalid email or password' });
-      }
-
-      // Check if user record exists by email 
-      let user = await storage.getUserByEmail(email);
-      
-      if (!user) {
-        // Create user record from employee data
-        user = await storage.upsertUser({
-          id: employee.id,
-          email: employee.email || '',
-          firstName: employee.firstName || '',
-          lastName: employee.lastName || '',
-          role: 'employee' // Default role for employees
-        });
-      }
-
-      // Create a simple session
-      const sessionId = `session_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-      const expiresAt = Date.now() + (24 * 60 * 60 * 1000); // 24 hours
-      
-      activeSessions.set(sessionId, {
-        userId: user.id,
-        email: user.email,
-        expiresAt
-      });
-
-      console.log('✅ Simple login successful for:', user.email);
-      
-      // Set session cookie
-      res.cookie('sessionId', sessionId, {
-        httpOnly: true,
-        secure: false, // Set to true in production with HTTPS
-        maxAge: 24 * 60 * 60 * 1000, // 24 hours
-        sameSite: 'lax'
-      });
-      
-      res.json({
-        success: true,
-        user: {
-          id: user.id,
-          email: user.email,
-          firstName: user.firstName,
-          lastName: user.lastName,
-          role: user.role
-        }
-      });
-    } catch (error) {
-      console.error('❌ Simple login error:', error);
-      res.status(500).json({ message: 'Login failed' });
-    }
-  });
 
   // Legacy admin employee creation route - now redirects to unified HR system
   app.post('/api/admin/create-employee', isAuthenticated, async (req, res) => {
@@ -2096,8 +1986,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: 'Location ID required', code: 'LOCATION_REQUIRED' });
       }
 
-      // Get user from session
-      const user = req.user || req.session?.user;
+      // Get user from Firebase authentication
+      const user = req.user;
       
       // Exempt owners from HR add-on restrictions
       if (user?.role === 'owner') {
@@ -2557,7 +2447,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Employee Self-Service Time Clock API - Personal time tracking
   app.get('/api/employees/:employeeId/time-entries', isAuthenticated, async (req, res) => {
     try {
-      // Get user ID from either employee session or Replit auth
+      // Get user ID from Firebase authentication
       const userId = req.user.id;
       console.log('🕐 Time entries request - userId:', userId, 'employeeId:', req.params.employeeId);
       
@@ -2579,7 +2469,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.get('/api/employees/:employeeId/shifts', isAuthenticated, async (req, res) => {
     try {
-      // Get user ID from either employee session or Replit auth
+      // Get user ID from Firebase authentication
       const userId = req.user.id;
       // Ensure employees can only access their own shifts
       if (req.params.employeeId !== userId) {
@@ -2595,7 +2485,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post('/api/employees/:employeeId/clock-in', isAuthenticated, async (req, res) => {
     try {
-      // Get user ID from either employee session or Replit auth
+      // Get user ID from Firebase authentication
       const userId = req.user.id;
       // Ensure employees can only clock in for themselves
       if (req.params.employeeId !== userId) {
@@ -2611,7 +2501,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post('/api/employees/:employeeId/clock-out', isAuthenticated, async (req, res) => {
     try {
-      // Get user ID from either employee session or Replit auth
+      // Get user ID from Firebase authentication
       const userId = req.user.id;
       // Ensure employees can only clock out for themselves
       if (req.params.employeeId !== userId) {
@@ -2633,7 +2523,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post('/api/employees/:employeeId/break-start', isAuthenticated, async (req, res) => {
     try {
-      // Get user ID from either employee session or Replit auth
+      // Get user ID from Firebase authentication
       const userId = req.user.id;
       if (req.params.employeeId !== userId) {
         return res.status(403).json({ message: 'Access denied - can only start break for yourself' });
@@ -2653,7 +2543,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post('/api/employees/:employeeId/break-end', isAuthenticated, async (req, res) => {
     try {
-      // Get user ID from either employee session or Replit auth
+      // Get user ID from Firebase authentication
       const userId = req.user.id;
       if (req.params.employeeId !== userId) {
         return res.status(403).json({ message: 'Access denied - can only end break for yourself' });
