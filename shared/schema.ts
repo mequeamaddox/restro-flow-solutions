@@ -1684,3 +1684,67 @@ export const insertPriceImportSchema = createInsertSchema(priceImports).omit({ i
 export type PriceImport = typeof priceImports.$inferSelect;
 export type InsertPriceImport = z.infer<typeof insertPriceImportSchema>;
 
+// Owner onboarding system
+export const onboardingStepEnum = pgEnum("onboarding_step", [
+  "restaurant_info", 
+  "departments", 
+  "positions", 
+  "hr_addon", 
+  "employee_invitations"
+]);
+
+export const ownerOnboardingStatusEnum = pgEnum("owner_onboarding_status", [
+  "not_started",
+  "in_progress", 
+  "completed",
+  "skipped"
+]);
+
+// Track overall owner onboarding progress
+export const ownerOnboarding = pgTable("owner_onboarding", {
+  id: uuid("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").references(() => users.id).notNull(),
+  isCompleted: boolean("is_completed").default(false),
+  currentStep: onboardingStepEnum("current_step").default("restaurant_info"),
+  totalSteps: integer("total_steps").default(5),
+  completedSteps: integer("completed_steps").default(0),
+  skippedSteps: jsonb("skipped_steps").default("[]"), // Array of step names that were skipped
+  startedAt: timestamp("started_at").defaultNow(),
+  completedAt: timestamp("completed_at"),
+  data: jsonb("data").default("{}"), // Store step data for resume functionality
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// Track individual step completion
+export const ownerOnboardingSteps = pgTable("owner_onboarding_steps", {
+  id: uuid("id").primaryKey().default(sql`gen_random_uuid()`),
+  onboardingId: uuid("onboarding_id").references(() => ownerOnboarding.id, { onDelete: "cascade" }).notNull(),
+  stepName: onboardingStepEnum("step_name").notNull(),
+  status: ownerOnboardingStatusEnum("status").default("not_started"),
+  stepData: jsonb("step_data"), // Store specific data for this step
+  startedAt: timestamp("started_at"),
+  completedAt: timestamp("completed_at"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// Insert schemas for owner onboarding
+export const insertOwnerOnboardingSchema = createInsertSchema(ownerOnboarding).omit({ 
+  id: true, 
+  createdAt: true, 
+  updatedAt: true 
+});
+
+export const insertOwnerOnboardingStepSchema = createInsertSchema(ownerOnboardingSteps).omit({ 
+  id: true, 
+  createdAt: true, 
+  updatedAt: true 
+});
+
+// Types for owner onboarding
+export type OwnerOnboarding = typeof ownerOnboarding.$inferSelect;
+export type InsertOwnerOnboarding = z.infer<typeof insertOwnerOnboardingSchema>;
+export type OwnerOnboardingStep = typeof ownerOnboardingSteps.$inferSelect;
+export type InsertOwnerOnboardingStep = z.infer<typeof insertOwnerOnboardingStepSchema>;
+

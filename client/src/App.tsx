@@ -53,6 +53,7 @@ import EmployeeBuildSheets from "@/pages/employee-build-sheets";
 import EmployeePayStubs from "@/pages/employee-pay-stubs";
 import EmployeeTimeOff from "@/pages/employee-time-off";
 import PublicOnboarding from "@/pages/public-onboarding";
+import Onboarding from "@/pages/onboarding";
 import MultiUnitDashboard from "@/pages/multi-unit-dashboard";
 import BluetoothScalePrototype from "@/pages/bluetooth-scale-prototype";
 import Sidebar from "@/components/layout/sidebar";
@@ -106,6 +107,15 @@ function Router() {
             <Header onMobileMenuToggle={() => setIsMobileMenuOpen(!isMobileMenuOpen)} />
             <main className="flex-1 overflow-y-auto">
               <Switch>
+                {/* Owner Onboarding Route - Must be accessible to owners only */}
+                <Route path="/onboarding" component={() => {
+                  // Only allow owners to access onboarding
+                  if (user?.role !== 'owner') {
+                    return <NotFound />;
+                  }
+                  return <Onboarding />;
+                }} />
+                
                 <Route path="/" component={() => {
                   // Route employees to their dashboard, others to admin dashboard
                   return user?.role === 'employee' ? <EmployeeDashboard /> : <Dashboard />;

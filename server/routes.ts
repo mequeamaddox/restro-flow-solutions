@@ -37,6 +37,10 @@ import {
   insertPosIntegrationSchema,
   insertTeamResourceSchema,
   teamResources,
+  ownerOnboarding,
+  ownerOnboardingSteps,
+  insertOwnerOnboardingSchema,
+  insertOwnerOnboardingStepSchema,
 } from "@shared/schema";
 import { squareSubscriptionService } from "./squareSubscriptionService";
 import {
@@ -5139,6 +5143,112 @@ req.user.id
         message: 'Failed to cancel subscription',
         error: error.message 
       });
+    }
+  });
+
+  // Owner Onboarding Routes
+  // ============================================================================
+
+  // GET /api/owner-onboarding/progress - Get current onboarding progress
+  app.get('/api/owner-onboarding/progress', isAuthenticated, async (req: AuthenticatedRequest, res) => {
+    try {
+      const userId = req.user.id;
+      
+      // Only owners can access onboarding
+      if (req.user.role !== 'owner') {
+        return res.status(403).json({ 
+          message: 'Access denied. Onboarding is only available to business owners.' 
+        });
+      }
+
+      const onboarding = await storage.getOwnerOnboarding(userId);
+      res.json(onboarding || { 
+        userId,
+        isCompleted: false,
+        currentStep: 'restaurant_info',
+        completedSteps: 0,
+        totalSteps: 5,
+        data: {}
+      });
+    } catch (error) {
+      console.error('Error fetching onboarding progress:', error);
+      res.status(500).json({ message: 'Failed to fetch onboarding progress' });
+    }
+  });
+
+  // POST /api/owner-onboarding/start - Start or resume onboarding
+  app.post('/api/owner-onboarding/start', isAuthenticated, async (req: AuthenticatedRequest, res) => {
+    try {
+      const userId = req.user.id;
+      
+      // Only owners can start onboarding
+      if (req.user.role !== 'owner') {
+        return res.status(403).json({ 
+          message: 'Access denied. Onboarding is only available to business owners.' 
+        });
+      }
+
+      // Check if onboarding already exists
+      let onboarding = await storage.getOwnerOnboarding(userId);
+      
+      if (!onboarding) {
+        // Create new onboarding
+        onboarding = await storage.createOwnerOnboarding({
+          userId,
+          isCompleted: false,
+          currentStep: 'restaurant_info',
+          totalSteps: 5,
+          completedSteps: 0,
+          skippedSteps: [],
+          data: {}
+        });
+      }
+
+      res.status(201).json(onboarding);
+    } catch (error) {
+      console.error('Error starting onboarding:', error);
+      res.status(500).json({ message: 'Failed to start onboarding' });
+    }
+  });
+
+  // PUT /api/owner-onboarding/step - Update a specific step
+  app.put('/api/owner-onboarding/step', isAuthenticated, async (req: AuthenticatedRequest, res) => {
+    try {
+      const userId = req.user.id;
+      const { stepName, stepData, status = 'completed' } = req.body;
+      
+      // Only owners can update onboarding
+      if (req.user.role !== 'owner') {
+        return res.status(403).json({ 
+          message: 'Access denied. Onboarding is only available to business owners.' 
+        });
+      }
+
+      const onboarding = await storage.updateOwnerOnboardingStep(userId, stepName, stepData, status);
+      res.json(onboarding);
+    } catch (error) {
+      console.error('Error updating onboarding step:', error);
+      res.status(500).json({ message: 'Failed to update onboarding step' });
+    }
+  });
+
+  // POST /api/owner-onboarding/complete - Complete the entire onboarding
+  app.post('/api/owner-onboarding/complete', isAuthenticated, async (req: AuthenticatedRequest, res) => {
+    try {
+      const userId = req.user.id;
+      
+      // Only owners can complete onboarding
+      if (req.user.role !== 'owner') {
+        return res.status(403).json({ 
+          message: 'Access denied. Onboarding is only available to business owners.' 
+        });
+      }
+
+      const onboarding = await storage.completeOwnerOnboarding(userId);
+      res.json(onboarding);
+    } catch (error) {
+      console.error('Error completing onboarding:', error);
+      res.status(500).json({ message: 'Failed to complete onboarding' });
     }
   });
 

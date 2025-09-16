@@ -156,6 +156,12 @@ import {
   type InsertEmployeeOnboardingData,
   type OnboardingToken,
   type InsertOnboardingToken,
+  ownerOnboarding,
+  ownerOnboardingSteps,
+  type OwnerOnboarding,
+  type InsertOwnerOnboarding,
+  type OwnerOnboardingStep,
+  type InsertOwnerOnboardingStep,
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, sql, desc, and, gte, lte, lt, ilike, sum, isNull, isNotNull, asc } from "drizzle-orm";
@@ -477,6 +483,12 @@ export interface IStorage {
   createLocalAuthUser(user: InsertLocalAuthUser): Promise<LocalAuthUser>;
   getLocalAuthUser(email: string): Promise<LocalAuthUser | null>;
   verifyLocalAuthUser(email: string, password: string): Promise<LocalAuthUser | null>;
+
+  // Owner onboarding operations
+  getOwnerOnboarding(userId: string): Promise<OwnerOnboarding | undefined>;
+  createOwnerOnboarding(data: InsertOwnerOnboarding): Promise<OwnerOnboarding>;
+  updateOwnerOnboardingStep(userId: string, stepName: string, stepData: any, status: string): Promise<OwnerOnboarding>;
+  completeOwnerOnboarding(userId: string): Promise<OwnerOnboarding>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -4625,6 +4637,117 @@ export class DatabaseStorage implements IStorage {
         isLowStock: purchaseQuantity <= parseFloat(item.reorderLevel)
       };
     });
+  }
+
+  // Owner onboarding operations
+  async getOwnerOnboarding(userId: string): Promise<OwnerOnboarding | undefined> {
+    const [result] = await db
+      .select()
+      .from(ownerOnboarding)
+      .where(eq(ownerOnboarding.userId, userId));
+    return result;
+  }
+
+  async createOwnerOnboarding(data: InsertOwnerOnboarding): Promise<OwnerOnboarding> {
+    const [result] = await db.insert(ownerOnboarding).values(data).returning();
+    return result;
+  }
+
+  async updateOwnerOnboardingStep(userId: string, stepName: string, stepData: any, status: string): Promise<OwnerOnboarding> {
+    // Get existing onboarding
+    const existing = await this.getOwnerOnboarding(userId);
+    if (!existing) {
+      throw new Error('Onboarding not found');
+    }
+
+    // Update step-specific data in the main onboarding data object
+    const currentData = existing.data || {};
+    const updatedData = {
+      ...currentData,
+      [stepName]: stepData
+    };
+
+    // Calculate progress
+    const stepMap = {
+      'restaurant_info': 1,
+      'departments': 2,
+      'positions': 3,
+      'hr_addon': 4,
+      'employee_invitations': 5
+    };
+
+    const currentStepNumber = stepMap[stepName as keyof typeof stepMap] || 1;
+    const completedSteps = status === 'completed' ? Math.max(existing.completedSteps, currentStepNumber) : existing.completedSteps;
+
+    // Determine next step
+    let nextStep = stepName;
+    if (status === 'completed' && currentStepNumber < 5) {
+      const nextSteps = Object.keys(stepMap).find(key => stepMap[key as keyof typeof stepMap] === currentStepNumber + 1);
+      nextStep = nextSteps || stepName;
+    }
+
+    // Update main onboarding record
+    const [updatedOnboarding] = await db
+      .update(ownerOnboarding)
+      .set({
+        data: updatedData,
+        currentStep: nextStep as any,
+        completedSteps,
+        updatedAt: new Date(),
+      })
+      .where(eq(ownerOnboarding.userId, userId))
+      .returning();
+
+    // Create or update individual step record
+    const existingStep = await db
+      .select()
+      .from(ownerOnboardingSteps)
+      .where(and(
+        eq(ownerOnboardingSteps.onboardingId, existing.id),
+        eq(ownerOnboardingSteps.stepName, stepName as any)
+      ));
+
+    if (existingStep.length > 0) {
+      await db
+        .update(ownerOnboardingSteps)
+        .set({
+          status: status as any,
+          stepData,
+          completedAt: status === 'completed' ? new Date() : null,
+          updatedAt: new Date(),
+        })
+        .where(eq(ownerOnboardingSteps.id, existingStep[0].id));
+    } else {
+      await db.insert(ownerOnboardingSteps).values({
+        onboardingId: existing.id,
+        stepName: stepName as any,
+        status: status as any,
+        stepData,
+        startedAt: new Date(),
+        completedAt: status === 'completed' ? new Date() : null,
+      });
+    }
+
+    return updatedOnboarding;
+  }
+
+  async completeOwnerOnboarding(userId: string): Promise<OwnerOnboarding> {
+    const [result] = await db
+      .update(ownerOnboarding)
+      .set({
+        isCompleted: true,
+        completedAt: new Date(),
+        completedSteps: 5,
+        updatedAt: new Date(),
+      })
+      .where(eq(ownerOnboarding.userId, userId))
+      .returning();
+
+    if (!result) {
+      throw new Error('Onboarding not found');
+    }
+
+    return result;
   }
 }
 
