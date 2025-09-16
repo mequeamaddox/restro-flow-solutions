@@ -99,7 +99,7 @@ class SquareSubscriptionService {
       },
       {
         id: 'professional',
-        name: 'Professional (Core)',
+        name: 'Professional',
         price: 179,
         billingCycle: 'MONTHLY',
         popular: true,
@@ -117,6 +117,26 @@ class SquareSubscriptionService {
           'Menu engineering analysis',
           'Priority phone support',
           'API access'
+        ]
+      },
+      {
+        id: 'enterprise',
+        name: 'Enterprise',
+        price: 329,
+        billingCycle: 'MONTHLY',
+        features: [
+          'Everything in Professional',
+          'White-label customization',
+          'Custom reporting & dashboards',
+          'Advanced API access & webhooks',
+          'Multi-brand management',
+          'Enterprise-grade security',
+          'Dedicated account manager',
+          'Custom integrations',
+          'Advanced user permissions',
+          'SLA guarantee',
+          '24/7 phone support',
+          'On-site training'
         ]
       }
     ];
