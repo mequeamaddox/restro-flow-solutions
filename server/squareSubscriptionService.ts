@@ -12,6 +12,9 @@ export interface SubscriptionPlan {
   price: number;
   features: string[];
   billingCycle: 'MONTHLY' | 'ANNUAL';
+  trialDays?: number;
+  badge?: string;
+  popular?: boolean;
 }
 
 export interface CreateSubscriptionRequest {
@@ -92,6 +95,31 @@ class SquareSubscriptionService {
           'Daily P&L statements',
           'Email support',
           '1 location only'
+        ]
+      },
+      {
+        id: 'professional_trial',
+        name: 'Professional (14-Day Free Trial)',
+        price: 179,
+        billingCycle: 'MONTHLY',
+        trialDays: 14,
+        badge: 'FREE TRIAL',
+        popular: true,
+        features: [
+          '✨ Full Professional features for 14 days',
+          'Unlimited OCR invoice processing',
+          'Advanced image OCR (scanned invoices)',
+          'Support for all file types (PDF, Images)',
+          'Advanced analytics dashboard',
+          'Unlimited locations',
+          'All POS/accounting integrations',
+          'Automated invoice processing (24-48hr)',
+          'Budget tracking & variance analysis',
+          'Theoretical vs actual reporting',
+          'Menu engineering analysis',
+          'Priority phone support',
+          'API access',
+          '💳 No charge for first 14 days'
         ]
       },
       {
