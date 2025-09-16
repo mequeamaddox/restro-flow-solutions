@@ -38,6 +38,12 @@ import {
   insertTeamResourceSchema,
   teamResources,
 } from "@shared/schema";
+import { squareSubscriptionService } from "./squareSubscriptionService";
+import {
+  createSubscriptionSchema,
+  squareWebhookSchema,
+  cancelSubscriptionSchema,
+} from "@shared/subscriptionSchemas";
 
 // Use Firebase-only authentication
 const isAuthenticated = requireFirebaseAuth;
@@ -4715,6 +4721,282 @@ req.user.id
       res.status(500).json({ message: 'Failed to fetch sales analytics' });
     }
   });
+
+  // ============================================================================
+  // SQUARE SUBSCRIPTION ENDPOINTS
+  // ============================================================================
+
+  // GET /api/subscriptions/plans - Get available subscription plans with pricing
+  app.get('/api/subscriptions/plans', async (req, res) => {
+    try {
+      if (!squareSubscriptionService.isEnabled()) {
+        return res.status(503).json({ 
+          message: 'Square subscription service not configured',
+          error: 'Please configure SQUARE_ACCESS_TOKEN and SQUARE_APPLICATION_ID environment variables'
+        });
+      }
+
+      const plans = squareSubscriptionService.getSubscriptionPlans();
+      const hrAddon = squareSubscriptionService.getHrAddonPricing();
+      const config = squareSubscriptionService.getConfiguration();
+
+      res.json({
+        plans,
+        hrAddon,
+        config
+      });
+    } catch (error) {
+      console.error('❌ Error fetching subscription plans:', error);
+      res.status(500).json({ 
+        message: 'Failed to fetch subscription plans',
+        error: error.message 
+      });
+    }
+  });
+
+  // POST /api/subscriptions/create - Create Square subscription with plan selection
+  app.post('/api/subscriptions/create', isAuthenticated, async (req: AuthenticatedRequest, res) => {
+    try {
+      if (!squareSubscriptionService.isEnabled()) {
+        return res.status(503).json({ 
+          message: 'Square subscription service not configured',
+          error: 'Please configure SQUARE_ACCESS_TOKEN and SQUARE_APPLICATION_ID environment variables'
+        });
+      }
+
+      const validatedData = createSubscriptionSchema.parse(req.body);
+      const { email, plan, hrAddonLocations = 0 } = validatedData;
+      const userId = req.user.id;
+
+      console.log('🔄 Creating Square subscription for user:', userId, 'plan:', plan);
+
+      // Get current user
+      const currentUser = await storage.getUser(userId);
+      if (!currentUser) {
+        return res.status(404).json({ message: 'User not found' });
+      }
+
+      let squareCustomerId = currentUser.squareCustomerId;
+
+      // Create Square customer if doesn't exist
+      if (!squareCustomerId) {
+        console.log('🆕 Creating new Square customer for:', email);
+        squareCustomerId = await squareSubscriptionService.createCustomer(
+          email, 
+          currentUser.firstName || undefined, 
+          currentUser.lastName || undefined
+        );
+        
+        // Update user with Square customer ID
+        await storage.createSquareCustomer(userId, squareCustomerId);
+      }
+
+      // Create Square subscription
+      const subscriptionResult = await squareSubscriptionService.createSubscription(
+        squareCustomerId, 
+        plan, 
+        hrAddonLocations
+      );
+
+      // Update user subscription in database
+      await storage.updateUserSubscription(userId, {
+        subscriptionPlan: plan,
+        subscriptionStatus: 'active',
+        squareCustomerId,
+        squareSubscriptionId: subscriptionResult.subscriptionId,
+        subscriptionEndDate: new Date(subscriptionResult.nextBillingDate || Date.now() + 30 * 24 * 60 * 60 * 1000),
+        hrAddonEnabled: hrAddonLocations > 0,
+        ocrCreditsLimit: plan === 'professional' || plan === 'enterprise' ? 999 : 5
+      });
+
+      console.log('✅ Square subscription created successfully:', subscriptionResult.subscriptionId);
+
+      res.json({
+        success: true,
+        subscription: subscriptionResult,
+        message: 'Subscription created successfully'
+      });
+
+    } catch (error) {
+      console.error('❌ Error creating Square subscription:', error);
+      
+      if (error.name === 'ZodError') {
+        return res.status(400).json({ 
+          message: 'Invalid request data',
+          errors: error.errors 
+        });
+      }
+
+      res.status(500).json({ 
+        message: 'Failed to create subscription',
+        error: error.message 
+      });
+    }
+  });
+
+  // POST /api/subscriptions/webhook - Handle Square subscription webhooks
+  app.post('/api/subscriptions/webhook', async (req, res) => {
+    try {
+      if (!squareSubscriptionService.isEnabled()) {
+        return res.status(503).json({ 
+          message: 'Square subscription service not configured' 
+        });
+      }
+
+      const signature = req.headers['x-square-signature'] as string;
+      const payload = JSON.stringify(req.body);
+
+      // Verify webhook signature if signature key is configured
+      if (!squareSubscriptionService.verifyWebhookSignature(payload, signature)) {
+        console.error('❌ Invalid Square webhook signature');
+        return res.status(401).json({ message: 'Invalid webhook signature' });
+      }
+
+      console.log('🔔 Square webhook received:', req.body.type);
+
+      const validatedWebhook = squareWebhookSchema.parse(req.body);
+      const { type, data } = validatedWebhook;
+
+      // Handle subscription events
+      if (type.includes('subscription')) {
+        const subscriptionObject = data.object;
+        const squareSubscriptionId = subscriptionObject.id;
+
+        // Find user by Square subscription ID
+        const users = await db.select().from(users).where(eq(users.squareSubscriptionId, squareSubscriptionId));
+        const user = users[0];
+
+        if (!user) {
+          console.log('⚠️ No user found for Square subscription:', squareSubscriptionId);
+          return res.status(200).json({ message: 'Webhook processed (user not found)' });
+        }
+
+        // Update subscription status based on webhook type
+        let newStatus: 'active' | 'inactive' | 'cancelled' | 'past_due' = 'active';
+        
+        if (type.includes('deactivated') || type.includes('canceled')) {
+          newStatus = 'cancelled';
+        } else if (type.includes('paused')) {
+          newStatus = 'inactive';
+        } else if (type.includes('activated') || type.includes('renewed')) {
+          newStatus = 'active';
+        }
+
+        // Update user subscription status
+        await storage.updateUserSubscription(user.id, {
+          subscriptionStatus: newStatus,
+          subscriptionEndDate: subscriptionObject.next_billing_date ? 
+            new Date(subscriptionObject.next_billing_date) : undefined
+        });
+
+        console.log('✅ Updated subscription status for user:', user.id, 'to:', newStatus);
+      }
+
+      res.status(200).json({ message: 'Webhook processed successfully' });
+
+    } catch (error) {
+      console.error('❌ Error processing Square webhook:', error);
+      res.status(500).json({ 
+        message: 'Failed to process webhook',
+        error: error.message 
+      });
+    }
+  });
+
+  // GET /api/subscriptions/portal - Get subscription management portal URL
+  app.get('/api/subscriptions/portal', isAuthenticated, async (req: AuthenticatedRequest, res) => {
+    try {
+      if (!squareSubscriptionService.isEnabled()) {
+        return res.status(503).json({ 
+          message: 'Square subscription service not configured' 
+        });
+      }
+
+      const userId = req.user.id;
+      const user = await storage.getSubscriptionByUser(userId);
+
+      if (!user || !user.squareCustomerId) {
+        return res.status(404).json({ 
+          message: 'No Square customer found for user' 
+        });
+      }
+
+      const portalUrl = await squareSubscriptionService.getCustomerPortalUrl(user.squareCustomerId);
+
+      res.json({
+        portalUrl,
+        message: 'Portal URL generated successfully'
+      });
+
+    } catch (error) {
+      console.error('❌ Error generating subscription portal URL:', error);
+      res.status(500).json({ 
+        message: 'Failed to generate portal URL',
+        error: error.message 
+      });
+    }
+  });
+
+  // POST /api/subscriptions/cancel - Cancel active subscription
+  app.post('/api/subscriptions/cancel', isAuthenticated, async (req: AuthenticatedRequest, res) => {
+    try {
+      if (!squareSubscriptionService.isEnabled()) {
+        return res.status(503).json({ 
+          message: 'Square subscription service not configured' 
+        });
+      }
+
+      const validatedData = cancelSubscriptionSchema.parse(req.body);
+      const userId = req.user.id;
+
+      const user = await storage.getSubscriptionByUser(userId);
+      if (!user || !user.squareSubscriptionId) {
+        return res.status(404).json({ 
+          message: 'No active subscription found' 
+        });
+      }
+
+      console.log('🔄 Cancelling Square subscription:', user.squareSubscriptionId);
+
+      // Cancel subscription in Square
+      const cancelled = await squareSubscriptionService.cancelSubscription(user.squareSubscriptionId);
+      
+      if (!cancelled) {
+        throw new Error('Failed to cancel subscription in Square');
+      }
+
+      // Update user subscription status
+      await storage.updateUserSubscription(userId, {
+        subscriptionStatus: 'cancelled',
+        hrAddonEnabled: false,
+        ocrCreditsLimit: 5 // Reset to free plan limit
+      });
+
+      console.log('✅ Square subscription cancelled successfully for user:', userId);
+
+      res.json({
+        success: true,
+        message: 'Subscription cancelled successfully'
+      });
+
+    } catch (error) {
+      console.error('❌ Error cancelling Square subscription:', error);
+      
+      if (error.name === 'ZodError') {
+        return res.status(400).json({ 
+          message: 'Invalid request data',
+          errors: error.errors 
+        });
+      }
+
+      res.status(500).json({ 
+        message: 'Failed to cancel subscription',
+        error: error.message 
+      });
+    }
+  });
+
+  // ============================================================================
 
   const httpServer = createServer(app);
   return httpServer;

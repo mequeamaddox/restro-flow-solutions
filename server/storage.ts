@@ -186,9 +186,15 @@ export interface IStorage {
     subscriptionStatus?: 'active' | 'inactive' | 'cancelled' | 'past_due';
     stripeCustomerId?: string;
     stripeSubscriptionId?: string;
+    squareCustomerId?: string;
+    squareSubscriptionId?: string;
     subscriptionEndDate?: Date;
     ocrCreditsLimit?: number;
+    hrAddonEnabled?: boolean;
   }): Promise<User>;
+  createSquareCustomer(userId: string, squareCustomerId: string): Promise<User>;
+  getSubscriptionByUser(userId: string): Promise<User | undefined>;
+  getUserBySquareCustomerId(squareCustomerId: string): Promise<User | undefined>;
   updateOcrCreditsUsed(userId: string, creditsUsed: number): Promise<User>;
   checkOcrAccess(userId: string): Promise<{ hasAccess: boolean; creditsRemaining: number; plan: string }>;
   resetOcrCredits(userId: string): Promise<User>;
@@ -572,8 +578,11 @@ export class DatabaseStorage implements IStorage {
     subscriptionStatus?: 'active' | 'inactive' | 'cancelled' | 'past_due';
     stripeCustomerId?: string;
     stripeSubscriptionId?: string;
+    squareCustomerId?: string;
+    squareSubscriptionId?: string;
     subscriptionEndDate?: Date;
     ocrCreditsLimit?: number;
+    hrAddonEnabled?: boolean;
   }): Promise<User> {
     const [user] = await db
       .update(users)
@@ -629,6 +638,28 @@ export class DatabaseStorage implements IStorage {
       })
       .where(eq(users.id, userId))
       .returning();
+    return user;
+  }
+
+  async createSquareCustomer(userId: string, squareCustomerId: string): Promise<User> {
+    const [user] = await db
+      .update(users)
+      .set({
+        squareCustomerId,
+        updatedAt: new Date(),
+      })
+      .where(eq(users.id, userId))
+      .returning();
+    return user;
+  }
+
+  async getSubscriptionByUser(userId: string): Promise<User | undefined> {
+    const [user] = await db.select().from(users).where(eq(users.id, userId));
+    return user;
+  }
+
+  async getUserBySquareCustomerId(squareCustomerId: string): Promise<User | undefined> {
+    const [user] = await db.select().from(users).where(eq(users.squareCustomerId, squareCustomerId));
     return user;
   }
 
