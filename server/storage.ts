@@ -24,6 +24,7 @@ import {
   documentFormFields,
   employeeDocumentResponses,
   recipeAssignments,
+  invitationTokens,
   type User,
   type UpsertUser,
   type Location,
@@ -132,6 +133,8 @@ import {
   type InsertEmployeeDocumentResponse,
   type RecipeAssignment,
   type InsertRecipeAssignment,
+  type InvitationToken,
+  type InsertInvitationToken,
   // Document and onboarding imports
   employeeDocuments,
   documentRequirements,
@@ -461,6 +464,16 @@ export interface IStorage {
   getRecipeAssignmentsForEmployee(employeeId: string): Promise<RecipeAssignment[]>;
   createRecipeAssignment(assignment: InsertRecipeAssignment): Promise<RecipeAssignment>;
   updateRecipeAssignmentStatus(id: string, status: string): Promise<RecipeAssignment>;
+
+  // Invitation token operations
+  getInvitationTokens(invitedBy?: string): Promise<InvitationToken[]>;
+  getInvitationToken(token: string): Promise<InvitationToken | undefined>;
+  getInvitationTokenById(id: string): Promise<InvitationToken | undefined>;
+  createInvitationToken(invitation: InsertInvitationToken): Promise<InvitationToken>;
+  updateInvitationToken(id: string, updates: Partial<InsertInvitationToken>): Promise<InvitationToken>;
+  acceptInvitationToken(token: string, employeeId: string): Promise<InvitationToken>;
+  cancelInvitationToken(id: string): Promise<void>;
+  expireOldInvitationTokens(): Promise<number>;
 
   // Payroll operations
   getPayrollPeriods(locationId?: string): Promise<PayrollPeriod[]>;
@@ -4037,6 +4050,131 @@ export class DatabaseStorage implements IStorage {
       .returning();
     
     return updated;
+  }
+
+  // Invitation token operations
+  async getInvitationTokens(invitedBy?: string): Promise<InvitationToken[]> {
+    let query = db.select({
+      invitation: invitationTokens,
+      location: locations,
+      department: departments,
+      position: positions,
+      invitedByUser: users,
+    })
+    .from(invitationTokens)
+    .leftJoin(locations, eq(invitationTokens.locationId, locations.id))
+    .leftJoin(departments, eq(invitationTokens.departmentId, departments.id))
+    .leftJoin(positions, eq(invitationTokens.positionId, positions.id))
+    .leftJoin(users, eq(invitationTokens.invitedBy, users.id))
+    .orderBy(desc(invitationTokens.createdAt));
+
+    if (invitedBy) {
+      query = query.where(eq(invitationTokens.invitedBy, invitedBy)) as any;
+    }
+
+    const results = await query;
+    return results.map(row => ({
+      ...row.invitation,
+      location: row.location,
+      department: row.department,
+      position: row.position,
+      invitedByUser: row.invitedByUser,
+    })) as InvitationToken[];
+  }
+
+  async getInvitationToken(token: string): Promise<InvitationToken | undefined> {
+    const [invitation] = await db.select({
+      invitation: invitationTokens,
+      location: locations,
+      department: departments,
+      position: positions,
+    })
+    .from(invitationTokens)
+    .leftJoin(locations, eq(invitationTokens.locationId, locations.id))
+    .leftJoin(departments, eq(invitationTokens.departmentId, departments.id))
+    .leftJoin(positions, eq(invitationTokens.positionId, positions.id))
+    .where(eq(invitationTokens.token, token));
+
+    if (!invitation) return undefined;
+
+    return {
+      ...invitation.invitation,
+      location: invitation.location,
+      department: invitation.department,
+      position: invitation.position,
+    } as InvitationToken;
+  }
+
+  async getInvitationTokenById(id: string): Promise<InvitationToken | undefined> {
+    const [invitation] = await db.select().from(invitationTokens).where(eq(invitationTokens.id, id));
+    return invitation;
+  }
+
+  async createInvitationToken(invitation: InsertInvitationToken): Promise<InvitationToken> {
+    // Generate secure random token
+    const token = crypto.randomBytes(32).toString('hex');
+    
+    // Set expiry to 48 hours from now
+    const expiresAt = new Date();
+    expiresAt.setHours(expiresAt.getHours() + 48);
+
+    const invitationData = {
+      ...invitation,
+      token,
+      expiresAt,
+      status: 'pending' as const,
+    };
+
+    const [created] = await db.insert(invitationTokens).values(invitationData).returning();
+    return created;
+  }
+
+  async updateInvitationToken(id: string, updates: Partial<InsertInvitationToken>): Promise<InvitationToken> {
+    const [updated] = await db.update(invitationTokens)
+      .set({ ...updates, updatedAt: new Date() })
+      .where(eq(invitationTokens.id, id))
+      .returning();
+    return updated;
+  }
+
+  async acceptInvitationToken(token: string, employeeId: string): Promise<InvitationToken> {
+    const [updated] = await db.update(invitationTokens)
+      .set({
+        status: 'accepted' as const,
+        acceptedAt: new Date(),
+        employeeId,
+        updatedAt: new Date(),
+      })
+      .where(eq(invitationTokens.token, token))
+      .returning();
+    return updated;
+  }
+
+  async cancelInvitationToken(id: string): Promise<void> {
+    await db.update(invitationTokens)
+      .set({
+        status: 'cancelled' as const,
+        updatedAt: new Date(),
+      })
+      .where(eq(invitationTokens.id, id));
+  }
+
+  async expireOldInvitationTokens(): Promise<number> {
+    const now = new Date();
+    const result = await db.update(invitationTokens)
+      .set({
+        status: 'expired' as const,
+        updatedAt: now,
+      })
+      .where(
+        and(
+          eq(invitationTokens.status, 'pending'),
+          lt(invitationTokens.expiresAt, now)
+        )
+      )
+      .returning();
+    
+    return result.length;
   }
 
   // Payroll operations

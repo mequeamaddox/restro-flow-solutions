@@ -643,6 +643,42 @@ export const employees = pgTable("employees", {
   updatedAt: timestamp("updated_at").defaultNow(),
 });
 
+// Employee invitation tokens for secure invite system
+export const invitationStatusEnum = pgEnum("invitation_status", ["pending", "accepted", "expired", "cancelled"]);
+
+export const invitationTokens = pgTable("invitation_tokens", {
+  id: uuid("id").primaryKey().default(sql`gen_random_uuid()`),
+  token: varchar("token", { length: 64 }).unique().notNull(), // Secure random token
+  email: varchar("email", { length: 255 }).notNull(),
+  firstName: varchar("first_name", { length: 50 }),
+  lastName: varchar("last_name", { length: 50 }),
+  role: varchar("role", { length: 50 }).notNull(), // employee, manager, team_lead, etc.
+  
+  // Organization linkage
+  locationId: uuid("location_id").references(() => locations.id).notNull(),
+  departmentId: uuid("department_id").references(() => departments.id),
+  positionId: uuid("position_id").references(() => positions.id),
+  
+  // Employment details
+  hourlyRate: decimal("hourly_rate", { precision: 10, scale: 2 }),
+  salary: decimal("salary", { precision: 12, scale: 2 }),
+  startDate: date("start_date"),
+  
+  // Invitation management
+  invitedBy: varchar("invited_by").references(() => users.id).notNull(),
+  status: invitationStatusEnum("status").default("pending"),
+  expiresAt: timestamp("expires_at").notNull(), // Invitation expiry (48 hours)
+  acceptedAt: timestamp("accepted_at"),
+  employeeId: uuid("employee_id").references(() => employees.id), // Set when invitation is accepted
+  
+  // Additional data
+  personalMessage: text("personal_message"),
+  metadata: jsonb("metadata"), // Store additional invitation data
+  
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
 // Employee schedules and shifts
 export const shifts = pgTable("shifts", {
   id: uuid("id").primaryKey().default(sql`gen_random_uuid()`),
@@ -803,6 +839,7 @@ export const teamResources = pgTable("team_resources", {
 export const insertDepartmentSchema = createInsertSchema(departments).omit({ id: true, createdAt: true, updatedAt: true });
 export const insertPositionSchema = createInsertSchema(positions).omit({ id: true, createdAt: true, updatedAt: true });
 export const insertEmployeeSchema = createInsertSchema(employees).omit({ id: true, employeeNumber: true, createdAt: true, updatedAt: true });
+export const insertInvitationTokenSchema = createInsertSchema(invitationTokens).omit({ id: true, token: true, status: true, acceptedAt: true, employeeId: true, createdAt: true, updatedAt: true });
 export const insertShiftSchema = createInsertSchema(shifts).omit({ id: true, createdAt: true, updatedAt: true });
 export const insertAvailabilitySchema = createInsertSchema(availability).omit({ id: true, createdAt: true, updatedAt: true });
 export const insertTimeOffRequestSchema = createInsertSchema(timeOffRequests).omit({ id: true, createdAt: true, updatedAt: true });
@@ -898,6 +935,8 @@ export type Position = typeof positions.$inferSelect;
 export type InsertPosition = z.infer<typeof insertPositionSchema>;
 export type Employee = typeof employees.$inferSelect;
 export type InsertEmployee = z.infer<typeof insertEmployeeSchema>;
+export type InvitationToken = typeof invitationTokens.$inferSelect;
+export type InsertInvitationToken = z.infer<typeof insertInvitationTokenSchema>;
 export type Shift = typeof shifts.$inferSelect;
 export type InsertShift = z.infer<typeof insertShiftSchema>;
 export type Availability = typeof availability.$inferSelect;

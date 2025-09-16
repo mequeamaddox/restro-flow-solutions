@@ -41,6 +41,8 @@ import {
   ownerOnboardingSteps,
   insertOwnerOnboardingSchema,
   insertOwnerOnboardingStepSchema,
+  insertInvitationTokenSchema,
+  invitationTokens,
 } from "@shared/schema";
 import { squareSubscriptionService } from "./squareSubscriptionService";
 import {
@@ -48,6 +50,7 @@ import {
   squareWebhookSchema,
   cancelSubscriptionSchema,
 } from "@shared/subscriptionSchemas";
+import { InvitationEmailService } from "./invitationEmailService";
 
 // Use Firebase-only authentication
 const isAuthenticated = requireFirebaseAuth;
@@ -1000,6 +1003,245 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error resetting credits:", error);
       res.status(500).json({ message: "Failed to reset credits" });
+    }
+  });
+
+  // Employee Invitation Management Routes
+  
+  // Create invitation (owner only)
+  app.post('/api/invitations', isAuthenticated, requirePermission(Permission.MANAGE_EMPLOYEES), async (req, res) => {
+    try {
+      const userId = req.user.id;
+      const invitationData = insertInvitationTokenSchema.parse(req.body);
+      
+      // Ensure invitedBy is set to current user
+      const invitation = await storage.createInvitationToken({
+        ...invitationData,
+        invitedBy: userId,
+      });
+
+      // Get inviter and company information for email
+      const inviter = await storage.getUser(userId);
+      const inviterName = `${inviter?.firstName || ''} ${inviter?.lastName || ''}`.trim() || inviter?.email || 'RestroFlow Admin';
+      
+      // Get company name (could be from location or user organization)
+      let companyName = 'RestroFlow Restaurant';
+      if (invitation.locationId) {
+        const location = await storage.getLocation(invitation.locationId);
+        companyName = location?.name || companyName;
+      }
+
+      // Send invitation email
+      try {
+        // Get the full invitation with related data for email
+        const fullInvitation = await storage.getInvitationToken(invitation.token);
+        if (fullInvitation) {
+          await InvitationEmailService.sendInvitationEmail(
+            fullInvitation,
+            inviterName,
+            companyName
+          );
+        }
+      } catch (emailError) {
+        console.error("Failed to send invitation email:", emailError);
+        // Don't fail the invitation creation if email fails
+      }
+
+      res.status(201).json({
+        message: "Invitation created and email sent successfully",
+        invitation: {
+          id: invitation.id,
+          email: invitation.email,
+          role: invitation.role,
+          status: invitation.status,
+          expiresAt: invitation.expiresAt,
+          createdAt: invitation.createdAt,
+        }
+      });
+    } catch (error) {
+      console.error("Error creating invitation:", error);
+      res.status(400).json({ message: "Failed to create invitation" });
+    }
+  });
+
+  // List pending invitations (owner only)
+  app.get('/api/invitations', isAuthenticated, requirePermission(Permission.MANAGE_EMPLOYEES), async (req, res) => {
+    try {
+      const userId = req.user.id;
+      const invitations = await storage.getInvitationTokens(userId);
+      
+      res.json(invitations.map(inv => ({
+        id: inv.id,
+        email: inv.email,
+        firstName: inv.firstName,
+        lastName: inv.lastName,
+        role: inv.role,
+        status: inv.status,
+        locationId: inv.locationId,
+        departmentId: inv.departmentId,
+        positionId: inv.positionId,
+        expiresAt: inv.expiresAt,
+        createdAt: inv.createdAt,
+        location: inv.location,
+        department: inv.department,
+        position: inv.position,
+      })));
+    } catch (error) {
+      console.error("Error fetching invitations:", error);
+      res.status(500).json({ message: "Failed to fetch invitations" });
+    }
+  });
+
+  // Validate invitation token (public route)
+  app.get('/api/invitations/:token', async (req, res) => {
+    try {
+      const { token } = req.params;
+      const invitation = await storage.getInvitationToken(token);
+      
+      if (!invitation) {
+        return res.status(404).json({ message: "Invitation not found" });
+      }
+
+      if (invitation.status !== 'pending') {
+        return res.status(400).json({ 
+          message: `Invitation is ${invitation.status}`,
+          status: invitation.status 
+        });
+      }
+
+      if (new Date() > new Date(invitation.expiresAt)) {
+        await storage.updateInvitationToken(invitation.id, { status: 'expired' });
+        return res.status(400).json({ message: "Invitation has expired" });
+      }
+
+      res.json({
+        email: invitation.email,
+        firstName: invitation.firstName,
+        lastName: invitation.lastName,
+        role: invitation.role,
+        location: invitation.location,
+        department: invitation.department,
+        position: invitation.position,
+        expiresAt: invitation.expiresAt,
+      });
+    } catch (error) {
+      console.error("Error validating invitation:", error);
+      res.status(500).json({ message: "Failed to validate invitation" });
+    }
+  });
+
+  // Accept invitation and create employee account (public route)
+  app.post('/api/invitations/:token/accept', async (req, res) => {
+    try {
+      const { token } = req.params;
+      const { password, firebaseUid } = req.body;
+
+      if (!password || !firebaseUid) {
+        return res.status(400).json({ message: "Password and Firebase UID required" });
+      }
+
+      const invitation = await storage.getInvitationToken(token);
+      
+      if (!invitation) {
+        return res.status(404).json({ message: "Invitation not found" });
+      }
+
+      if (invitation.status !== 'pending') {
+        return res.status(400).json({ 
+          message: `Invitation is ${invitation.status}`,
+          status: invitation.status 
+        });
+      }
+
+      if (new Date() > new Date(invitation.expiresAt)) {
+        await storage.updateInvitationToken(invitation.id, { status: 'expired' });
+        return res.status(400).json({ message: "Invitation has expired" });
+      }
+
+      // Create Firebase user account
+      try {
+        await createFirebaseUser(invitation.email, password);
+      } catch (firebaseError) {
+        console.error("Error creating Firebase user:", firebaseError);
+        return res.status(400).json({ message: "Failed to create user account" });
+      }
+
+      // Create user record in the users table
+      const user = await storage.upsertUser({
+        id: firebaseUid,
+        email: invitation.email,
+        firstName: invitation.firstName || '',
+        lastName: invitation.lastName || '',
+        role: invitation.role,
+        defaultLocationId: invitation.locationId,
+      });
+
+      // Create employee record if HR addon is enabled for location
+      if (invitation.locationId) {
+        const location = await storage.getLocation(invitation.locationId);
+        if (location?.hrAddonEnabled) {
+          const employeeData = {
+            firstName: invitation.firstName || '',
+            lastName: invitation.lastName || '',
+            email: invitation.email,
+            hireDate: invitation.startDate || new Date(),
+            status: 'active',
+            departmentId: invitation.departmentId,
+            positionId: invitation.positionId,
+            hourlyRate: invitation.hourlyRate,
+            salary: invitation.salary,
+          };
+
+          const employee = await storage.createEmployee(employeeData);
+          
+          // Mark invitation as accepted and link to employee
+          await storage.acceptInvitationToken(token, employee.id);
+        } else {
+          // Mark invitation as accepted without employee record
+          await storage.acceptInvitationToken(token, null);
+        }
+      }
+
+      res.json({
+        message: "Invitation accepted successfully",
+        user: {
+          id: user.id,
+          email: user.email,
+          firstName: user.firstName,
+          lastName: user.lastName,
+          role: user.role,
+        }
+      });
+    } catch (error) {
+      console.error("Error accepting invitation:", error);
+      res.status(500).json({ message: "Failed to accept invitation" });
+    }
+  });
+
+  // Cancel invitation (owner only)
+  app.delete('/api/invitations/:id', isAuthenticated, requirePermission(Permission.MANAGE_EMPLOYEES), async (req, res) => {
+    try {
+      const { id } = req.params;
+      await storage.cancelInvitationToken(id);
+      
+      res.json({ message: "Invitation cancelled successfully" });
+    } catch (error) {
+      console.error("Error cancelling invitation:", error);
+      res.status(500).json({ message: "Failed to cancel invitation" });
+    }
+  });
+
+  // Cleanup expired invitations (internal cron job endpoint)
+  app.post('/api/invitations/cleanup', isAuthenticated, requirePermission(Permission.MANAGE_EMPLOYEES), async (req, res) => {
+    try {
+      const expiredCount = await storage.expireOldInvitationTokens();
+      res.json({ 
+        message: `Cleaned up ${expiredCount} expired invitations`,
+        expiredCount 
+      });
+    } catch (error) {
+      console.error("Error cleaning up invitations:", error);
+      res.status(500).json({ message: "Failed to cleanup invitations" });
     }
   });
 
