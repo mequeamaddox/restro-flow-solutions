@@ -81,62 +81,26 @@ class SquareSubscriptionService {
   public getSubscriptionPlans(): SubscriptionPlan[] {
     return [
       {
-        id: 'free',
-        name: 'Free',
-        price: 0,
-        billingCycle: 'MONTHLY',
-        features: [
-          '5 OCR invoice processes/month',
-          'Basic text extraction (PDFs only)',
-          'Real-time inventory tracking',
-          'Recipe costing & management',
-          'Purchase order automation',
-          'Comprehensive waste tracking',
-          'Daily P&L statements',
-          'Email support',
-          '1 location only'
-        ]
-      },
-      {
-        id: 'professional',
-        name: 'Professional',
+        id: 'per_location',
+        name: 'RestroFlow Core',
         price: 179,
         billingCycle: 'MONTHLY',
         popular: true,
         features: [
-          'Everything in Free',
           'Unlimited OCR invoice processing',
           'Advanced image OCR (scanned invoices)',
-          'Support for all file types (PDF, Images)',
+          'Real-time inventory tracking',
+          'Recipe costing & management',
+          'Purchase order automation',
+          'Comprehensive waste tracking',
           'Advanced analytics dashboard',
-          'Unlimited locations',
           'All POS/accounting integrations',
-          'Automated invoice processing (24-48hr)',
           'Budget tracking & variance analysis',
           'Theoretical vs actual reporting',
           'Menu engineering analysis',
+          'Daily P&L statements',
           'Priority phone support',
           'API access'
-        ]
-      },
-      {
-        id: 'enterprise',
-        name: 'Enterprise',
-        price: 329,
-        billingCycle: 'MONTHLY',
-        features: [
-          'Everything in Professional',
-          'White-label customization',
-          'Custom reporting & dashboards',
-          'Advanced API access & webhooks',
-          'Multi-brand management',
-          'Enterprise-grade security',
-          'Dedicated account manager',
-          'Custom integrations',
-          'Advanced user permissions',
-          'SLA guarantee',
-          '24/7 phone support',
-          'On-site training'
         ]
       }
     ];
