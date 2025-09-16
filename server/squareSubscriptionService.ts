@@ -78,35 +78,41 @@ class SquareSubscriptionService {
   public getSubscriptionPlans(): SubscriptionPlan[] {
     return [
       {
-        id: 'professional',
-        name: 'Professional',
-        price: 179,
+        id: 'free',
+        name: 'Free',
+        price: 0,
         billingCycle: 'MONTHLY',
         features: [
-          'Unlimited inventory items',
-          'Advanced reporting & analytics',
-          'Vendor price comparison',
+          '5 OCR invoice processes/month',
+          'Basic text extraction (PDFs only)',
+          'Real-time inventory tracking',
+          'Recipe costing & management',
           'Purchase order automation',
-          'Invoice processing with OCR',
-          'Cost monitoring & alerts',
-          'Multi-location support',
-          'Priority support'
+          'Comprehensive waste tracking',
+          'Daily P&L statements',
+          'Email support',
+          '1 location only'
         ]
       },
       {
-        id: 'enterprise',
-        name: 'Enterprise',
-        price: 329,
+        id: 'professional',
+        name: 'Professional (Core)',
+        price: 179,
         billingCycle: 'MONTHLY',
         features: [
-          'Everything in Professional',
-          'Advanced forecasting',
-          'Custom integrations',
-          'White-label options',
-          'Dedicated account manager',
-          'Custom training sessions',
-          'SLA guarantees',
-          'Advanced security features'
+          'Everything in Free',
+          'Unlimited OCR invoice processing',
+          'Advanced image OCR (scanned invoices)',
+          'Support for all file types (PDF, Images)',
+          'Advanced analytics dashboard',
+          'Unlimited locations',
+          'All POS/accounting integrations',
+          'Automated invoice processing (24-48hr)',
+          'Budget tracking & variance analysis',
+          'Theoretical vs actual reporting',
+          'Menu engineering analysis',
+          'Priority phone support',
+          'API access'
         ]
       }
     ];
@@ -117,6 +123,32 @@ class SquareSubscriptionService {
       pricePerLocation: 79,
       description: 'HR Management Add-on - Employee scheduling, time tracking, payroll, and document management'
     };
+  }
+
+  public getCompleteSubscriptionData(): { 
+    plans: SubscriptionPlan[]; 
+    hrAddon: { pricePerLocation: number; description: string; features: string[] } 
+  } {
+    return {
+      plans: this.getSubscriptionPlans(),
+      hrAddon: {
+        ...this.getHrAddonPricing(),
+        features: [
+          'Employee scheduling & time tracking',
+          'Digital document management',
+          'Payroll processing & pay stubs',
+          'Performance reviews & evaluations',
+          'Time-off request management',
+          'Task assignment & completion tracking',
+          'Internal messaging system',
+          'HR analytics & reporting'
+        ]
+      }
+    };
+  }
+
+  public isEnabled(): boolean {
+    return this.isConfigured;
   }
 
   public async createCustomer(email: string, firstName?: string, lastName?: string): Promise<string> {

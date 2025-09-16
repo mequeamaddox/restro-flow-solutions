@@ -38,7 +38,9 @@ import {
   BookOpen,
   Building,
   Briefcase,
-  Calculator
+  Calculator,
+  Crown,
+  Star
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import logoImg from "@assets/IMG_20250812_004328_1754973838131.png";
@@ -57,6 +59,11 @@ const navigation = [
   { name: 'Waste Tracking', href: '/waste-tracking', icon: Trash2 },
   { name: 'POS Integration', href: '/pos-integration', icon: CreditCard },
   { name: 'Settings', href: '/settings', icon: Settings },
+];
+
+// Subscription & Billing navigation for owners
+const subscriptionNavigation = [
+  { name: 'Subscription', href: '/subscription', icon: Crown, badge: 'BILLING' },
 ];
 
 const hrNavigation = [
@@ -103,11 +110,20 @@ export default function Sidebar({ isMobileMenuOpen = false, setIsMobileMenuOpen 
   // Get employee profile data for position title
   const userId = (user as any)?.id || (user as any)?.claims?.sub;
   const isEmployee = (user as any)?.role === 'employee';
+  const isOwner = (user as any)?.role === 'owner';
   const { data: employeeProfile } = useQuery({
     queryKey: [`/api/employees/${userId}/profile`],
     enabled: !!userId && isEmployee,
   });
   const isHREnabled = hasPermission(Permission.VIEW_ALL_EMPLOYEES) || hasPermission(Permission.MANAGE_EMPLOYEES);
+  
+  // Get user subscription status for badges
+  const { data: userProfile } = useQuery({
+    queryKey: ['/api/auth/me'],
+    enabled: !!user && !isEmployee
+  });
+  const subscriptionPlan = (userProfile as any)?.user?.subscriptionPlan || 'free';
+  const subscriptionStatus = (userProfile as any)?.user?.subscriptionStatus || 'inactive';
   
   // Use external state if provided, otherwise use internal state
   const mobileMenuOpen = isMobileMenuOpen || internalMobileMenuOpen;
@@ -211,6 +227,59 @@ export default function Sidebar({ isMobileMenuOpen = false, setIsMobileMenuOpen 
             </div>
           )}
           
+          {/* Subscription & Billing - Only show for owners */}
+          {isOwner && (
+            <div className="mb-6">
+              <div className="px-6 py-2 text-xs font-semibold text-slate-400 uppercase tracking-wide">
+                <div className="flex items-center justify-between">
+                  <span>Subscription & Billing</span>
+                  <span className={cn(
+                    "px-2 py-0.5 text-xs font-bold rounded-full",
+                    subscriptionPlan === 'free' ? "bg-slate-500/20 text-slate-400" :
+                    subscriptionPlan === 'professional' ? "bg-orange-500/20 text-orange-400" :
+                    subscriptionPlan === 'enterprise' ? "bg-purple-500/20 text-purple-400" :
+                    "bg-slate-500/20 text-slate-400"
+                  )}>
+                    {subscriptionPlan === 'free' ? 'FREE' : 
+                     subscriptionPlan === 'professional' ? 'PRO' :
+                     subscriptionPlan === 'enterprise' ? 'ENTERPRISE' : 'FREE'}
+                  </span>
+                </div>
+              </div>
+              <ul className="space-y-1">
+                {subscriptionNavigation.map((item) => {
+                  const isActive = currentPath === item.href;
+                  const Icon = item.icon;
+                  
+                  return (
+                    <li key={item.name}>
+                      <Link href={item.href}>
+                        <div
+                          className={cn(
+                            "flex items-center px-6 py-3 text-slate-300 hover:bg-slate-700/50 hover:text-white transition-all duration-200 cursor-pointer rounded-r-2xl mr-4",
+                            isActive && "bg-gradient-to-r from-purple-500/20 to-pink-500/20 border-r-4 border-purple-400 text-white"
+                          )}
+                          onClick={() => setMobileMenuOpen(false)}
+                        >
+                          <Icon className="h-5 w-5 mr-3" />
+                          <span className="flex-1">{item.name}</span>
+                          {(item as any).badge && (
+                            <span className="ml-2 px-2 py-0.5 text-xs font-bold rounded-full bg-purple-500/20 text-purple-400">
+                              {(item as any).badge}
+                            </span>
+                          )}
+                          {subscriptionStatus === 'active' && (
+                            <div className="w-2 h-2 bg-green-400 rounded-full ml-2"></div>
+                          )}
+                        </div>
+                      </Link>
+                    </li>
+                  );
+                })}
+              </ul>
+            </div>
+          )}
+
           {/* Core Platform - Show limited view for employees, full view for managers+ */}
           {!isEmployee && (
             <div className="mb-6">

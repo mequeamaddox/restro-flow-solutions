@@ -10,6 +10,7 @@ import { PermissionProvider } from "@/contexts/PermissionContext";
 import NotFound from "@/pages/not-found";
 import Landing from "@/pages/landing";
 import Pricing from "@/pages/pricing";
+import Subscription from "@/pages/subscription";
 import Auth from "@/pages/auth";
 import FirebaseAuth from "@/pages/firebase-auth";
 import Dashboard from "@/pages/dashboard";
@@ -122,6 +123,8 @@ function Router() {
                 <Route path="/forecasting" component={Forecasting} />
                 <Route path="/barcode-test" component={BarcodeTest} />
                 <Route path="/multi-unit-dashboard" component={MultiUnitDashboard} />
+                <Route path="/subscription" component={Subscription} />
+                <Route path="/pricing" component={Pricing} />
                 {/* Hidden owner-only prototype routes */}
                 <Route path="/bluetooth-scale-prototype" component={BluetoothScalePrototype} />
                 <Route path="/settings" component={Settings} />

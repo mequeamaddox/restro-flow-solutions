@@ -1,90 +1,185 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Check, ArrowLeft, Star, Zap, Crown, ChefHat } from "lucide-react";
+import { Skeleton } from "@/components/ui/skeleton";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Slider } from "@/components/ui/slider";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Check, ArrowLeft, Star, Zap, Crown, ChefHat, AlertCircle, Loader2, Users } from "lucide-react";
 import { Link } from "wouter";
 import { useState } from "react";
+import { useQuery, useMutation } from "@tanstack/react-query";
+import { useAuth } from "@/hooks/useAuth";
+import { apiRequest, queryClient } from "@/lib/queryClient";
+import { useToast } from "@/hooks/use-toast";
+
+interface SubscriptionPlan {
+  id: string;
+  name: string;
+  price: number;
+  billingCycle: string;
+  features: string[];
+}
+
+interface SubscriptionData {
+  plans: SubscriptionPlan[];
+  hrAddon: {
+    pricePerLocation: number;
+    description: string;
+    features: string[];
+  };
+  config?: any;
+}
 
 export default function Pricing() {
+  const { user } = useAuth();
+  const { toast } = useToast();
   const [billingCycle, setBillingCycle] = useState<'monthly' | 'annual'>('monthly');
+  const [hrAddonLocations, setHrAddonLocations] = useState(1);
+  const [selectedPlan, setSelectedPlan] = useState<string | null>(null);
   
-  const plans = [
-    {
-      name: "Free",
-      monthlyPrice: 0,
-      annualPrice: 0,
-      period: "forever",
-      description: "Get started with basic features",
-      icon: ChefHat,
-      color: "from-slate-500 to-gray-500",
-      popular: false,
-      competitorPrice: 0,
-      features: [
-        "5 OCR invoice processes/month",
-        "Basic text extraction (PDFs only)",
-        "Real-time inventory tracking",
-        "Recipe costing & management", 
-        "Purchase order automation",
-        "Comprehensive waste tracking",
-        "Daily P&L statements",
-        "Email support",
-        "1 location only"
-      ]
+  // Fetch subscription plans from API
+  const { data: subscriptionData, isLoading: plansLoading, error: plansError } = useQuery<SubscriptionData>({
+    queryKey: ['/api/subscriptions/plans']
+  });
+  
+  // Create subscription mutation
+  const createSubscriptionMutation = useMutation({
+    mutationFn: async (data: { plan: string; hrAddonLocations: number }) => {
+      const response = await apiRequest('POST', '/api/subscriptions/create', {
+        email: (user as any)?.email,
+        plan: data.plan,
+        hrAddonLocations: data.hrAddonLocations
+      });
+      return response.json();
     },
-    {
-      name: "Professional",
-      monthlyPrice: 179,
-      annualPrice: 143, // 20% discount  
-      period: "per location",
-      description: "Most popular - complete MarginEdge alternative with unlimited OCR",
-      icon: Star,
-      color: "from-orange-500 to-red-500", 
-      popular: true,
-      competitorPrice: 330,
-      features: [
-        "Everything in Free",
-        "Unlimited OCR invoice processing",
-        "Advanced image OCR (scanned invoices)",
-        "Support for all file types (PDF, Images)",
-        "Advanced analytics dashboard",
-        "Unlimited locations", 
-        "All POS/accounting integrations",
-        "Automated invoice processing (24-48hr)",
-        "Budget tracking & variance analysis",
-        "Theoretical vs actual reporting",
-        "Menu engineering analysis", 
-        "Priority phone support",
-        "API access"
-      ]
+    onSuccess: (data) => {
+      if (data.checkoutUrl) {
+        // Redirect to Square checkout
+        window.location.href = data.checkoutUrl;
+      } else {
+        toast({
+          title: "Subscription Created",
+          description: "Your subscription has been set up successfully!",
+        });
+        queryClient.invalidateQueries({ queryKey: ['/api/auth/me'] });
+      }
     },
-    {
-      name: "Enterprise",
-      monthlyPrice: 249,
-      annualPrice: 199, // 20% discount
-      period: "per location", 
-      description: "Premium features for restaurant chains",
-      icon: Crown,
-      color: "from-purple-500 to-pink-500",
-      popular: false,
-      competitorPrice: 480, // vs premium competitor solution
+    onError: (error: any) => {
+      toast({
+        title: "Subscription Error",
+        description: error.message || "Failed to create subscription. Please try again.",
+        variant: "destructive"
+      });
+    }
+  });
+  
+  // Fallback data if API fails
+  const fallbackData: SubscriptionData = {
+    plans: [
+      {
+        id: "free",
+        name: "Free",
+        price: 0,
+        billingCycle: "MONTHLY",
+        features: [
+          "5 OCR invoice processes/month",
+          "Basic text extraction (PDFs only)",
+          "Real-time inventory tracking",
+          "Recipe costing & management",
+          "Purchase order automation",
+          "Comprehensive waste tracking",
+          "Daily P&L statements",
+          "Email support",
+          "1 location only"
+        ]
+      },
+      {
+        id: "professional",
+        name: "Professional (Core)",
+        price: 179,
+        billingCycle: "MONTHLY",
+        features: [
+          "Everything in Free",
+          "Unlimited OCR invoice processing",
+          "Advanced image OCR (scanned invoices)",
+          "Support for all file types (PDF, Images)",
+          "Advanced analytics dashboard",
+          "Unlimited locations",
+          "All POS/accounting integrations",
+          "Automated invoice processing (24-48hr)",
+          "Budget tracking & variance analysis",
+          "Theoretical vs actual reporting",
+          "Menu engineering analysis",
+          "Priority phone support",
+          "API access"
+        ]
+      }
+    ],
+    hrAddon: {
+      pricePerLocation: 79,
+      description: "HR Management Add-on - Employee scheduling, time tracking, payroll, and document management",
       features: [
-        "Everything in Professional",
-        "Priority OCR processing (<1 minute)",
-        "Batch invoice processing",
-        "Smart scale integration",
-        "White-label solution",
-        "Custom integrations", 
-        "Dedicated account manager",
-        "Advanced security & compliance",
-        "Custom training & onboarding",
-        "SLA guarantees (99.9% uptime)",
-        "Multi-brand management",
-        "Advanced user permissions",
-        "Commission transfers",
-        "Enterprise-grade reporting"
+        "Employee scheduling & time tracking",
+        "Digital document management",
+        "Payroll processing & pay stubs",
+        "Performance reviews & evaluations",
+        "Time-off request management",
+        "Task assignment & completion tracking",
+        "Internal messaging system",
+        "HR analytics & reporting"
       ]
     }
-  ];
+  };
+  
+  // Use API data if available, otherwise fallback
+  const currentData = subscriptionData || fallbackData;
+  const plans = currentData.plans;
+  const hrAddonPrice = currentData.hrAddon.pricePerLocation;
+  
+  // HR Add-on pricing with discount
+  const hrAddonAnnualPrice = Math.round(hrAddonPrice * 0.8); // 20% discount
+  
+  // Plan presentation logic
+  const getDisplayPlan = (plan: SubscriptionPlan) => {
+    const isAnnual = billingCycle === 'annual';
+    const annualDiscount = 0.2;
+    const displayPrice = isAnnual ? Math.round(plan.price * (1 - annualDiscount)) : plan.price;
+    
+    return {
+      ...plan,
+      displayPrice,
+      originalPrice: plan.price,
+      icon: plan.id === 'free' ? ChefHat : plan.id === 'professional' ? Star : Crown,
+      color: plan.id === 'free' ? 'from-slate-500 to-gray-500' : 
+             plan.id === 'professional' ? 'from-orange-500 to-red-500' :
+             'from-purple-500 to-pink-500',
+      popular: plan.id === 'professional',
+      competitorPrice: plan.id === 'free' ? 0 : plan.id === 'professional' ? 330 : 480
+    };
+  };
+  
+  const handleSubscribe = (planId: string) => {
+    if (!user) {
+      window.location.href = '/api/login';
+      return;
+    }
+    
+    if (planId === 'free') {
+      toast({
+        title: "Free Plan Active",
+        description: "You're already on the free plan! Upgrade to unlock premium features.",
+      });
+      return;
+    }
+    
+    setSelectedPlan(planId);
+    createSubscriptionMutation.mutate({
+      plan: planId,
+      hrAddonLocations: planId !== 'free' ? hrAddonLocations : 0
+    });
+  };
 
   return (
     <div className="min-h-screen relative overflow-hidden">
@@ -108,13 +203,24 @@ export default function Pricing() {
               </div>
             </Link>
             <div className="flex items-center space-x-4">
-              <Button 
-                variant="outline"
-                className="bg-transparent border-2 border-orange-400 text-orange-400 hover:bg-orange-400 hover:text-white px-6 py-2 font-semibold rounded-full transition-all duration-300"
-                onClick={() => window.location.href = '/api/login'}
-              >
-                Login
-              </Button>
+              {user ? (
+                <div className="flex items-center space-x-2">
+                  <span className="text-slate-300">Welcome, {(user as any)?.firstName || (user as any)?.email}</span>
+                  <Link href="/subscription">
+                    <Button variant="outline" className="bg-transparent border-2 border-green-400 text-green-400 hover:bg-green-400 hover:text-white px-6 py-2 font-semibold rounded-full transition-all duration-300">
+                      Manage Subscription
+                    </Button>
+                  </Link>
+                </div>
+              ) : (
+                <Button 
+                  variant="outline"
+                  className="bg-transparent border-2 border-orange-400 text-orange-400 hover:bg-orange-400 hover:text-white px-6 py-2 font-semibold rounded-full transition-all duration-300"
+                  onClick={() => window.location.href = '/api/login'}
+                >
+                  Login
+                </Button>
+              )}
             </div>
           </div>
         </nav>
@@ -177,6 +283,67 @@ export default function Pricing() {
                 </div>
               </div>
             </div>
+            
+            {/* HR Add-on Configuration for Premium Plans */}
+            {user && (
+              <div className="bg-slate-800/50 rounded-2xl p-6 max-w-3xl mx-auto mb-12 border border-blue-500/20">
+                <div className="text-center mb-6">
+                  <div className="flex items-center justify-center mb-4">
+                    <Users className="h-6 w-6 text-blue-400 mr-2" />
+                    <h3 className="text-xl font-bold text-white">HR Employee Management Add-on</h3>
+                  </div>
+                  <p className="text-slate-300 text-sm">Add comprehensive employee management to your Professional or Enterprise plan</p>
+                </div>
+                
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+                  <div className="space-y-4">
+                    <Label className="text-white">Locations Needing HR Add-on</Label>
+                    <div className="space-y-3">
+                      <Slider
+                        value={[hrAddonLocations]}
+                        onValueChange={(value) => setHrAddonLocations(value[0])}
+                        max={10}
+                        min={1}
+                        step={1}
+                        className="w-full"
+                      />
+                      <div className="flex items-center space-x-2">
+                        <Input
+                          type="number"
+                          value={hrAddonLocations}
+                          onChange={(e) => setHrAddonLocations(Math.max(1, parseInt(e.target.value) || 1))}
+                          min={1}
+                          max={50}
+                          className="w-20 bg-slate-700 border-slate-600 text-white"
+                        />
+                        <span className="text-slate-300 text-sm">locations</span>
+                      </div>
+                    </div>
+                  </div>
+                  
+                  <div className="space-y-4">
+                    <div className="text-center p-4 bg-slate-700/50 rounded-xl">
+                      <div className="text-2xl font-bold text-blue-400">
+                        +${billingCycle === 'monthly' ? hrAddonPrice * hrAddonLocations : hrAddonAnnualPrice * hrAddonLocations}/mo
+                      </div>
+                      <div className="text-sm text-slate-300">HR Add-on Total</div>
+                      {billingCycle === 'annual' && (
+                        <div className="text-xs text-green-400 mt-1">
+                          Save ${(hrAddonPrice - hrAddonAnnualPrice) * hrAddonLocations}/mo with annual billing
+                        </div>
+                      )}
+                    </div>
+                    <ul className="text-xs text-slate-300 space-y-1">
+                      <li>• Complete employee management</li>
+                      <li>• Time clock & scheduling</li>
+                      <li>• Payroll processing</li>
+                      <li>• Document management</li>
+                      <li>• Performance tracking</li>
+                    </ul>
+                  </div>
+                </div>
+              </div>
+            )}
             
             {/* Trust Indicators */}
             <div className="flex items-center justify-center space-x-8 mb-16">
@@ -313,13 +480,35 @@ export default function Pricing() {
           <div className="max-w-4xl mx-auto text-center mb-12">
             <h2 className="text-3xl font-bold text-white mb-4">Core Restaurant Plans</h2>
             <p className="text-slate-300">Choose your base plan, then add specialized features as needed</p>
+            
+            {/* Loading State */}
+            {plansLoading && (
+              <div className="flex items-center justify-center space-x-2 mt-8">
+                <Loader2 className="h-5 w-5 animate-spin text-orange-400" />
+                <span className="text-slate-300">Loading pricing plans...</span>
+              </div>
+            )}
+            
+            {/* Error State */}
+            {plansError && (
+              <Alert className="mt-8 bg-yellow-900/20 border-yellow-500/50">
+                <AlertCircle className="h-4 w-4" />
+                <AlertDescription className="text-yellow-200">
+                  Unable to load current pricing. Showing default plans below.
+                </AlertDescription>
+              </Alert>
+            )}
           </div>
+          
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-7xl mx-auto">
-            {plans.map((plan, index) => {
-              const Icon = plan.icon;
+            {plans.map((plan) => {
+              const displayPlan = getDisplayPlan(plan);
+              const Icon = displayPlan.icon;
+              const isSubscribing = createSubscriptionMutation.isPending && selectedPlan === plan.id;
+              
               return (
-                <div key={plan.name} className="relative">
-                  {plan.popular && (
+                <div key={plan.id} className="relative">
+                  {displayPlan.popular && (
                     <div className="absolute -top-4 left-1/2 transform -translate-x-1/2">
                       <Badge className="bg-gradient-to-r from-orange-500 to-red-600 text-white px-4 py-1 text-sm font-semibold">
                         Most Popular
@@ -327,43 +516,64 @@ export default function Pricing() {
                     </div>
                   )}
                   
-                  <Card className={`bg-slate-800/80 backdrop-blur-sm border-slate-700/50 hover:border-orange-500/50 transition-all duration-300 h-full ${plan.popular ? 'scale-105 border-orange-500/30' : ''}`}>
+                  <Card className={`bg-slate-800/80 backdrop-blur-sm border-slate-700/50 hover:border-orange-500/50 transition-all duration-300 h-full ${displayPlan.popular ? 'scale-105 border-orange-500/30' : ''}`}>
                     <CardHeader className="text-center pb-4">
-                      <div className={`w-16 h-16 rounded-2xl bg-gradient-to-br ${plan.color} flex items-center justify-center mx-auto mb-4 shadow-lg`}>
+                      <div className={`w-16 h-16 rounded-2xl bg-gradient-to-br ${displayPlan.color} flex items-center justify-center mx-auto mb-4 shadow-lg`}>
                         <Icon className="h-8 w-8 text-white" />
                       </div>
-                      <CardTitle className="text-2xl font-bold text-white mb-2">{plan.name}</CardTitle>
-                      <CardDescription className="text-slate-300 mb-4">{plan.description}</CardDescription>
+                      <CardTitle className="text-2xl font-bold text-white mb-2">{displayPlan.name}</CardTitle>
+                      <CardDescription className="text-slate-300 mb-4">
+                        {plan.id === 'free' ? 'Get started with basic features' :
+                         plan.id === 'professional' ? 'Most popular - complete MarginEdge alternative with unlimited OCR' :
+                         'Premium features for restaurant chains'}
+                      </CardDescription>
                       
                       <div className="mb-6">
                         <div className="flex items-baseline justify-center">
                           <span className="text-4xl font-black text-white">
-                            ${billingCycle === 'monthly' ? plan.monthlyPrice : plan.annualPrice}
+                            ${displayPlan.displayPrice}
                           </span>
                           <span className="text-slate-400 ml-2">/month</span>
                         </div>
-                        <div className="text-sm text-slate-400 mt-1">{plan.period}</div>
-                        {billingCycle === 'annual' && (
+                        <div className="text-sm text-slate-400 mt-1">
+                          {plan.id === 'free' ? 'forever' : 'per location'}
+                        </div>
+                        {billingCycle === 'annual' && plan.id !== 'free' && (
                           <div className="text-xs text-green-400 mt-1 font-semibold">
-                            Billed annually • Save ${plan.monthlyPrice - plan.annualPrice}/mo
+                            Billed annually • Save ${displayPlan.originalPrice - displayPlan.displayPrice}/mo
                           </div>
                         )}
-                        <div className="text-xs text-orange-300 mt-2 font-semibold">
-                          vs competitors ${plan.competitorPrice}/mo - Save ${plan.competitorPrice - (billingCycle === 'monthly' ? plan.monthlyPrice : plan.annualPrice)}/mo
-                        </div>
+                        {plan.id !== 'free' && (
+                          <div className="text-xs text-orange-300 mt-2 font-semibold">
+                            vs competitors ${displayPlan.competitorPrice}/mo - Save ${displayPlan.competitorPrice - displayPlan.displayPrice}/mo
+                          </div>
+                        )}
                       </div>
                     </CardHeader>
                     
                     <CardContent>
                       <Button 
                         className={`w-full mb-6 py-3 font-semibold rounded-full transition-all duration-300 ${
-                          plan.popular 
+                          displayPlan.popular 
                             ? 'bg-gradient-to-r from-orange-500 to-red-600 hover:from-orange-600 hover:to-red-700 text-white shadow-lg transform hover:scale-105' 
                             : 'bg-slate-700/50 text-slate-300 border border-slate-600 hover:bg-slate-600/50 hover:text-white'
                         }`}
-                        onClick={() => window.location.href = '/api/login'}
+                        onClick={() => handleSubscribe(plan.id)}
+                        disabled={isSubscribing}
+                        data-testid={`button-subscribe-${plan.id}`}
                       >
-                        Start Free Trial
+                        {isSubscribing ? (
+                          <div className="flex items-center">
+                            <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                            Creating...
+                          </div>
+                        ) : plan.id === 'free' ? (
+                          'Get Started Free'
+                        ) : user ? (
+                          'Start Subscription'
+                        ) : (
+                          'Start Free Trial'
+                        )}
                       </Button>
                       
                       <ul className="space-y-3">

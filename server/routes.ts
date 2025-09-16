@@ -115,6 +115,13 @@ function mapPositionToRole(positionTitle: string | null | undefined): string {
   return 'employee'; // default fallback
 }
 
+// Helper function to calculate subscription total cost
+function calculateSubscriptionTotal(plan: string | null, hrAddonLocations: number): number {
+  const basePlanCost = plan === 'professional' ? 179 : 0;
+  const hrAddonCost = hrAddonLocations * 79;
+  return basePlanCost + hrAddonCost;
+}
+
 export async function registerRoutes(app: Express): Promise<Server> {
   // Firebase-only authentication - no session setup required
 
@@ -4729,6 +4736,84 @@ req.user.id
   // GET /api/subscriptions/plans - Get available subscription plans with pricing
   app.get('/api/subscriptions/plans', async (req, res) => {
     try {
+      // Always return subscription data, even if Square isn't configured
+      const subscriptionData = squareSubscriptionService.getCompleteSubscriptionData();
+      
+      // Only include Square config if service is enabled
+      const responseData: any = { ...subscriptionData };
+      
+      if (squareSubscriptionService.isEnabled()) {
+        responseData.config = squareSubscriptionService.getConfiguration();
+        responseData.squareEnabled = true;
+      } else {
+        responseData.squareEnabled = false;
+        responseData.message = 'Square checkout disabled - subscription plans available for preview';
+      }
+
+      res.json(responseData);
+    } catch (error) {
+      console.error('❌ Error fetching subscription plans:', error);
+      res.status(500).json({ 
+        message: 'Failed to fetch subscription plans',
+        error: error.message 
+      });
+    }
+  });
+
+  // GET /api/subscriptions/current - Get user's current subscription status
+  app.get('/api/subscriptions/current', isAuthenticated, async (req: AuthenticatedRequest, res) => {
+    try {
+      const userId = req.user.id;
+      const user = await storage.getUser(userId);
+      
+      // Only owners can access subscription information
+      if (user?.role !== 'owner') {
+        return res.status(403).json({ 
+          message: 'Access denied. Only business owners can access subscription information.' 
+        });
+      }
+      
+      if (!user) {
+        return res.status(404).json({ message: 'User not found' });
+      }
+
+      // Get all locations to calculate HR add-on count (for now, until user-location association is implemented)
+      const allLocations = await storage.getLocations();
+      const hrAddonLocations = allLocations.filter(loc => loc.hrAddonEnabled).length;
+
+      res.json({
+        id: user.squareSubscriptionId || user.id,
+        plan: user.subscriptionPlan || 'free',
+        status: user.subscriptionStatus || 'inactive',
+        nextBillingDate: user.subscriptionEndDate?.toISOString(),
+        totalAmount: calculateSubscriptionTotal(user.subscriptionPlan, hrAddonLocations),
+        hrAddonLocations,
+        createdAt: user.createdAt?.toISOString(),
+        squareCustomerId: user.squareCustomerId,
+        squareSubscriptionId: user.squareSubscriptionId
+      });
+    } catch (error) {
+      console.error('❌ Error fetching current subscription:', error);
+      res.status(500).json({ 
+        message: 'Failed to fetch current subscription',
+        error: error.message 
+      });
+    }
+  });
+
+  // POST /api/subscriptions/upgrade - Upgrade or modify subscription plan
+  app.post('/api/subscriptions/upgrade', isAuthenticated, async (req: AuthenticatedRequest, res) => {
+    try {
+      const userId = req.user.id;
+      const user = await storage.getUser(userId);
+      
+      // Only owners can upgrade subscriptions
+      if (user?.role !== 'owner') {
+        return res.status(403).json({ 
+          message: 'Access denied. Only business owners can upgrade subscriptions.' 
+        });
+      }
+
       if (!squareSubscriptionService.isEnabled()) {
         return res.status(503).json({ 
           message: 'Square subscription service not configured',
@@ -4736,19 +4821,66 @@ req.user.id
         });
       }
 
-      const plans = squareSubscriptionService.getSubscriptionPlans();
-      const hrAddon = squareSubscriptionService.getHrAddonPricing();
-      const config = squareSubscriptionService.getConfiguration();
+      const { plan, hrAddonLocations = 0 } = req.body;
+
+      if (!user) {
+        return res.status(404).json({ message: 'User not found' });
+      }
+
+      if (!plan || !['free', 'professional'].includes(plan)) {
+        return res.status(400).json({ message: 'Valid plan required (free or professional)' });
+      }
+
+      // For downgrade to free, just update the user record
+      if (plan === 'free') {
+        await storage.updateUserSubscription(userId, {
+          subscriptionPlan: 'free',
+          subscriptionStatus: 'active'
+        });
+
+        res.json({
+          success: true,
+          message: 'Successfully downgraded to free plan'
+        });
+        return;
+      }
+
+      // For upgrade to professional, create new subscription
+      let squareCustomerId = user.squareCustomerId;
+
+      if (!squareCustomerId) {
+        squareCustomerId = await squareSubscriptionService.createCustomer(
+          user.email!, 
+          user.firstName || undefined, 
+          user.lastName || undefined
+        );
+        await storage.createSquareCustomer(userId, squareCustomerId);
+      }
+
+      const subscriptionResult = await squareSubscriptionService.createSubscription(
+        squareCustomerId, 
+        plan, 
+        hrAddonLocations
+      );
+
+      // Update user subscription in database
+      await storage.updateUserSubscription(userId, {
+        subscriptionPlan: plan as 'professional',
+        subscriptionStatus: 'active',
+        squareSubscriptionId: subscriptionResult.subscriptionId,
+        subscriptionEndDate: subscriptionResult.nextBillingDate ? new Date(subscriptionResult.nextBillingDate) : undefined,
+        ocrCreditsLimit: plan === 'professional' ? 999 : 5
+      });
 
       res.json({
-        plans,
-        hrAddon,
-        config
+        success: true,
+        message: 'Successfully upgraded subscription',
+        subscription: subscriptionResult
       });
     } catch (error) {
-      console.error('❌ Error fetching subscription plans:', error);
+      console.error('❌ Error upgrading subscription:', error);
       res.status(500).json({ 
-        message: 'Failed to fetch subscription plans',
+        message: 'Failed to upgrade subscription',
         error: error.message 
       });
     }
@@ -4774,6 +4906,13 @@ req.user.id
       const currentUser = await storage.getUser(userId);
       if (!currentUser) {
         return res.status(404).json({ message: 'User not found' });
+      }
+
+      // Only owners can create subscriptions
+      if (currentUser.role !== 'owner') {
+        return res.status(403).json({ 
+          message: 'Access denied. Only business owners can create subscriptions.' 
+        });
       }
 
       let squareCustomerId = currentUser.squareCustomerId;
@@ -4953,6 +5092,13 @@ req.user.id
       if (!user || !user.squareSubscriptionId) {
         return res.status(404).json({ 
           message: 'No active subscription found' 
+        });
+      }
+
+      // Only owners can cancel subscriptions
+      if (user.role !== 'owner') {
+        return res.status(403).json({ 
+          message: 'Access denied. Only business owners can cancel subscriptions.' 
         });
       }
 

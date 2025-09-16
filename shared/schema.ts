@@ -42,7 +42,7 @@ export const locations = pgTable("locations", {
 
 // Subscription plans enum
 export const subscriptionPlanEnum = pgEnum("subscription_plan", ["free", "professional", "enterprise"]);
-export const subscriptionStatusEnum = pgEnum("subscription_status", ["active", "inactive", "cancelled", "paused", "canceled", "past_due"]);
+export const subscriptionStatusEnum = pgEnum("subscription_status", ["active", "inactive", "cancelled", "paused", "past_due"]);
 
 // User storage table (required for Replit Auth)
 export const users = pgTable("users", {
@@ -61,7 +61,6 @@ export const users = pgTable("users", {
   squareCustomerId: varchar("square_customer_id"), // Square customer ID
   squareSubscriptionId: varchar("square_subscription_id"), // Square subscription ID
   subscriptionEndDate: timestamp("subscription_end_date"),
-  hrAddonEnabled: boolean("hr_addon_enabled").default(false), // Whether HR add-on is active
   ocrCreditsUsed: integer("ocr_credits_used").default(0),
   ocrCreditsLimit: integer("ocr_credits_limit").default(5), // Free tier gets 5 OCR processes
   createdAt: timestamp("created_at").defaultNow(),
