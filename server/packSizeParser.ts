@@ -276,8 +276,8 @@ export function parseVendorCsvRow(row: any, debug = false): {
   );
   
   const vendorSku = findColumnValue(row,
-    'StateOfOri Product Number', 'stateoforipro product number',
-    'Stock/Product Number', 'product number', 'stock number', 
+    'Product Number', 'product number', 'StateOfOri Product Number', 
+    'stateoforipro product number', 'Stock/Product Number', 'stock number', 
     'sku', 'item number', 'code', 'product code', 'item#', 'stock#'
   );
   
@@ -287,8 +287,8 @@ export function parseVendorCsvRow(row: any, debug = false): {
   );
   
   const purchaseUomRaw = findColumnValue(row,
-    'UnitOfMeasure', 'unitofmeasure', 'Unit of Measure', 'unit of measure', 
-    'uom', 'u/m', 'um', 'sell uom', 'sell um', 'u of m', 'unit', 'measure'
+    'UOM', 'uom', 'UnitOfMeasure', 'unitofmeasure', 'Unit of Measure', 
+    'unit of measure', 'u/m', 'um', 'sell uom', 'sell um', 'u of m', 'unit', 'measure'
   );
   
   const priceStr = findColumnValue(row,
