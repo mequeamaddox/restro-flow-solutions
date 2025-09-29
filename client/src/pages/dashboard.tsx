@@ -1,6 +1,8 @@
 import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { DollarSign, AlertTriangle, TrendingUp, Trash2 } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { DollarSign, AlertTriangle, TrendingUp, Trash2, ArrowRight } from "lucide-react";
+import { Link } from "wouter";
 import { useLocation } from "@/contexts/LocationContext";
 import MetricsCards from "@/components/dashboard/metrics-cards";
 import LowStockAlerts from "@/components/dashboard/low-stock-alerts";
@@ -29,23 +31,28 @@ export default function Dashboard() {
   });
 
   return (
-    <div className="p-4 lg:p-6 space-y-6">
+    <div className="p-3 lg:p-6 space-y-4 lg:space-y-6">
       {/* Location Banner */}
       <LocationBanner />
       
-      {/* Page Header */}
+      {/* Page Header - Compact on mobile */}
       <div>
-        <h1 className="text-2xl font-semibold text-white">Dashboard</h1>
-        <p className="text-slate-300">
+        <h1 className="text-xl lg:text-2xl font-semibold text-white">Dashboard</h1>
+        <p className="text-sm lg:text-base text-slate-300">
           {currentLocation ? `Overview of ${currentLocation.name} inventory` : 'Select a location to view dashboard'}
         </p>
       </div>
 
-      {/* Key Metrics */}
+      {/* Key Metrics - Compact grid on mobile */}
       <MetricsCards metrics={metrics} isLoading={metricsLoading} />
 
-      {/* Charts and Quick Actions */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      {/* Quick Actions - Horizontal scroll on mobile */}
+      <div className="lg:hidden">
+        <QuickActions />
+      </div>
+
+      {/* Charts and Quick Actions - Desktop layout */}
+      <div className="hidden lg:grid lg:grid-cols-3 gap-6">
         {/* Usage Trends Chart Placeholder */}
         <div className="lg:col-span-2">
           <Card className="bg-slate-800/80 backdrop-blur-sm border-slate-700/50">
@@ -76,14 +83,30 @@ export default function Dashboard() {
         </div>
       </div>
 
-      {/* Low Stock Alerts & Recent Activity */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <LowStockAlerts items={lowStockItems} isLoading={lowStockLoading} />
+      {/* Low Stock Alerts - Priority on mobile */}
+      <LowStockAlerts items={lowStockItems} isLoading={lowStockLoading} />
+      
+      {/* Mobile: View full inventory link */}
+      <div className="lg:hidden">
+        <Link href="/inventory">
+          <Button 
+            variant="outline" 
+            className="w-full bg-slate-700/50 border-slate-600 text-slate-300 hover:bg-slate-600/50 hover:text-white"
+            data-testid="button-view-full-inventory"
+          >
+            View Full Inventory
+            <ArrowRight className="ml-2 h-4 w-4" />
+          </Button>
+        </Link>
+      </div>
+
+      {/* Recent Activity - Desktop only initially */}
+      <div className="hidden lg:block">
         <RecentActivity />
       </div>
 
-      {/* Inventory Table */}
-      <Card>
+      {/* Inventory Table - Hidden on mobile, link to full inventory page instead */}
+      <Card className="hidden lg:block">
         <CardHeader>
           <CardTitle>Current Inventory</CardTitle>
         </CardHeader>

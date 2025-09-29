@@ -125,6 +125,16 @@
     background: var(--restaurant-gradient-subtle);
   }
 
+  /* Mobile optimizations */
+  .scrollbar-hide {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+  
+  .scrollbar-hide::-webkit-scrollbar {
+    display: none;
+  }
+
   .glass-morphism {
     backdrop-filter: blur(10px);
     background: hsl(215, 28%, 8%, 0.8);
