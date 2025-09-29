@@ -507,16 +507,16 @@ For Internal Use Only - Keep Secure
   );
 
   return (
-    <div className="p-4 lg:p-6 space-y-6">
+    <div className="p-3 lg:p-6 space-y-4 lg:space-y-6 bg-slate-950 min-h-screen">
       {/* Page Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-semibold text-gray-900">Recipes & Menu Costing</h1>
-          <p className="text-gray-600">Manage recipes and calculate food costs</p>
+          <h1 className="text-xl lg:text-3xl font-bold text-white">Recipes & Menu Costing</h1>
+          <p className="text-xs lg:text-sm text-slate-400 mt-1">Manage recipes and calculate food costs</p>
         </div>
         <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
           <DialogTrigger asChild>
-            <Button className="bg-primary-600 hover:bg-primary-700">
+            <Button className="bg-blue-600 hover:bg-blue-700 text-white">
               <Plus className="h-4 w-4 mr-2" />
               Add Recipe
             </Button>
@@ -670,7 +670,7 @@ For Internal Use Only - Keep Secure
                             />
                           </FormControl>
                           {currentCost > 0 && (
-                            <div className="text-xs space-y-1 bg-gray-50 p-2 rounded">
+                            <div className="text-xs space-y-1 bg-slate-900/50 p-2 rounded border border-slate-700">
                               <div className="flex justify-between">
                                 <span>Recipe Cost:</span>
                                 <span className="font-medium">${currentCost.toFixed(2)}</span>
@@ -727,11 +727,11 @@ For Internal Use Only - Keep Secure
                 />
                 
                 {/* Pricing Strategy */}
-                <div className="bg-blue-50 p-4 rounded-lg space-y-3">
-                  <h4 className="text-sm font-medium text-blue-900">Pricing Strategy</h4>
+                <div className="bg-slate-900/50 p-4 rounded-lg space-y-3 border border-slate-700">
+                  <h4 className="text-sm font-medium text-white">Pricing Strategy</h4>
                   <div className="grid grid-cols-2 gap-4">
                     <div>
-                      <label className="text-sm font-medium text-blue-800">Target Food Cost %</label>
+                      <label className="text-sm font-medium text-slate-300">Target Food Cost %</label>
                       <select 
                         value={targetFoodCost}
                         onChange={(e) => {
@@ -748,7 +748,7 @@ For Internal Use Only - Keep Secure
                       </select>
                     </div>
                     <div>
-                      <label className="text-sm font-medium text-blue-800">Auto-Calculate Price</label>
+                      <label className="text-sm font-medium text-slate-300">Auto-Calculate Price</label>
                       <Button
                         type="button"
                         variant="outline"
@@ -848,11 +848,11 @@ For Internal Use Only - Keep Secure
                   ))}
                   
                   {ingredients.filter(ing => ing.inventoryItemId && ing.quantity > 0).length === 0 && (
-                    <p className="text-sm text-gray-500">Add ingredients to calculate recipe cost</p>
+                    <p className="text-sm text-slate-400">Add ingredients to calculate recipe cost</p>
                   )}
                 </div>
                 </div>
-                <div className="flex justify-end space-x-2 pt-4 border-t mt-4 bg-white">
+                <div className="flex justify-end space-x-2 pt-4 border-t border-slate-700 mt-4">
                   <Button
                     type="button"
                     variant="outline"
@@ -863,7 +863,7 @@ For Internal Use Only - Keep Secure
                   <Button
                     type="submit"
                     disabled={createRecipeMutation.isPending}
-                    className="bg-primary-600 hover:bg-primary-700"
+                    className="bg-blue-600 hover:bg-blue-700 text-white"
                   >
                     {createRecipeMutation.isPending ? "Creating..." : "Create Recipe"}
                   </Button>
@@ -875,10 +875,10 @@ For Internal Use Only - Keep Secure
       </div>
 
       {/* Search */}
-      <Card>
+      <Card className="bg-slate-900/50 border-slate-700">
         <CardContent className="pt-6">
           <div className="relative">
-            <Search className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
+            <Search className="absolute left-3 top-3 h-4 w-4 text-slate-400" />
             <Input
               placeholder="Search recipes..."
               value={searchTerm}
@@ -893,15 +893,15 @@ For Internal Use Only - Keep Secure
       {isLoading ? (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {[...Array(6)].map((_, i) => (
-            <Card key={i} className="animate-pulse">
+            <Card key={i} className="animate-pulse bg-slate-900/50 border-slate-700">
               <CardHeader>
-                <div className="h-4 bg-gray-200 rounded w-3/4"></div>
-                <div className="h-3 bg-gray-200 rounded w-1/2"></div>
+                <div className="h-4 bg-slate-700 rounded w-3/4"></div>
+                <div className="h-3 bg-slate-700 rounded w-1/2"></div>
               </CardHeader>
               <CardContent>
                 <div className="space-y-2">
-                  <div className="h-3 bg-gray-200 rounded"></div>
-                  <div className="h-3 bg-gray-200 rounded w-5/6"></div>
+                  <div className="h-3 bg-slate-700 rounded"></div>
+                  <div className="h-3 bg-slate-700 rounded w-5/6"></div>
                 </div>
               </CardContent>
             </Card>
@@ -910,10 +910,10 @@ For Internal Use Only - Keep Secure
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {filteredRecipes.map((recipe: any) => (
-            <Card key={recipe.id} className="hover:shadow-lg transition-shadow">
+            <Card key={recipe.id} className="bg-slate-900/50 border-slate-700 hover:bg-slate-900/70 transition-all">
               {/* Recipe Photo */}
               {recipe.imageUrl && (
-                <div className="aspect-w-16 aspect-h-9 bg-gray-100">
+                <div className="aspect-w-16 aspect-h-9 bg-slate-800">
                   <img 
                     src={recipe.imageUrl} 
                     alt={recipe.name}
@@ -924,44 +924,44 @@ For Internal Use Only - Keep Secure
               <CardHeader>
                 <div className="flex items-center justify-between">
                   <div className="flex items-center space-x-2">
-                    <ChefHat className="h-5 w-5 text-primary-600" />
-                    <CardTitle className="text-lg">{recipe.name}</CardTitle>
+                    <ChefHat className="h-5 w-5 text-orange-500" />
+                    <CardTitle className="text-lg text-white">{recipe.name}</CardTitle>
                   </div>
-                  <Badge variant="secondary">
+                  <Badge variant="secondary" className="bg-slate-800 text-slate-200">
                     {recipe.servingSize} {recipe.servingSize === 1 ? 'serving' : 'servings'}
                   </Badge>
                 </div>
                 {recipe.description && (
-                  <p className="text-sm text-gray-600">{recipe.description}</p>
+                  <p className="text-sm text-slate-400">{recipe.description}</p>
                 )}
               </CardHeader>
               <CardContent>
                 <div className="space-y-3">
                   <div className="flex items-center justify-between">
-                    <span className="text-sm text-gray-500">Estimated Cost</span>
+                    <span className="text-sm text-slate-400">Estimated Cost</span>
                     <div className="flex items-center space-x-1">
-                      <DollarSign className="h-4 w-4 text-green-600" />
-                      <span className="font-medium">
+                      <DollarSign className="h-4 w-4 text-green-500" />
+                      <span className="font-medium text-white">
                         {recipe.estimatedCost ? `$${recipe.estimatedCost.toFixed(2)}` : '$0.00'}
                       </span>
                     </div>
                   </div>
                   <div className="flex items-center justify-between">
-                    <span className="text-sm text-gray-500">Selling Price</span>
+                    <span className="text-sm text-slate-400">Selling Price</span>
                     <div className="flex items-center space-x-1">
-                      <DollarSign className="h-4 w-4 text-blue-600" />
-                      <span className="font-medium">
+                      <DollarSign className="h-4 w-4 text-blue-500" />
+                      <span className="font-medium text-white">
                         {recipe.sellingPrice ? `$${parseFloat(recipe.sellingPrice).toFixed(2)}` : 'Not set'}
                       </span>
                     </div>
                   </div>
                   <div className="flex items-center justify-between">
-                    <span className="text-sm text-gray-500">Food Cost %</span>
+                    <span className="text-sm text-slate-400">Food Cost %</span>
                     <span className={`text-sm font-medium ${
                       recipe.estimatedCost && recipe.sellingPrice ? 
-                        (recipe.estimatedCost / recipe.sellingPrice * 100) <= 35 ? 'text-green-600' : 
-                        (recipe.estimatedCost / recipe.sellingPrice * 100) <= 45 ? 'text-yellow-600' : 'text-red-600'
-                      : 'text-gray-500'
+                        (recipe.estimatedCost / recipe.sellingPrice * 100) <= 35 ? 'text-green-500' : 
+                        (recipe.estimatedCost / recipe.sellingPrice * 100) <= 45 ? 'text-yellow-500' : 'text-red-500'
+                      : 'text-slate-500'
                     }`}>
                       {recipe.estimatedCost && recipe.sellingPrice ? 
                         `${(recipe.estimatedCost / recipe.sellingPrice * 100).toFixed(1)}%` : 
@@ -970,12 +970,12 @@ For Internal Use Only - Keep Secure
                     </span>
                   </div>
                   <div className="flex items-center justify-between">
-                    <span className="text-sm text-gray-500">Ingredients</span>
-                    <span className="text-sm font-medium">
+                    <span className="text-sm text-slate-400">Ingredients</span>
+                    <span className="text-sm font-medium text-white">
                       {recipe.ingredientCount || 0} items
                     </span>
                   </div>
-                  <div className="pt-2 border-t space-y-2">
+                  <div className="pt-2 border-t border-slate-700 space-y-2">
                     {/* Primary Actions Row */}
                     <div className="flex gap-2">
                       <Button 
@@ -1114,9 +1114,9 @@ For Internal Use Only - Keep Secure
       {!isLoading && filteredRecipes.length === 0 && (
         <Card>
           <CardContent className="py-12 text-center">
-            <ChefHat className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-            <h3 className="text-lg font-medium text-gray-900 mb-2">No recipes found</h3>
-            <p className="text-gray-600 mb-4">
+            <ChefHat className="h-12 w-12 text-slate-400 mx-auto mb-4" />
+            <h3 className="text-lg font-medium text-white mb-2">No recipes found</h3>
+            <p className="text-slate-400 mb-4">
               {searchTerm ? "No recipes match your search criteria." : "Start by creating your first recipe."}
             </p>
             <Button className="bg-primary-600 hover:bg-primary-700">
@@ -1144,20 +1144,20 @@ For Internal Use Only - Keep Secure
               {/* Recipe Info */}
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                 <div className="text-center">
-                  <p className="text-sm text-gray-500">Serves</p>
-                  <p className="font-medium">{selectedRecipe.servingSize}</p>
+                  <p className="text-sm text-slate-400">Serves</p>
+                  <p className="font-medium text-white">{selectedRecipe.servingSize}</p>
                 </div>
                 <div className="text-center">
-                  <p className="text-sm text-gray-500">Prep Time</p>
-                  <p className="font-medium">{selectedRecipe.prepTime} min</p>
+                  <p className="text-sm text-slate-400">Prep Time</p>
+                  <p className="font-medium text-white">{selectedRecipe.prepTime} min</p>
                 </div>
                 <div className="text-center">
-                  <p className="text-sm text-gray-500">Cook Time</p>
-                  <p className="font-medium">{selectedRecipe.cookTime} min</p>
+                  <p className="text-sm text-slate-400">Cook Time</p>
+                  <p className="font-medium text-white">{selectedRecipe.cookTime} min</p>
                 </div>
                 <div className="text-center">
-                  <p className="text-sm text-gray-500">Selling Price</p>
-                  <p className="font-medium">
+                  <p className="text-sm text-slate-400">Selling Price</p>
+                  <p className="font-medium text-white">
                     {selectedRecipe.sellingPrice ? `$${parseFloat(selectedRecipe.sellingPrice).toFixed(2)}` : 'Not set'}
                   </p>
                 </div>
@@ -1165,21 +1165,21 @@ For Internal Use Only - Keep Secure
 
               {/* Ingredients */}
               <div>
-                <h3 className="font-medium mb-3">Ingredients</h3>
+                <h3 className="font-medium text-white mb-3">Ingredients</h3>
                 {selectedRecipe.ingredients && selectedRecipe.ingredients.length > 0 ? (
                   <div className="space-y-2">
                     {selectedRecipe.ingredients.map((ingredient: any, index: number) => (
-                      <div key={index} className="flex justify-between items-center py-2 px-3 bg-gray-50 rounded">
-                        <span className="font-medium">{ingredient.inventoryItem?.name}</span>
-                        <span className="text-sm text-gray-600">
+                      <div key={index} className="flex justify-between items-center py-2 px-3 bg-slate-800 rounded">
+                        <span className="font-medium text-white">{ingredient.inventoryItem?.name}</span>
+                        <span className="text-sm text-slate-300">
                           {ingredient.quantity} {ingredient.unit}
                         </span>
                       </div>
                     ))}
-                    <div className="mt-3 pt-3 border-t">
+                    <div className="mt-3 pt-3 border-t border-slate-700">
                       <div className="flex justify-between items-center">
-                        <span className="font-medium">Estimated Cost:</span>
-                        <span className="font-medium text-green-600">
+                        <span className="font-medium text-white">Estimated Cost:</span>
+                        <span className="font-medium text-green-500">
                           ${selectedRecipe.ingredients.reduce((total: number, ing: any) => 
                             total + computeLineCost(ing.inventoryItem, Number(ing.quantity), String(ing.unit)), 0
                           ).toFixed(2)}
@@ -1188,14 +1188,14 @@ For Internal Use Only - Keep Secure
                     </div>
                   </div>
                 ) : (
-                  <p className="text-gray-500 italic">No ingredients added yet</p>
+                  <p className="text-slate-400 italic">No ingredients added yet</p>
                 )}
               </div>
 
               {/* Instructions */}
               <div>
-                <h3 className="font-medium mb-3">Instructions</h3>
-                <div className="bg-gray-50 p-4 rounded whitespace-pre-wrap">
+                <h3 className="font-medium text-white mb-3">Instructions</h3>
+                <div className="bg-slate-900 p-4 rounded whitespace-pre-wrap border border-slate-700 text-slate-200">
                   {selectedRecipe.instructions}
                 </div>
               </div>
@@ -1205,7 +1205,7 @@ For Internal Use Only - Keep Secure
           
           {/* Fixed Actions at Bottom */}
           {selectedRecipe && (
-            <div className="flex justify-between pt-4 border-t flex-shrink-0">
+            <div className="flex justify-between pt-4 border-t border-slate-700 flex-shrink-0">
               <AlertDialog>
                 <AlertDialogTrigger asChild>
                   <Button variant="outline" className="text-red-600 hover:text-red-700">
@@ -1249,7 +1249,7 @@ For Internal Use Only - Keep Secure
             </DialogDescription>
           </DialogHeader>
           <div className="mt-4 max-h-[70vh] overflow-y-auto">
-            <pre className="whitespace-pre-wrap text-sm font-mono bg-gray-50 text-gray-900 p-4 rounded border">
+            <pre className="whitespace-pre-wrap text-sm font-mono bg-slate-900 text-slate-200 p-4 rounded border border-slate-700">
               {previewContent}
             </pre>
           </div>
