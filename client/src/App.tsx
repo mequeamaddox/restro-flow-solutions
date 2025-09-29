@@ -60,6 +60,7 @@ import MultiUnitDashboard from "@/pages/multi-unit-dashboard";
 import BluetoothScalePrototype from "@/pages/bluetooth-scale-prototype";
 import Sidebar from "@/components/layout/sidebar";
 import Header from "@/components/layout/header";
+import MobileBottomNav from "@/components/layout/mobile-bottom-nav";
 
 function Router() {
   // Always call useState hooks first to maintain consistent order
@@ -108,7 +109,7 @@ function Router() {
           />
           <div className="flex-1 flex flex-col overflow-hidden">
             <Header onMobileMenuToggle={() => setIsMobileMenuOpen(!isMobileMenuOpen)} />
-            <main className="flex-1 overflow-y-auto">
+            <main className="flex-1 overflow-y-auto pb-16 lg:pb-0">
               <Switch>
                 {/* Owner Onboarding Route - Must be accessible to owners only */}
                 <Route path="/onboarding" component={() => {
@@ -175,6 +176,9 @@ function Router() {
               </Switch>
             </main>
           </div>
+          
+          {/* Mobile Bottom Navigation */}
+          <MobileBottomNav onMenuClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)} />
         </div>
       </div>
       </PermissionProvider>
