@@ -79,7 +79,7 @@ export function LoginForm({ onToggleMode }: LoginFormProps) {
     setIsLoading(true);
     setError(null);
 
-    const { error: signInError } = await signIn(data.email.trim(), data.password.trim());
+    const { error: signInError } = await signIn(data.email.trim().toLowerCase(), data.password.trim());
     
     if (signInError) {
       setError(signInError);

@@ -141,8 +141,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       let { email, password } = req.body;
       
-      // Input sanitization - trim whitespace that could cause issues
-      email = email?.trim();
+      // Input sanitization - trim whitespace and normalize email to lowercase
+      email = email?.trim().toLowerCase();
       // Do not trim password - preserve exact user input including whitespace
       
       if (!email || !password) {
