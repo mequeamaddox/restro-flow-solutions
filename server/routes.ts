@@ -513,7 +513,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         diagnostics: diagnosticInfo,
         userExists: userExistenceCheck,
         adminSdkWorking: !!adminAuth,
-        suggestions: []
+        suggestions: [] as string[]
       };
 
       // Add suggestions based on findings
@@ -531,11 +531,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json(response);
 
     } catch (error) {
-      console.error('❌ Diagnostic endpoint error:', error);
+      const err = error as Error;
+      console.error('❌ Diagnostic endpoint error:', err);
       res.status(500).json({ 
         success: false,
         message: 'Diagnostic failed',
-        error: error.message,
+        error: err.message,
         adminSdkError: !adminAuth ? 'Admin SDK not properly initialized' : null
       });
     }
@@ -626,7 +627,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.log('Processing file:', req.file.originalname, 'Type:', req.file.mimetype);
       
       // Check OCR access for current user - fix for session-based auth
-      const userId = req.user.id;
+      const userId = req.user!.id;
       if (!userId) {
         console.log('Authentication failed - userId not found');
         return res.status(401).json({ message: "User not authenticated" });
@@ -930,7 +931,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Subscription and OCR Management Routes
   app.get('/api/user/subscription', isAuthenticated, async (req, res) => {
     try {
-      const userId = req.user.id;
+      const userId = req.user!.id;
       if (!userId) {
         return res.status(401).json({ message: "User not authenticated" });
       }
@@ -955,7 +956,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post('/api/user/upgrade-plan', isAuthenticated, async (req, res) => {
     try {
-      const userId = req.user.id;
+      const userId = req.user!.id;
       if (!userId) {
         return res.status(401).json({ message: "User not authenticated" });
       }
@@ -988,7 +989,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post('/api/user/reset-credits', isAuthenticated, async (req, res) => {
     try {
-      const userId = req.user.id;
+      const userId = req.user!.id;
       if (!userId) {
         return res.status(401).json({ message: "User not authenticated" });
       }
@@ -1011,7 +1012,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Create invitation (owner only)
   app.post('/api/invitations', isAuthenticated, requirePermission(Permission.MANAGE_EMPLOYEES), async (req, res) => {
     try {
-      const userId = req.user.id;
+      const userId = req.user!.id;
       const invitationData = insertInvitationTokenSchema.parse(req.body);
       
       // Ensure invitedBy is set to current user
@@ -1027,7 +1028,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Get company name (could be from location or user organization)
       let companyName = 'RestroFlow Restaurant';
       if (invitation.locationId) {
-        const location = await storage.getLocation(invitation.locationId);
+        const locations = await storage.getLocations();
+        const location = locations.find(loc => loc.id === invitation.locationId);
         companyName = location?.name || companyName;
       }
 
@@ -1067,7 +1069,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // List pending invitations (owner only)
   app.get('/api/invitations', isAuthenticated, requirePermission(Permission.MANAGE_EMPLOYEES), async (req, res) => {
     try {
-      const userId = req.user.id;
+      const userId = req.user!.id;
       const invitations = await storage.getInvitationTokens(userId);
       
       res.json(invitations.map(inv => ({
@@ -1082,9 +1084,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
         positionId: inv.positionId,
         expiresAt: inv.expiresAt,
         createdAt: inv.createdAt,
-        location: inv.location,
-        department: inv.department,
-        position: inv.position,
       })));
     } catch (error) {
       console.error("Error fetching invitations:", error);
@@ -1110,7 +1109,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       if (new Date() > new Date(invitation.expiresAt)) {
-        await storage.updateInvitationToken(invitation.id, { status: 'expired' });
+        await storage.updateInvitationToken(invitation.id, {});
         return res.status(400).json({ message: "Invitation has expired" });
       }
 
@@ -1119,9 +1118,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         firstName: invitation.firstName,
         lastName: invitation.lastName,
         role: invitation.role,
-        location: invitation.location,
-        department: invitation.department,
-        position: invitation.position,
+        locationId: invitation.locationId,
+        departmentId: invitation.departmentId,
+        positionId: invitation.positionId,
         expiresAt: invitation.expiresAt,
       });
     } catch (error) {
@@ -1154,7 +1153,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       if (new Date() > new Date(invitation.expiresAt)) {
-        await storage.updateInvitationToken(invitation.id, { status: 'expired' });
+        await storage.updateInvitationToken(invitation.id, {});
         return res.status(400).json({ message: "Invitation has expired" });
       }
 
@@ -1178,14 +1177,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Create employee record if HR addon is enabled for location
       if (invitation.locationId) {
-        const location = await storage.getLocation(invitation.locationId);
+        const locations = await storage.getLocations();
+        const location = locations.find(loc => loc.id === invitation.locationId);
         if (location?.hrAddonEnabled) {
           const employeeData = {
             firstName: invitation.firstName || '',
             lastName: invitation.lastName || '',
             email: invitation.email,
-            hireDate: invitation.startDate || new Date(),
-            status: 'active',
+            hireDate: invitation.startDate ? (typeof invitation.startDate === 'string' ? invitation.startDate : new Date(invitation.startDate as any).toISOString()) : new Date().toISOString(),
             departmentId: invitation.departmentId,
             positionId: invitation.positionId,
             hourlyRate: invitation.hourlyRate,
@@ -1198,7 +1197,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           await storage.acceptInvitationToken(token, employee.id);
         } else {
           // Mark invitation as accepted without employee record
-          await storage.acceptInvitationToken(token, null);
+          await storage.acceptInvitationToken(token, '');
         }
       }
 
@@ -1549,7 +1548,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post('/api/inventory/import-from-invoice', isAuthenticated, async (req, res) => {
     try {
       const { items, locationId } = req.body;
-      const userId = req.user.id;
+      const userId = req.user!.id;
       
       if (!items || !Array.isArray(items)) {
         return res.status(400).json({ message: "Invalid items data" });
@@ -1631,7 +1630,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         type: "in",
         quantity: itemData.quantity?.toString() || "0",
         reference: "Initial stock",
-        createdBy: req.user.id || "system",
+        createdBy: req.user!.id || "system",
       });
       
       res.status(201).json(item);
@@ -1661,6 +1660,168 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error deleting inventory item:", error);
       res.status(400).json({ message: "Failed to delete inventory item" });
+    }
+  });
+
+  // CSV Import for inventory items
+  app.post('/api/inventory/import', isAuthenticated, csvUpload.single('file'), async (req, res) => {
+    try {
+      const locationId = req.body.locationId;
+      const userId = req.user!.id;
+      
+      if (!locationId) {
+        return res.status(400).json({ message: "Location ID is required" });
+      }
+
+      if (!req.file) {
+        return res.status(400).json({ message: "No file uploaded" });
+      }
+
+      console.log('📁 CSV Import started:', {
+        fileName: req.file.originalname,
+        fileSize: req.file.size,
+        locationId
+      });
+
+      const results: any[] = [];
+      const errors: Array<{ row: number; field: string; message: string }> = [];
+      let rowNumber = 0;
+
+      // Fetch categories and vendors for mapping
+      const categories = await storage.getCategories();
+      const vendors = await storage.getVendors(locationId);
+
+      // Parse CSV file
+      const stream = Readable.from(req.file.buffer);
+      
+      await new Promise<void>((resolve, reject) => {
+        stream
+          .pipe(csv())
+          .on('data', (row) => {
+            rowNumber++;
+            results.push({ rowNumber, data: row });
+          })
+          .on('end', () => {
+            resolve();
+          })
+          .on('error', (error) => {
+            reject(error);
+          });
+      });
+
+      console.log(`📊 Parsed ${results.length} rows from CSV`);
+
+      let successCount = 0;
+      let failedCount = 0;
+
+      // Process each row
+      for (const result of results) {
+        const { rowNumber, data } = result;
+        const row = data;
+
+        try {
+          // Validate required fields
+          if (!row.name || row.name.trim() === '') {
+            errors.push({ row: rowNumber, field: 'name', message: 'Name is required' });
+            failedCount++;
+            continue;
+          }
+
+          if (!row.quantity || isNaN(parseFloat(row.quantity))) {
+            errors.push({ row: rowNumber, field: 'quantity', message: 'Valid quantity is required' });
+            failedCount++;
+            continue;
+          }
+
+          if (!row.unit || row.unit.trim() === '') {
+            errors.push({ row: rowNumber, field: 'unit', message: 'Unit is required' });
+            failedCount++;
+            continue;
+          }
+
+          if (!row.costPerUnit || isNaN(parseFloat(row.costPerUnit))) {
+            errors.push({ row: rowNumber, field: 'costPerUnit', message: 'Valid cost per unit is required' });
+            failedCount++;
+            continue;
+          }
+
+          // Map category name to categoryId
+          let categoryId = null;
+          if (row.categoryName && row.categoryName.trim() !== '') {
+            const category = categories.find(c => c.name.toLowerCase() === row.categoryName.trim().toLowerCase());
+            if (!category) {
+              errors.push({ row: rowNumber, field: 'categoryName', message: `Category '${row.categoryName}' not found` });
+              failedCount++;
+              continue;
+            }
+            categoryId = category.id;
+          }
+
+          // Map vendor name to vendorId
+          let vendorId = null;
+          if (row.vendorName && row.vendorName.trim() !== '') {
+            const vendor = vendors.find(v => v.name.toLowerCase() === row.vendorName.trim().toLowerCase());
+            if (!vendor) {
+              errors.push({ row: rowNumber, field: 'vendorName', message: `Vendor '${row.vendorName}' not found` });
+              failedCount++;
+              continue;
+            }
+            vendorId = vendor.id;
+          }
+
+          // Prepare item data
+          const itemData: any = {
+            name: row.name.trim(),
+            description: row.description?.trim() || null,
+            categoryId,
+            vendorId,
+            locationId,
+            quantity: parseFloat(row.quantity).toString(),
+            unit: row.unit.trim(),
+            costPerUnit: parseFloat(row.costPerUnit).toString(),
+            reorderLevel: row.reorderLevel ? parseFloat(row.reorderLevel).toString() : "0",
+            sku: row.sku?.trim() || null,
+          };
+
+          // Validate with schema
+          const validatedData = insertInventoryItemSchema.parse(itemData);
+
+          // Insert into database
+          const item = await storage.createInventoryItem(validatedData);
+
+          // Create inventory transaction for initial stock
+          await storage.createInventoryTransaction({
+            inventoryItemId: item.id,
+            locationId,
+            type: "in",
+            quantity: validatedData.quantity?.toString() || "0",
+            reference: "CSV Import",
+            createdBy: userId,
+          });
+
+          successCount++;
+        } catch (error: any) {
+          console.error(`Error processing row ${rowNumber}:`, error);
+          errors.push({ 
+            row: rowNumber, 
+            field: 'general', 
+            message: error.message || 'Failed to process row' 
+          });
+          failedCount++;
+        }
+      }
+
+      console.log(`✅ CSV Import completed: ${successCount} success, ${failedCount} failed`);
+
+      res.json({
+        success: successCount,
+        failed: failedCount,
+        errors: errors.slice(0, 100), // Limit errors to first 100
+        totalRows: results.length
+      });
+    } catch (error: any) {
+      console.error("Error importing CSV:", error);
+      res.status(500).json({ message: error.message || "Failed to import CSV file" });
     }
   });
 
@@ -1847,7 +2008,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post('/api/variance/production', isAuthenticated, async (req, res) => {
     try {
       const { recipeId, locationId, quantityProduced, batchNumber } = req.body;
-      const userId = req.user.id;
+      const userId = req.user!.id;
       
       if (!recipeId || !locationId || !quantityProduced) {
         return res.status(400).json({ message: "Recipe ID, location ID, and quantity produced are required" });
@@ -1956,7 +2117,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         expectedDeliveryDate: req.body.expectedDeliveryDate && req.body.expectedDeliveryDate.trim() !== '' ? new Date(req.body.expectedDeliveryDate) : null,
         totalAmount: req.body.totalAmount,
         notes: req.body.notes || null,
-        createdBy: req.user.id,
+        createdBy: req.user!.id,
       };
       
       const order = await storage.createPurchaseOrder(orderData);
@@ -2008,7 +2169,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
                   quantity: item.quantity.toString(),
                   reference: `PO-${currentOrder.orderNumber}`,
                   notes: `Received from purchase order ${currentOrder.orderNumber}`,
-                  createdBy: req.user.id || 'system'
+                  createdBy: req.user!.id || 'system'
                 });
                 
                 // Update inventory quantity
@@ -2082,7 +2243,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         expectedDeliveryDate: null,
         totalAmount: totalAmount.toString(),
         notes: `Auto-generated from ${lowStockItems.length} low stock items`,
-        createdBy: req.user.id || 'system',
+        createdBy: req.user!.id || 'system',
       };
       
       const order = await storage.createPurchaseOrder(orderData);
@@ -2150,7 +2311,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const wasteData = insertWasteEntrySchema.parse({
         ...req.body,
-        reportedBy: req.user.id,
+        reportedBy: req.user!.id,
       });
       const entry = await storage.createWasteEntry(wasteData);
       
@@ -2162,7 +2323,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         quantity: wasteData.quantity,
         reference: `Waste: ${wasteData.reason}`,
         notes: wasteData.notes,
-        createdBy: req.user.id,
+        createdBy: req.user!.id,
       });
       
       res.status(201).json(entry);
@@ -2201,7 +2362,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const transactionData = insertInventoryTransactionSchema.parse({
         ...req.body,
-        createdBy: req.user.id,
+        createdBy: req.user!.id,
       });
       const transaction = await storage.createInventoryTransaction(transactionData);
       res.status(201).json(transaction);
@@ -2813,7 +2974,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.put('/api/hr/time-off-requests/:id/status', isAuthenticated, async (req, res) => {
     try {
       const { status, notes } = req.body;
-      const request = await storage.updateTimeOffRequestStatus(req.params.id, status, notes, req.user.id);
+      const request = await storage.updateTimeOffRequestStatus(req.params.id, status, notes, req.user!.id);
       res.json(request);
     } catch (error) {
       console.error('Error updating time-off request status:', error);
@@ -2943,7 +3104,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get('/api/employees/:employeeId/time-entries', isAuthenticated, async (req, res) => {
     try {
       // Get user ID from Firebase authentication
-      const userId = req.user.id;
+      const userId = req.user!.id;
       console.log('🕐 Time entries request - userId:', userId, 'employeeId:', req.params.employeeId);
       
       // Allow owners/admins to view any employee's time entries, employees can only view their own
@@ -2965,7 +3126,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get('/api/employees/:employeeId/shifts', isAuthenticated, async (req, res) => {
     try {
       // Get user ID from Firebase authentication
-      const userId = req.user.id;
+      const userId = req.user!.id;
       // Ensure employees can only access their own shifts
       if (req.params.employeeId !== userId) {
         return res.status(403).json({ message: 'Access denied - can only view your own shifts' });
@@ -2981,7 +3142,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post('/api/employees/:employeeId/clock-in', isAuthenticated, async (req, res) => {
     try {
       // Get user ID from Firebase authentication
-      const userId = req.user.id;
+      const userId = req.user!.id;
       // Ensure employees can only clock in for themselves
       if (req.params.employeeId !== userId) {
         return res.status(403).json({ message: 'Access denied - can only clock in for yourself' });
@@ -2997,7 +3158,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post('/api/employees/:employeeId/clock-out', isAuthenticated, async (req, res) => {
     try {
       // Get user ID from Firebase authentication
-      const userId = req.user.id;
+      const userId = req.user!.id;
       // Ensure employees can only clock out for themselves
       if (req.params.employeeId !== userId) {
         return res.status(403).json({ message: 'Access denied - can only clock out for yourself' });
@@ -3019,7 +3180,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post('/api/employees/:employeeId/break-start', isAuthenticated, async (req, res) => {
     try {
       // Get user ID from Firebase authentication
-      const userId = req.user.id;
+      const userId = req.user!.id;
       if (req.params.employeeId !== userId) {
         return res.status(403).json({ message: 'Access denied - can only start break for yourself' });
       }
@@ -3039,7 +3200,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post('/api/employees/:employeeId/break-end', isAuthenticated, async (req, res) => {
     try {
       // Get user ID from Firebase authentication
-      const userId = req.user.id;
+      const userId = req.user!.id;
       if (req.params.employeeId !== userId) {
         return res.status(403).json({ message: 'Access denied - can only end break for yourself' });
       }
@@ -3099,7 +3260,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post('/api/hr/payroll/pay-periods/:id/approve', async (req, res) => {
     try {
-      const payPeriod = await storage.approvePayroll(req.params.id, req.user.id);
+      const payPeriod = await storage.approvePayroll(req.params.id, req.user!.id);
       res.json(payPeriod);
     } catch (error) {
       console.error('Error approving payroll:', error);
@@ -3214,7 +3375,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post('/api/hr/team-resources', isAuthenticated, async (req, res) => {
     try {
-      const userId = req.user.id;
+      const userId = req.user!.id;
       const resourceData = insertTeamResourceSchema.parse({
         ...req.body,
         uploadedBy: userId,
@@ -3328,7 +3489,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Create manual time entry (for supervisors to add missed clock-ins)
   app.post('/api/hr/time-entries/manual', isAuthenticated, async (req, res) => {
     try {
-      const userId = req.user.id;
+      const userId = req.user!.id;
       const { employeeId, clockInTime, clockOutTime, breakStartTime, breakEndTime, notes } = req.body;
 
       // Validate required fields
@@ -3381,7 +3542,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post('/api/hr/messages', isAuthenticated, async (req, res) => {
     try {
       // Get user ID from authenticated request
-      const userId = req.user.id;
+      const userId = req.user!.id;
       
       const messageData = {
         ...req.body,
@@ -3631,7 +3792,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post("/api/hr/documents", isAuthenticated, async (req, res) => {
     try {
-      const userId = req.user.id;
+      const userId = req.user!.id;
       const documentData = {
         ...req.body,
         uploadedBy: userId
@@ -3647,7 +3808,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.put("/api/hr/documents/:id", isAuthenticated, async (req, res) => {
     try {
       const { id } = req.params;
-      const userId = req.user.id;
+      const userId = req.user!.id;
       const updateData = {
         ...req.body,
         reviewedBy: userId,
@@ -3714,7 +3875,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post("/api/hr/onboarding/templates", isAuthenticated, async (req, res) => {
     try {
-      const userId = req.user.id;
+      const userId = req.user!.id;
       const templateData = {
         ...req.body,
         createdBy: userId
@@ -3795,7 +3956,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.put("/api/hr/onboarding/steps/:id", isAuthenticated, async (req, res) => {
     try {
       const { id } = req.params;
-      const userId = req.user.id;
+      const userId = req.user!.id;
       const updateData = {
         ...req.body,
         completedBy: userId,
@@ -4021,7 +4182,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.put("/api/employees/:id/profile", isAuthenticated, async (req, res) => {
     try {
       const { id } = req.params;
-      const userId = req.user.id;
+      const userId = req.user!.id;
       
       // Only allow employees to update their own profile
       if (id !== userId) {
@@ -4062,7 +4223,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.put("/api/employees/:id/password", isAuthenticated, async (req, res) => {
     try {
       const { id } = req.params;
-      const userId = req.user.id;
+      const userId = req.user!.id;
       
       // Only allow employees to change their own password
       if (id !== userId) {
@@ -4173,7 +4334,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post('/api/document-templates', isAuthenticated, async (req, res) => {
     try {
-      const userId = req.user.id;
+      const userId = req.user!.id;
       const templateData = { ...req.body, createdBy: userId };
       const template = await storage.createDocumentTemplate(templateData);
       res.status(201).json(template);
@@ -4213,7 +4374,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post('/api/employee-documents/assign', isAuthenticated, async (req, res) => {
     try {
-      const userId = req.user.id;
+      const userId = req.user!.id;
       const assignmentData = { 
         ...req.body, 
         sentBy: userId, 
@@ -4339,7 +4500,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Manager paper upload endpoint
   app.put('/api/employee-documents/:id/manager-upload', isAuthenticated, async (req, res) => {
     try {
-      const userId = req.user.id;
+      const userId = req.user!.id;
       const { filePath, fileSize, mimeType } = req.body;
       
       const assignment = await storage.updateDocumentAssignment(req.params.id, {
@@ -4438,7 +4599,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Create payroll period
   app.post("/api/payroll-periods", async (req, res) => {
     try {
-      const userId = req.user.id;
+      const userId = req.user!.id;
       
       console.log('Received payroll period request body:', JSON.stringify(req.body, null, 2));
       
@@ -4900,7 +5061,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         paymentMethod || 'cash',
         customerName || null,
         salesItems,
-req.user.id
+req.user!.id
       );
 
       res.json({ transactionId, message: 'Sales transaction recorded successfully' });
@@ -4998,18 +5159,19 @@ req.user.id
 
       res.json(responseData);
     } catch (error) {
-      console.error('❌ Error fetching subscription plans:', error);
+      const err = error as Error;
+      console.error('❌ Error fetching subscription plans:', err);
       res.status(500).json({ 
         message: 'Failed to fetch subscription plans',
-        error: error.message 
+        error: err.message 
       });
     }
   });
 
   // GET /api/subscriptions/current - Get user's current subscription status
-  app.get('/api/subscriptions/current', isAuthenticated, async (req: AuthenticatedRequest, res) => {
+  app.get('/api/subscriptions/current', isAuthenticated, async (req, res) => {
     try {
-      const userId = req.user.id;
+      const userId = req.user!.id;
       const user = await storage.getUser(userId);
       
       // Only owners can access subscription information
@@ -5039,18 +5201,19 @@ req.user.id
         squareSubscriptionId: user.squareSubscriptionId
       });
     } catch (error) {
-      console.error('❌ Error fetching current subscription:', error);
+      const err = error as Error;
+      console.error('❌ Error fetching current subscription:', err);
       res.status(500).json({ 
         message: 'Failed to fetch current subscription',
-        error: error.message 
+        error: err.message 
       });
     }
   });
 
   // POST /api/subscriptions/upgrade - Upgrade or modify subscription plan
-  app.post('/api/subscriptions/upgrade', isAuthenticated, async (req: AuthenticatedRequest, res) => {
+  app.post('/api/subscriptions/upgrade', isAuthenticated, async (req, res) => {
     try {
-      const userId = req.user.id;
+      const userId = req.user!.id;
       const user = await storage.getUser(userId);
       
       // Only owners can upgrade subscriptions
@@ -5124,16 +5287,17 @@ req.user.id
         subscription: subscriptionResult
       });
     } catch (error) {
-      console.error('❌ Error upgrading subscription:', error);
+      const err = error as Error;
+      console.error('❌ Error upgrading subscription:', err);
       res.status(500).json({ 
         message: 'Failed to upgrade subscription',
-        error: error.message 
+        error: err.message 
       });
     }
   });
 
   // POST /api/subscriptions/create - Create Square subscription with plan selection
-  app.post('/api/subscriptions/create', isAuthenticated, async (req: AuthenticatedRequest, res) => {
+  app.post('/api/subscriptions/create', isAuthenticated, async (req, res) => {
     try {
       if (!squareSubscriptionService.isEnabled()) {
         return res.status(503).json({ 
@@ -5144,7 +5308,7 @@ req.user.id
 
       const validatedData = createSubscriptionSchema.parse(req.body);
       const { email, plan, hrAddonLocations = 0 } = validatedData;
-      const userId = req.user.id;
+      const userId = req.user!.id;
 
       console.log('🔄 Creating Square subscription for user:', userId, 'plan:', plan);
 
@@ -5203,18 +5367,19 @@ req.user.id
       });
 
     } catch (error) {
-      console.error('❌ Error creating Square subscription:', error);
+      const err = error as any;
+      console.error('❌ Error creating Square subscription:', err);
       
-      if (error.name === 'ZodError') {
+      if (err.name === 'ZodError') {
         return res.status(400).json({ 
           message: 'Invalid request data',
-          errors: error.errors 
+          errors: err.errors 
         });
       }
 
       res.status(500).json({ 
         message: 'Failed to create subscription',
-        error: error.message 
+        error: err.message 
       });
     }
   });
@@ -5248,8 +5413,8 @@ req.user.id
         const squareSubscriptionId = subscriptionObject.id;
 
         // Find user by Square subscription ID
-        const users = await db.select().from(users).where(eq(users.squareSubscriptionId, squareSubscriptionId));
-        const user = users[0];
+        const userResults = await db.select().from(users).where(eq(users.squareSubscriptionId, squareSubscriptionId));
+        const user = userResults[0];
 
         if (!user) {
           console.log('⚠️ No user found for Square subscription:', squareSubscriptionId);
@@ -5280,16 +5445,17 @@ req.user.id
       res.status(200).json({ message: 'Webhook processed successfully' });
 
     } catch (error) {
-      console.error('❌ Error processing Square webhook:', error);
+      const err = error as Error;
+      console.error('❌ Error processing Square webhook:', err);
       res.status(500).json({ 
         message: 'Failed to process webhook',
-        error: error.message 
+        error: err.message 
       });
     }
   });
 
   // GET /api/subscriptions/portal - Get subscription management portal URL
-  app.get('/api/subscriptions/portal', isAuthenticated, async (req: AuthenticatedRequest, res) => {
+  app.get('/api/subscriptions/portal', isAuthenticated, async (req, res) => {
     try {
       if (!squareSubscriptionService.isEnabled()) {
         return res.status(503).json({ 
@@ -5297,7 +5463,7 @@ req.user.id
         });
       }
 
-      const userId = req.user.id;
+      const userId = req.user!.id;
       const user = await storage.getSubscriptionByUser(userId);
 
       if (!user || !user.squareCustomerId) {
@@ -5314,16 +5480,17 @@ req.user.id
       });
 
     } catch (error) {
-      console.error('❌ Error generating subscription portal URL:', error);
+      const err = error as Error;
+      console.error('❌ Error generating subscription portal URL:', err);
       res.status(500).json({ 
         message: 'Failed to generate portal URL',
-        error: error.message 
+        error: err.message 
       });
     }
   });
 
   // POST /api/subscriptions/cancel - Cancel active subscription
-  app.post('/api/subscriptions/cancel', isAuthenticated, async (req: AuthenticatedRequest, res) => {
+  app.post('/api/subscriptions/cancel', isAuthenticated, async (req, res) => {
     try {
       if (!squareSubscriptionService.isEnabled()) {
         return res.status(503).json({ 
@@ -5332,7 +5499,7 @@ req.user.id
       }
 
       const validatedData = cancelSubscriptionSchema.parse(req.body);
-      const userId = req.user.id;
+      const userId = req.user!.id;
 
       const user = await storage.getSubscriptionByUser(userId);
       if (!user || !user.squareSubscriptionId) {
@@ -5372,18 +5539,19 @@ req.user.id
       });
 
     } catch (error) {
-      console.error('❌ Error cancelling Square subscription:', error);
+      const err = error as any;
+      console.error('❌ Error cancelling Square subscription:', err);
       
-      if (error.name === 'ZodError') {
+      if (err.name === 'ZodError') {
         return res.status(400).json({ 
           message: 'Invalid request data',
-          errors: error.errors 
+          errors: err.errors 
         });
       }
 
       res.status(500).json({ 
         message: 'Failed to cancel subscription',
-        error: error.message 
+        error: err.message 
       });
     }
   });
@@ -5392,12 +5560,12 @@ req.user.id
   // ============================================================================
 
   // GET /api/owner-onboarding/progress - Get current onboarding progress
-  app.get('/api/owner-onboarding/progress', isAuthenticated, async (req: AuthenticatedRequest, res) => {
+  app.get('/api/owner-onboarding/progress', isAuthenticated, async (req, res) => {
     try {
-      const userId = req.user.id;
+      const userId = req.user!.id;
       
       // Only owners can access onboarding
-      if (req.user.role !== 'owner') {
+      if (req.user!.role !== 'owner') {
         return res.status(403).json({ 
           message: 'Access denied. Onboarding is only available to business owners.' 
         });
@@ -5419,12 +5587,12 @@ req.user.id
   });
 
   // POST /api/owner-onboarding/start - Start or resume onboarding
-  app.post('/api/owner-onboarding/start', isAuthenticated, async (req: AuthenticatedRequest, res) => {
+  app.post('/api/owner-onboarding/start', isAuthenticated, async (req, res) => {
     try {
-      const userId = req.user.id;
+      const userId = req.user!.id;
       
       // Only owners can start onboarding
-      if (req.user.role !== 'owner') {
+      if (req.user!.role !== 'owner') {
         return res.status(403).json({ 
           message: 'Access denied. Onboarding is only available to business owners.' 
         });
@@ -5454,13 +5622,13 @@ req.user.id
   });
 
   // PUT /api/owner-onboarding/step - Update a specific step
-  app.put('/api/owner-onboarding/step', isAuthenticated, async (req: AuthenticatedRequest, res) => {
+  app.put('/api/owner-onboarding/step', isAuthenticated, async (req, res) => {
     try {
-      const userId = req.user.id;
+      const userId = req.user!.id;
       const { stepName, stepData, status = 'completed' } = req.body;
       
       // Only owners can update onboarding
-      if (req.user.role !== 'owner') {
+      if (req.user!.role !== 'owner') {
         return res.status(403).json({ 
           message: 'Access denied. Onboarding is only available to business owners.' 
         });
@@ -5475,12 +5643,12 @@ req.user.id
   });
 
   // POST /api/owner-onboarding/complete - Complete the entire onboarding
-  app.post('/api/owner-onboarding/complete', isAuthenticated, async (req: AuthenticatedRequest, res) => {
+  app.post('/api/owner-onboarding/complete', isAuthenticated, async (req, res) => {
     try {
-      const userId = req.user.id;
+      const userId = req.user!.id;
       
       // Only owners can complete onboarding
-      if (req.user.role !== 'owner') {
+      if (req.user!.role !== 'owner') {
         return res.status(403).json({ 
           message: 'Access denied. Onboarding is only available to business owners.' 
         });

@@ -11,11 +11,13 @@ import { isUnauthorizedError } from "@/lib/authUtils";
 import { useLocation } from "@/contexts/LocationContext";
 import InventoryTable from "@/components/inventory/inventory-table";
 import AddItemDialog from "@/components/inventory/add-item-dialog";
+import CsvImportDialog from "@/components/inventory/csv-import-dialog";
 import LocationBanner from "@/components/location/location-banner";
 import QuickAddWidget from "@/components/inventory/quick-add-widget";
 
 export default function Inventory() {
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
+  const [isCsvImportDialogOpen, setIsCsvImportDialogOpen] = useState(false);
   const [editingItem, setEditingItem] = useState<any>(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [categoryFilter, setCategoryFilter] = useState("");
@@ -106,9 +108,11 @@ export default function Inventory() {
             Export
           </Button>
           <Button 
+            onClick={() => setIsCsvImportDialogOpen(true)}
             variant="outline"
             className="border-slate-600 text-slate-300 hover:bg-slate-800"
             disabled={!currentLocation}
+            data-testid="button-import"
           >
             <Upload className="h-4 w-4 mr-2" />
             Import
@@ -300,6 +304,15 @@ export default function Inventory() {
           categories={(categories as any[]) || []}
           vendors={(vendors as any[]) || []}
           editingItem={editingItem}
+        />
+      )}
+
+      {/* CSV Import Dialog */}
+      {currentLocation && (
+        <CsvImportDialog
+          isOpen={isCsvImportDialogOpen}
+          onClose={() => setIsCsvImportDialogOpen(false)}
+          locationId={currentLocation.id}
         />
       )}
     </div>
