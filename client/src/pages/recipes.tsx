@@ -44,6 +44,8 @@ export default function Recipes() {
   const [ingredients, setIngredients] = useState([{ inventoryItemId: '', quantity: 0, unit: '' }]);
   const [targetFoodCost, setTargetFoodCost] = useState(30); // 30% default food cost
   const [previewContent, setPreviewContent] = useState<string>('');
+  const [pdfUrl, setPdfUrl] = useState<string | null>(null);
+  const [pdfFileName, setPdfFileName] = useState<string>('');
   const [isPreviewDialogOpen, setIsPreviewDialogOpen] = useState(false);
   const [isAssignDialogOpen, setIsAssignDialogOpen] = useState(false);
   const [selectedDepartmentId, setSelectedDepartmentId] = useState<string>('');
@@ -437,19 +439,15 @@ export default function Recipes() {
       // Generate PDF blob
       const blob = await pdf(<BuildSheetPDF />).toBlob();
       
-      // Create download link
+      // Create preview URL
       const url = URL.createObjectURL(blob);
-      const link = document.createElement('a');
-      link.href = url;
-      link.download = `${recipe.name.replace(/[^a-z0-9]/gi, '_')}_build_sheet.pdf`;
-      link.click();
-      
-      // Clean up
-      setTimeout(() => URL.revokeObjectURL(url), 100);
+      setPdfUrl(url);
+      setPdfFileName(`${recipe.name.replace(/[^a-z0-9]/gi, '_')}_build_sheet.pdf`);
+      setIsPreviewDialogOpen(true);
 
       toast({
         title: "Build Sheet Generated",
-        description: `Downloaded ${recipe.name} build sheet PDF for kitchen use`,
+        description: `Preview ready - you can download when ready`,
       });
     } catch (error) {
       console.error('PDF generation error:', error);
@@ -462,7 +460,7 @@ export default function Recipes() {
   };
 
   const generateCostSheet = async (recipe: any) => {
-    console.log('Generating cost sheet for recipe:', recipe);
+    console.log('Generating cost sheet PDF for recipe:', recipe);
     
     // Get full recipe data with ingredients
     const response = await fetch(`/api/recipes/${recipe.id}`);
@@ -470,98 +468,230 @@ export default function Recipes() {
     console.log('Full recipe with ingredients:', fullRecipe);
     
     const ingredients = fullRecipe.ingredients || [];
-    let totalCost = 0;
-    
-    const costSheetContent = `
-▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓
-                        ${currentLocation?.name?.toUpperCase() || 'RESTAURANT'}
-                       RECIPE COST ANALYSIS - CONFIDENTIAL
-▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓
-
-RECIPE: ${recipe.name.toUpperCase()}
-Category: ${recipe.category?.charAt(0).toUpperCase() + recipe.category?.slice(1) || 'N/A'}
-Serves: ${recipe.servingSize} portion${recipe.servingSize === 1 ? '' : 's'}
-Prep: ${recipe.prepTime} min  |  Cook: ${recipe.cookTime} min
-${recipe.sellingPrice ? `Menu Price: $${parseFloat(recipe.sellingPrice).toFixed(2)}` : 'Menu Price: NOT SET'}
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-🧾 INGREDIENT COSTS
-${ingredients.map((ing: any, index: number) => {
-  const itemName = ing.inventoryItem?.name || 'Unknown Item';
-  const lineCost = computeLineCost(ing.inventoryItem, Number(ing.quantity), String(ing.unit));
-  const unitCost = lineCost / Math.max(Number(ing.quantity) || 1, 1);
-  totalCost += lineCost;
-  
-  console.log(`Ingredient ${index + 1}:`, {
-    name: itemName,
-    quantity: ing.quantity,
-    unit: ing.unit,
-    unitCost,
-    lineCost
-  });
-  
-  return `${String(index + 1).padStart(2, '0')}. ${itemName.padEnd(25)} ${String(ing.quantity).padStart(6)} ${ing.unit.padEnd(8)} @ $${unitCost.toFixed(4)}  = $${lineCost.toFixed(2)}`;
-}).join('\n')}
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-💰 FINANCIAL ANALYSIS
-Total Recipe Cost:        $${totalCost.toFixed(2)}
-Cost Per Serving:         $${(totalCost / recipe.servingSize).toFixed(2)}
-${recipe.sellingPrice ? `
-Menu Price Per Serving:   $${parseFloat(recipe.sellingPrice).toFixed(2)}
-Food Cost Percentage:     ${((totalCost / recipe.servingSize) / parseFloat(recipe.sellingPrice) * 100).toFixed(1)}%
-Profit Per Serving:       $${(parseFloat(recipe.sellingPrice) - (totalCost / recipe.servingSize)).toFixed(2)}
-Target Food Cost (30%):   ${((totalCost / recipe.servingSize) / parseFloat(recipe.sellingPrice) * 100) <= 30 ? '✅ EXCELLENT' : ((totalCost / recipe.servingSize) / parseFloat(recipe.sellingPrice) * 100) <= 35 ? '⚠️  ACCEPTABLE' : '❌ TOO HIGH'}
-` : `
-Menu Price Per Serving:   NOT SET - PLEASE UPDATE
-Food Cost Percentage:     Cannot calculate without menu price
-Profit Analysis:          Requires menu price to be set
-`}
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-📝 PREPARATION NOTES
-${recipe.instructions}
-
-▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓
-CONFIDENTIAL MANAGEMENT DOCUMENT - ${new Date().toLocaleDateString()} ${new Date().toLocaleTimeString()}
-For Internal Use Only - Keep Secure
-▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓
-    `.trim();
-
-    // Create and download the cost sheet - mobile-friendly approach
-    const blob = new Blob([costSheetContent], { type: 'text/plain' });
-    const url = window.URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `${recipe.name.replace(/[^a-z0-9]/gi, '_')}_cost_sheet.txt`;
-    a.style.display = 'none';
-    document.body.appendChild(a);
-    
-    // Force download on mobile
-    if (navigator.userAgent.match(/iPhone|iPad|iPod|Android/i)) {
-      // For mobile, open in new window which allows saving
-      const newWindow = window.open(url, '_blank');
-      if (newWindow) {
-        newWindow.document.write(`<pre>${costSheetContent}</pre>`);
-        newWindow.document.title = `${recipe.name} Cost Sheet`;
-      }
-    } else {
-      a.click();
-    }
-    
-    document.body.removeChild(a);
-    setTimeout(() => window.URL.revokeObjectURL(url), 100);
-
-    // Also show preview for development testing
-    setPreviewContent(costSheetContent);
-    setIsPreviewDialogOpen(true);
-
-    toast({
-      title: "Cost Sheet Generated",
-      description: `Downloaded ${recipe.name} cost analysis for management`,
+    const costData = ingredients.map((ing: any) => {
+      const itemName = ing.inventoryItem?.name || 'Unknown Item';
+      const lineCost = computeLineCost(ing.inventoryItem, Number(ing.quantity), String(ing.unit));
+      const unitCost = lineCost / Math.max(Number(ing.quantity) || 1, 1);
+      return { itemName, quantity: ing.quantity, unit: ing.unit, unitCost, lineCost };
     });
+    
+    const totalCost = costData.reduce((sum, item) => sum + item.lineCost, 0);
+    const costPerServing = totalCost / recipe.servingSize;
+    const foodCostPct = recipe.sellingPrice ? (costPerServing / parseFloat(recipe.sellingPrice) * 100) : 0;
+    const profitPerServing = recipe.sellingPrice ? (parseFloat(recipe.sellingPrice) - costPerServing) : 0;
+    
+    // PDF Styles
+    const pdfStyles = StyleSheet.create({
+      page: {
+        padding: 40,
+        fontSize: 10,
+        fontFamily: 'Helvetica',
+      },
+      header: {
+        marginBottom: 20,
+        borderBottom: '2 solid #000',
+        paddingBottom: 10,
+        backgroundColor: '#f5f5f5',
+        padding: 15,
+      },
+      title: {
+        fontSize: 18,
+        fontWeight: 'bold',
+        textAlign: 'center',
+        marginBottom: 3,
+      },
+      subtitle: {
+        fontSize: 12,
+        textAlign: 'center',
+        color: '#d32f2f',
+        fontWeight: 'bold',
+      },
+      infoRow: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        marginBottom: 4,
+        fontSize: 10,
+      },
+      section: {
+        marginTop: 15,
+        marginBottom: 10,
+      },
+      sectionTitle: {
+        fontSize: 12,
+        fontWeight: 'bold',
+        marginBottom: 8,
+        backgroundColor: '#e0e0e0',
+        padding: 5,
+      },
+      table: {
+        marginTop: 10,
+      },
+      tableRow: {
+        flexDirection: 'row',
+        borderBottom: '1 solid #ddd',
+        paddingVertical: 5,
+      },
+      tableHeader: {
+        flexDirection: 'row',
+        borderBottom: '2 solid #000',
+        paddingVertical: 6,
+        backgroundColor: '#f0f0f0',
+        fontWeight: 'bold',
+      },
+      col1: { width: '5%' },
+      col2: { width: '40%' },
+      col3: { width: '15%' },
+      col4: { width: '20%' },
+      col5: { width: '20%', textAlign: 'right' },
+      financialBox: {
+        backgroundColor: '#f9f9f9',
+        padding: 12,
+        marginTop: 10,
+        border: '1 solid #ddd',
+      },
+      financialRow: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        marginBottom: 6,
+        fontSize: 11,
+      },
+      financialLabel: {
+        fontWeight: 'bold',
+      },
+      highlight: {
+        backgroundColor: '#fff3cd',
+        padding: 8,
+        marginTop: 8,
+        border: '1 solid #ffc107',
+      },
+      footer: {
+        position: 'absolute',
+        bottom: 30,
+        left: 40,
+        right: 40,
+        textAlign: 'center',
+        fontSize: 9,
+        color: '#d32f2f',
+        borderTop: '1 solid #d32f2f',
+        paddingTop: 10,
+        fontWeight: 'bold',
+      },
+    });
+
+    // Create PDF Document
+    const CostSheetPDF = () => (
+      <Document>
+        <Page size="A4" style={pdfStyles.page}>
+          {/* Header */}
+          <View style={pdfStyles.header}>
+            <Text style={pdfStyles.title}>{currentLocation?.name?.toUpperCase() || 'RESTAURANT'}</Text>
+            <Text style={pdfStyles.subtitle}>RECIPE COST ANALYSIS - CONFIDENTIAL</Text>
+          </View>
+
+          {/* Recipe Info */}
+          <View style={pdfStyles.infoRow}>
+            <Text>Recipe: {recipe.name}</Text>
+            <Text>Category: {recipe.category}</Text>
+          </View>
+          <View style={pdfStyles.infoRow}>
+            <Text>Serves: {recipe.servingSize}</Text>
+            <Text>Prep: {recipe.prepTime} min | Cook: {recipe.cookTime} min</Text>
+          </View>
+          <View style={pdfStyles.infoRow}>
+            <Text>Menu Price: ${recipe.sellingPrice ? parseFloat(recipe.sellingPrice).toFixed(2) : 'NOT SET'}</Text>
+            <Text>Date: {new Date().toLocaleDateString()}</Text>
+          </View>
+
+          {/* Ingredient Costs Table */}
+          <View style={pdfStyles.section}>
+            <Text style={pdfStyles.sectionTitle}>Ingredient Costs</Text>
+            <View style={pdfStyles.table}>
+              <View style={pdfStyles.tableHeader}>
+                <Text style={pdfStyles.col1}>#</Text>
+                <Text style={pdfStyles.col2}>Ingredient</Text>
+                <Text style={pdfStyles.col3}>Quantity</Text>
+                <Text style={pdfStyles.col4}>Unit Cost</Text>
+                <Text style={pdfStyles.col5}>Line Cost</Text>
+              </View>
+              {costData.map((item, index) => (
+                <View key={index} style={pdfStyles.tableRow}>
+                  <Text style={pdfStyles.col1}>{index + 1}</Text>
+                  <Text style={pdfStyles.col2}>{item.itemName}</Text>
+                  <Text style={pdfStyles.col3}>{item.quantity} {item.unit}</Text>
+                  <Text style={pdfStyles.col4}>${item.unitCost.toFixed(4)}</Text>
+                  <Text style={pdfStyles.col5}>${item.lineCost.toFixed(2)}</Text>
+                </View>
+              ))}
+            </View>
+          </View>
+
+          {/* Financial Analysis */}
+          <View style={pdfStyles.section}>
+            <Text style={pdfStyles.sectionTitle}>Financial Analysis</Text>
+            <View style={pdfStyles.financialBox}>
+              <View style={pdfStyles.financialRow}>
+                <Text style={pdfStyles.financialLabel}>Total Recipe Cost:</Text>
+                <Text>${totalCost.toFixed(2)}</Text>
+              </View>
+              <View style={pdfStyles.financialRow}>
+                <Text style={pdfStyles.financialLabel}>Cost Per Serving:</Text>
+                <Text>${costPerServing.toFixed(2)}</Text>
+              </View>
+              {recipe.sellingPrice && (
+                <>
+                  <View style={pdfStyles.financialRow}>
+                    <Text style={pdfStyles.financialLabel}>Menu Price Per Serving:</Text>
+                    <Text>${parseFloat(recipe.sellingPrice).toFixed(2)}</Text>
+                  </View>
+                  <View style={pdfStyles.financialRow}>
+                    <Text style={pdfStyles.financialLabel}>Food Cost Percentage:</Text>
+                    <Text>{foodCostPct.toFixed(1)}%</Text>
+                  </View>
+                  <View style={pdfStyles.financialRow}>
+                    <Text style={pdfStyles.financialLabel}>Profit Per Serving:</Text>
+                    <Text>${profitPerServing.toFixed(2)}</Text>
+                  </View>
+                  <View style={pdfStyles.highlight}>
+                    <Text>
+                      Target Food Cost (30%): {foodCostPct <= 30 ? '✓ EXCELLENT' : foodCostPct <= 35 ? '! ACCEPTABLE' : '✗ TOO HIGH'}
+                    </Text>
+                  </View>
+                </>
+              )}
+            </View>
+          </View>
+
+          {/* Footer */}
+          <View style={pdfStyles.footer}>
+            <Text>CONFIDENTIAL MANAGEMENT DOCUMENT</Text>
+            <Text>For Internal Use Only - Keep Secure</Text>
+          </View>
+        </Page>
+      </Document>
+    );
+
+    try {
+      // Generate PDF blob
+      const blob = await pdf(<CostSheetPDF />).toBlob();
+      
+      // Create preview URL
+      const url = URL.createObjectURL(blob);
+      setPdfUrl(url);
+      setPdfFileName(`${recipe.name.replace(/[^a-z0-9]/gi, '_')}_cost_sheet.pdf`);
+      setIsPreviewDialogOpen(true);
+
+      toast({
+        title: "Cost Sheet Generated",
+        description: `Preview ready - you can download when ready`,
+      });
+    } catch (error) {
+      console.error('PDF generation error:', error);
+      toast({
+        title: "Error",
+        description: "Failed to generate PDF. Please try again.",
+        variant: "destructive",
+      });
+    }
   };
 
   const onSubmit = (data: RecipeFormData) => {
@@ -1453,23 +1583,59 @@ For Internal Use Only - Keep Secure
         </DialogContent>
       </Dialog>
 
-      {/* Sheet Preview Dialog for Development Testing */}
-      <Dialog open={isPreviewDialogOpen} onOpenChange={setIsPreviewDialogOpen}>
-        <DialogContent className="sm:max-w-[800px] max-h-[90vh]">
+      {/* PDF Preview Dialog */}
+      <Dialog open={isPreviewDialogOpen} onOpenChange={(open) => {
+        setIsPreviewDialogOpen(open);
+        if (!open && pdfUrl) {
+          URL.revokeObjectURL(pdfUrl);
+          setPdfUrl(null);
+        }
+      }}>
+        <DialogContent className="sm:max-w-[900px] max-h-[90vh] flex flex-col">
           <DialogHeader>
-            <DialogTitle>Recipe Sheet Preview</DialogTitle>
+            <DialogTitle>PDF Preview</DialogTitle>
             <DialogDescription>
-              This is how the sheet will look when downloaded or printed
+              Preview your PDF before downloading
             </DialogDescription>
           </DialogHeader>
-          <div className="mt-4 max-h-[70vh] overflow-y-auto">
-            <pre className="whitespace-pre-wrap text-sm font-mono bg-slate-900 text-slate-200 p-4 rounded border border-slate-700">
-              {previewContent}
-            </pre>
-          </div>
-          <div className="flex justify-end pt-4 border-t">
-            <Button onClick={() => setIsPreviewDialogOpen(false)}>
-              Close Preview
+          {pdfUrl && (
+            <div className="flex-1 mt-4 min-h-[500px] max-h-[65vh] border border-slate-700 rounded overflow-hidden">
+              <iframe 
+                src={pdfUrl} 
+                className="w-full h-full"
+                title="PDF Preview"
+              />
+            </div>
+          )}
+          <div className="flex justify-end gap-2 pt-4 border-t border-slate-700">
+            <Button 
+              variant="outline" 
+              onClick={() => {
+                setIsPreviewDialogOpen(false);
+                if (pdfUrl) {
+                  URL.revokeObjectURL(pdfUrl);
+                  setPdfUrl(null);
+                }
+              }}
+            >
+              Close
+            </Button>
+            <Button 
+              onClick={() => {
+                if (pdfUrl && pdfFileName) {
+                  const link = document.createElement('a');
+                  link.href = pdfUrl;
+                  link.download = pdfFileName;
+                  link.click();
+                  toast({
+                    title: "Downloaded",
+                    description: `${pdfFileName} has been downloaded`,
+                  });
+                }
+              }}
+            >
+              <FileText className="h-4 w-4 mr-2" />
+              Download PDF
             </Button>
           </div>
         </DialogContent>
