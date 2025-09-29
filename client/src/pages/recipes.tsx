@@ -20,6 +20,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { ObjectUploader } from "@/components/ObjectUploader";
 import { computeLineCost } from "@/lib/unitCost";
 import { z } from "zod";
+import { Document, Page, Text, View, StyleSheet, pdf, Image } from '@react-pdf/renderer';
 
 const recipeFormSchema = z.object({
   name: z.string().min(1, "Recipe name is required"),
@@ -244,7 +245,7 @@ export default function Recipes() {
   });
 
   const generateBuildSheet = async (recipe: any) => {
-    console.log('Generating build sheet for recipe:', recipe);
+    console.log('Generating build sheet PDF for recipe:', recipe);
     
     // Get full recipe data with ingredients
     const response = await fetch(`/api/recipes/${recipe.id}`);
@@ -252,95 +253,212 @@ export default function Recipes() {
     console.log('Full recipe with ingredients:', fullRecipe);
     
     const ingredients = fullRecipe.ingredients || [];
-    
-    // Split instructions into steps
     const instructions = recipe.instructions.split('\n').filter((line: string) => line.trim());
     
-    const buildSheetContent = `
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-                    ${currentLocation?.name?.toUpperCase() || 'RESTAURANT'}
-                   BUILD SHEET - ${recipe.name.toUpperCase()}
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-Menu Period: ${recipe.category?.toUpperCase() || 'STANDARD MENU'}
-
-Menu Description: ${recipe.description || recipe.name}
-
-Server Description: ${recipe.servingSize} serving${recipe.servingSize === 1 ? '' : 's'} 
-${recipe.description || 'Prepared fresh to order with premium ingredients'}
-
-Plate: Standard Serving Plate
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-Ingredients
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-${ingredients.map((ing: any) => {
-  const itemName = ing.inventoryItem?.name || 'Unknown Item';
-  return `☐ ${itemName} - ${ing.quantity} ${ing.unit}`;
-}).join('\n')}
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-Kitchen Directions
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-${instructions.map((step: string, index: number) => `${index + 1}. ${step.trim()}`).join('\n')}
-
-Prep Time: ${recipe.prepTime} minutes
-Cook Time: ${recipe.cookTime} minutes
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-Service Standards
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-☐ Ensure the dish is plated on the inside and tidy on the outside
-☐ Ensure any cheese is melted
-☐ Check temperature before serving
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-Potential Allergens
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-⚠ Check ingredient labels for: Gluten, Dairy, Eggs, Nuts, Soy, Shellfish
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-Generated: ${new Date().toLocaleDateString()} at ${new Date().toLocaleTimeString()}
-Kitchen Use Only - Do Not Remove From Station
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-    `.trim();
-
-    // Create and download the build sheet - mobile-friendly approach
-    const blob = new Blob([buildSheetContent], { type: 'text/plain' });
-    const url = window.URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `${recipe.name.replace(/[^a-z0-9]/gi, '_')}_build_sheet.txt`;
-    a.style.display = 'none';
-    document.body.appendChild(a);
-    
-    // Force download on mobile
-    if (navigator.userAgent.match(/iPhone|iPad|iPod|Android/i)) {
-      // For mobile, open in new window which allows saving
-      const newWindow = window.open(url, '_blank');
-      if (newWindow) {
-        newWindow.document.write(`<pre>${buildSheetContent}</pre>`);
-        newWindow.document.title = `${recipe.name} Build Sheet`;
-      }
-    } else {
-      a.click();
-    }
-    
-    document.body.removeChild(a);
-    setTimeout(() => window.URL.revokeObjectURL(url), 100);
-
-    // Also show preview for development testing
-    setPreviewContent(buildSheetContent);
-    setIsPreviewDialogOpen(true);
-
-    toast({
-      title: "Build Sheet Generated",
-      description: `Downloaded ${recipe.name} build sheet for kitchen use`,
+    // PDF Styles
+    const pdfStyles = StyleSheet.create({
+      page: {
+        padding: 40,
+        fontSize: 11,
+        fontFamily: 'Helvetica',
+      },
+      header: {
+        marginBottom: 20,
+        borderBottom: '2 solid #000',
+        paddingBottom: 10,
+      },
+      title: {
+        fontSize: 18,
+        fontWeight: 'bold',
+        textAlign: 'center',
+        marginBottom: 5,
+      },
+      subtitle: {
+        fontSize: 14,
+        textAlign: 'center',
+        marginBottom: 5,
+      },
+      section: {
+        marginTop: 15,
+        marginBottom: 10,
+      },
+      sectionTitle: {
+        fontSize: 12,
+        fontWeight: 'bold',
+        marginBottom: 8,
+        borderBottom: '1 solid #333',
+        paddingBottom: 3,
+      },
+      row: {
+        flexDirection: 'row',
+        marginBottom: 5,
+      },
+      label: {
+        fontWeight: 'bold',
+        width: '30%',
+      },
+      value: {
+        width: '70%',
+      },
+      checkbox: {
+        flexDirection: 'row',
+        marginBottom: 5,
+      },
+      checkboxSquare: {
+        width: 12,
+        height: 12,
+        border: '1 solid #000',
+        marginRight: 8,
+        marginTop: 2,
+      },
+      ingredientText: {
+        flex: 1,
+      },
+      step: {
+        flexDirection: 'row',
+        marginBottom: 6,
+      },
+      stepNumber: {
+        width: 25,
+        fontWeight: 'bold',
+      },
+      stepText: {
+        flex: 1,
+      },
+      footer: {
+        position: 'absolute',
+        bottom: 30,
+        left: 40,
+        right: 40,
+        textAlign: 'center',
+        fontSize: 9,
+        color: '#666',
+        borderTop: '1 solid #ccc',
+        paddingTop: 10,
+      },
     });
+
+    // Create PDF Document
+    const BuildSheetPDF = () => (
+      <Document>
+        <Page size="A4" style={pdfStyles.page}>
+          {/* Header */}
+          <View style={pdfStyles.header}>
+            <Text style={pdfStyles.title}>{currentLocation?.name?.toUpperCase() || 'RESTAURANT'}</Text>
+            <Text style={pdfStyles.subtitle}>Build Sheet - {recipe.name}</Text>
+          </View>
+
+          {/* Menu Period */}
+          <View style={pdfStyles.row}>
+            <Text style={pdfStyles.label}>Menu Period:</Text>
+            <Text style={pdfStyles.value}>{recipe.category?.toUpperCase() || 'STANDARD MENU'}</Text>
+          </View>
+
+          {/* Menu Description */}
+          <View style={pdfStyles.row}>
+            <Text style={pdfStyles.label}>Menu Description:</Text>
+            <Text style={pdfStyles.value}>{recipe.description || recipe.name}</Text>
+          </View>
+
+          {/* Server Description */}
+          <View style={pdfStyles.row}>
+            <Text style={pdfStyles.label}>Server Description:</Text>
+            <Text style={pdfStyles.value}>
+              {recipe.servingSize} serving{recipe.servingSize === 1 ? '' : 's'}. {recipe.description || 'Prepared fresh to order with premium ingredients'}
+            </Text>
+          </View>
+
+          {/* Plate */}
+          <View style={pdfStyles.row}>
+            <Text style={pdfStyles.label}>Plate:</Text>
+            <Text style={pdfStyles.value}>Standard Serving Plate</Text>
+          </View>
+
+          {/* Ingredients Section */}
+          <View style={pdfStyles.section}>
+            <Text style={pdfStyles.sectionTitle}>Ingredients</Text>
+            {ingredients.map((ing: any, index: number) => (
+              <View key={index} style={pdfStyles.checkbox}>
+                <View style={pdfStyles.checkboxSquare} />
+                <Text style={pdfStyles.ingredientText}>
+                  {ing.inventoryItem?.name || 'Unknown Item'} - {ing.quantity} {ing.unit}
+                </Text>
+              </View>
+            ))}
+          </View>
+
+          {/* Kitchen Directions */}
+          <View style={pdfStyles.section}>
+            <Text style={pdfStyles.sectionTitle}>Kitchen Directions</Text>
+            {instructions.map((step: string, index: number) => (
+              <View key={index} style={pdfStyles.step}>
+                <Text style={pdfStyles.stepNumber}>{index + 1}.</Text>
+                <Text style={pdfStyles.stepText}>{step.trim()}</Text>
+              </View>
+            ))}
+            <Text style={{ marginTop: 10, fontSize: 10 }}>
+              Prep Time: {recipe.prepTime} min | Cook Time: {recipe.cookTime} min
+            </Text>
+          </View>
+
+          {/* Service Standards */}
+          <View style={pdfStyles.section}>
+            <Text style={pdfStyles.sectionTitle}>Service Standards</Text>
+            <View style={pdfStyles.checkbox}>
+              <View style={pdfStyles.checkboxSquare} />
+              <Text style={pdfStyles.ingredientText}>Ensure the dish is plated on the inside and tidy on the outside</Text>
+            </View>
+            <View style={pdfStyles.checkbox}>
+              <View style={pdfStyles.checkboxSquare} />
+              <Text style={pdfStyles.ingredientText}>Ensure any cheese is melted</Text>
+            </View>
+            <View style={pdfStyles.checkbox}>
+              <View style={pdfStyles.checkboxSquare} />
+              <Text style={pdfStyles.ingredientText}>Check temperature before serving</Text>
+            </View>
+          </View>
+
+          {/* Potential Allergens */}
+          <View style={pdfStyles.section}>
+            <Text style={pdfStyles.sectionTitle}>Potential Allergens</Text>
+            <Text style={{ fontSize: 10 }}>⚠️ Check ingredient labels for: Gluten, Dairy, Eggs, Nuts, Soy, Shellfish</Text>
+          </View>
+
+          {/* Footer */}
+          <View style={pdfStyles.footer}>
+            <Text>Generated: {new Date().toLocaleDateString()} at {new Date().toLocaleTimeString()}</Text>
+            <Text>Kitchen Use Only - Do Not Remove From Station</Text>
+          </View>
+        </Page>
+      </Document>
+    );
+
+    try {
+      // Generate PDF blob
+      const blob = await pdf(<BuildSheetPDF />).toBlob();
+      
+      // Create download link
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `${recipe.name.replace(/[^a-z0-9]/gi, '_')}_build_sheet.pdf`;
+      link.click();
+      
+      // Clean up
+      setTimeout(() => URL.revokeObjectURL(url), 100);
+
+      toast({
+        title: "Build Sheet Generated",
+        description: `Downloaded ${recipe.name} build sheet PDF for kitchen use`,
+      });
+    } catch (error) {
+      console.error('PDF generation error:', error);
+      toast({
+        title: "Error",
+        description: "Failed to generate PDF. Please try again.",
+        variant: "destructive",
+      });
+    }
   };
 
   const generateCostSheet = async (recipe: any) => {
