@@ -18,6 +18,7 @@ import { isUnauthorizedError } from "@/lib/authUtils";
 import { useLocation } from "@/contexts/LocationContext";
 import { useAuth } from "@/hooks/useAuth";
 import { ObjectUploader } from "@/components/ObjectUploader";
+import { computeLineCost } from "@/lib/unitCost";
 import { z } from "zod";
 
 const recipeFormSchema = z.object({
@@ -327,8 +328,8 @@ ${recipe.sellingPrice ? `Menu Price: $${parseFloat(recipe.sellingPrice).toFixed(
 🧾 INGREDIENT COSTS
 ${ingredients.map((ing: any, index: number) => {
   const itemName = ing.inventoryItem?.name || 'Unknown Item';
-  const unitCost = ing.inventoryItem?.costPerUnit ? parseFloat(ing.inventoryItem.costPerUnit) : 0;
-  const lineCost = parseFloat(ing.quantity) * unitCost;
+  const lineCost = computeLineCost(ing.inventoryItem, Number(ing.quantity), String(ing.unit));
+  const unitCost = lineCost / Math.max(Number(ing.quantity) || 1, 1);
   totalCost += lineCost;
   
   console.log(`Ingredient ${index + 1}:`, {
@@ -463,11 +464,11 @@ For Internal Use Only - Keep Secure
   const calculatePredictivePrice = (currentIngredients: any[]) => {
     let totalCost = 0;
     
-    currentIngredients.forEach(ingredient => {
-      if (ingredient.inventoryItemId && ingredient.quantity > 0) {
-        const item = inventoryItems.find((inv: any) => inv.id === ingredient.inventoryItemId);
+    currentIngredients.forEach(ing => {
+      if (ing.inventoryItemId && ing.quantity > 0 && ing.unit) {
+        const item = inventoryItems.find((inv: any) => inv.id === ing.inventoryItemId);
         if (item) {
-          totalCost += parseFloat(ingredient.quantity) * parseFloat(item.costPerUnit || 0);
+          totalCost += computeLineCost(item, Number(ing.quantity), String(ing.unit));
         }
       }
     });
@@ -643,9 +644,9 @@ For Internal Use Only - Keep Secure
                     name="sellingPrice"
                     render={({ field }) => {
                       const currentCost = ingredients.reduce((total, ing) => {
-                        if (ing.inventoryItemId && ing.quantity > 0) {
+                        if (ing.inventoryItemId && ing.quantity > 0 && ing.unit) {
                           const item = inventoryItems.find((inv: any) => inv.id === ing.inventoryItemId);
-                          return total + (parseFloat(String(ing.quantity)) * parseFloat(item?.costPerUnit || 0));
+                          return total + computeLineCost(item, Number(ing.quantity), String(ing.unit));
                         }
                         return total;
                       }, 0);
@@ -1180,7 +1181,7 @@ For Internal Use Only - Keep Secure
                         <span className="font-medium">Estimated Cost:</span>
                         <span className="font-medium text-green-600">
                           ${selectedRecipe.ingredients.reduce((total: number, ing: any) => 
-                            total + (parseFloat(ing.quantity) * parseFloat(ing.inventoryItem?.costPerUnit || 0)), 0
+                            total + computeLineCost(ing.inventoryItem, Number(ing.quantity), String(ing.unit)), 0
                           ).toFixed(2)}
                         </span>
                       </div>
