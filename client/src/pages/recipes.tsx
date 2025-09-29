@@ -253,30 +253,60 @@ export default function Recipes() {
     
     const ingredients = fullRecipe.ingredients || [];
     
+    // Split instructions into steps
+    const instructions = recipe.instructions.split('\n').filter((line: string) => line.trim());
+    
     const buildSheetContent = `
-═══════════════════════════════════════════════════════════════════════════
-                           ${currentLocation?.name?.toUpperCase() || 'RESTAURANT'}
-                              KITCHEN BUILD SHEET
-═══════════════════════════════════════════════════════════════════════════
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+                    ${currentLocation?.name?.toUpperCase() || 'RESTAURANT'}
+                   BUILD SHEET - ${recipe.name.toUpperCase()}
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-RECIPE: ${recipe.name.toUpperCase()}
-Category: ${recipe.category?.charAt(0).toUpperCase() + recipe.category?.slice(1) || 'N/A'}
-Serves: ${recipe.servingSize} portion${recipe.servingSize === 1 ? '' : 's'}
-Prep Time: ${recipe.prepTime} min  |  Cook Time: ${recipe.cookTime} min
+Menu Period: ${recipe.category?.toUpperCase() || 'STANDARD MENU'}
 
-▓▓▓ INGREDIENTS ▓▓▓
-${ingredients.map((ing: any, index: number) => {
+Menu Description: ${recipe.description || recipe.name}
+
+Server Description: ${recipe.servingSize} serving${recipe.servingSize === 1 ? '' : 's'} 
+${recipe.description || 'Prepared fresh to order with premium ingredients'}
+
+Plate: Standard Serving Plate
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Ingredients
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+${ingredients.map((ing: any) => {
   const itemName = ing.inventoryItem?.name || 'Unknown Item';
-  return `${String(index + 1).padStart(2, '0')}. ${itemName.padEnd(25)} → ${ing.quantity} ${ing.unit}`;
+  return `☐ ${itemName} - ${ing.quantity} ${ing.unit}`;
 }).join('\n')}
 
-▓▓▓ PREPARATION INSTRUCTIONS ▓▓▓
-${recipe.instructions}
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Kitchen Directions
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-═══════════════════════════════════════════════════════════════════════════
+${instructions.map((step: string, index: number) => `${index + 1}. ${step.trim()}`).join('\n')}
+
+Prep Time: ${recipe.prepTime} minutes
+Cook Time: ${recipe.cookTime} minutes
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Service Standards
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+☐ Ensure the dish is plated on the inside and tidy on the outside
+☐ Ensure any cheese is melted
+☐ Check temperature before serving
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Potential Allergens
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+⚠ Check ingredient labels for: Gluten, Dairy, Eggs, Nuts, Soy, Shellfish
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 Generated: ${new Date().toLocaleDateString()} at ${new Date().toLocaleTimeString()}
 Kitchen Use Only - Do Not Remove From Station
-═══════════════════════════════════════════════════════════════════════════
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
     `.trim();
 
     // Create and download the build sheet - mobile-friendly approach
