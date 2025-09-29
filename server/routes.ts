@@ -2016,8 +2016,29 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.put('/api/recipes/:id', isAuthenticated, async (req, res) => {
     try {
       const { id } = req.params;
-      const recipeData = insertRecipeSchema.partial().parse(req.body);
-      const recipe = await storage.updateRecipe(id, recipeData);
+      const { ingredients, ...recipeData } = req.body;
+      const parsedRecipeData = insertRecipeSchema.partial().parse(recipeData);
+      
+      // Update recipe basic data
+      const recipe = await storage.updateRecipe(id, parsedRecipeData);
+      
+      // Update ingredients if provided
+      if (ingredients !== undefined) {
+        // Delete existing ingredients
+        await storage.deleteRecipeIngredients(id);
+        
+        // Add new ingredients
+        if (ingredients.length > 0) {
+          const ingredientsWithRecipeId = ingredients.map((ing: any) => ({
+            recipeId: id,
+            inventoryItemId: ing.inventoryItemId,
+            quantity: ing.quantity,
+            unit: ing.unit
+          }));
+          await storage.addRecipeIngredients(ingredientsWithRecipeId);
+        }
+      }
+      
       res.json(recipe);
     } catch (error) {
       console.error("Error updating recipe:", error);

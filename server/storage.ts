@@ -243,10 +243,13 @@ export interface IStorage {
   getRecipes(): Promise<Recipe[]>;
   getRecipe(id: string): Promise<(Recipe & { ingredients: (RecipeIngredient & { inventoryItem: InventoryItem })[] }) | undefined>;
   createRecipe(recipe: InsertRecipe): Promise<Recipe>;
+  createRecipeWithIngredients(recipeData: InsertRecipe & { ingredients?: InsertRecipeIngredient[] }): Promise<Recipe>;
   updateRecipe(id: string, recipe: Partial<InsertRecipe>): Promise<Recipe>;
   deleteRecipe(id: string): Promise<void>;
   addRecipeIngredient(ingredient: InsertRecipeIngredient): Promise<RecipeIngredient>;
   removeRecipeIngredient(id: string): Promise<void>;
+  deleteRecipeIngredients(recipeId: string): Promise<void>;
+  addRecipeIngredients(ingredients: InsertRecipeIngredient[]): Promise<void>;
 
   // Menu item operations
   getMenuItems(): Promise<MenuItem[]>;
@@ -1370,6 +1373,16 @@ export class DatabaseStorage implements IStorage {
 
   async removeRecipeIngredient(id: string): Promise<void> {
     await db.delete(recipeIngredients).where(eq(recipeIngredients.id, id));
+  }
+
+  async deleteRecipeIngredients(recipeId: string): Promise<void> {
+    await db.delete(recipeIngredients).where(eq(recipeIngredients.recipeId, recipeId));
+  }
+
+  async addRecipeIngredients(ingredients: InsertRecipeIngredient[]): Promise<void> {
+    if (ingredients.length > 0) {
+      await db.insert(recipeIngredients).values(ingredients);
+    }
   }
 
   // Menu item operations

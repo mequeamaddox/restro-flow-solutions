@@ -39,6 +39,7 @@ export default function Recipes() {
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [selectedRecipe, setSelectedRecipe] = useState<any>(null);
   const [isDetailsDialogOpen, setIsDetailsDialogOpen] = useState(false);
+  const [editingRecipeId, setEditingRecipeId] = useState<string | null>(null);
   const [ingredients, setIngredients] = useState([{ inventoryItemId: '', quantity: 0, unit: '' }]);
   const [targetFoodCost, setTargetFoodCost] = useState(30); // 30% default food cost
   const [previewContent, setPreviewContent] = useState<string>('');
@@ -91,11 +92,22 @@ export default function Recipes() {
       if (validIngredients.length === 0) {
         throw new Error('At least one ingredient is required');
       }
-      await apiRequest('POST', '/api/recipes', {
-        ...data,
-        locationId: currentLocation?.id,
-        ingredients: validIngredients
-      });
+      
+      if (editingRecipeId) {
+        // Update existing recipe
+        await apiRequest('PUT', `/api/recipes/${editingRecipeId}`, {
+          ...data,
+          locationId: currentLocation?.id,
+          ingredients: validIngredients
+        });
+      } else {
+        // Create new recipe
+        await apiRequest('POST', '/api/recipes', {
+          ...data,
+          locationId: currentLocation?.id,
+          ingredients: validIngredients
+        });
+      }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/recipes', currentLocation?.id] });
@@ -103,9 +115,10 @@ export default function Recipes() {
       form.reset();
       setIngredients([{ inventoryItemId: '', quantity: 0, unit: '' }]);
       setTargetFoodCost(30);
+      setEditingRecipeId(null);
       toast({
         title: "Success",
-        description: "Recipe created successfully",
+        description: editingRecipeId ? "Recipe updated successfully" : "Recipe created successfully",
       });
     },
     onError: (error: any) => {
@@ -123,7 +136,7 @@ export default function Recipes() {
       console.error('Recipe creation error:', error);
       toast({
         title: "Error",
-        description: error.message || "Failed to create recipe",
+        description: error.message || `Failed to ${editingRecipeId ? 'update' : 'create'} recipe`,
         variant: "destructive",
       });
     },
@@ -501,6 +514,40 @@ For Internal Use Only - Keep Secure
     deleteRecipeMutation.mutate(recipeId);
   };
 
+  const handleEditRecipe = async (recipe: any) => {
+    // Fetch full recipe details including ingredients
+    const response = await fetch(`/api/recipes/${recipe.id}`);
+    const fullRecipe = await response.json();
+    
+    // Populate the form with recipe data
+    form.reset({
+      name: fullRecipe.name,
+      description: fullRecipe.description || '',
+      category: fullRecipe.category,
+      servingSize: fullRecipe.servingSize,
+      prepTime: fullRecipe.prepTime,
+      cookTime: fullRecipe.cookTime,
+      instructions: fullRecipe.instructions,
+      sellingPrice: fullRecipe.sellingPrice ? parseFloat(fullRecipe.sellingPrice) : 0
+    });
+    
+    // Populate ingredients
+    if (fullRecipe.ingredients && fullRecipe.ingredients.length > 0) {
+      setIngredients(fullRecipe.ingredients.map((ing: any) => ({
+        inventoryItemId: ing.inventoryItemId,
+        quantity: parseFloat(ing.quantity),
+        unit: ing.unit
+      })));
+    }
+    
+    // Set editing mode
+    setEditingRecipeId(recipe.id);
+    
+    // Close details dialog and open edit dialog
+    setIsDetailsDialogOpen(false);
+    setIsCreateDialogOpen(true);
+  };
+
   const filteredRecipes = recipes.filter((recipe: any) =>
     recipe.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
     recipe.description?.toLowerCase().includes(searchTerm.toLowerCase())
@@ -514,16 +561,30 @@ For Internal Use Only - Keep Secure
           <h1 className="text-xl lg:text-3xl font-bold text-white">Recipes & Menu Costing</h1>
           <p className="text-xs lg:text-sm text-slate-400 mt-1">Manage recipes and calculate food costs</p>
         </div>
-        <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
+        <Dialog open={isCreateDialogOpen} onOpenChange={(open) => {
+          setIsCreateDialogOpen(open);
+          if (!open) {
+            // Reset when closing
+            setEditingRecipeId(null);
+            form.reset();
+            setIngredients([{ inventoryItemId: '', quantity: 0, unit: '' }]);
+            setTargetFoodCost(30);
+          }
+        }}>
           <DialogTrigger asChild>
-            <Button className="bg-blue-600 hover:bg-blue-700 text-white">
+            <Button className="bg-blue-600 hover:bg-blue-700 text-white" onClick={() => {
+              setEditingRecipeId(null);
+              form.reset();
+              setIngredients([{ inventoryItemId: '', quantity: 0, unit: '' }]);
+              setTargetFoodCost(30);
+            }}>
               <Plus className="h-4 w-4 mr-2" />
               Add Recipe
             </Button>
           </DialogTrigger>
           <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-hidden">
             <DialogHeader>
-              <DialogTitle>Create New Recipe</DialogTitle>
+              <DialogTitle>{editingRecipeId ? 'Edit Recipe' : 'Create New Recipe'}</DialogTitle>
             </DialogHeader>
             <Form {...form}>
               <form onSubmit={form.handleSubmit(onSubmit)} className="flex flex-col max-h-[75vh]">
@@ -1231,9 +1292,14 @@ For Internal Use Only - Keep Secure
                   </AlertDialogFooter>
                 </AlertDialogContent>
               </AlertDialog>
-              <Button onClick={() => setIsDetailsDialogOpen(false)}>
-                Close
-              </Button>
+              <div className="flex gap-2">
+                <Button variant="outline" onClick={() => handleEditRecipe(selectedRecipe)}>
+                  Edit Recipe
+                </Button>
+                <Button onClick={() => setIsDetailsDialogOpen(false)}>
+                  Close
+                </Button>
+              </div>
             </div>
           )}
         </DialogContent>
