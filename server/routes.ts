@@ -1694,7 +1694,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const categories = await storage.getCategories();
       const vendors = await storage.getVendors(locationId);
 
-      const stream = Readable.from(req.file.buffer);
+      // Handle vendor CSVs with header rows before the actual column headers
+      const csvText = req.file.buffer.toString('utf-8');
+      const lines = csvText.split('\n');
+      
+      // Find the line with actual column headers (containing "Product Description" or "Pack Size")
+      let headerLineIndex = 0;
+      for (let i = 0; i < Math.min(20, lines.length); i++) {
+        const line = lines[i].toLowerCase();
+        if (line.includes('product description') || 
+            (line.includes('pack') && line.includes('size')) ||
+            line.includes('category name')) {
+          headerLineIndex = i;
+          console.log(`📍 Found actual CSV headers at line ${i + 1}`);
+          break;
+        }
+      }
+
+      // Parse CSV starting from the header line
+      const csvDataToRead = lines.slice(headerLineIndex).join('\n');
+      const stream = Readable.from(Buffer.from(csvDataToRead, 'utf-8'));
       
       await new Promise<void>((resolve, reject) => {
         stream
