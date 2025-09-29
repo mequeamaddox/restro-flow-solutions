@@ -14,12 +14,14 @@ import {
   recipes,
   wasteEntries,
   posSales,
-  users
+  users,
+  vendorPriceCatalog
 } from "@shared/schema";
 import { posService } from "./posService";
 import { OCRService } from "./ocrService";
 import { varianceService } from "./varianceService";
 import { ObjectStorageService, ObjectNotFoundError } from "./objectStorage";
+import { parseVendorCsvRow } from "./packSizeParser";
 import fs from 'fs';
 import path from 'path';
 import {
@@ -1663,10 +1665,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // CSV Import for inventory items
+  // CSV Import for inventory items - Enhanced with vendor invoice format support
   app.post('/api/inventory/import', isAuthenticated, csvUpload.single('file'), async (req, res) => {
     try {
       const locationId = req.body.locationId;
+      const vendorId = req.body.vendorId;
       const userId = req.user!.id;
       
       if (!locationId) {
@@ -1680,18 +1683,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.log('📁 CSV Import started:', {
         fileName: req.file.originalname,
         fileSize: req.file.size,
-        locationId
+        locationId,
+        vendorId
       });
 
       const results: any[] = [];
-      const errors: Array<{ row: number; field: string; message: string }> = [];
+      const errors: Array<{ row: number; field: string; message: string; warning?: boolean }> = [];
       let rowNumber = 0;
 
-      // Fetch categories and vendors for mapping
       const categories = await storage.getCategories();
       const vendors = await storage.getVendors(locationId);
 
-      // Parse CSV file
       const stream = Readable.from(req.file.buffer);
       
       await new Promise<void>((resolve, reject) => {
@@ -1713,91 +1715,200 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       let successCount = 0;
       let failedCount = 0;
+      
+      const firstRow = results[0]?.data || {};
+      const columnNames = Object.keys(firstRow).map(k => k.toLowerCase().trim());
+      
+      const hasSizeColumn = columnNames.some(col => 
+        col.includes('pack') || col.includes('size') || 
+        col.match(/\b(pack|size|pkg|ct|count)\b/)
+      );
+      
+      let detectedFormat = 'standard';
+      if (hasSizeColumn) {
+        const sampleRows = results.slice(0, Math.min(10, results.length));
+        let vendorParseSuccesses = 0;
+        
+        for (const result of sampleRows) {
+          const parsed = parseVendorCsvRow(result.data);
+          if (parsed && parsed.parsed.parseSuccess) {
+            vendorParseSuccesses++;
+          }
+        }
+        
+        const successRate = vendorParseSuccesses / sampleRows.length;
+        if (successRate >= 0.5) {
+          detectedFormat = 'vendor';
+        }
+      }
+      
+      console.log(`📋 Detected CSV format: ${detectedFormat} (columns: ${columnNames.slice(0, 5).join(', ')}...)`);
 
-      // Process each row
       for (const result of results) {
         const { rowNumber, data } = result;
         const row = data;
 
         try {
-          // Validate required fields
-          if (!row.name || row.name.trim() === '') {
-            errors.push({ row: rowNumber, field: 'name', message: 'Name is required' });
-            failedCount++;
-            continue;
-          }
+          let itemData: any;
+          let vendorPricingData: any = null;
 
-          if (!row.quantity || isNaN(parseFloat(row.quantity))) {
-            errors.push({ row: rowNumber, field: 'quantity', message: 'Valid quantity is required' });
-            failedCount++;
-            continue;
-          }
-
-          if (!row.unit || row.unit.trim() === '') {
-            errors.push({ row: rowNumber, field: 'unit', message: 'Unit is required' });
-            failedCount++;
-            continue;
-          }
-
-          if (!row.costPerUnit || isNaN(parseFloat(row.costPerUnit))) {
-            errors.push({ row: rowNumber, field: 'costPerUnit', message: 'Valid cost per unit is required' });
-            failedCount++;
-            continue;
-          }
-
-          // Map category name to categoryId
-          let categoryId = null;
-          if (row.categoryName && row.categoryName.trim() !== '') {
-            const category = categories.find(c => c.name.toLowerCase() === row.categoryName.trim().toLowerCase());
-            if (!category) {
-              errors.push({ row: rowNumber, field: 'categoryName', message: `Category '${row.categoryName}' not found` });
+          if (detectedFormat === 'vendor') {
+            const parsed = parseVendorCsvRow(row);
+            
+            if (!parsed) {
+              errors.push({ row: rowNumber, field: 'general', message: 'Missing required fields for vendor format' });
               failedCount++;
               continue;
             }
-            categoryId = category.id;
-          }
 
-          // Map vendor name to vendorId
-          let vendorId = null;
-          if (row.vendorName && row.vendorName.trim() !== '') {
-            const vendor = vendors.find(v => v.name.toLowerCase() === row.vendorName.trim().toLowerCase());
-            if (!vendor) {
-              errors.push({ row: rowNumber, field: 'vendorName', message: `Vendor '${row.vendorName}' not found` });
+            if (!parsed.parsed.parseSuccess) {
+              errors.push({ 
+                row: rowNumber, 
+                field: 'Pack Size', 
+                message: parsed.parsed.parseError || 'Failed to parse pack size',
+                warning: true
+              });
+            }
+
+            if (parsed.costs.costMismatch) {
+              errors.push({
+                row: rowNumber,
+                field: 'Per Unit Cost',
+                message: `Cost mismatch: Calculated $${parsed.costs.perPieceCost?.toFixed(4)} vs Vendor $${parsed.vendorPerUnitCost?.toFixed(4)} (${parsed.costs.costMismatchPercent?.toFixed(1)}% diff)`,
+                warning: true
+              });
+            }
+
+            let selectedVendorId = vendorId;
+            if (!selectedVendorId && vendors.length > 0) {
+              selectedVendorId = vendors[0].id;
+            }
+
+            const categoryMatch = categories.find(c => {
+              const itemNameLower = parsed.itemName.toLowerCase();
+              const categoryLower = c.name.toLowerCase();
+              return itemNameLower.includes(categoryLower) || categoryLower.includes(itemNameLower.split(' ')[0]);
+            });
+
+            itemData = {
+              name: parsed.itemName.trim(),
+              description: `${parsed.rawPackSize} ${parsed.purchaseUom}`,
+              categoryId: categoryMatch?.id || null,
+              vendorId: selectedVendorId,
+              locationId,
+              quantity: "0",
+              unit: parsed.purchaseUom || 'case',
+              costPerUnit: parsed.caseCost.toString(),
+              purchaseUnit: parsed.purchaseUom || 'case',
+              recipeUnit: parsed.parsed.innerUnit || 'oz',
+              conversionFactor: parsed.parsed.totalBaseUnits?.toString() || "1",
+              costPerPurchaseUnit: parsed.caseCost.toString(),
+              reorderLevel: "0",
+              barcode: parsed.vendorSku || null,
+            };
+
+            if (selectedVendorId && parsed.parsed.parseSuccess) {
+              vendorPricingData = {
+                vendorId: selectedVendorId,
+                costPerUnit: parsed.caseCost.toString(),
+                unit: parsed.purchaseUom || 'case',
+                caseCost: parsed.caseCost.toString(),
+                purchaseUom: parsed.purchaseUom || 'case',
+                packQty: parsed.parsed.packQty,
+                innerSize: parsed.parsed.innerSize?.toString(),
+                innerUnit: parsed.parsed.innerUnit,
+                perPieceCost: parsed.costs.perPieceCost?.toString(),
+                perBaseUnitCost: parsed.costs.perBaseUnitCost?.toString(),
+                totalBaseUnits: parsed.parsed.totalBaseUnits?.toString(),
+                vendorSku: parsed.vendorSku,
+                packSizeRaw: parsed.rawPackSize,
+              };
+            }
+          } else {
+            if (!row.name || row.name.trim() === '') {
+              errors.push({ row: rowNumber, field: 'name', message: 'Name is required' });
               failedCount++;
               continue;
             }
-            vendorId = vendor.id;
+
+            if (!row.quantity || isNaN(parseFloat(row.quantity))) {
+              errors.push({ row: rowNumber, field: 'quantity', message: 'Valid quantity is required' });
+              failedCount++;
+              continue;
+            }
+
+            if (!row.unit || row.unit.trim() === '') {
+              errors.push({ row: rowNumber, field: 'unit', message: 'Unit is required' });
+              failedCount++;
+              continue;
+            }
+
+            if (!row.costPerUnit || isNaN(parseFloat(row.costPerUnit))) {
+              errors.push({ row: rowNumber, field: 'costPerUnit', message: 'Valid cost per unit is required' });
+              failedCount++;
+              continue;
+            }
+
+            let categoryId = null;
+            if (row.categoryName && row.categoryName.trim() !== '') {
+              const category = categories.find(c => c.name.toLowerCase() === row.categoryName.trim().toLowerCase());
+              if (!category) {
+                errors.push({ row: rowNumber, field: 'categoryName', message: `Category '${row.categoryName}' not found` });
+                failedCount++;
+                continue;
+              }
+              categoryId = category.id;
+            }
+
+            let selectedVendorId = null;
+            if (row.vendorName && row.vendorName.trim() !== '') {
+              const vendor = vendors.find(v => v.name.toLowerCase() === row.vendorName.trim().toLowerCase());
+              if (!vendor) {
+                errors.push({ row: rowNumber, field: 'vendorName', message: `Vendor '${row.vendorName}' not found` });
+                failedCount++;
+                continue;
+              }
+              selectedVendorId = vendor.id;
+            }
+
+            itemData = {
+              name: row.name.trim(),
+              description: row.description?.trim() || null,
+              categoryId,
+              vendorId: selectedVendorId,
+              locationId,
+              quantity: parseFloat(row.quantity).toString(),
+              unit: row.unit.trim(),
+              costPerUnit: parseFloat(row.costPerUnit).toString(),
+              reorderLevel: row.reorderLevel ? parseFloat(row.reorderLevel).toString() : "0",
+              barcode: row.sku?.trim() || null,
+            };
           }
 
-          // Prepare item data
-          const itemData: any = {
-            name: row.name.trim(),
-            description: row.description?.trim() || null,
-            categoryId,
-            vendorId,
-            locationId,
-            quantity: parseFloat(row.quantity).toString(),
-            unit: row.unit.trim(),
-            costPerUnit: parseFloat(row.costPerUnit).toString(),
-            reorderLevel: row.reorderLevel ? parseFloat(row.reorderLevel).toString() : "0",
-            sku: row.sku?.trim() || null,
-          };
-
-          // Validate with schema
           const validatedData = insertInventoryItemSchema.parse(itemData);
-
-          // Insert into database
           const item = await storage.createInventoryItem(validatedData);
 
-          // Create inventory transaction for initial stock
-          await storage.createInventoryTransaction({
-            inventoryItemId: item.id,
-            locationId,
-            type: "in",
-            quantity: validatedData.quantity?.toString() || "0",
-            reference: "CSV Import",
-            createdBy: userId,
-          });
+          if (vendorPricingData && item.id) {
+            try {
+              await db.insert(vendorPriceCatalog).values({
+                ...vendorPricingData,
+                inventoryItemId: item.id,
+              });
+            } catch (vpError) {
+              console.error('Failed to create vendor pricing:', vpError);
+            }
+          }
+
+          if (detectedFormat === 'standard' && parseFloat(validatedData.quantity || "0") > 0) {
+            await storage.createInventoryTransaction({
+              inventoryItemId: item.id,
+              locationId,
+              type: "in",
+              quantity: validatedData.quantity?.toString() || "0",
+              reference: "CSV Import",
+              createdBy: userId,
+            });
+          }
 
           successCount++;
         } catch (error: any) {
@@ -1816,8 +1927,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json({
         success: successCount,
         failed: failedCount,
-        errors: errors.slice(0, 100), // Limit errors to first 100
-        totalRows: results.length
+        errors: errors.slice(0, 100),
+        totalRows: results.length,
+        format: detectedFormat
       });
     } catch (error: any) {
       console.error("Error importing CSV:", error);

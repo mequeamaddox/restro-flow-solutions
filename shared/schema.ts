@@ -93,8 +93,25 @@ export const vendorPriceCatalog = pgTable("vendor_price_catalog", {
   id: uuid("id").primaryKey().default(sql`gen_random_uuid()`),
   inventoryItemId: uuid("inventory_item_id").references(() => inventoryItems.id).notNull(),
   vendorId: uuid("vendor_id").references(() => vendors.id).notNull(),
+  
+  // Legacy fields (backward compatibility)
   costPerUnit: decimal("cost_per_unit", { precision: 10, scale: 2 }).notNull(),
   unit: varchar("unit", { length: 20 }).notNull(),
+  
+  // Enhanced pack size tracking
+  caseCost: decimal("case_cost", { precision: 10, scale: 2 }), // Full case/purchase unit price
+  purchaseUom: varchar("purchase_uom", { length: 20 }), // CS, BX, BG, EA, etc.
+  packQty: integer("pack_qty"), // Number of inner items (24 in "24x12 oz")
+  innerSize: decimal("inner_size", { precision: 10, scale: 4 }), // Size of each inner item (12 in "24x12 oz")
+  innerUnit: varchar("inner_unit", { length: 20 }), // Unit of inner item (oz in "24x12 oz")
+  perPieceCost: decimal("per_piece_cost", { precision: 10, scale: 4 }), // Cost per individual piece
+  perBaseUnitCost: decimal("per_base_unit_cost", { precision: 10, scale: 6 }), // Cost per oz/lb/etc
+  totalBaseUnits: decimal("total_base_units", { precision: 10, scale: 4 }), // Total oz/lb per case
+  
+  // Vendor product identifiers
+  vendorSku: varchar("vendor_sku", { length: 100 }), // Vendor's product number
+  packSizeRaw: varchar("pack_size_raw", { length: 100 }), // Original pack size string from vendor
+  
   minimumOrderQuantity: decimal("minimum_order_quantity", { precision: 10, scale: 2 }).default("1"),
   leadTimeDays: integer("lead_time_days").default(0),
   isPreferredVendor: boolean("is_preferred_vendor").default(false),
