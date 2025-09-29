@@ -86,19 +86,33 @@ export default function Inventory() {
   const averageValue = totalItems > 0 ? totalValue / totalItems : 0;
 
   return (
-    <div className="p-4 lg:p-6 space-y-6 bg-slate-950 min-h-screen">
+    <div className="p-3 lg:p-6 space-y-4 lg:space-y-6 bg-slate-950 min-h-screen">
       {/* Location Banner */}
       <LocationBanner />
       
-      {/* Page Header */}
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-        <div>
-          <h1 className="text-3xl font-bold text-white">Inventory Management</h1>
-          <p className="text-slate-400 mt-1">
-            {currentLocation ? `Managing inventory for ${currentLocation.name}` : 'Select a location to view inventory'}
-          </p>
+      {/* Page Header - Mobile optimized */}
+      <div className="flex flex-col space-y-3">
+        <div className="flex items-start justify-between">
+          <div>
+            <h1 className="text-xl lg:text-3xl font-bold text-white">Inventory</h1>
+            <p className="text-xs lg:text-sm text-slate-400 mt-1">
+              {currentLocation ? currentLocation.name : 'Select location'}
+            </p>
+          </div>
+          {/* Mobile: Primary add button */}
+          <Button 
+            onClick={() => setIsAddDialogOpen(true)}
+            size="sm"
+            className="lg:hidden bg-gradient-to-r from-orange-500 to-red-600 hover:from-orange-600 hover:to-red-700 text-white shadow-lg"
+            disabled={!currentLocation}
+            data-testid="button-add-item-mobile"
+          >
+            <Plus className="h-5 w-5" />
+          </Button>
         </div>
-        <div className="flex flex-wrap gap-2">
+        
+        {/* Desktop: Action buttons */}
+        <div className="hidden lg:flex flex-wrap gap-2">
           <Button 
             variant="outline"
             className="border-slate-600 text-slate-300 hover:bg-slate-800"
@@ -125,6 +139,30 @@ export default function Inventory() {
           >
             <Plus className="h-4 w-4 mr-2" />
             Add Item
+          </Button>
+        </div>
+        
+        {/* Mobile: Quick action buttons */}
+        <div className="lg:hidden flex gap-2 overflow-x-auto pb-2 scrollbar-hide">
+          <Button 
+            onClick={() => setIsCsvImportDialogOpen(true)}
+            size="sm"
+            variant="outline"
+            className="flex-shrink-0 border-slate-600 text-slate-300 hover:bg-slate-800"
+            disabled={!currentLocation}
+            data-testid="button-import-mobile"
+          >
+            <Upload className="h-4 w-4 mr-2" />
+            Import
+          </Button>
+          <Button 
+            size="sm"
+            variant="outline"
+            className="flex-shrink-0 border-slate-600 text-slate-300 hover:bg-slate-800"
+            disabled={!currentLocation}
+          >
+            <Download className="h-4 w-4 mr-2" />
+            Export
           </Button>
         </div>
       </div>

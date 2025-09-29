@@ -2,101 +2,13 @@
 
 ## Overview
 
-RestroFlow is a comprehensive enterprise-grade restaurant operations platform built with a modern full-stack architecture. The core system provides inventory management, OCR invoice processing, real-time analytics, and cost monitoring. The platform features a modular add-on architecture enabling restaurants to scale functionality as they grow.
+RestroFlow is a comprehensive enterprise-grade restaurant operations platform designed to streamline operations with inventory management, OCR invoice processing, real-time analytics, and cost monitoring. The platform features a modular add-on architecture for scalability.
 
-**Core Platform**: Inventory tracking, recipe costing, vendor management, purchase orders, waste tracking, OCR invoice processing with subscription-based monetization, and real-time business intelligence.
+**Core Platform**: Offers inventory tracking, recipe costing, vendor management, purchase orders, waste tracking, subscription-based OCR invoice processing, and real-time business intelligence. Key enhancements include AI-powered demand forecasting, automated ordering, and intelligent cost optimization.
 
-**Employee Management Add-on**: Comprehensive HR system including scheduling, task management, team messaging, performance tracking, time clock functionality, and payroll integration.
+**Employee Management Add-on**: Provides a comprehensive HR system with scheduling, task management, team messaging, performance tracking, time clock functionality, and payroll integration.
 
-The system features a React-based frontend with TypeScript, a Node.js/Express backend, PostgreSQL database with Drizzle ORM, enterprise-grade security middleware, comprehensive audit logging, real-time cost monitoring, and automated alerting systems.
-
-## Latest Enterprise Features (August 2025)
-
-### Employee Management Add-on Architecture (August 2025)
-- **Modular Business Model**: Core platform ($179/month) + Employee Management Add-on ($79/month) for scalable revenue growth
-- **Comprehensive HR System**: Employee directory, scheduling, task management, team messaging, performance tracking, and time clock functionality
-- **Multi-location Support**: Department-based organization with location-specific employee management and cross-location analytics
-- **Advanced Scheduling**: Drag-and-drop schedule builder, availability management, conflict detection, and time-off request workflows
-- **Task Management System**: Assignment tracking, completion verification, recurring tasks, and performance metrics integration
-- **Team Communication**: Real-time messaging, announcements, notification center, and conversation threading
-- **Performance Analytics**: Employee reviews, productivity tracking, labor cost analysis, and attendance monitoring
-- **Security & Compliance**: Role-based access control, PII protection, audit logging, and GDPR/CCPA compliance features
-
-## Latest Enterprise Features (August 2025)
-
-### Advanced Enterprise AI Features (August 2025)
-- **Real-Time Analytics Dashboard**: Live performance monitoring with automated alerts, current sales tracking, kitchen wait times, and real-time inventory warnings
-- **AI-Powered Demand Forecasting**: Machine learning-based demand prediction using sales history, weather patterns, events, and seasonality with 91% accuracy
-- **Automated Ordering System**: AI-driven purchase order automation with consumption pattern analysis, vendor optimization, and automatic reorder rules
-- **Intelligent Cost Optimization**: Real-time price monitoring, waste spike detection, and automated cost-saving recommendations
-- **Live Business Intelligence**: Real-time waste breakdown tracking, performance benchmarking, and instant profitability analysis
-- **Enterprise Navigation**: Enhanced sidebar with feature badges (LIVE, AI, AUTO, OCR) and streamlined access to premium capabilities
-
-## Recent Enterprise Fortification (August 2025)
-
-Following MarginEdge platform analysis, RestroFlow has been enhanced with:
-
-### Premium OCR Monetization System (August 2025)
-- **Subscription-Based OCR Access**: OCR processing moved to premium tiers for revenue generation
-- **Free Tier Limitations**: 5 OCR credits per month for basic PDF text extraction only
-- **Premium Unlimited Access**: Professional and Enterprise plans include unlimited OCR processing
-- **Advanced OCR Features**: Image recognition and scanned invoice processing restricted to premium users
-- **Credit Tracking System**: Real-time monitoring of OCR usage with database-backed credit management
-- **Upgrade Prompts**: Intelligent UI messaging encouraging free users to upgrade for advanced features
-- **Revenue Model**: Freemium approach where basic users can upgrade to unlock full OCR capabilities
-
-### Invoice Processing System Implementation (August 2025)
-- **Real Database Operations**: Replaced mock invoice data with actual PostgreSQL database operations for invoice creation, reading, and statistics
-- **Advanced Free OCR Processing**: Comprehensive PDF-to-image conversion with enhanced Tesseract OCR for multi-page scanned invoices
-- **Smart Processing Pipeline**: Automatic text extraction for text-based PDFs, fallback to OCR for scanned documents
-- **Multi-page PDF Support**: Converts PDF pages to high-resolution images (200 DPI) for optimal OCR accuracy
-- **Enhanced Tesseract Configuration**: Optimized OCR settings for invoice processing with character whitelisting and LSTM engine
-- **Data Sanitization**: Robust text processing to handle binary content and prevent UTF-8 encoding errors in database storage
-- **Expandable Detail Views**: Fully functional invoice detail dialogs showing complete information including OCR confidence, vendor details, and processing notes
-- **Real-time Statistics**: Database-driven invoice counts and statistics replacing mock data for accurate dashboard metrics
-
-### SEO Optimization for Market Visibility (August 2025)
-- **Search Engine Optimization**: Comprehensive SEO implementation targeting "inventory management software" keywords
-- **Meta Tags & Structured Data**: Complete HTML meta tags, Open Graph, Twitter Cards, and Schema.org structured data
-- **Content Marketing Optimization**: Landing page redesigned with strategic keyword placement and semantic SEO
-- **Performance Focus**: Optimized for ranking on search engines for restaurant inventory management solutions
-- **User Experience Enhancement**: Problem/solution sections, social proof, and conversion-optimized call-to-action
-
-### Custom Landing Page Design (August 2025)
-- **Unique Visual Identity**: Dark theme with gradient backgrounds and custom color schemes to stand out from competitors
-- **Restaurant-Focused Branding**: Bold, personality-driven copy that speaks directly to restaurant owners' pain points
-- **Interactive Elements**: Hover effects, gradient animations, and unique card designs for better engagement
-- **Authentic Testimonials**: Real customer stories and specific savings numbers instead of generic testimonials
-- **Conversion Optimization**: Urgency-driven CTAs and benefit-focused messaging throughout the page
-
-### Competitive Pricing Strategy (August 2025)
-- **MarginEdge Analysis**: Direct competitor pricing research ($330/month standard, $480/month with Freepour)
-- **Modular Pricing Advantage**: Core RestroFlow $179/month + HR Add-on $79/month = $258/month (22% savings vs MarginEdge)
-- **Professional Plan**: $179/month ($143 annual) vs MarginEdge $330/month - saves $1,848/year per location
-- **Add-on Revenue Model**: Employee Management add-on increases ARPU by 44% while maintaining cost advantage
-- **Annual Discounts**: 20% discount for annual subscriptions across all plans
-- **Feature Differentiation**: Combined inventory + HR platform vs competitors' single-focus solutions
-- **Interactive Pricing**: Monthly/Annual billing toggle with real-time savings calculations
-
-### Enterprise Security Features
-- **SOC2-style Security Standards**: Rate limiting, security headers (Helmet), input validation
-- **Comprehensive Audit Logging**: All user actions and data changes tracked with full context
-- **Security Event Monitoring**: Real-time logging of authentication, authorization, and suspicious activities
-- **Role-based Access Control**: Granular permissions system with location-specific access controls
-- **Data Encryption & Privacy**: Sensitive data sanitization and secure transmission protocols
-
-### Advanced Analytics & Business Intelligence
-- **Real-time Cost Monitoring**: Automated tracking of food costs, waste percentages, and margin analysis
-- **Daily Business Intelligence Reports**: Comprehensive P&L analysis with trend calculations
-- **Intelligent Cost Alerts**: Automated alerts for price variances, budget overruns, and waste thresholds
-- **Performance Benchmarking**: Industry-standard targets and variance tracking
-- **MarginEdge-style Reporting**: Daily controllable P&L, theoretical vs actual analysis, multi-location comparison
-
-### Automated Cost Control
-- **Price Monitoring**: Automatic tracking of ingredient price changes with threshold-based alerts
-- **Comprehensive Waste Tracking**: Real-time tracking of all waste types including plate waste (customer leftovers), kitchen waste, prep waste, and spoilage
-- **Inventory Turnover Analysis**: Automated calculation of inventory efficiency metrics
-- **Budget Management**: Period-based budget tracking with variance analysis
+The platform also includes a Progressive Web App (PWA) for mobile-first management, advanced enterprise AI features for demand forecasting and cost optimization, and a robust security framework.
 
 ## User Preferences
 
@@ -109,66 +21,49 @@ Business Strategy: Modular add-on approach for employee management to enable sca
 
 ## System Architecture
 
-### Frontend Architecture
-- **Framework**: React 18 with TypeScript and Vite for development/build tooling
-- **UI Framework**: shadcn/ui components built on Radix UI primitives with Tailwind CSS styling
-- **State Management**: TanStack Query (React Query) for server state management and caching
-- **Routing**: Wouter for lightweight client-side routing
-- **Forms**: React Hook Form with Zod schema validation for type-safe form handling
-- **Build System**: Vite with custom configuration supporting path aliases and development overlays
+### UI/UX Decisions
+- **Mobile App**: Progressive Web App (PWA) with mobile-first navigation, touch-optimized interface, responsive dashboard, and role-based UX.
+- **Visual Identity**: Dark theme with gradient backgrounds, custom color schemes, and interactive elements.
+- **User Experience**: Problem/solution sections, social proof, and conversion-optimized calls-to-action on landing pages.
+- **Reporting**: Single Analytics & Reports page for streamlined navigation.
 
-### Backend Architecture
-- **Runtime**: Node.js with Express.js framework using ES modules
-- **Database ORM**: Drizzle ORM with PostgreSQL dialect for type-safe database operations
-- **Authentication**: Replit's OpenID Connect integration with Passport.js strategy
-- **Session Management**: Express sessions stored in PostgreSQL using connect-pg-simple
-- **Database Provider**: Neon PostgreSQL with serverless connection pooling
-- **API Design**: RESTful endpoints following conventional HTTP methods and status codes
+### Technical Implementations
+- **Frontend**: React 18 with TypeScript and Vite, utilizing shadcn/ui (Radix UI + Tailwind CSS), TanStack Query for state management, Wouter for routing, and React Hook Form with Zod for forms.
+- **Backend**: Node.js with Express.js (ES modules), Drizzle ORM (PostgreSQL dialect), and Replit's OpenID Connect integration with Passport.js for authentication.
+- **Database**: PostgreSQL on Neon, using Drizzle for schema management and migrations.
+- **Authentication**: Replit OIDC, server-side sessions with secure HTTP-only cookies, automatic user management, and basic role-based access control.
+- **Security**: SOC2-style standards including rate limiting, security headers, input validation, comprehensive audit logging, and role-based access control.
+- **Monetization**: Subscription-based OCR access with a freemium model and credit tracking.
+- **Invoice Processing**: Real database operations for invoice creation/statistics, advanced free OCR (PDF-to-image conversion, Tesseract), multi-page PDF support, and data sanitization.
+- **AI Features**: Real-time analytics with alerts, AI-powered demand forecasting, automated ordering, and intelligent cost optimization.
+- **SEO**: Comprehensive meta tags, Open Graph, Twitter Cards, Schema.org, and content optimization.
+- **Pricing Strategy**: Modular pricing with competitive analysis against MarginEdge, offering savings and annual discounts.
 
-### Data Storage Solutions
-- **Primary Database**: PostgreSQL hosted on Neon with connection pooling
-- **Schema Management**: Drizzle migrations with schema defined in TypeScript
-- **Session Storage**: Database-backed sessions for authentication persistence
-- **Data Modeling**: Comprehensive relational schema covering inventory, recipes, vendors, purchase orders, and waste tracking
-
-### Authentication and Authorization
-- **Provider**: Replit OpenID Connect (OIDC) integration
-- **Session Strategy**: Server-side sessions with secure HTTP-only cookies
-- **User Management**: Automatic user creation/updates on authentication
-- **Role System**: Basic role-based access (admin, manager, staff)
-- **Security**: HTTPS-only cookies with secure session configuration
-
-### Database Schema Design
-The system uses a normalized relational database design with the following core entities:
-- **Users**: Authentication and user profile management
-- **Categories**: Hierarchical organization of inventory items
-- **Vendors**: Supplier information and contact management
-- **Inventory Items**: Core product catalog with quantities, costs, and reorder levels
-- **Recipes**: Menu items with ingredient breakdowns and costing
-- **Purchase Orders**: Procurement workflow with line items and status tracking
-- **Waste Tracking**: Loss recording with categorization and cost analysis
-- **Inventory Transactions**: Audit trail for all stock movements
+### System Design Choices
+- **Modular Architecture**: Core platform with add-ons (e.g., Employee Management) for scalable functionality and revenue growth.
+- **Real-time Capabilities**: Real-time cost monitoring, analytics, and alerting systems.
+- **Data Model**: Normalized relational database schema covering inventory, recipes, vendors, purchase orders, waste tracking, and transactions.
 
 ## External Dependencies
 
 ### Database Services
-- **Neon PostgreSQL**: Serverless PostgreSQL hosting with connection pooling and WebSocket support for real-time features
+- **Neon PostgreSQL**: Serverless PostgreSQL hosting with connection pooling.
 
 ### Authentication Services
-- **Replit OIDC**: OpenID Connect authentication provider integrated with Replit's user system
+- **Replit OIDC**: OpenID Connect authentication provider.
 
 ### Frontend Libraries
-- **Radix UI**: Comprehensive set of accessible UI primitives for building the component library
-- **Tailwind CSS**: Utility-first CSS framework for responsive design and consistent styling
-- **TanStack Query**: Server state management with caching, background updates, and optimistic updates
-- **React Hook Form**: Performant form library with minimal re-renders and built-in validation
+- **Radix UI**: Accessible UI primitives.
+- **Tailwind CSS**: Utility-first CSS framework.
+- **TanStack Query**: Server state management.
+- **React Hook Form**: Form management with validation.
 
 ### Development Tools
-- **Vite**: Fast development server and build tool with HMR and TypeScript support
-- **Drizzle Kit**: Database migration and schema management tooling
-- **TypeScript**: Static type checking across the entire application stack
+- **Vite**: Fast development server and build tool.
+- **Drizzle Kit**: Database migration and schema management.
+- **TypeScript**: Static type checking.
 
 ### Utility Libraries
-- **date-fns**: Date manipulation and formatting utilities
-- **Zod**: Runtime type validation and schema definition
-- **clsx/twMerge**: Conditional CSS class utilities for dynamic styling
+- **date-fns**: Date manipulation.
+- **Zod**: Runtime type validation.
+- **clsx/twMerge**: Conditional CSS class utilities.
