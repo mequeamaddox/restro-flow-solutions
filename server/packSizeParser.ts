@@ -255,7 +255,7 @@ function findColumnValue(row: any, ...possibleNames: string[]): string {
   return '';
 }
 
-export function parseVendorCsvRow(row: any): {
+export function parseVendorCsvRow(row: any, debug = false): {
   parsed: PackSizeParseResult;
   costs: CostCalculations;
   itemName: string;
@@ -265,6 +265,10 @@ export function parseVendorCsvRow(row: any): {
   caseCost: number;
   vendorPerUnitCost?: number;
 } | null {
+  if (debug) {
+    console.log(`🔍 CSV Row columns: ${Object.keys(row).join(', ')}`);
+  }
+  
   const itemName = findColumnValue(row, 
     'Product Description', 'product description', 'description',
     'Company Product ID Brand', 'product name', 'item name', 'name', 
@@ -297,7 +301,14 @@ export function parseVendorCsvRow(row: any): {
     'each cost', 'ea cost', 'per piece', 'per each'
   );
 
+  if (debug) {
+    console.log(`   Found: itemName="${itemName}", packSize="${rawPackSize}", price="${priceStr}"`);
+  }
+
   if (!itemName || !rawPackSize) {
+    if (debug) {
+      console.log(`   ❌ Missing required fields`);
+    }
     return null;
   }
 

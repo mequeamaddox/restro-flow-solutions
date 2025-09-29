@@ -1726,17 +1726,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       let detectedFormat = 'standard';
       if (hasSizeColumn) {
+        console.log(`🔍 Size column detected - sampling first rows for vendor format...`);
         const sampleRows = results.slice(0, Math.min(10, results.length));
         let vendorParseSuccesses = 0;
         
         for (const result of sampleRows) {
-          const parsed = parseVendorCsvRow(result.data);
+          const parsed = parseVendorCsvRow(result.data, true);
+          console.log(`   Row ${result.rowNumber}: parsed=${!!parsed}, success=${parsed?.parsed.parseSuccess}, item=${parsed?.itemName?.substring(0, 30)}`);
           if (parsed && parsed.parsed.parseSuccess) {
             vendorParseSuccesses++;
           }
         }
         
         const successRate = vendorParseSuccesses / sampleRows.length;
+        console.log(`📊 Vendor parse results: ${vendorParseSuccesses}/${sampleRows.length} successful (${(successRate * 100).toFixed(0)}% success rate)`);
         if (successRate >= 0.5) {
           detectedFormat = 'vendor';
         }
