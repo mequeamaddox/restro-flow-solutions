@@ -46,7 +46,8 @@ export default function Inventory() {
 
   // Filter items based on search and category
   const filteredItems = (inventoryItems as any[])?.filter((item: any) => {
-    const matchesSearch = item.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    const matchesSearch = item.displayName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         item.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          item.description?.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesCategory = !categoryFilter || categoryFilter === 'all' || item.categoryId === categoryFilter;
     return matchesSearch && matchesCategory;
