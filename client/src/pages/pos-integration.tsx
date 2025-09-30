@@ -67,19 +67,19 @@ export default function PosIntegration() {
   });
 
   // Fetch integrations for current location
-  const { data: integrations = [], isLoading: integrationsLoading } = useQuery({
+  const { data: integrations = [], isLoading: integrationsLoading } = useQuery<PosIntegration[]>({
     queryKey: ["/api/pos/integrations", selectedLocation?.id],
     enabled: !!selectedLocation?.id,
   });
 
   // Fetch recent sales data
-  const { data: sales = [], isLoading: salesLoading } = useQuery({
+  const { data: sales = [], isLoading: salesLoading } = useQuery<PosSale[]>({
     queryKey: ["/api/pos/sales", selectedLocation?.id],
     enabled: !!selectedLocation?.id,
   });
 
   // Fetch webhook status
-  const { data: webhookStatus = [], isLoading: webhookStatusLoading } = useQuery({
+  const { data: webhookStatus = [], isLoading: webhookStatusLoading } = useQuery<PosIntegration[]>({
     queryKey: ["/api/pos/webhook-status"],
   });
 

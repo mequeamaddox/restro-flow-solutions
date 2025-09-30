@@ -1,8 +1,8 @@
 import { storage } from "./storage";
 import { 
-  CloverIntegration, 
-  InsertCloverSale, 
-  InsertCloverSaleItem,
+  PosIntegration, 
+  InsertPosSale, 
+  InsertPosSaleItem,
   InsertInventoryTransaction 
 } from "@shared/schema";
 
@@ -46,7 +46,7 @@ export class CloverService {
       console.log('Processing Clover webhook:', payload);
       
       // Find the integration for this merchant
-      const integration = await storage.getCloverIntegrationByMerchant(payload.merchantId);
+      const integration = await storage.getPosIntegrationByMerchant(payload.merchantId, 'clover');
       if (!integration || !integration.isActive) {
         console.log('No active integration found for merchant:', payload.merchantId);
         return;
@@ -72,19 +72,26 @@ export class CloverService {
    * Fetch order details from Clover API
    */
   private async fetchOrderFromClover(
-    integration: CloverIntegration, 
+    integration: PosIntegration, 
     orderId: string
   ): Promise<CloverOrderResponse | null> {
     try {
       const baseUrl = integration.environment === 'production' 
         ? 'https://api.clover.com'
         : 'https://sandbox.dev.clover.com';
-        
+      
+      const raw = integration.credentials;
+      const accessToken = typeof raw === 'object' && raw !== null ? (raw as any).accessToken : undefined;
+      if (!accessToken || typeof accessToken !== 'string') {
+        console.error('Clover integration missing valid accessToken in credentials');
+        return null;
+      }
+      
       const response = await fetch(
         `${baseUrl}/v3/merchants/${integration.merchantId}/orders/${orderId}?expand=lineItems`,
         {
           headers: {
-            'Authorization': `Bearer ${integration.accessToken}`,
+            'Authorization': `Bearer ${accessToken}`,
             'Content-Type': 'application/json',
           },
         }
@@ -105,45 +112,49 @@ export class CloverService {
    * Process order and automatically deduct inventory
    */
   private async processOrder(
-    integration: CloverIntegration,
+    integration: PosIntegration,
     orderData: CloverOrderResponse
   ): Promise<void> {
     try {
       // Check if this order has already been processed
-      const existingSale = await storage.getCloverSaleByOrderId(orderData.id);
+      const existingSale = await storage.getPosSaleByOrderId(integration.id, orderData.id);
       if (existingSale) {
         console.log('Order already processed:', orderData.id);
         return;
       }
 
       // Create sale record
-      const saleData: InsertCloverSale = {
-        cloverOrderId: orderData.id,
-        cloverIntegrationId: integration.id,
+      const saleData: InsertPosSale = {
+        posOrderId: orderData.id,
+        posIntegrationId: integration.id,
         locationId: integration.locationId,
         total: (orderData.total / 100).toString(), // Clover amounts are in cents
         orderDate: new Date(orderData.createdTime),
         inventoryProcessed: false,
       };
 
-      const sale = await storage.createCloverSale(saleData);
+      const sale = await storage.createPosSale(saleData);
 
       // Process each line item
       for (const lineItem of orderData.lineItems) {
+        const unitPrice = (lineItem.price / 100);
+        const quantity = lineItem.quantity || 1;
+        
         // Create sale item record
-        const saleItemData: InsertCloverSaleItem = {
-          cloverSaleId: sale.id,
-          cloverMenuItemId: null, // Will be set if mapping exists
+        const saleItemData: InsertPosSaleItem = {
+          posSaleId: sale.id,
+          posMenuItemId: null, // Will be set if mapping exists
           itemName: lineItem.name,
-          quantity: lineItem.quantity || 1,
-          price: (lineItem.price / 100).toString(), // Convert from cents
+          quantity: quantity,
+          unitPrice: unitPrice.toString(),
+          totalPrice: (unitPrice * quantity).toString(),
         };
 
-        const saleItem = await storage.createCloverSaleItem(saleItemData);
+        const saleItem = await storage.createPosSaleItem(saleItemData);
 
         // Check if we have an inventory mapping for this item
         if (lineItem.item?.id) {
-          const mapping = await storage.getCloverItemMappingByCloverItemId(lineItem.item.id);
+          const mapping = await storage.getPosItemMappingByPosItemId(lineItem.item.id);
           if (mapping) {
             // Calculate total quantity to deduct
             const quantityToDeduct = parseFloat(mapping.quantityUsed) * (lineItem.quantity || 1);
@@ -169,22 +180,21 @@ export class CloverService {
               
               await storage.updateInventoryItem(mapping.inventoryItemId, {
                 quantity: newQuantity.toString(),
-                updatedAt: new Date(),
               });
 
               console.log(`Deducted ${quantityToDeduct} ${mapping.unit} of ${inventoryItem.name}`);
             }
 
             // Update sale item with mapping info
-            await storage.updateCloverSaleItem(saleItem.id, {
-              cloverMenuItemId: mapping.cloverMenuItemId,
+            await storage.updatePosSaleItem(saleItem.id, {
+              posMenuItemId: mapping.posMenuItemId,
             });
           }
         }
       }
 
       // Mark sale as inventory processed
-      await storage.updateCloverSale(sale.id, {
+      await storage.updatePosSale(sale.id, {
         inventoryProcessed: true,
         processedAt: new Date(),
       });
@@ -202,7 +212,7 @@ export class CloverService {
    */
   async syncMenuItems(integrationId: string): Promise<void> {
     try {
-      const integration = await storage.getCloverIntegration(integrationId);
+      const integration = await storage.getPosIntegration(integrationId);
       if (!integration || !integration.isActive) {
         throw new Error('Integration not found or inactive');
       }
@@ -211,11 +221,17 @@ export class CloverService {
         ? 'https://api.clover.com'
         : 'https://sandbox.dev.clover.com';
 
+      const raw = integration.credentials;
+      const accessToken = typeof raw === 'object' && raw !== null ? (raw as any).accessToken : undefined;
+      if (!accessToken || typeof accessToken !== 'string') {
+        throw new Error('Clover integration missing valid accessToken in credentials');
+      }
+      
       const response = await fetch(
         `${baseUrl}/v3/merchants/${integration.merchantId}/items`,
         {
           headers: {
-            'Authorization': `Bearer ${integration.accessToken}`,
+            'Authorization': `Bearer ${accessToken}`,
             'Content-Type': 'application/json',
           },
         }
@@ -229,16 +245,16 @@ export class CloverService {
       const items = data.elements || [];
 
       for (const item of items) {
-        await storage.upsertCloverMenuItem({
-          cloverItemId: item.id,
-          cloverIntegrationId: integration.id,
+        await storage.upsertPosMenuItem({
+          posItemId: item.id,
+          posIntegrationId: integration.id,
           name: item.name,
           price: item.price ? (item.price / 100).toString() : null,
           isActive: !item.hidden,
         });
       }
 
-      await storage.updateCloverIntegration(integration.id, {
+      await storage.updatePosIntegration(integration.id, {
         lastSyncAt: new Date(),
       });
 
@@ -255,7 +271,7 @@ export class CloverService {
    */
   async testConnection(integrationId: string): Promise<boolean> {
     try {
-      const integration = await storage.getCloverIntegration(integrationId);
+      const integration = await storage.getPosIntegration(integrationId);
       if (!integration) {
         return false;
       }
@@ -264,11 +280,18 @@ export class CloverService {
         ? 'https://api.clover.com'
         : 'https://sandbox.dev.clover.com';
 
+      const raw = integration.credentials;
+      const accessToken = typeof raw === 'object' && raw !== null ? (raw as any).accessToken : undefined;
+      if (!accessToken || typeof accessToken !== 'string') {
+        console.error('Clover integration missing valid accessToken in credentials');
+        return false;
+      }
+      
       const response = await fetch(
         `${baseUrl}/v3/merchants/${integration.merchantId}`,
         {
           headers: {
-            'Authorization': `Bearer ${integration.accessToken}`,
+            'Authorization': `Bearer ${accessToken}`,
             'Content-Type': 'application/json',
           },
         }
