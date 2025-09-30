@@ -2,8 +2,8 @@ import { storage } from "./storage";
 import { safeFetch } from "./lib/safeFetch";
 
 interface PosCredentials {
-  accessToken: string;
-  apiKey?: string;
+  accessToken?: string | null;
+  apiKey?: string | null;
   [key: string]: any;
 }
 
@@ -15,8 +15,8 @@ export class PosService {
         production: "https://api.clover.com",
       },
       spoton: {
-        sandbox: "https://api-sandbox.spoton.com",
-        production: "https://api.spoton.com",
+        sandbox: "https://restaurantapi-qa.spoton.com/posexport/v1",
+        production: "https://restaurantapi.spoton.com/posexport/v1",
       },
       square: {
         sandbox: "https://connect.squareupsandbox.com",
@@ -42,19 +42,21 @@ export class PosService {
       const credentials = integration.credentials as PosCredentials;
       const baseUrl = this.getBaseUrl(integration.provider, integration.environment);
       
-      if (!baseUrl || !integration.merchantId || !credentials?.accessToken) return false;
+      if (!baseUrl || !integration.merchantId) return false;
 
       // Provider-specific connection test
       switch (integration.provider) {
-        case "clover":
-          return await this.testCloverConnection(baseUrl, integration.merchantId, credentials.accessToken!);
         case "spoton":
-          return await this.testSpotOnConnection(baseUrl, credentials);
+          return await this.testSpotOnConnection(baseUrl, credentials, integration.merchantId);
+        case "clover":
+          if (!credentials?.accessToken) return false;
+          return await this.testCloverConnection(baseUrl, integration.merchantId, credentials.accessToken);
         case "square":
-          return await this.testSquareConnection(baseUrl, credentials.accessToken!);
+          if (!credentials?.accessToken) return false;
+          return await this.testSquareConnection(baseUrl, credentials.accessToken);
         default:
           // For unsupported providers, return true if credentials exist
-          return !!credentials.accessToken;
+          return !!(credentials.accessToken || credentials.apiKey);
       }
     } catch (error) {
       console.error("POS connection test failed:", error);
@@ -69,12 +71,14 @@ export class PosService {
     return response.ok;
   }
 
-  private async testSpotOnConnection(baseUrl: string, credentials: PosCredentials): Promise<boolean> {
-    const response = await fetch(`${baseUrl}/v1/auth/test`, {
-      headers: { 
-        Authorization: `Bearer ${credentials.accessToken}`,
-        "X-API-Key": credentials.apiKey || "",
-      },
+  private async testSpotOnConnection(
+    baseUrl: string,
+    credentials: PosCredentials,
+    locationId: string
+  ): Promise<boolean> {
+    if (!credentials.apiKey) return false;
+    const response = await fetch(`${baseUrl}/locations/${encodeURIComponent(locationId)}`, {
+      headers: { "x-api-key": credentials.apiKey! },
     });
     return response.ok;
   }
@@ -155,25 +159,19 @@ export class PosService {
   }
 
   private async syncSpotOnMenuItems(baseUrl: string, integration: any, credentials: PosCredentials): Promise<void> {
-    const response = await fetch(`${baseUrl}/v1/menu/items`, {
-      headers: { 
-        Authorization: `Bearer ${credentials.accessToken}`,
-        "X-API-Key": credentials.apiKey || "",
-      },
-    });
-
-    if (!response.ok) throw new Error("Failed to fetch SpotOn menu items");
-
-    const data = await response.json();
+    if (!credentials.apiKey) throw new Error("Missing SpotOn API key");
+    const url = `${baseUrl}/locations/${encodeURIComponent(integration.merchantId)}/menu-items`;
+    const res = await safeFetch(url, { headers: { "x-api-key": credentials.apiKey! } });
+    const items = await res.json();
     
-    for (const item of data.items || []) {
+    for (const item of items ?? []) {
       await storage.upsertPosMenuItem({
         posItemId: item.id,
         posIntegrationId: integration.id,
         name: item.name,
-        price: item.price ? item.price.toString() : null,
-        category: item.category || null,
-        sku: item.sku || null,
+        price: item.standardPriceAmount ?? null,
+        category: item.reportCategoryId ?? null,
+        sku: item.plu ?? null,
       });
     }
   }
@@ -209,6 +207,102 @@ export class PosService {
       }
       cursor = data?.cursor;
     } while (cursor);
+  }
+
+  async pollSpotOnOrders(integrationId: string): Promise<{ ordersProcessed: number }> {
+    const integration = await storage.getPosIntegration(integrationId);
+    if (!integration || !integration.isActive) return { ordersProcessed: 0 };
+    const credentials = integration.credentials as PosCredentials;
+    if (!credentials.apiKey) throw new Error("Missing SpotOn API key");
+
+    const baseUrl = this.getBaseUrl("spoton", integration.environment);
+    const lagMin = Number(process.env.SPOTON_LAG_MINUTES ?? 5);
+    const intervalMin = Number(process.env.SPOTON_POLL_INTERVAL_MINUTES ?? 1);
+
+    const now = new Date();
+    const windowEnd = new Date(now.getTime() - lagMin * 60 * 1000);
+    const windowStart = new Date(windowEnd.getTime() - intervalMin * 60 * 1000);
+
+    const params = new URLSearchParams({
+      updatedAtStart: toRFC3339Z(windowStart),
+      updatedAtEnd: toRFC3339Z(windowEnd),
+    });
+
+    const url = `${baseUrl}/locations/${encodeURIComponent(integration.merchantId)}/orders?${params}`;
+    const res = await safeFetch(url, { headers: { "x-api-key": credentials.apiKey! } });
+    const orders = await res.json();
+
+    let count = 0;
+    for (const order of orders ?? []) {
+      const existing = await storage.getPosSaleByOrderId(integration.id, order.id);
+      if (existing) continue;
+
+      const total = order.totalAmount?.amount ?? "0";
+      const createdAt = order.createdAt ?? new Date().toISOString();
+
+      const posSale = await storage.createPosSale({
+        posOrderId: order.id,
+        posIntegrationId: integration.id,
+        locationId: integration.locationId,
+        total,
+        orderDate: new Date(createdAt),
+        inventoryProcessed: false,
+      });
+
+      const addItem = async (li: any) => {
+        const qty = Number(li.quantity ?? "1");
+        const unit = li.preDiscountsAmount?.amount ?? "0";
+        const totalLine = li.totalAmount?.amount ?? "0";
+        await storage.createPosSaleItem({
+          posSaleId: posSale.id,
+          itemName: li.name,
+          quantity: qty,
+          unitPrice: unit,
+          totalPrice: totalLine,
+        });
+      };
+
+      for (const check of order.checks ?? []) {
+        for (const li of check.items ?? []) await addItem(li);
+        for (const guest of check.guests ?? []) {
+          for (const li of guest.items ?? []) await addItem(li);
+        }
+      }
+
+      await this.processInventoryDeductions(posSale.id);
+      count++;
+    }
+
+    await storage.updatePosIntegration(integration.id, { lastSyncAt: new Date().toISOString() });
+    return { ordersProcessed: count };
+  }
+
+  async pollSpotOnTimeclock(integrationId: string): Promise<{ punchesProcessed: number }> {
+    const integration = await storage.getPosIntegration(integrationId);
+    if (!integration || !integration.isActive) return { punchesProcessed: 0 };
+    const credentials = integration.credentials as PosCredentials;
+    if (!credentials.apiKey) throw new Error("Missing SpotOn API key");
+    const baseUrl = this.getBaseUrl("spoton", integration.environment);
+
+    const lagMin = Number(process.env.SPOTON_LAG_MINUTES ?? 5);
+    const intervalMin = Number(process.env.SPOTON_POLL_INTERVAL_MINUTES ?? 1);
+    const now = new Date();
+    const windowEnd = new Date(now.getTime() - lagMin * 60 * 1000);
+    const windowStart = new Date(windowEnd.getTime() - intervalMin * 60 * 1000);
+    const params = new URLSearchParams({
+      updatedAtStart: toRFC3339Z(windowStart),
+      updatedAtEnd: toRFC3339Z(windowEnd),
+    });
+
+    const url = `${baseUrl}/locations/${encodeURIComponent(integration.merchantId)}/time-clock-entries?${params}`;
+    const res = await safeFetch(url, { headers: { "x-api-key": credentials.apiKey! } });
+    const punches = await res.json();
+
+    let count = 0;
+    for (const p of punches ?? []) {
+      count++;
+    }
+    return { punchesProcessed: count };
   }
 
   async processOrderWebhook(payload: any): Promise<void> {
@@ -425,6 +519,10 @@ export class PosService {
       console.error("Failed to process inventory deductions:", error);
     }
   }
+}
+
+function toRFC3339Z(d: Date): string {
+  return new Date(Math.floor(d.getTime() / 1000) * 1000).toISOString().replace(/\.\d{3}Z$/, "Z");
 }
 
 export const posService = new PosService();
