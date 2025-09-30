@@ -267,14 +267,21 @@ export default function PosIntegration() {
               </div>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label htmlFor="merchantId">Merchant ID</Label>
+                  <Label htmlFor="merchantId">
+                    {newIntegration.provider === "spoton" ? "Location ID" : "Merchant ID"}
+                  </Label>
                   <Input
                     id="merchantId"
-                    placeholder="Enter your POS Merchant ID"
+                    placeholder={
+                      newIntegration.provider === "spoton" 
+                        ? "Enter your SpotOn Location ID" 
+                        : "Enter your POS Merchant ID"
+                    }
                     value={newIntegration.merchantId}
                     onChange={(e) =>
                       setNewIntegration({ ...newIntegration, merchantId: e.target.value })
                     }
+                    data-testid="input-merchantid"
                   />
                 </div>
                 <div className="space-y-2">
@@ -295,28 +302,51 @@ export default function PosIntegration() {
                   </Select>
                 </div>
               </div>
-              <div className="space-y-2">
-                <Label htmlFor="accessToken">Access Token</Label>
-                <Textarea
-                  id="accessToken"
-                  placeholder="Enter your POS API access token"
-                  value={newIntegration.credentials.accessToken}
-                  onChange={(e) =>
-                    setNewIntegration({ 
-                      ...newIntegration, 
-                      credentials: { ...newIntegration.credentials, accessToken: e.target.value }
-                    })
-                  }
-                />
-              </div>
+              {newIntegration.provider === "spoton" ? (
+                <div className="space-y-2">
+                  <Label htmlFor="apiKey">API Key</Label>
+                  <Textarea
+                    id="apiKey"
+                    placeholder="Enter your SpotOn API Key"
+                    value={newIntegration.credentials.apiKey}
+                    onChange={(e) =>
+                      setNewIntegration({ 
+                        ...newIntegration, 
+                        credentials: { ...newIntegration.credentials, apiKey: e.target.value }
+                      })
+                    }
+                    data-testid="input-apikey"
+                  />
+                  <p className="text-sm text-muted-foreground">
+                    Find your SpotOn API Key in your SpotOn Dashboard under Settings → API
+                  </p>
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  <Label htmlFor="accessToken">Access Token</Label>
+                  <Textarea
+                    id="accessToken"
+                    placeholder="Enter your POS API access token"
+                    value={newIntegration.credentials.accessToken}
+                    onChange={(e) =>
+                      setNewIntegration({ 
+                        ...newIntegration, 
+                        credentials: { ...newIntegration.credentials, accessToken: e.target.value }
+                      })
+                    }
+                    data-testid="input-accesstoken"
+                  />
+                </div>
+              )}
               <Button
                 onClick={() => createIntegrationMutation.mutate(newIntegration)}
                 disabled={
                   !newIntegration.name ||
                   !newIntegration.merchantId ||
-                  !newIntegration.credentials.accessToken ||
+                  (newIntegration.provider === "spoton" ? !newIntegration.credentials.apiKey : !newIntegration.credentials.accessToken) ||
                   createIntegrationMutation.isPending
                 }
+                data-testid="button-create-integration"
               >
                 {createIntegrationMutation.isPending ? "Creating..." : "Create Integration"}
               </Button>
