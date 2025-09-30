@@ -42,16 +42,16 @@ export class PosService {
       const credentials = integration.credentials as PosCredentials;
       const baseUrl = this.getBaseUrl(integration.provider, integration.environment);
       
-      if (!baseUrl || !integration.merchantId) return false;
+      if (!baseUrl || !integration.merchantId || !credentials?.accessToken) return false;
 
       // Provider-specific connection test
       switch (integration.provider) {
         case "clover":
-          return await this.testCloverConnection(baseUrl, integration.merchantId, credentials.accessToken);
+          return await this.testCloverConnection(baseUrl, integration.merchantId, credentials.accessToken!);
         case "spoton":
           return await this.testSpotOnConnection(baseUrl, credentials);
         case "square":
-          return await this.testSquareConnection(baseUrl, credentials.accessToken);
+          return await this.testSquareConnection(baseUrl, credentials.accessToken!);
         default:
           // For unsupported providers, return true if credentials exist
           return !!credentials.accessToken;
@@ -99,6 +99,10 @@ export class PosService {
       
       if (!integration.merchantId) {
         throw new Error("Merchant ID is required for menu sync");
+      }
+      
+      if (!credentials?.accessToken) {
+        throw new Error("Access token is required for menu sync");
       }
 
       // Provider-specific menu sync
