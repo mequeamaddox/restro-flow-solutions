@@ -116,7 +116,7 @@ export class PosService {
       }
 
       await storage.updatePosIntegration(integrationId, {
-        lastSyncAt: new Date(),
+        lastSyncAt: new Date().toISOString() as any,
       });
     } catch (error) {
       console.error("Menu items sync failed:", error);
@@ -243,7 +243,7 @@ export class PosService {
       
       // Update last sync time
       await storage.updatePosIntegration(integration.id, {
-        lastSyncAt: new Date(),
+        lastSyncAt: new Date().toISOString() as any,
       });
     } catch (error) {
       console.error("Webhook processing failed:", error);
