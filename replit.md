@@ -21,6 +21,19 @@ Business Strategy: Modular add-on approach for employee management to enable sca
 
 ## Recent Changes
 
+### September 30, 2025 - Invitation Email Bug Fix
+- **Issue**: Invitation emails failed to display location, department, and position names - all showed as undefined.
+- **Root Cause**: 
+  - InvitationEmailService tried to access nested objects (invitation.location.name, invitation.department.name, invitation.position.title)
+  - InvitationToken schema only stores IDs (locationId, departmentId, positionId) without relationship loading
+  - Email service expected fully populated relationship data that didn't exist
+- **Solution**:
+  - Refactored InvitationEmailService to accept location/department/position names as optional string parameters
+  - Updated routes.ts POST /api/invitations to fetch related entity names from storage before sending email
+  - Added personalMessage support - displays in both HTML (styled blue box) and text versions of invitation emails
+  - Added token validation guard to prevent emails with undefined invitation links
+- **Result**: Invitation emails now properly display all role details and personal messages. SendGrid 401 error remains (separate issue: user needs to verify sender email and API key).
+
 ### September 30, 2025 - Employee Data Synchronization Fix
 - **Issue**: Employee data displayed inconsistently across HR pages (Employees, Time Clock, Documents) due to mixed endpoint usage and HR addon access issues.
 - **Root Cause**: 
