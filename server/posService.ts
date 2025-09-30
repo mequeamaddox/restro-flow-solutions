@@ -378,13 +378,14 @@ export class PosService {
 
   private async processInventoryDeductions(saleId: string): Promise<void> {
     try {
-      const sale = await storage.getPosSaleByOrderId(saleId);
+      const sale = await storage.getPosSaleById(saleId);
       if (!sale) return;
 
-      // Mark sale as processed (basic implementation)
+      // TODO: Look up mappings and write inventory movements here
+      // For now, mark as processed
       await storage.updatePosSale(saleId, {
         inventoryProcessed: true,
-        processedAt: new Date(),
+        processedAt: new Date().toISOString() as any,
       });
     } catch (error) {
       console.error("Failed to process inventory deductions:", error);

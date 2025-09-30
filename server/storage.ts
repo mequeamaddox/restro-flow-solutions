@@ -61,6 +61,7 @@ import {
   posItemMappings,
   posSales,
   posSaleItems,
+  webhookEvents,
   type PosIntegration,
   type InsertPosIntegration,
   type PosMenuItem,
@@ -313,6 +314,9 @@ export interface IStorage {
   // POS sales
   createPosSale(sale: InsertPosSale): Promise<PosSale>;
   getPosSales(integrationId?: string, startDate?: Date, endDate?: Date): Promise<(PosSale & { items?: PosSaleItem[] })[]>;
+  getPosSaleById(id: string): Promise<PosSale | undefined>;
+  hasProcessedWebhook(eventId: string): Promise<boolean>;
+  markWebhookProcessed(eventId: string, record: { provider: string; integrationId: string; receivedAt: string; raw?: any }): Promise<void>;
 
   // Advanced MarginEdge-like Features
   
@@ -1122,6 +1126,26 @@ export class DatabaseStorage implements IStorage {
       .where(eq(posSaleItems.id, id))
       .returning();
     return saleItem;
+  }
+
+  async getPosSaleById(id: string): Promise<PosSale | undefined> {
+    const [sale] = await db.select().from(posSales).where(eq(posSales.id, id));
+    return sale;
+  }
+
+  async hasProcessedWebhook(eventId: string): Promise<boolean> {
+    const [event] = await db.select().from(webhookEvents).where(eq(webhookEvents.eventId, eventId));
+    return !!event;
+  }
+
+  async markWebhookProcessed(eventId: string, record: { provider: string; integrationId: string; receivedAt: string; raw?: any }): Promise<void> {
+    await db.insert(webhookEvents).values({
+      eventId,
+      provider: record.provider,
+      integrationId: record.integrationId,
+      receivedAt: new Date(record.receivedAt),
+      rawPayload: record.raw,
+    });
   }
 
   // Inventory operations

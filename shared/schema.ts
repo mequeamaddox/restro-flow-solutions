@@ -1080,6 +1080,17 @@ export const posSaleItems = pgTable("pos_sale_items", {
   createdAt: timestamp("created_at").defaultNow(),
 });
 
+// Webhook Events for idempotency
+export const webhookEvents = pgTable("webhook_events", {
+  id: uuid("id").primaryKey().default(sql`gen_random_uuid()`),
+  eventId: varchar("event_id").notNull().unique(),
+  provider: varchar("provider").notNull(),
+  integrationId: varchar("integration_id").notNull(),
+  receivedAt: timestamp("received_at").notNull(),
+  rawPayload: jsonb("raw_payload"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
 // POS Integration schema exports
 export const insertPosIntegrationSchema = createInsertSchema(posIntegrations).omit({ id: true, createdAt: true, updatedAt: true });
 export const insertPosMenuItemSchema = createInsertSchema(posMenuItems).omit({ id: true, createdAt: true, updatedAt: true });
