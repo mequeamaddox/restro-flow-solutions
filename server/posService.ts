@@ -126,23 +126,27 @@ export class PosService {
   }
 
   private async syncCloverMenuItems(baseUrl: string, integration: any, credentials: PosCredentials): Promise<void> {
-    const response = await fetch(`${baseUrl}/v3/merchants/${integration.merchantId}/items`, {
-      headers: { Authorization: `Bearer ${credentials.accessToken}` },
-    });
-
-    if (!response.ok) throw new Error("Failed to fetch Clover menu items");
-
-    const data = await response.json();
-    
-    for (const item of data.elements || []) {
-      await storage.upsertPosMenuItem({
-        posItemId: item.id,
-        posIntegrationId: integration.id,
-        name: item.name,
-        price: item.price ? (item.price / 100).toString() : null,
-        category: item.categories?.[0]?.name || null,
-        sku: item.sku || null,
+    const limit = 100;
+    for (let offset = 0; ; offset += limit) {
+      const url = `${baseUrl}/v3/merchants/${integration.merchantId}/items?limit=${limit}&offset=${offset}`;
+      const res = await safeFetch(url, { 
+        headers: { Authorization: `Bearer ${credentials.accessToken}` } 
       });
+      const data = await res.json();
+      const items = data.elements ?? [];
+      
+      for (const item of items) {
+        await storage.upsertPosMenuItem({
+          posItemId: item.id,
+          posIntegrationId: integration.id,
+          name: item.name,
+          price: item.price != null ? (item.price / 100).toString() : null,
+          category: item.categories?.[0]?.name ?? null,
+          sku: item.sku ?? null,
+        });
+      }
+      
+      if (items.length < limit) break;
     }
   }
 
