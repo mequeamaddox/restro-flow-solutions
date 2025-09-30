@@ -235,9 +235,14 @@ export default function InventoryTable({ items, isLoading, showPagination = fals
                             {getCategoryIcon(item.category?.name)}
                           </div>
                           <div>
-                            <div className="font-medium text-white">{item.name}</div>
+                            <div className="font-medium text-white">
+                              {item.displayName || item.name}
+                            </div>
+                            {item.displayName && (
+                              <div className="text-xs text-slate-500 mt-0.5">{item.name}</div>
+                            )}
                             {item.description && (
-                              <div className="text-sm text-slate-400">{item.description}</div>
+                              <div className="text-sm text-slate-400 mt-1">{item.description}</div>
                             )}
                           </div>
                         </div>
@@ -356,8 +361,11 @@ export default function InventoryTable({ items, isLoading, showPagination = fals
                       {getCategoryIcon(item.category?.name)}
                     </div>
                     <div>
-                      <div className="font-medium text-white">{item.name}</div>
+                      <div className="font-medium text-white">{item.displayName || item.name}</div>
                       <div className="text-sm text-slate-400">{item.category?.name || 'Uncategorized'}</div>
+                      {item.displayName && (
+                        <div className="text-xs text-slate-500 mt-0.5">{item.name}</div>
+                      )}
                     </div>
                   </div>
                   {getStatusBadge(item)}
