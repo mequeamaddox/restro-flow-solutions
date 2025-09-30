@@ -336,6 +336,14 @@ export class PosService {
 
   private async processSpotOnOrder(payload: any, integration: any): Promise<void> {
     const order = payload.order;
+    
+    // Check if order already exists (idempotency)
+    const existing = await storage.getPosSaleByOrderId(order.id);
+    if (existing) {
+      console.log(`SpotOn order ${order.id} already processed`);
+      return;
+    }
+    
     const posSale = await storage.createPosSale({
       posOrderId: order.id,
       posIntegrationId: integration.id,
@@ -362,6 +370,14 @@ export class PosService {
 
   private async processSquareOrder(payload: any, integration: any): Promise<void> {
     const order = payload.data.object.order;
+    
+    // Check if order already exists (idempotency)
+    const existing = await storage.getPosSaleByOrderId(order.id);
+    if (existing) {
+      console.log(`Square order ${order.id} already processed`);
+      return;
+    }
+    
     const posSale = await storage.createPosSale({
       posOrderId: order.id,
       posIntegrationId: integration.id,
@@ -372,13 +388,17 @@ export class PosService {
     });
 
     if (order.line_items) {
-      for (const lineItem of order.line_items) {
+      for (const li of order.line_items) {
+        const qty = Number(li.quantity ?? 1);
+        const totalCents = li.total_money?.amount ?? 0;
+        const unitCents = li.base_price_money?.amount ?? (qty ? Math.round(totalCents / qty) : totalCents);
+        
         await storage.createPosSaleItem({
           posSaleId: posSale.id,
-          itemName: lineItem.name,
-          quantity: parseInt(lineItem.quantity),
-          unitPrice: (lineItem.total_money.amount / 100).toString(),
-          totalPrice: (lineItem.total_money.amount / 100).toString(),
+          itemName: li.name,
+          quantity: qty,
+          unitPrice: (unitCents / 100).toString(),
+          totalPrice: (totalCents / 100).toString(),
         });
       }
     }
