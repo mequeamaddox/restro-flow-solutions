@@ -4664,9 +4664,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Ensure we have all required fields
       const periodData = {
         name: name || `${safeFrequency} Period`,
-        startDate: startDateObj,
-        endDate: endDateObj,
-        payDate: payDateObj,
+        startDate: startDateObj.toISOString().split('T')[0],
+        endDate: endDateObj.toISOString().split('T')[0],
+        payDate: payDateObj.toISOString().split('T')[0],
         frequency: safeFrequency,
         locationId: locationId || null,
         status: 'draft',

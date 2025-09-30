@@ -69,6 +69,16 @@ export default function EmployeeTimeClock() {
     enabled: !!userId,
   });
 
+  // Get employee profile to determine their location
+  const { data: employeeProfile } = useQuery<{ 
+    firstName: string; 
+    lastName: string;
+    location?: { id: string; name: string };
+  }>({
+    queryKey: [`/api/employees/${userId}/profile`],
+    enabled: !!userId,
+  });
+
   // Get today's time entry if exists
   const todayEntry = myTimeEntries.find(entry => 
     isToday(parseISO(entry.clockInTime))
@@ -174,6 +184,12 @@ export default function EmployeeTimeClock() {
             <p className="text-slate-300 dark:text-slate-400">
               Clock in and out, manage breaks, and view your work hours
             </p>
+            {employeeProfile?.location && (
+              <div className="flex items-center mt-2 text-slate-300">
+                <MapPin className="h-4 w-4 mr-2" />
+                <span className="text-sm font-medium">{employeeProfile.location.name}</span>
+              </div>
+            )}
           </div>
           <div className="text-right">
             <div className="text-3xl font-mono font-bold text-white">
