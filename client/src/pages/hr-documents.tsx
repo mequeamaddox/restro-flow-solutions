@@ -19,6 +19,7 @@ import { DocumentAssignmentWizard } from '@/components/hr/DocumentAssignmentWiza
 import { format } from 'date-fns';
 import { apiRequest, queryClient } from '@/lib/queryClient';
 import { useToast } from '@/hooks/use-toast';
+import { useLocation } from '@/contexts/LocationContext';
 import type { 
   EmployeeDocument, Employee, OnboardingTemplate, EmployeeOnboarding 
 } from '@shared/schema';
@@ -47,6 +48,7 @@ interface InviteFormData {
 
 export default function HRDocumentsPage() {
   const { toast } = useToast();
+  const { currentLocation } = useLocation();
   const [selectedEmployee, setSelectedEmployee] = useState<string>('');
   const [documentFilter, setDocumentFilter] = useState<string>('all');
   const [onboardingFilter, setOnboardingFilter] = useState<string>('all');
@@ -57,7 +59,8 @@ export default function HRDocumentsPage() {
 
   // Fetch data
   const { data: employees } = useQuery<Employee[]>({
-    queryKey: ['/api/hr/employees'],
+    queryKey: ['/api/hr/employees', currentLocation?.id],
+    enabled: !!currentLocation,
   });
 
   const { data: documents } = useQuery<EmployeeDocument[]>({
@@ -66,7 +69,8 @@ export default function HRDocumentsPage() {
   });
 
   const { data: onboardingTemplates } = useQuery<OnboardingTemplate[]>({
-    queryKey: ['/api/hr/onboarding/templates'],
+    queryKey: ['/api/hr/onboarding/templates', currentLocation?.id],
+    enabled: !!currentLocation,
   });
 
   const { data: employeeOnboarding } = useQuery<EmployeeOnboarding[]>({
@@ -80,7 +84,8 @@ export default function HRDocumentsPage() {
     overdueOnboarding: number;
     averageCompletionDays: number;
   }>({
-    queryKey: ['/api/hr/onboarding/analytics'],
+    queryKey: ['/api/hr/onboarding/analytics', currentLocation?.id],
+    enabled: !!currentLocation,
   });
 
   // Document upload mutation
