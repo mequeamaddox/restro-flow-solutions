@@ -1,4 +1,5 @@
 import { storage } from "./storage";
+import { safeFetch } from "./lib/safeFetch";
 
 interface PosCredentials {
   accessToken: string;
@@ -170,31 +171,36 @@ export class PosService {
   }
 
   private async syncSquareMenuItems(baseUrl: string, integration: any, credentials: PosCredentials): Promise<void> {
-    const response = await fetch(`${baseUrl}/v2/catalog/list?types=ITEM`, {
-      headers: { 
-        Authorization: `Bearer ${credentials.accessToken}`,
-        "Square-Version": "2023-12-13",
-      },
-    });
+    let cursor: string | undefined;
+    do {
+      const url = new URL(`${baseUrl}/v2/catalog/list`);
+      url.searchParams.set("types", "ITEM");
+      if (cursor) url.searchParams.set("cursor", cursor);
 
-    if (!response.ok) throw new Error("Failed to fetch Square menu items");
+      const res = await safeFetch(url.toString(), {
+        headers: {
+          Authorization: `Bearer ${credentials.accessToken}`,
+          "Square-Version": "2025-05-15",
+        },
+      });
+      const data = await res.json();
 
-    const data = await response.json();
-    
-    for (const object of data.objects || []) {
-      if (object.type === "ITEM") {
-        const item = object.item_data;
+      for (const obj of data.objects ?? []) {
+        if (obj.type !== "ITEM") continue;
+        const item = obj.item_data;
+        const firstVar = item?.variations?.[0]?.item_variation_data;
+        const cents = firstVar?.price_money?.amount;
         await storage.upsertPosMenuItem({
-          posItemId: object.id,
+          posItemId: obj.id,
           posIntegrationId: integration.id,
-          name: item.name,
-          price: item.variations?.[0]?.item_variation_data?.price_money?.amount ? 
-            (item.variations[0].item_variation_data.price_money.amount / 100).toString() : null,
-          category: item.category_id || null,
-          sku: item.sku || null,
+          name: item?.name ?? "",
+          price: cents != null ? (cents / 100).toString() : null,
+          category: item?.category_id ?? null,
+          sku: firstVar?.sku ?? null,
         });
       }
-    }
+      cursor = data?.cursor;
+    } while (cursor);
   }
 
   async processOrderWebhook(payload: any): Promise<void> {
