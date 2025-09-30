@@ -171,6 +171,27 @@ export const inventoryItems = pgTable("inventory_items", {
   alcoholContent: decimal("alcohol_content", { precision: 5, scale: 2 }), // ABV percentage
   isAlcoholic: boolean("is_alcoholic").default(false),
   bottleSize: varchar("bottle_size"), // 750ml, 1L, etc.
+  
+  // Normalized unit prices for universal recipe costing
+  packSize: varchar("pack_size", { length: 100 }), // e.g., "40 LB", "1/5 GA", "2000 CT"
+  caseQuantity: decimal("case_quantity", { precision: 10, scale: 4 }), // numeric part of pack (e.g., 40, 5, 2000)
+  casePrice: decimal("case_price", { precision: 10, scale: 2 }), // price per case/pack
+  pricePerLb: decimal("price_per_lb", { precision: 10, scale: 6 }),
+  pricePerGa: decimal("price_per_ga", { precision: 10, scale: 6 }),
+  pricePerOz: decimal("price_per_oz", { precision: 10, scale: 6 }),
+  pricePerInnerUnit: decimal("price_per_inner_unit", { precision: 10, scale: 6 }),
+  innerUnit: varchar("inner_unit", { length: 20 }), // CT/EA/OZ/LB/GA (from pack size)
+  
+  // Conversion layer for recipe costing
+  piecesPerLb: decimal("pieces_per_lb", { precision: 10, scale: 4 }), // shrimp 16/20 ~ 18, wings 5–8 ~ 6.5
+  ozPerPiece: decimal("oz_per_piece", { precision: 10, scale: 4 }), // patties/tenders, e.g., 6 oz
+  ozPerCup: decimal("oz_per_cup", { precision: 10, scale: 4 }), // default 8 if not set (water-like sauces)
+  cupsPerGa: decimal("cups_per_ga", { precision: 10, scale: 4 }), // default 16 if not set
+  piecesPerCase: decimal("pieces_per_case", { precision: 10, scale: 4 }), // disposables count if helpful
+  yieldPct: decimal("yield_pct", { precision: 5, scale: 2 }), // 0–100 (default 100)
+  gradeLow: integer("grade_low"), // for "16/20"
+  gradeHigh: integer("grade_high"), // for "16/20"
+  
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });

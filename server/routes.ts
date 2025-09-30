@@ -1812,6 +1812,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
               return itemNameLower.includes(categoryLower) || categoryLower.includes(itemNameLower.split(' ')[0]);
             });
 
+            // Calculate normalized unit prices
+            const pricePerLb = parsed.parsed.innerUnit === 'lb' && parsed.costs.perBaseUnitCost 
+              ? parsed.costs.perBaseUnitCost.toString() 
+              : null;
+            const pricePerGa = parsed.parsed.innerUnit === 'gal' && parsed.costs.perBaseUnitCost
+              ? parsed.costs.perBaseUnitCost.toString()
+              : null;
+            const pricePerOz = parsed.parsed.innerUnit === 'oz' && parsed.costs.perBaseUnitCost
+              ? parsed.costs.perBaseUnitCost.toString()
+              : (pricePerLb ? (Number(pricePerLb) / 16).toString() : null);
+
             itemData = {
               name: parsed.itemName.trim(),
               description: `${parsed.rawPackSize} ${parsed.purchaseUom}`,
@@ -1827,6 +1838,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
               costPerPurchaseUnit: parsed.caseCost.toString(),
               reorderLevel: "0",
               barcode: parsed.vendorSku || null,
+              // Add new conversion fields for universal recipe costing
+              packSize: parsed.rawPackSize,
+              caseQuantity: parsed.parsed.packQty?.toString(),
+              casePrice: parsed.caseCost.toString(),
+              pricePerLb: pricePerLb,
+              pricePerGa: pricePerGa,
+              pricePerOz: pricePerOz,
+              pricePerInnerUnit: parsed.costs.perPieceCost?.toString(),
+              innerUnit: parsed.parsed.innerUnit,
+              piecesPerLb: parsed.conversion.piecesPerLb?.toString(),
+              ozPerPiece: parsed.conversion.ozPerPiece?.toString(),
+              ozPerCup: parsed.conversion.ozPerCup?.toString(),
+              cupsPerGa: parsed.conversion.cupsPerGa?.toString(),
+              yieldPct: parsed.conversion.yieldPct?.toString(),
+              gradeLow: parsed.conversion.gradeLow,
+              gradeHigh: parsed.conversion.gradeHigh,
             };
 
             if (selectedVendorId && parsed.parsed.parseSuccess) {

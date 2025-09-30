@@ -77,6 +77,13 @@ export default function AddItemDialog({ isOpen, onClose, onSuccess, categories, 
         recipeUnit: editingItem.recipeUnit ?? undefined,
         conversionFactor: editingItem.conversionFactor?.toString() ?? undefined,
         servingsPerPurchaseUnit: editingItem.servingsPerPurchaseUnit?.toString() ?? undefined,
+        piecesPerLb: editingItem.piecesPerLb?.toString() ?? undefined,
+        ozPerPiece: editingItem.ozPerPiece?.toString() ?? undefined,
+        ozPerCup: editingItem.ozPerCup?.toString() ?? undefined,
+        cupsPerGa: editingItem.cupsPerGa?.toString() ?? undefined,
+        yieldPct: editingItem.yieldPct?.toString() ?? undefined,
+        gradeLow: editingItem.gradeLow ?? undefined,
+        gradeHigh: editingItem.gradeHigh ?? undefined,
       });
     } else {
       // Reset to default values when not editing
@@ -183,7 +190,7 @@ export default function AddItemDialog({ isOpen, onClose, onSuccess, categories, 
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Category</FormLabel>
-                    <Select onValueChange={field.onChange} value={field.value}>
+                    <Select onValueChange={field.onChange} value={field.value ?? undefined}>
                       <FormControl>
                         <SelectTrigger>
                           <SelectValue placeholder="Select category" />
@@ -365,9 +372,128 @@ export default function AddItemDialog({ isOpen, onClose, onSuccess, categories, 
                     <FormItem>
                       <FormLabel>Servings per Purchase</FormLabel>
                       <FormControl>
-                        <Input type="number" step="1" placeholder="160" {...field} />
+                        <Input type="number" step="1" placeholder="160" {...field} value={field.value ?? ''} />
                       </FormControl>
                       <p className="text-xs text-slate-500">Total servings from 1 purchase unit</p>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+            </div>
+
+            {/* Recipe Costing Conversions Section */}
+            <div className="space-y-4">
+              <div className="flex items-center gap-2 pt-4 border-t border-slate-700">
+                <Calculator className="h-4 w-4 text-slate-400" />
+                <h3 className="text-sm font-semibold text-slate-300">Recipe Costing Conversions</h3>
+                <span className="text-xs text-slate-500">(Optional - for precise recipe costing)</span>
+              </div>
+              <p className="text-xs text-slate-400">
+                Configure conversion factors for accurate recipe cost calculations. Auto-populated from CSV imports.
+              </p>
+              
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <FormField
+                  control={form.control}
+                  name="piecesPerLb"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Pieces per Lb</FormLabel>
+                      <FormControl>
+                        <Input type="number" step="0.01" placeholder="6.5" {...field} value={field.value ?? ''} />
+                      </FormControl>
+                      <p className="text-xs text-slate-500">e.g., Wings: 6.5, Shrimp 16/20: 18</p>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="ozPerPiece"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Oz per Piece</FormLabel>
+                      <FormControl>
+                        <Input type="number" step="0.01" placeholder="6" {...field} value={field.value ?? ''} />
+                      </FormControl>
+                      <p className="text-xs text-slate-500">e.g., 6oz burger patty</p>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+              
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <FormField
+                  control={form.control}
+                  name="ozPerCup"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Oz per Cup</FormLabel>
+                      <FormControl>
+                        <Input type="number" step="0.01" placeholder="8" {...field} value={field.value ?? ''} />
+                      </FormControl>
+                      <p className="text-xs text-slate-500">Default: 8 (water-like liquids)</p>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="cupsPerGa"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Cups per Gallon</FormLabel>
+                      <FormControl>
+                        <Input type="number" step="0.01" placeholder="16" {...field} value={field.value ?? ''} />
+                      </FormControl>
+                      <p className="text-xs text-slate-500">Default: 16</p>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+              
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <FormField
+                  control={form.control}
+                  name="yieldPct"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Yield %</FormLabel>
+                      <FormControl>
+                        <Input type="number" step="0.01" placeholder="100" {...field} value={field.value ?? ''} />
+                      </FormControl>
+                      <p className="text-xs text-slate-500">Default: 100 (no waste)</p>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="gradeLow"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Grade Low</FormLabel>
+                      <FormControl>
+                        <Input type="number" step="1" placeholder="16" {...field} value={field.value ?? ''} onChange={(e) => field.onChange(e.target.value ? parseInt(e.target.value) : undefined)} />
+                      </FormControl>
+                      <p className="text-xs text-slate-500">e.g., 16 in "16/20"</p>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="gradeHigh"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Grade High</FormLabel>
+                      <FormControl>
+                        <Input type="number" step="1" placeholder="20" {...field} value={field.value ?? ''} onChange={(e) => field.onChange(e.target.value ? parseInt(e.target.value) : undefined)} />
+                      </FormControl>
+                      <p className="text-xs text-slate-500">e.g., 20 in "16/20"</p>
                       <FormMessage />
                     </FormItem>
                   )}
@@ -382,7 +508,7 @@ export default function AddItemDialog({ isOpen, onClose, onSuccess, categories, 
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Vendor</FormLabel>
-                    <Select onValueChange={field.onChange} value={field.value}>
+                    <Select onValueChange={field.onChange} value={field.value ?? undefined}>
                       <FormControl>
                         <SelectTrigger>
                           <SelectValue placeholder="Select vendor" />
@@ -429,7 +555,7 @@ export default function AddItemDialog({ isOpen, onClose, onSuccess, categories, 
                   <FormLabel>Barcode (Optional)</FormLabel>
                   <div className="flex space-x-2">
                     <FormControl>
-                      <Input placeholder="Scan or enter barcode" {...field} className="flex-1" />
+                      <Input placeholder="Scan or enter barcode" {...field} value={field.value ?? ''} className="flex-1" />
                     </FormControl>
                     <Button
                       type="button"
@@ -456,7 +582,8 @@ export default function AddItemDialog({ isOpen, onClose, onSuccess, categories, 
                     <Textarea 
                       rows={3} 
                       placeholder="Additional details about the item..."
-                      {...field} 
+                      {...field}
+                      value={field.value ?? ''} 
                     />
                   </FormControl>
                   <FormMessage />

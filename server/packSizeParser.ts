@@ -15,6 +15,16 @@ export interface CostCalculations {
   costMismatchPercent?: number;
 }
 
+export interface ConversionData {
+  piecesPerLb?: number | null;
+  ozPerPiece?: number | null;
+  ozPerCup?: number | null;
+  cupsPerGa?: number | null;
+  yieldPct?: number | null;
+  gradeLow?: number | null;
+  gradeHigh?: number | null;
+}
+
 const CAN_SIZES: Record<string, number> = {
   '#10': 109,
   '#5': 51,
@@ -76,6 +86,46 @@ const UNIT_NORMALIZATIONS: Record<string, string> = {
 export function normalizeUnit(unit: string): string {
   const upper = unit.toUpperCase().trim();
   return UNIT_NORMALIZATIONS[upper] || unit.toLowerCase();
+}
+
+export function detectConversions(description: string, innerUnit: string | null): ConversionData {
+  const conversion: ConversionData = {};
+  const desc = description || "";
+  
+  // Detect "5-8 count average" or "5-8 count avg"
+  const countRange = desc.match(/(\d+)\s*[-–]\s*(\d+)\s*(?:count|ct)\s*(?:avg|average)?/i);
+  
+  // Detect grade like "16/20"
+  const grade = desc.match(/(\d+)\s*\/\s*(\d+)\b/);
+  
+  if (countRange) {
+    const lo = Number(countRange[1]);
+    const hi = Number(countRange[2]);
+    if (lo && hi && lo > 0 && hi > 0) {
+      conversion.gradeLow = lo;
+      conversion.gradeHigh = hi;
+      conversion.piecesPerLb = (lo + hi) / 2;
+    }
+  } else if (grade) {
+    const lo = Number(grade[1]);
+    const hi = Number(grade[2]);
+    if (lo && hi && lo > 0 && hi > 0) {
+      conversion.gradeLow = lo;
+      conversion.gradeHigh = hi;
+      conversion.piecesPerLb = (lo + hi) / 2;
+    }
+  }
+  
+  // Liquids default helpers (if purchased in GA/gal)
+  if (innerUnit?.toLowerCase() === "gal" || innerUnit?.toLowerCase() === "ga") {
+    conversion.ozPerCup = conversion.ozPerCup ?? 8;
+    conversion.cupsPerGa = conversion.cupsPerGa ?? 16;
+  }
+  
+  // Default yield to 100%
+  conversion.yieldPct = 100;
+  
+  return conversion;
 }
 
 export function normalizePurchaseUom(uom: string): string {
@@ -258,6 +308,7 @@ function findColumnValue(row: any, ...possibleNames: string[]): string {
 export function parseVendorCsvRow(row: any, debug = false): {
   parsed: PackSizeParseResult;
   costs: CostCalculations;
+  conversion: ConversionData;
   itemName: string;
   vendorSku: string;
   purchaseUom: string;
@@ -329,10 +380,12 @@ export function parseVendorCsvRow(row: any, debug = false): {
   const parsed = parsePackSize(rawPackSize);
   const purchaseUom = normalizePurchaseUom(purchaseUomRaw);
   const costs = calculateCosts(caseCost, parsed.packQty, parsed.totalBaseUnits, vendorPerUnitCost);
+  const conversion = detectConversions(itemName, parsed.innerUnit);
 
   return {
     parsed,
     costs,
+    conversion,
     itemName,
     vendorSku,
     purchaseUom,
