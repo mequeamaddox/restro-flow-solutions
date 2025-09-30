@@ -146,10 +146,21 @@ Please try:
       throw new Error('No text found in document');
     }
 
-    // Extract text from Textract blocks
+    // Create block lookup map for relationships
+    const blockMap = new Map();
+    for (const block of response.Blocks) {
+      if (block.Id) {
+        blockMap.set(block.Id, block);
+      }
+    }
+
+    // Extract text from LINE blocks
     let extractedText = '';
     let totalConfidence = 0;
     let confidenceCount = 0;
+
+    // Also extract tables for structured data
+    const tables: Array<Array<string[]>> = [];
 
     for (const block of response.Blocks) {
       if (block.BlockType === 'LINE' && block.Text) {
@@ -158,17 +169,88 @@ Please try:
           totalConfidence += block.Confidence;
           confidenceCount++;
         }
+      } else if (block.BlockType === 'TABLE') {
+        // Parse table structure
+        const table = this.parseTextractTable(block, blockMap);
+        if (table.length > 0) {
+          tables.push(table);
+          // Add table data to text output as well for backward compatibility
+          extractedText += '\n--- TABLE ---\n';
+          for (const row of table) {
+            extractedText += row.join(' | ') + '\n';
+          }
+          extractedText += '--- END TABLE ---\n\n';
+        }
       }
     }
 
     const averageConfidence = confidenceCount > 0 ? totalConfidence / confidenceCount : 0;
     
-    console.log(`AWS Textract completed with ${averageConfidence.toFixed(1)}% confidence`);
+    console.log(`AWS Textract completed with ${averageConfidence.toFixed(1)}% confidence, ${tables.length} tables found`);
     
     return {
       text: extractedText.trim(),
       confidence: Math.round(averageConfidence)
     };
+  }
+
+  // Parse Textract TABLE block into structured array
+  private static parseTextractTable(tableBlock: any, blockMap: Map<string, any>): string[][] {
+    const table: string[][] = [];
+    const cellMap = new Map<string, { row: number; col: number; text: string }>();
+
+    // Find all CELL blocks that are children of this table
+    if (!tableBlock.Relationships) {
+      return table;
+    }
+
+    for (const relationship of tableBlock.Relationships) {
+      if (relationship.Type === 'CHILD') {
+        for (const childId of relationship.Ids || []) {
+          const cellBlock = blockMap.get(childId);
+          if (cellBlock && cellBlock.BlockType === 'CELL') {
+            const rowIndex = (cellBlock.RowIndex || 1) - 1;
+            const colIndex = (cellBlock.ColumnIndex || 1) - 1;
+            
+            // Extract text from cell
+            let cellText = '';
+            if (cellBlock.Relationships) {
+              for (const cellRel of cellBlock.Relationships) {
+                if (cellRel.Type === 'CHILD') {
+                  for (const wordId of cellRel.Ids || []) {
+                    const wordBlock = blockMap.get(wordId);
+                    if (wordBlock && wordBlock.Text) {
+                      cellText += wordBlock.Text + ' ';
+                    }
+                  }
+                }
+              }
+            }
+            
+            cellMap.set(`${rowIndex}-${colIndex}`, {
+              row: rowIndex,
+              col: colIndex,
+              text: cellText.trim()
+            });
+          }
+        }
+      }
+    }
+
+    // Convert cell map to 2D array
+    const maxRow = Math.max(...Array.from(cellMap.values()).map(c => c.row), 0);
+    const maxCol = Math.max(...Array.from(cellMap.values()).map(c => c.col), 0);
+
+    for (let row = 0; row <= maxRow; row++) {
+      const rowData: string[] = [];
+      for (let col = 0; col <= maxCol; col++) {
+        const cell = cellMap.get(`${row}-${col}`);
+        rowData.push(cell?.text || '');
+      }
+      table.push(rowData);
+    }
+
+    return table;
   }
 
   // Convert scanned PDF to images and run OCR

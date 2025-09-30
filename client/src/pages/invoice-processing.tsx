@@ -34,7 +34,6 @@ import {
   Edit3
 } from "lucide-react";
 import { format } from "date-fns";
-import { SubscriptionBanner } from "@/components/subscription/subscription-banner";
 import { InvoiceReviewDialog } from "@/components/invoice-review-dialog";
 import { useLocation } from "@/contexts/LocationContext";
 import LocationBanner from "@/components/location/location-banner";
@@ -60,7 +59,6 @@ export default function InvoiceProcessing() {
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [uploadProgress, setUploadProgress] = useState<number>(0);
   const [isUploading, setIsUploading] = useState(false);
-  const [selectedLineItems, setSelectedLineItems] = useState<{ [invoiceId: string]: boolean[] }>({});
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Queries
@@ -191,39 +189,6 @@ export default function InvoiceProcessing() {
     },
   });
 
-  const importToInventoryMutation = useMutation({
-    mutationFn: async (items: any[]) => {
-      if (!currentLocation) {
-        throw new Error("Please select a location before importing items");
-      }
-      const response = await apiRequest("POST", "/api/inventory/import-from-invoice", { 
-        items, 
-        locationId: currentLocation.id 
-      });
-      return response.json();
-    },
-    onSuccess: (data) => {
-      toast({ 
-        title: "Items Imported",
-        description: `Successfully imported ${data.count} items to inventory`
-      });
-      // Force refresh all inventory-related queries
-      queryClient.invalidateQueries({ queryKey: ["/api/inventory"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/inventory/low-stock"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/dashboard/metrics"] });
-      // Refetch inventory immediately to see changes
-      queryClient.refetchQueries({ queryKey: ["/api/inventory"] });
-    },
-    onError: (error) => {
-      console.error('Import error:', error);
-      toast({
-        title: "Import failed",
-        description: error.message || "Failed to import items to inventory",
-        variant: "destructive",
-      });
-    },
-  });
-
   const form = useForm<InvoiceFormData>({
     resolver: zodResolver(invoiceSchema),
     defaultValues: {
@@ -231,80 +196,6 @@ export default function InvoiceProcessing() {
       tax: 0,
     },
   });
-
-  // Helper functions for checkbox state management
-  const initializeSelectedItems = (invoiceId: string, itemCount: number) => {
-    if (!selectedLineItems[invoiceId]) {
-      setSelectedLineItems(prev => ({
-        ...prev,
-        [invoiceId]: new Array(itemCount).fill(true)
-      }));
-    }
-  };
-
-  const toggleSelectAllItems = (invoiceId: string, itemCount: number) => {
-    const currentSelections = selectedLineItems[invoiceId] || new Array(itemCount).fill(true);
-    const allSelected = currentSelections.every(selected => selected);
-    setSelectedLineItems(prev => ({
-      ...prev,
-      [invoiceId]: new Array(itemCount).fill(!allSelected)
-    }));
-  };
-
-  const toggleSingleItem = (invoiceId: string, itemIndex: number) => {
-    setSelectedLineItems(prev => {
-      const currentSelections = prev[invoiceId] || [];
-      const newSelections = [...currentSelections];
-      newSelections[itemIndex] = !newSelections[itemIndex];
-      return {
-        ...prev,
-        [invoiceId]: newSelections
-      };
-    });
-  };
-
-  const getSelectedItemsCount = (invoiceId: string) => {
-    const selections = selectedLineItems[invoiceId];
-    return selections ? selections.filter(Boolean).length : 0;
-  };
-
-  const importSelectedItems = (invoiceId: string, lineItems: any[]) => {
-    if (!currentLocation) {
-      toast({
-        title: "No location selected",
-        description: "Please select a location before importing items",
-        variant: "destructive",
-      });
-      return;
-    }
-    
-    const selections = selectedLineItems[invoiceId] || new Array(lineItems.length).fill(true);
-    const selectedItems = lineItems.filter((_: any, index: number) => selections[index]);
-    
-    if (selectedItems.length === 0) {
-      toast({
-        title: "No items selected",
-        description: "Please select at least one item to import",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    // Convert line items to inventory format
-    const inventoryItems = selectedItems.map((item: any) => ({
-      name: item.description,
-      category: 'Food', // Default category
-      quantity: parseFloat(item.quantity) || 1,
-      unit: item.unitType || 'each',
-      costPerUnit: parseFloat(item.unitPrice) || 0,
-      reorderLevel: Math.ceil((parseFloat(item.quantity) || 1) * 0.2), // 20% of current quantity
-      reorderQuantity: parseFloat(item.quantity) || 1,
-      supplier: 'Imported from Invoice'
-    }));
-
-    console.log('Importing items:', inventoryItems);
-    importToInventoryMutation.mutate(inventoryItems);
-  };
 
   const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -412,9 +303,6 @@ export default function InvoiceProcessing() {
           )}
         </div>
       </div>
-
-      {/* Subscription Banner */}
-      <SubscriptionBanner />
 
       {/* Stats Cards */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
@@ -687,26 +575,9 @@ export default function InvoiceProcessing() {
                                         </TableRow>
                                       </TableHeader>
                                       <TableBody>
-                                        {invoice.lineItems.map((item: any, index: number) => {
-                                          // Initialize selected items for this invoice if not already done
-                                          if (!selectedLineItems[invoice.id]) {
-                                            setSelectedLineItems(prev => ({
-                                              ...prev,
-                                              [invoice.id]: new Array(invoice.lineItems.length).fill(true)
-                                            }));
-                                          }
-                                          const isSelected = selectedLineItems[invoice.id]?.[index] ?? true;
-                                          
-                                          return (
+                                        {invoice.lineItems.map((item: any, index: number) => (
                                           <TableRow key={index} className="border-slate-700">
-                                            <TableCell className="text-slate-300 font-medium flex items-center gap-3">
-                                              <input
-                                                type="checkbox"
-                                                checked={isSelected}
-                                                onChange={() => toggleSingleItem(invoice.id, index)}
-                                                className="rounded border-slate-600 bg-slate-700 text-blue-500 focus:ring-blue-500"
-                                                data-testid={`checkbox-lineitem-${index}`}
-                                              />
+                                            <TableCell className="text-slate-300 font-medium">
                                               {item.description || 'Unknown Item'}
                                             </TableCell>
                                             <TableCell className="text-slate-300 text-right">
@@ -719,8 +590,7 @@ export default function InvoiceProcessing() {
                                               ${(item.totalPrice || 0).toFixed(2)}
                                             </TableCell>
                                           </TableRow>
-                                          );
-                                        })}
+                                        ))}
                                         <TableRow className="border-slate-600 bg-slate-700/50">
                                           <TableCell colSpan={3} className="text-slate-300 font-semibold">
                                             Total from Line Items:
@@ -731,34 +601,6 @@ export default function InvoiceProcessing() {
                                         </TableRow>
                                       </TableBody>
                                     </Table>
-                                  </div>
-                                  <div className="flex justify-between items-center">
-                                    <div className="text-sm text-slate-400">
-                                      Select items to import to inventory
-                                    </div>
-                                    <div className="flex gap-2">
-                                      <Button
-                                        variant="ghost"
-                                        size="sm"
-                                        className="text-slate-400 hover:bg-slate-700"
-                                        onClick={() => toggleSelectAllItems(invoice.id, invoice.lineItems.length)}
-                                      >
-                                        {(() => {
-                                          const selections = selectedLineItems[invoice.id] || new Array(invoice.lineItems.length).fill(true);
-                                          const allSelected = selections.every(selected => selected);
-                                          return allSelected ? 'Unselect All' : 'Select All';
-                                        })()}
-                                      </Button>
-                                      <Button
-                                        variant="outline"
-                                        size="sm"
-                                        className="border-slate-600 text-slate-300 hover:bg-slate-700"
-                                        onClick={() => importSelectedItems(invoice.id, invoice.lineItems)}
-                                      >
-                                        <Package className="h-4 w-4 mr-2" />
-                                        Import Selected ({getSelectedItemsCount(invoice.id)})
-                                      </Button>
-                                    </div>
                                   </div>
                                 </div>
                               )}
