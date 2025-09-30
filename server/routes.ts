@@ -5105,11 +5105,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
         locationId, 
         totalAmount, 
         paymentMethod,
-        customerName, 
-        salesItems 
+        customerCount, 
+        posTransactionId,
+        items 
       } = req.body;
 
-      if (!locationId || !totalAmount || !salesItems || !Array.isArray(salesItems)) {
+      if (!locationId || !totalAmount || !items || !Array.isArray(items)) {
         return res.status(400).json({ message: 'Missing required fields' });
       }
 
@@ -5117,9 +5118,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         locationId,
         parseFloat(totalAmount),
         paymentMethod || 'cash',
-        customerName || null,
-        salesItems,
-req.user!.id
+        customerCount || 1,
+        posTransactionId || null,
+        items,
+        req.user!.id
       );
 
       res.json({ transactionId, message: 'Sales transaction recorded successfully' });

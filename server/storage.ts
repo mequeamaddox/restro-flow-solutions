@@ -4649,11 +4649,15 @@ export class DatabaseStorage implements IStorage {
     locationId: string, 
     totalAmount: number, 
     paymentMethod: string,
-    customerName: string | null,
-    salesItems: Array<{
-      inventoryItemId: string;
-      quantitySold: number;
+    customerCount: number,
+    posTransactionId: string | null,
+    items: Array<{
+      itemName: string;
+      quantity: number;
       unitPrice: number;
+      recipeId?: string;
+      menuItemId?: string;
+      inventoryItemId?: string;
     }>,
     createdBy: string
   ): Promise<string> {
@@ -4663,59 +4667,87 @@ export class DatabaseStorage implements IStorage {
         locationId,
         totalAmount: totalAmount.toString(),
         paymentMethod,
+        customerCount,
+        posTransactionId,
         saleDate: new Date(),
-        createdAt: new Date()
+        createdAt: new Date(),
+        updatedAt: new Date()
       }).returning();
 
       const transactionId = salesTransaction.id;
 
       // Process each sales item and deduct from inventory
-      for (const item of salesItems) {
-        const totalPrice = item.quantitySold * item.unitPrice;
+      for (const item of items) {
+        const totalPrice = item.quantity * item.unitPrice;
+
+        // Get inventory cost for profit calculation if linked to inventory
+        let costOfGoods: number | null = null;
+        if (item.inventoryItemId) {
+          const [inventoryItem] = await db
+            .select()
+            .from(inventoryItems)
+            .where(eq(inventoryItems.id, item.inventoryItemId));
+          
+          if (inventoryItem) {
+            const costPerRecipeUnit = this.calculateCostPerRecipeUnit(inventoryItem);
+            costOfGoods = item.quantity * costPerRecipeUnit;
+          }
+        }
+
+        const profitAmount = costOfGoods !== null ? totalPrice - costOfGoods : null;
+        const profitMargin = profitAmount !== null && totalPrice > 0 
+          ? (profitAmount / totalPrice) * 100 
+          : null;
 
         // Create sales item record
         await db.insert(salesItems).values({
-          salesTransactionId: transactionId,
-          inventoryItemId: item.inventoryItemId,
-          quantitySold: item.quantitySold.toString(),
+          saleId: transactionId,
+          menuItemId: item.menuItemId || null,
+          recipeId: item.recipeId || null,
+          itemName: item.itemName,
+          quantity: Math.floor(item.quantity),
           unitPrice: item.unitPrice.toString(),
           totalPrice: totalPrice.toString(),
-          createdAt: new Date()
+          costOfGoods: costOfGoods?.toString() || null,
+          profitAmount: profitAmount?.toString() || null,
+          profitMargin: profitMargin?.toString() || null
         });
 
-        // Get the inventory item to determine unit conversion
-        const [inventoryItem] = await db
-          .select()
-          .from(inventoryItems)
-          .where(eq(inventoryItems.id, item.inventoryItemId));
-
-        if (inventoryItem) {
-          // Convert sales quantity (in recipe units) to purchase units for inventory deduction
-          const purchaseUnitsToDeduct = this.convertRecipeToPurchaseUnits(inventoryItem, item.quantitySold);
-
-          // Update inventory quantity (subtract from purchase units)
-          const currentQuantity = parseFloat(inventoryItem.quantity);
-          const newQuantity = Math.max(0, currentQuantity - purchaseUnitsToDeduct);
-
-          await db
-            .update(inventoryItems)
-            .set({ 
-              quantity: newQuantity.toString(),
-              updatedAt: new Date() 
-            })
+        // Deduct from inventory if linked to an inventory item
+        if (item.inventoryItemId) {
+          const [inventoryItem] = await db
+            .select()
+            .from(inventoryItems)
             .where(eq(inventoryItems.id, item.inventoryItemId));
 
-          // Record inventory transaction for audit trail
-          await db.insert(inventoryTransactions).values({
-            inventoryItemId: item.inventoryItemId,
-            locationId,
-            type: 'sales_deduction',
-            quantity: (-purchaseUnitsToDeduct).toString(), // Negative for deduction
-            unitCost: inventoryItem.costPerPurchaseUnit || inventoryItem.costPerUnit,
-            totalCost: (-(purchaseUnitsToDeduct * parseFloat(inventoryItem.costPerPurchaseUnit || inventoryItem.costPerUnit))).toString(),
-            reference: `Sales Transaction: ${transactionId}`,
-            createdBy
-          });
+          if (inventoryItem) {
+            // Convert sales quantity (in recipe units) to purchase units for inventory deduction
+            const purchaseUnitsToDeduct = this.convertRecipeToPurchaseUnits(inventoryItem, item.quantity);
+
+            // Update inventory quantity (subtract from purchase units)
+            const currentQuantity = parseFloat(inventoryItem.quantity);
+            const newQuantity = Math.max(0, currentQuantity - purchaseUnitsToDeduct);
+
+            await db
+              .update(inventoryItems)
+              .set({ 
+                quantity: newQuantity.toString(),
+                updatedAt: new Date() 
+              })
+              .where(eq(inventoryItems.id, item.inventoryItemId));
+
+            // Record inventory transaction for audit trail
+            await db.insert(inventoryTransactions).values({
+              inventoryItemId: item.inventoryItemId,
+              locationId,
+              type: 'out',
+              quantity: (-purchaseUnitsToDeduct).toString(),
+              unitCost: inventoryItem.costPerPurchaseUnit || inventoryItem.costPerUnit,
+              totalCost: (-(purchaseUnitsToDeduct * parseFloat(inventoryItem.costPerPurchaseUnit || inventoryItem.costPerUnit))).toString(),
+              reference: `Sales Transaction: ${transactionId}`,
+              createdBy
+            });
+          }
         }
       }
 
@@ -4742,20 +4774,18 @@ export class DatabaseStorage implements IStorage {
         const items = await db
           .select({
             id: salesItems.id,
-            inventoryItemId: salesItems.inventoryItemId,
-            quantitySold: salesItems.quantitySold,
+            itemName: salesItems.itemName,
+            quantity: salesItems.quantity,
             unitPrice: salesItems.unitPrice,
             totalPrice: salesItems.totalPrice,
-            inventoryItem: {
-              id: inventoryItems.id,
-              name: inventoryItems.name,
-              recipeUnit: inventoryItems.recipeUnit,
-              purchaseUnit: inventoryItems.purchaseUnit
-            }
+            costOfGoods: salesItems.costOfGoods,
+            profitAmount: salesItems.profitAmount,
+            profitMargin: salesItems.profitMargin,
+            menuItemId: salesItems.menuItemId,
+            recipeId: salesItems.recipeId
           })
           .from(salesItems)
-          .leftJoin(inventoryItems, eq(salesItems.inventoryItemId, inventoryItems.id))
-          .where(eq(salesItems.salesTransactionId, transaction.id));
+          .where(eq(salesItems.saleId, transaction.id));
 
         return {
           ...transaction,
