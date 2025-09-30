@@ -118,7 +118,7 @@ export default function HRDocumentsPage() {
       });
       setShowOnboardingDialog(false);
     },
-    onError: (error) => {
+    onError: () => {
       toast({
         title: "Error",
         description: "Failed to start onboarding process",
@@ -132,14 +132,14 @@ export default function HRDocumentsPage() {
     mutationFn: async (data: InviteFormData) => {
       return await apiRequest('POST', '/api/hr/onboarding/invite', data);
     },
-    onSuccess: (response) => {
+    onSuccess: () => {
       toast({
         title: "Invitation Sent",
         description: `Onboarding invitation created successfully! Link expires in 72 hours.`,
       });
       setShowInviteDialog(false);
     },
-    onError: (error) => {
+    onError: () => {
       toast({
         title: "Error",
         description: "Failed to create onboarding invitation",
