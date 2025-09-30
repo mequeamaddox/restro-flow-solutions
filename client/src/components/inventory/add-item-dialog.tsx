@@ -38,6 +38,7 @@ export default function AddItemDialog({ isOpen, onClose, onSuccess, categories, 
     resolver: zodResolver(insertInventoryItemSchema),
     defaultValues: {
       name: "",
+      displayName: undefined,
       description: undefined,
       categoryId: undefined,
       locationId: currentLocation?.id || "",
@@ -63,6 +64,7 @@ export default function AddItemDialog({ isOpen, onClose, onSuccess, categories, 
     if (editingItem) {
       form.reset({
         name: editingItem.name || "",
+        displayName: editingItem.displayName ?? undefined,
         description: editingItem.description ?? undefined,
         categoryId: editingItem.categoryId ?? undefined,
         locationId: editingItem.locationId || currentLocation?.id || "",
@@ -92,6 +94,7 @@ export default function AddItemDialog({ isOpen, onClose, onSuccess, categories, 
       // Reset to default values when not editing
       form.reset({
         name: "",
+        displayName: undefined,
         description: undefined,
         categoryId: undefined,
         locationId: currentLocation?.id || "",
@@ -173,20 +176,39 @@ export default function AddItemDialog({ isOpen, onClose, onSuccess, categories, 
         </DialogHeader>
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 gap-4">
               <FormField
                 control={form.control}
                 name="name"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Item Name *</FormLabel>
+                    <FormLabel>Product Name (Full Vendor Name) *</FormLabel>
                     <FormControl>
-                      <Input placeholder="e.g., Chicken Breast" {...field} />
+                      <Input placeholder="e.g., Sysco Premium Boneless Skinless Chicken Breast, 40 lb case" {...field} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
                 )}
               />
+              <FormField
+                control={form.control}
+                name="displayName"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Display Name (Team-Friendly Name)</FormLabel>
+                    <FormControl>
+                      <Input placeholder="e.g., Chicken Breast" {...field} value={field.value || ""} />
+                    </FormControl>
+                    <p className="text-xs text-slate-400 mt-1">
+                      Simple name your team can search for (e.g., "Chicken" instead of the full vendor product name)
+                    </p>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <FormField
                 control={form.control}
                 name="categoryId"
