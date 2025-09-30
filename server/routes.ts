@@ -1484,79 +1484,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Import invoice line items to inventory
-  app.post('/api/inventory/import-from-invoice', isAuthenticated, async (req, res) => {
-    try {
-      const { items, locationId } = req.body;
-      const userId = req.user!.id;
-      
-      if (!items || !Array.isArray(items)) {
-        return res.status(400).json({ message: "Invalid items data" });
-      }
-
-      if (!locationId) {
-        return res.status(400).json({ message: "Location ID is required for import" });
-      }
-
-      console.log('🔄 Importing items to inventory for location:', locationId, items);
-
-      // Verify the location exists
-      const locations = await storage.getLocations();
-      const targetLocation = locations.find(loc => loc.id === locationId);
-      
-      if (!targetLocation) {
-        return res.status(400).json({ message: "Invalid location ID" });
-      }
-
-      let importedCount = 0;
-      for (const item of items) {
-        try {
-          console.log('💾 Attempting to save item:', {
-            name: item.name,
-            description: `Imported from invoice`,
-            locationId: targetLocation.id,
-            quantity: item.quantity.toString(),
-            unit: item.unit,
-            costPerUnit: item.costPerUnit.toString(),
-            reorderLevel: item.reorderLevel.toString(),
-          });
-          
-          const savedItem = await storage.createInventoryItem({
-            name: item.name,
-            description: `Imported from invoice`,
-            categoryId: null, // Will need to map to actual category
-            locationId: targetLocation.id,
-            quantity: item.quantity.toString(),
-            unit: item.unit,
-            costPerUnit: item.costPerUnit.toString(),
-            reorderLevel: item.reorderLevel.toString(),
-            vendorId: null, // No vendor mapping yet
-          });
-          
-          console.log('✅ Item saved with ID:', savedItem.id);
-          importedCount++;
-        } catch (error) {
-          console.error('❌ Error importing item:', item.name, error);
-          // Continue with other items even if one fails
-        }
-      }
-
-      console.log(`✅ Successfully imported ${importedCount} out of ${items.length} items`);
-      
-      // Verify the items were actually saved by checking inventory count
-      const allInventory = await storage.getInventoryItems();
-      console.log(`📊 Total inventory items in database: ${allInventory.length}`);
-      
-      res.json({ 
-        message: "Items imported successfully", 
-        count: importedCount,
-        total: items.length 
-      });
-    } catch (error) {
-      console.error("❌ Error importing items to inventory:", error);
-      res.status(500).json({ message: "Failed to import items" });
-    }
-  });
+  // REMOVED: Import invoice line items to inventory
+  // Users now import inventory via CSV instead
+  // app.post('/api/inventory/import-from-invoice', isAuthenticated, async (req, res) => { ... });
 
   app.post('/api/inventory', isAuthenticated, async (req, res) => {
     try {
