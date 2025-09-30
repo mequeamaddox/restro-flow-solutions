@@ -965,25 +965,41 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const inviter = await storage.getUser(userId);
       const inviterName = `${inviter?.firstName || ''} ${inviter?.lastName || ''}`.trim() || inviter?.email || 'RestroFlow Admin';
       
-      // Get company name (could be from location or user organization)
+      // Get company name and related data for email
       let companyName = 'RestroFlow Restaurant';
+      let locationName: string | undefined;
+      let departmentName: string | undefined;
+      let positionTitle: string | undefined;
+
       if (invitation.locationId) {
         const locations = await storage.getLocations();
         const location = locations.find(loc => loc.id === invitation.locationId);
         companyName = location?.name || companyName;
+        locationName = location?.name;
+      }
+
+      if (invitation.departmentId) {
+        const departments = await storage.getDepartments();
+        const department = departments.find(dept => dept.id === invitation.departmentId);
+        departmentName = department?.name;
+      }
+
+      if (invitation.positionId) {
+        const positions = await storage.getPositions();
+        const position = positions.find(pos => pos.id === invitation.positionId);
+        positionTitle = position?.title;
       }
 
       // Send invitation email
       try {
-        // Get the full invitation with related data for email
-        const fullInvitation = await storage.getInvitationToken(invitation.token);
-        if (fullInvitation) {
-          await InvitationEmailService.sendInvitationEmail(
-            fullInvitation,
-            inviterName,
-            companyName
-          );
-        }
+        await InvitationEmailService.sendInvitationEmail(
+          invitation,
+          inviterName,
+          companyName,
+          locationName,
+          departmentName,
+          positionTitle
+        );
       } catch (emailError) {
         console.error("Failed to send invitation email:", emailError);
         // Don't fail the invitation creation if email fails

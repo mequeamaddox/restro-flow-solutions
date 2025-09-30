@@ -12,6 +12,7 @@ interface InvitationEmailData {
   position?: string;
   invitationToken: string;
   expiresAt: Date;
+  personalMessage?: string;
 }
 
 export class InvitationEmailService {
@@ -191,6 +192,13 @@ export class InvitationEmailService {
                 </div>
               </div>
 
+              ${data.personalMessage ? `
+              <div style="margin: 24px 0; padding: 16px; border-radius: 6px; background: #eef7ff; border: 1px solid #d6ecff;">
+                <strong>Message from ${data.inviterName}:</strong>
+                <div style="white-space: pre-wrap; margin-top: 8px;">${data.personalMessage}</div>
+              </div>
+              ` : ''}
+
               <div style="text-align: center; margin: 30px 0;">
                 <a href="${invitationUrl}" class="cta-button">Accept Invitation & Create Account</a>
               </div>
@@ -266,6 +274,8 @@ ${data.department ? `- Department: ${data.department}` : ''}
 ${data.location ? `- Location: ${data.location}` : ''}
 - Invited by: ${data.inviterName}
 
+${data.personalMessage ? `\nMessage from ${data.inviterName}:\n${data.personalMessage}\n` : ''}
+
 To accept your invitation and create your account, please visit:
 ${invitationUrl}
 
@@ -292,20 +302,29 @@ RestroFlow - Restaurant Management Made Simple
   static async sendInvitationEmail(
     invitation: InvitationToken,
     inviterName: string,
-    companyName: string
+    companyName: string,
+    locationName?: string,
+    departmentName?: string,
+    positionTitle?: string
   ): Promise<boolean> {
     try {
+      if (!invitation.token) {
+        console.error('❌ Invitation token missing for', invitation.email);
+        throw new Error('Invitation token not generated');
+      }
+
       const emailData: InvitationEmailData = {
         recipientEmail: invitation.email,
         recipientName: `${invitation.firstName} ${invitation.lastName}`.trim() || invitation.email,
         inviterName,
         companyName,
         role: invitation.role,
-        location: invitation.location?.name,
-        department: invitation.department?.name,
-        position: invitation.position?.title,
+        location: locationName,
+        department: departmentName,
+        position: positionTitle,
         invitationToken: invitation.token,
         expiresAt: new Date(invitation.expiresAt),
+        personalMessage: invitation.personalMessage || undefined,
       };
 
       const htmlContent = this.generateInvitationHtml(emailData);
@@ -330,20 +349,29 @@ RestroFlow - Restaurant Management Made Simple
   static async sendInvitationReminderEmail(
     invitation: InvitationToken,
     inviterName: string,
-    companyName: string
+    companyName: string,
+    locationName?: string,
+    departmentName?: string,
+    positionTitle?: string
   ): Promise<boolean> {
     try {
+      if (!invitation.token) {
+        console.error('❌ Invitation token missing for', invitation.email);
+        throw new Error('Invitation token not generated');
+      }
+
       const emailData: InvitationEmailData = {
         recipientEmail: invitation.email,
         recipientName: `${invitation.firstName} ${invitation.lastName}`.trim() || invitation.email,
         inviterName,
         companyName,
         role: invitation.role,
-        location: invitation.location?.name,
-        department: invitation.department?.name,
-        position: invitation.position?.title,
+        location: locationName,
+        department: departmentName,
+        position: positionTitle,
         invitationToken: invitation.token,
         expiresAt: new Date(invitation.expiresAt),
+        personalMessage: invitation.personalMessage || undefined,
       };
 
       const invitationUrl = `${this.APP_URL}/invitation/accept/${invitation.token}`;
