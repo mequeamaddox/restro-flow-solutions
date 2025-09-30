@@ -35,9 +35,10 @@ export default function InventoryTable({ items, isLoading, showPagination = fals
       await apiRequest('DELETE', `/api/inventory/${itemId}`);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/inventory'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/inventory', currentLocation?.id] });
       queryClient.invalidateQueries({ queryKey: ['/api/dashboard/metrics'] });
-      queryClient.invalidateQueries({ queryKey: ['/api/inventory/low-stock'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/inventory/low-stock', currentLocation?.id] });
+      queryClient.invalidateQueries({ queryKey: ['/api/recipes'] });
       setDeleteItem(null);
       toast({
         title: "Success",
@@ -315,6 +316,7 @@ export default function InventoryTable({ items, isLoading, showPagination = fals
                             <DropdownMenuItem 
                               onClick={() => handleDeleteItem(item)}
                               className="text-red-400 hover:bg-red-950 hover:text-red-300 cursor-pointer"
+                              data-testid={`button-delete-item-${item.id}`}
                             >
                               <Trash2 className="h-4 w-4 mr-2" />
                               Delete
@@ -395,6 +397,7 @@ export default function InventoryTable({ items, isLoading, showPagination = fals
                     size="sm" 
                     onClick={() => handleDeleteItem(item)}
                     className="border-red-600 text-red-400 hover:bg-red-950 hover:text-red-300"
+                    data-testid={`button-delete-item-mobile-${item.id}`}
                   >
                     <Trash2 className="h-4 w-4 mr-1" />
                     Delete
