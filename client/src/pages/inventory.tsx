@@ -9,6 +9,7 @@ import { Plus, Search, Filter, Package, TrendingUp, AlertTriangle, DollarSign, D
 import { useToast } from "@/hooks/use-toast";
 import { isUnauthorizedError } from "@/lib/authUtils";
 import { useLocation } from "@/contexts/LocationContext";
+import { apiRequest } from "@/lib/queryClient";
 import InventoryTable from "@/components/inventory/inventory-table";
 import AddItemDialog from "@/components/inventory/add-item-dialog";
 import CsvImportDialog from "@/components/inventory/csv-import-dialog";
@@ -75,6 +76,45 @@ export default function Inventory() {
 
   const handleEditItem = (item: any) => {
     setEditingItem(item);
+  };
+
+  const deleteItemMutation = useMutation({
+    mutationFn: async (itemId: string) => {
+      await apiRequest('DELETE', `/api/inventory/${itemId}`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/inventory', currentLocation?.id] });
+      queryClient.invalidateQueries({ queryKey: ['/api/dashboard/metrics'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/inventory/low-stock', currentLocation?.id] });
+      queryClient.invalidateQueries({ queryKey: ['/api/recipes'] });
+      setEditingItem(null);
+      toast({
+        title: "Success",
+        description: "Item deleted successfully",
+      });
+    },
+    onError: (error) => {
+      if (isUnauthorizedError(error)) {
+        toast({
+          title: "Unauthorized",
+          description: "You are logged out. Logging in again...",
+          variant: "destructive",
+        });
+        setTimeout(() => {
+          window.location.href = "/auth";
+        }, 500);
+        return;
+      }
+      toast({
+        title: "Error",
+        description: "Failed to delete item",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const handleDeleteFromDialog = (item: any) => {
+    deleteItemMutation.mutate(item.id);
   };
 
   // Calculate inventory metrics
@@ -342,6 +382,7 @@ export default function Inventory() {
           categories={(categories as any[]) || []}
           vendors={(vendors as any[]) || []}
           editingItem={editingItem}
+          onDelete={handleDeleteFromDialog}
         />
       )}
 

@@ -1,4 +1,5 @@
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -13,7 +14,7 @@ import { useToast } from "@/hooks/use-toast";
 import { isUnauthorizedError } from "@/lib/authUtils";
 import { useLocation } from "@/contexts/LocationContext";
 import { Checkbox } from "@/components/ui/checkbox";
-import { ScanLine, Camera, Calculator } from "lucide-react";
+import { ScanLine, Camera, Calculator, AlertCircle } from "lucide-react";
 import BarcodeScanner from "@/components/barcode/barcode-scanner";
 import { useState, useEffect } from "react";
 
@@ -24,12 +25,14 @@ interface AddItemDialogProps {
   categories: Category[];
   vendors: Vendor[];
   editingItem?: any;
+  onDelete?: (item: any) => void;
 }
 
-export default function AddItemDialog({ isOpen, onClose, onSuccess, categories, vendors, editingItem }: AddItemDialogProps) {
+export default function AddItemDialog({ isOpen, onClose, onSuccess, categories, vendors, editingItem, onDelete }: AddItemDialogProps) {
   const { toast } = useToast();
   const { currentLocation } = useLocation();
   const [isScannerOpen, setIsScannerOpen] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
   const form = useForm<InsertInventoryItem>({
     resolver: zodResolver(insertInventoryItemSchema),
@@ -591,20 +594,33 @@ export default function AddItemDialog({ isOpen, onClose, onSuccess, categories, 
               )}
             />
             
-            <div className="flex justify-end space-x-3 pt-6 border-t border-gray-200">
-              <Button type="button" variant="outline" onClick={handleClose}>
-                Cancel
-              </Button>
-              <Button 
-                type="submit" 
-                disabled={createItemMutation.isPending}
-                className="bg-blue-600 hover:bg-blue-700 text-white"
-              >
-                {createItemMutation.isPending ? 
-                  (editingItem ? "Updating..." : "Adding...") : 
-                  (editingItem ? "Update Item" : "Add Item")
-                }
-              </Button>
+            <div className="flex justify-between items-center pt-6 border-t border-gray-200">
+              {editingItem && onDelete && (
+                <Button 
+                  type="button" 
+                  variant="destructive"
+                  onClick={() => setShowDeleteConfirm(true)}
+                  className="bg-red-600 hover:bg-red-700 text-white"
+                  data-testid={`button-delete-item-dialog-${editingItem.id}`}
+                >
+                  Delete Item
+                </Button>
+              )}
+              <div className={`flex space-x-3 ${!editingItem || !onDelete ? 'w-full justify-end' : ''}`}>
+                <Button type="button" variant="outline" onClick={handleClose}>
+                  Cancel
+                </Button>
+                <Button 
+                  type="submit" 
+                  disabled={createItemMutation.isPending}
+                  className="bg-blue-600 hover:bg-blue-700 text-white"
+                >
+                  {createItemMutation.isPending ? 
+                    (editingItem ? "Updating..." : "Adding...") : 
+                    (editingItem ? "Update Item" : "Add Item")
+                  }
+                </Button>
+              </div>
             </div>
           </form>
         </Form>
@@ -616,6 +632,37 @@ export default function AddItemDialog({ isOpen, onClose, onSuccess, categories, 
         onClose={() => setIsScannerOpen(false)}
         onScan={handleBarcodeScanned}
       />
+      
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog open={showDeleteConfirm} onOpenChange={setShowDeleteConfirm}>
+        <AlertDialogContent className="bg-slate-900 border-slate-700">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="text-white flex items-center gap-2">
+              <AlertCircle className="h-5 w-5 text-red-500" />
+              Delete Inventory Item
+            </AlertDialogTitle>
+            <AlertDialogDescription className="text-slate-400">
+              Are you sure you want to delete "{editingItem?.name}"? This will remove the item and its references from recipes, transactions, and vendor pricing. This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel className="bg-slate-800 border-slate-600 text-slate-300 hover:bg-slate-700">
+              Cancel
+            </AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={() => {
+                if (editingItem && onDelete) {
+                  onDelete(editingItem);
+                  setShowDeleteConfirm(false);
+                }
+              }}
+              className="bg-red-600 hover:bg-red-700 text-white"
+            >
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </Dialog>
   );
 }
