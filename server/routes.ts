@@ -955,10 +955,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const userId = req.user!.id;
       const invitationData = insertInvitationTokenSchema.parse(req.body);
       
-      // Ensure invitedBy is set to current user
+      // Ensure invitedBy and expiresAt are set
+      const expiresAt = invitationData.expiresAt || new Date(Date.now() + 48 * 60 * 60 * 1000); // 48 hours from now
+      
       const invitation = await storage.createInvitationToken({
         ...invitationData,
         invitedBy: userId,
+        expiresAt,
       });
 
       // Get inviter and company information for email

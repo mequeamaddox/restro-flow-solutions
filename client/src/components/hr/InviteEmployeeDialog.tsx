@@ -78,14 +78,6 @@ export default function InviteEmployeeDialog({
     queryKey: ['/api/locations'],
   });
 
-  const { data: departments = [] } = useQuery<Department[]>({
-    queryKey: ['/api/hr/departments'],
-  });
-
-  const { data: positions = [] } = useQuery<Position[]>({
-    queryKey: ['/api/hr/positions'],
-  });
-
   const form = useForm<InviteEmployeeFormData>({
     resolver: zodResolver(inviteEmployeeSchema),
     defaultValues: {
@@ -139,14 +131,31 @@ export default function InviteEmployeeDialog({
     inviteEmployeeMutation.mutate(data);
   };
 
-  const selectedLocation = locations.find(loc => loc.id === form.watch('locationId'));
-  const filteredDepartments = departments.filter(dept => 
-    !selectedLocation || dept.locationId === selectedLocation.id
-  );
-  const filteredPositions = positions.filter(pos => {
-    if (!selectedLocation) return true;
-    const posDepartment = departments.find(d => d.id === pos.departmentId);
-    return posDepartment?.locationId === selectedLocation.id;
+  // Watch selected location to fetch departments and positions
+  const selectedLocationId = form.watch('locationId');
+
+  const { data: departments = [] } = useQuery<Department[]>({
+    queryKey: ['/api/hr/departments', selectedLocationId],
+    queryFn: async () => {
+      const response = await fetch(`/api/hr/departments?locationId=${selectedLocationId}`, {
+        credentials: 'include',
+      });
+      if (!response.ok) throw new Error('Failed to fetch departments');
+      return response.json();
+    },
+    enabled: !!selectedLocationId,
+  });
+
+  const { data: positions = [] } = useQuery<Position[]>({
+    queryKey: ['/api/hr/positions', selectedLocationId],
+    queryFn: async () => {
+      const response = await fetch(`/api/hr/positions?locationId=${selectedLocationId}`, {
+        credentials: 'include',
+      });
+      if (!response.ok) throw new Error('Failed to fetch positions');
+      return response.json();
+    },
+    enabled: !!selectedLocationId,
   });
 
   const roleDescriptions = {
@@ -326,7 +335,7 @@ export default function InviteEmployeeDialog({
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
-                          {filteredDepartments.map((department) => (
+                          {departments.map((department) => (
                             <SelectItem key={department.id} value={department.id}>
                               {department.name}
                             </SelectItem>
@@ -351,7 +360,7 @@ export default function InviteEmployeeDialog({
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
-                          {filteredPositions.map((position) => (
+                          {positions.map((position) => (
                             <SelectItem key={position.id} value={position.id}>
                               {position.title}
                             </SelectItem>

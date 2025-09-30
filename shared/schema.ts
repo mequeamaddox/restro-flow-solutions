@@ -878,7 +878,14 @@ export const teamResources = pgTable("team_resources", {
 export const insertDepartmentSchema = createInsertSchema(departments).omit({ id: true, createdAt: true, updatedAt: true });
 export const insertPositionSchema = createInsertSchema(positions).omit({ id: true, createdAt: true, updatedAt: true });
 export const insertEmployeeSchema = createInsertSchema(employees).omit({ id: true, employeeNumber: true, createdAt: true, updatedAt: true });
-export const insertInvitationTokenSchema = createInsertSchema(invitationTokens).omit({ id: true, token: true, status: true, acceptedAt: true, employeeId: true, createdAt: true, updatedAt: true });
+export const insertInvitationTokenSchema = createInsertSchema(invitationTokens)
+  .omit({ id: true, token: true, status: true, acceptedAt: true, employeeId: true, createdAt: true, updatedAt: true })
+  .extend({
+    invitedBy: z.string().optional(),
+    expiresAt: z.date().optional(),
+    hourlyRate: z.union([z.string(), z.number()]).optional().transform(val => val ? String(val) : undefined),
+    salary: z.union([z.string(), z.number()]).optional().transform(val => val ? String(val) : undefined),
+  });
 export const insertShiftSchema = createInsertSchema(shifts).omit({ id: true, createdAt: true, updatedAt: true });
 export const insertAvailabilitySchema = createInsertSchema(availability).omit({ id: true, createdAt: true, updatedAt: true });
 export const insertTimeOffRequestSchema = createInsertSchema(timeOffRequests).omit({ id: true, createdAt: true, updatedAt: true });
