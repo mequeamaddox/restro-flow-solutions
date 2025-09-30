@@ -54,7 +54,7 @@ import {
   Send,
 } from 'lucide-react';
 import InviteEmployeeDialog from '@/components/hr/InviteEmployeeDialog';
-import type { InvitationToken } from '@shared/schema';
+import type { InvitationToken, Location, Department } from '@shared/schema';
 
 export default function HRInvitations() {
   const [searchTerm, setSearchTerm] = useState('');
@@ -71,6 +71,16 @@ export default function HRInvitations() {
     refetch 
   } = useQuery<InvitationToken[]>({
     queryKey: ['/api/invitations'],
+  });
+
+  // Fetch locations for display
+  const { data: locations = [] } = useQuery<Location[]>({
+    queryKey: ['/api/locations'],
+  });
+
+  // Fetch departments for display
+  const { data: departments = [] } = useQuery<Department[]>({
+    queryKey: ['/api/hr/departments'],
   });
 
   // Cancel invitation mutation
@@ -144,10 +154,10 @@ export default function HRInvitations() {
     return matchesSearch && matchesStatus;
   });
 
-  const getStatusBadge = (status: string, expiresAt: string) => {
-    const isExpired = new Date(expiresAt) < new Date();
+  const getStatusBadge = (status: string, expiresAt: Date | null) => {
+    const isExp = expiresAt ? new Date(expiresAt) < new Date() : false;
     
-    if (isExpired && status === 'pending') {
+    if (isExp && status === 'pending') {
       return <Badge variant="destructive">Expired</Badge>;
     }
     
@@ -180,7 +190,7 @@ export default function HRInvitations() {
     );
   };
 
-  const isExpired = (expiresAt: string) => new Date(expiresAt) < new Date();
+  const isExpired = (expiresAt: Date | null) => expiresAt ? new Date(expiresAt) < new Date() : false;
   const canResend = (invitation: InvitationToken) => 
     invitation.status === 'pending' || isExpired(invitation.expiresAt);
 
@@ -386,7 +396,7 @@ export default function HRInvitations() {
                         <div className="flex items-center gap-1">
                           <MapPin className="h-3 w-3 text-gray-400" />
                           <span className="text-sm">
-                            {invitation.location?.name || 'N/A'}
+                            {locations.find(l => l.id === invitation.locationId)?.name || 'N/A'}
                           </span>
                         </div>
                       </TableCell>
@@ -394,18 +404,18 @@ export default function HRInvitations() {
                         <div className="flex items-center gap-1">
                           <Briefcase className="h-3 w-3 text-gray-400" />
                           <span className="text-sm">
-                            {invitation.department?.name || 'N/A'}
+                            {invitation.departmentId ? departments.find(d => d.id === invitation.departmentId)?.name || 'N/A' : 'N/A'}
                           </span>
                         </div>
                       </TableCell>
                       <TableCell>
-                        {getStatusBadge(invitation.status, invitation.expiresAt)}
+                        {getStatusBadge(invitation.status || 'pending', invitation.expiresAt)}
                       </TableCell>
                       <TableCell>
                         <div className="flex items-center gap-1">
                           <Calendar className="h-3 w-3 text-gray-400" />
                           <span className="text-sm">
-                            {format(new Date(invitation.createdAt), 'MMM dd, yyyy')}
+                            {invitation.createdAt ? format(new Date(invitation.createdAt), 'MMM dd, yyyy') : 'N/A'}
                           </span>
                         </div>
                       </TableCell>
@@ -413,7 +423,7 @@ export default function HRInvitations() {
                         <div className="flex items-center gap-1">
                           <Clock className="h-3 w-3 text-gray-400" />
                           <span className={`text-sm ${isExpired(invitation.expiresAt) ? 'text-red-600' : ''}`}>
-                            {format(new Date(invitation.expiresAt), 'MMM dd, HH:mm')}
+                            {invitation.expiresAt ? format(new Date(invitation.expiresAt), 'MMM dd, HH:mm') : 'N/A'}
                           </span>
                         </div>
                       </TableCell>

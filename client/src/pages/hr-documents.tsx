@@ -17,6 +17,7 @@ import {
   Award, User, Send, Zap
 } from 'lucide-react';
 import { DocumentAssignmentWizard } from '@/components/hr/DocumentAssignmentWizard';
+import InviteEmployeeDialog from '@/components/hr/InviteEmployeeDialog';
 import { format } from 'date-fns';
 import { apiRequest, queryClient } from '@/lib/queryClient';
 import { useToast } from '@/hooks/use-toast';
@@ -40,13 +41,6 @@ interface OnboardingFormData {
   assignedMentorId?: string;
 }
 
-interface InviteFormData {
-  employeeId: string;
-  email: string;
-  phone?: string;
-  sendMethod: 'email' | 'text';
-}
-
 export default function HRDocumentsPage() {
   const { toast } = useToast();
   const { currentLocation } = useLocation();
@@ -55,7 +49,6 @@ export default function HRDocumentsPage() {
   const [onboardingFilter, setOnboardingFilter] = useState<string>('all');
   const [showDocumentDialog, setShowDocumentDialog] = useState(false);
   const [showOnboardingDialog, setShowOnboardingDialog] = useState(false);
-  const [showInviteDialog, setShowInviteDialog] = useState(false);
   const [showAssignmentWizard, setShowAssignmentWizard] = useState(false);
 
   // Upload Document form state
@@ -70,12 +63,6 @@ export default function HRDocumentsPage() {
   const [onboardingStartDate, setOnboardingStartDate] = useState(format(new Date(), 'yyyy-MM-dd'));
   const [onboardingTargetDate, setOnboardingTargetDate] = useState('');
   const [onboardingMentorId, setOnboardingMentorId] = useState('');
-
-  // Invite Employee form state
-  const [inviteEmployeeId, setInviteEmployeeId] = useState('');
-  const [inviteEmail, setInviteEmail] = useState('');
-  const [invitePhone, setInvitePhone] = useState('');
-  const [inviteSendMethod, setInviteSendMethod] = useState<'email' | 'text'>('email');
 
   // Fetch data
   const { data: employees } = useQuery<Employee[]>({
@@ -125,27 +112,6 @@ export default function HRDocumentsPage() {
       toast({
         title: "Error",
         description: "Failed to upload document",
-        variant: "destructive",
-      });
-    },
-  });
-
-  // Invitation creation mutation
-  const createInvitationMutation = useMutation({
-    mutationFn: async (data: InviteFormData) => {
-      return await apiRequest('POST', '/api/hr/onboarding/invite', data);
-    },
-    onSuccess: () => {
-      toast({
-        title: "Invitation Sent",
-        description: `Onboarding invitation created successfully! Link expires in 72 hours.`,
-      });
-      setShowInviteDialog(false);
-    },
-    onError: () => {
-      toast({
-        title: "Error",
-        description: "Failed to create onboarding invitation",
         variant: "destructive",
       });
     },
@@ -206,28 +172,6 @@ export default function HRDocumentsPage() {
           variant: "destructive",
         });
       });
-    } else {
-      toast({
-        title: "Error",
-        description: "Please fill in all required fields",
-        variant: "destructive",
-      });
-    }
-  };
-
-  const handleSendInvitation = () => {
-    if (inviteEmployeeId && inviteEmail) {
-      createInvitationMutation.mutate({
-        employeeId: inviteEmployeeId,
-        email: inviteEmail,
-        phone: invitePhone || undefined,
-        sendMethod: inviteSendMethod,
-      });
-      // Reset form state
-      setInviteEmployeeId('');
-      setInviteEmail('');
-      setInvitePhone('');
-      setInviteSendMethod('email');
     } else {
       toast({
         title: "Error",
@@ -499,83 +443,14 @@ export default function HRDocumentsPage() {
             </DialogContent>
           </Dialog>
 
-          <Dialog open={showInviteDialog} onOpenChange={setShowInviteDialog}>
-            <DialogTrigger asChild>
+          <InviteEmployeeDialog 
+            trigger={
               <Button variant="outline" data-testid="button-invite-employee">
                 <Send className="w-4 h-4 mr-2" />
                 Invite Employee
               </Button>
-            </DialogTrigger>
-            <DialogContent>
-              <DialogHeader>
-                <DialogTitle>Send Onboarding Invitation</DialogTitle>
-              </DialogHeader>
-              <div className="space-y-4">
-                <div>
-                  <Label htmlFor="employeeId">Employee</Label>
-                  <Select value={inviteEmployeeId} onValueChange={setInviteEmployeeId} required>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select employee" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {employees?.map(emp => (
-                        <SelectItem key={emp.id} value={emp.id}>
-                          {emp.firstName} {emp.lastName}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                
-                <div>
-                  <Label htmlFor="email">Email Address</Label>
-                  <Input 
-                    value={inviteEmail}
-                    onChange={(e) => setInviteEmail(e.target.value)}
-                    type="email" 
-                    placeholder="employee@example.com" 
-                    required 
-                  />
-                </div>
-
-                <div>
-                  <Label htmlFor="phone">Phone Number (Optional)</Label>
-                  <Input 
-                    value={invitePhone}
-                    onChange={(e) => setInvitePhone(e.target.value)}
-                    type="tel" 
-                    placeholder="+1 (555) 123-4567" 
-                  />
-                </div>
-
-                <div>
-                  <Label htmlFor="sendMethod">Send Method</Label>
-                  <Select value={inviteSendMethod} onValueChange={(value) => setInviteSendMethod(value as 'email' | 'text')} required>
-                    <SelectTrigger>
-                      <SelectValue placeholder="How to send invitation" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="email">Email</SelectItem>
-                      <SelectItem value="text">Text Message</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div className="flex justify-end gap-2">
-                  <Button type="button" variant="outline" onClick={() => setShowInviteDialog(false)}>
-                    Cancel
-                  </Button>
-                  <Button 
-                    type="button" 
-                    disabled={createInvitationMutation.isPending} 
-                    onClick={handleSendInvitation}
-                  >
-                    {createInvitationMutation.isPending ? 'Sending...' : 'Send Invitation'}
-                  </Button>
-                </div>
-              </div>
-            </DialogContent>
-          </Dialog>
+            }
+          />
         </div>
       </div>
 

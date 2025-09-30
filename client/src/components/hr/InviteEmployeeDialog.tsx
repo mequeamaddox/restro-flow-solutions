@@ -143,9 +143,11 @@ export default function InviteEmployeeDialog({
   const filteredDepartments = departments.filter(dept => 
     !selectedLocation || dept.locationId === selectedLocation.id
   );
-  const filteredPositions = positions.filter(pos => 
-    !selectedLocation || pos.locationId === selectedLocation.id
-  );
+  const filteredPositions = positions.filter(pos => {
+    if (!selectedLocation) return true;
+    const posDepartment = departments.find(d => d.id === pos.departmentId);
+    return posDepartment?.locationId === selectedLocation.id;
+  });
 
   const roleDescriptions = {
     owner: 'Full access to all system features and business management',
