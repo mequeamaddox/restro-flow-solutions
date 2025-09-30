@@ -8,7 +8,7 @@ import { Progress } from "@/components/ui/progress";
 import { Link } from "wouter";
 import { 
   FileText, Clock, CheckCircle, AlertTriangle, MessageCircle, 
-  Calendar, User, Target, Upload, Download, Send, Users,
+  Calendar, Target, Upload, Download, Send,
   Bell, Star, TrendingUp, Award
 } from "lucide-react";
 import { format, isToday, isTomorrow, addDays } from "date-fns";
