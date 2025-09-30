@@ -5026,6 +5026,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // ==========================================
+  // PRICE COMPARISON FEATURE - DISABLED
+  // Moved to backup folder - to be built out later
+  // Frontend files: backup/price-comparison.tsx, backup/price-comparison-broken.tsx
+  // ==========================================
+  
+  /*
   // Vendor Price Comparison API
   app.get('/api/price-comparison', isAuthenticated, async (req, res) => {
     try {
@@ -5219,6 +5226,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       await storage.updatePriceImportStatus(importId, 'failed', stats);
     }
   }
+  */
 
   // Sales Integration API endpoints
 

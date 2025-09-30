@@ -51,7 +51,6 @@ const navigation = [
   { name: 'Recipes', href: '/recipes', icon: ChefHat },
   { name: 'Purchase Orders', href: '/purchase-orders', icon: ShoppingCart },
   { name: 'Vendors', href: '/vendors', icon: Building2 },
-  { name: 'Price Comparison', href: '/price-comparison', icon: DollarSign },
   { name: 'Invoice Processing', href: '/invoice-processing', icon: FileText, badge: 'OCR' },
   { name: 'Analytics & Reports', href: '/analytics', icon: BarChart3, badge: 'LIVE' },
   { name: 'Demand Forecasting', href: '/forecasting', icon: Brain, badge: 'AI' },

@@ -21,7 +21,6 @@ import PurchaseOrders from "@/pages/purchase-orders";
 import WasteTracking from "@/pages/waste-tracking";
 import PosIntegration from "@/pages/pos-integration";
 import Analytics from "@/pages/analytics";
-import PriceComparison from "@/pages/price-comparison";
 import BarcodeTest from "@/pages/barcode-test";
 import Settings from "@/pages/settings";
 import InvoiceProcessing from "@/pages/invoice-processing";
@@ -131,7 +130,6 @@ function Router() {
                 <Route path="/waste-tracking" component={WasteTracking} />
                 <Route path="/pos-integration" component={PosIntegration} />
                 <Route path="/analytics" component={Analytics} />
-                <Route path="/price-comparison" component={PriceComparison} />
                 <Route path="/invoice-processing" component={InvoiceProcessing} />
                 <Route path="/automated-ordering" component={AutomatedOrdering} />
                 <Route path="/forecasting" component={Forecasting} />
