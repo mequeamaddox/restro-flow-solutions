@@ -4422,8 +4422,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Check if employee has an active onboarding record, create if not
       const employeeId = assignmentData.employeeId;
       const existingOnboarding = await storage.getEmployeeOnboarding(employeeId);
+      const hasActiveOnboarding = existingOnboarding && existingOnboarding.some(
+        (ob: any) => ob.status === 'in-progress' || ob.status === 'not-started'
+      );
       
-      if (!existingOnboarding || existingOnboarding.length === 0) {
+      if (!hasActiveOnboarding) {
         // Get the first available onboarding template
         const templates = await storage.getOnboardingTemplates();
         const defaultTemplate = templates.length > 0 ? templates[0] : null;
