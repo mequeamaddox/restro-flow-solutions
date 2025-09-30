@@ -12,8 +12,8 @@ import { Textarea } from '@/components/ui/textarea';
 import { ObjectUploader } from '@/components/ObjectUploader';
 import { 
   FileText, Upload, CheckCircle, Clock, AlertTriangle, Users, 
-  Calendar, BarChart3, Download, Eye, Trash2, Plus, Filter,
-  Award, Target, TrendingUp, User, Search, Send, Zap
+  Calendar, Download, Eye, Trash2, Plus,
+  Award, User, Send, Zap
 } from 'lucide-react';
 import { DocumentAssignmentWizard } from '@/components/hr/DocumentAssignmentWizard';
 import { format } from 'date-fns';
@@ -100,28 +100,6 @@ export default function HRDocumentsPage() {
       toast({
         title: "Error",
         description: "Failed to upload document",
-        variant: "destructive",
-      });
-    },
-  });
-
-  // Onboarding creation mutation
-  const createOnboardingMutation = useMutation({
-    mutationFn: async (data: OnboardingFormData & { totalSteps: number }) => {
-      return await apiRequest('POST', '/api/hr/onboarding', data);
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/hr/onboarding'] });
-      toast({
-        title: "Success",
-        description: "Onboarding process started successfully",
-      });
-      setShowOnboardingDialog(false);
-    },
-    onError: () => {
-      toast({
-        title: "Error",
-        description: "Failed to start onboarding process",
         variant: "destructive",
       });
     },
