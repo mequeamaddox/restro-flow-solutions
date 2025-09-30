@@ -13,7 +13,7 @@ import { ObjectUploader } from '@/components/ObjectUploader';
 import { 
   FileText, Upload, CheckCircle, Clock, AlertTriangle, Users, 
   Calendar, BarChart3, Download, Eye, Trash2, Plus, Filter,
-  Award, Target, TrendingUp, User, Settings, Search, Send, Zap
+  Award, Target, TrendingUp, User, Search, Send, Zap
 } from 'lucide-react';
 import { DocumentAssignmentWizard } from '@/components/hr/DocumentAssignmentWizard';
 import { format } from 'date-fns';
