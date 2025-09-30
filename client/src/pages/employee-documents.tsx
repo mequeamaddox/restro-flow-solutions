@@ -43,7 +43,6 @@ export default function EmployeeDocuments() {
   const [showSignatureDialog, setShowSignatureDialog] = useState(false);
   const [showDigitalForm, setShowDigitalForm] = useState(false);
   const [filter, setFilter] = useState<string>('all');
-  const [showManagerUpload, setShowManagerUpload] = useState(false);
   const [selectedDocumentForUpload, setSelectedDocumentForUpload] = useState<EmployeeDocument | null>(null);
 
   // Fetch employee documents
@@ -122,7 +121,6 @@ export default function EmployeeDocuments() {
         description: "Paper document has been uploaded successfully.",
       });
       queryClient.invalidateQueries({ queryKey: [`/api/employees/${user?.id}/documents`] });
-      setShowManagerUpload(false);
       setSelectedDocumentForUpload(null);
     },
     onError: () => {
@@ -134,15 +132,6 @@ export default function EmployeeDocuments() {
     },
   });
 
-  const handleSignature = async (signatureData: string, signedName: string) => {
-    if (selectedDocument) {
-      signatureMutation.mutate({
-        documentId: selectedDocument.id,
-        signatureData,
-        signedName,
-      });
-    }
-  };
 
   const handleManagerUpload = async (result: any) => {
     const uploadedFile = result.successful[0];
@@ -345,9 +334,10 @@ export default function EmployeeDocuments() {
                       maxFileSize={10485760}
                       onGetUploadParameters={async () => {
                         const response = await apiRequest('POST', '/api/objects/upload');
+                        const data = await response.json();
                         return {
                           method: 'PUT' as const,
-                          url: response.uploadURL,
+                          url: data.uploadURL,
                         };
                       }}
                       onComplete={handleManagerUpload}
@@ -589,7 +579,7 @@ export default function EmployeeDocuments() {
       </Dialog>
 
       {/* Document Details Dialog */}
-      <Dialog open={!!selectedDocument && !showUploadDialog && !showDigitalForm} onOpenChange={() => setSelectedDocument(null)}>
+      <Dialog open={!!selectedDocument && !showDigitalForm} onOpenChange={() => setSelectedDocument(null)}>
         <DialogContent className="max-w-2xl">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
