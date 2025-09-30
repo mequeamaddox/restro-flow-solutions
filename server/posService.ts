@@ -105,8 +105,15 @@ export class PosService {
         throw new Error("Merchant ID is required for menu sync");
       }
       
-      if (!credentials?.accessToken) {
-        throw new Error("Access token is required for menu sync");
+      // Provider-specific credential validation
+      if (integration.provider === "spoton") {
+        if (!credentials?.apiKey) {
+          throw new Error("API key is required for SpotOn menu sync");
+        }
+      } else {
+        if (!credentials?.accessToken) {
+          throw new Error("Access token is required for menu sync");
+        }
       }
 
       // Provider-specific menu sync

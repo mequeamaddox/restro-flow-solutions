@@ -49,7 +49,7 @@ export function startSpotOnSchedulers() {
 
           try {
             const url = `${baseUrl}/locations/${encodeURIComponent(i.merchantId)}/orders?${params}`;
-            const res = await fetch(url, { headers: { "x-api-key": credentials.apiKey } });
+            const res = await fetch(url, { headers: { "x-api-key": credentials.apiKey! } });
             
             if (!res.ok) {
               console.error(`SpotOn backfill fetch failed: ${res.status}`);
@@ -102,7 +102,7 @@ export function startSpotOnSchedulers() {
         
         if (totalOrders > 0) {
           console.log(`SpotOn backfill completed: ${totalOrders} orders processed for integration ${i.id}`);
-          await storage.updatePosIntegration(i.id, { lastSyncAt: new Date().toISOString() });
+          await storage.updatePosIntegration(i.id, { lastSyncAt: new Date().toISOString() as any });
         }
       } catch (e) {
         console.error("SpotOn backfill failed", { integrationId: i.id, err: String(e) });
