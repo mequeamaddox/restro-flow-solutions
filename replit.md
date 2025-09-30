@@ -4,11 +4,11 @@
 
 RestroFlow is a comprehensive enterprise-grade restaurant operations platform designed to streamline operations with inventory management, OCR invoice processing, real-time analytics, and cost monitoring. The platform features a modular add-on architecture for scalability.
 
-**Core Platform**: Offers inventory tracking, recipe costing, vendor management, purchase orders, waste tracking, subscription-based OCR invoice processing, and real-time business intelligence. Key enhancements include AI-powered demand forecasting, automated ordering, and intelligent cost optimization.
+**Core Platform**: Offers inventory tracking, recipe costing, vendor management, purchase orders, waste tracking, OCR invoice processing, and real-time business intelligence.
 
 **Employee Management Add-on**: Provides a comprehensive HR system with scheduling, task management, team messaging, performance tracking, time clock functionality, and payroll integration.
 
-The platform also includes a Progressive Web App (PWA) for mobile-first management, advanced enterprise AI features for demand forecasting and cost optimization, and a robust security framework.
+The platform also includes a Progressive Web App (PWA) for mobile-first management and a robust security framework.
 
 ## User Preferences
 
@@ -35,7 +35,7 @@ Business Strategy: Modular add-on approach for employee management to enable sca
 - **Security**: SOC2-style standards including rate limiting, security headers, input validation, comprehensive audit logging, and role-based access control.
 - **Monetization**: Subscription-based OCR access with a freemium model and credit tracking.
 - **Invoice Processing**: Real database operations for invoice creation/statistics, advanced free OCR (PDF-to-image conversion, Tesseract), multi-page PDF support, and data sanitization.
-- **AI Features**: Real-time analytics with alerts, AI-powered demand forecasting, automated ordering, and intelligent cost optimization.
+- **AI Features**: Real-time analytics with alerts and intelligent cost optimization.
 - **SEO**: Comprehensive meta tags, Open Graph, Twitter Cards, Schema.org, and content optimization.
 - **Pricing Strategy**: Modular pricing with competitive analysis against MarginEdge, offering savings and annual discounts.
 

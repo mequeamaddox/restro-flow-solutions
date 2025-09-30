@@ -3608,22 +3608,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // ============================================================================
-  // AUTOMATED ORDERING ROUTES - TEMPORARILY DISABLED (COMING SOON FEATURE)
-  // ============================================================================
-  // Original functionality backed up in: backup/advanced-features/
-  
-  // Temporary placeholder route for coming soon feature
-  app.get('/api/auto-ordering/rules', isAuthenticated, async (req: any, res) => {
-    res.json([]); // Return empty array for coming soon feature
-  });
-
-
-  // ============================================================================
-  // DEMAND FORECASTING ROUTES - TEMPORARILY DISABLED (COMING SOON FEATURE)
-  // ============================================================================
-  // Original functionality backed up in: backup/advanced-features/
-
   // Analytics and Activity Routes
   app.get('/api/activities', isAuthenticated, async (req, res) => {
     try {

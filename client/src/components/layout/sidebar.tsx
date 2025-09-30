@@ -53,8 +53,6 @@ const navigation = [
   { name: 'Vendors', href: '/vendors', icon: Building2 },
   { name: 'Invoice Processing', href: '/invoice-processing', icon: FileText, badge: 'OCR' },
   { name: 'Analytics & Reports', href: '/analytics', icon: BarChart3, badge: 'LIVE' },
-  { name: 'Demand Forecasting', href: '/forecasting', icon: Brain, badge: 'AI' },
-  { name: 'Automated Ordering', href: '/automated-ordering', icon: Bot, badge: 'AUTO' },
   { name: 'Waste Tracking', href: '/waste-tracking', icon: Trash2 },
   { name: 'POS Integration', href: '/pos-integration', icon: CreditCard },
   { name: 'Settings', href: '/settings', icon: Settings },

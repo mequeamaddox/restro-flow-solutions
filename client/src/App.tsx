@@ -24,8 +24,6 @@ import Analytics from "@/pages/analytics";
 import BarcodeTest from "@/pages/barcode-test";
 import Settings from "@/pages/settings";
 import InvoiceProcessing from "@/pages/invoice-processing";
-import AutomatedOrdering from "@/pages/automated-ordering";
-import Forecasting from "@/pages/forecasting";
 import HRDashboard from "@/pages/hr-dashboard";
 import HREmployees from "@/pages/hr-employees";
 import HRAnalytics from "@/pages/hr-analytics";
@@ -131,8 +129,6 @@ function Router() {
                 <Route path="/pos-integration" component={PosIntegration} />
                 <Route path="/analytics" component={Analytics} />
                 <Route path="/invoice-processing" component={InvoiceProcessing} />
-                <Route path="/automated-ordering" component={AutomatedOrdering} />
-                <Route path="/forecasting" component={Forecasting} />
                 <Route path="/barcode-test" component={BarcodeTest} />
                 <Route path="/multi-unit-dashboard" component={MultiUnitDashboard} />
                 <Route path="/subscription" component={Subscription} />
