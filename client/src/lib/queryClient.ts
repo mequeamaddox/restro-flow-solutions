@@ -57,7 +57,7 @@ export const getQueryFn: <T>(options: {
     // Handle location-specific queries
     if (queryKey.length > 1 && queryKey[1]) {
       const locationId = queryKey[1] as string;
-      if (url.includes('/api/inventory') || url.includes('/api/dashboard') || url.includes('/api/waste')) {
+      if (url.includes('/api/inventory') || url.includes('/api/dashboard') || url.includes('/api/waste') || url.includes('/api/hr/')) {
         url += url.includes('?') ? `&locationId=${locationId}` : `?locationId=${locationId}`;
       }
     }
