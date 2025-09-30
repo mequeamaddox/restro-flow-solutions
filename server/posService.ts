@@ -10,7 +10,7 @@ export class PosService {
   private getBaseUrl(provider: string, environment: string): string {
     const urls: Record<string, Record<string, string>> = {
       clover: {
-        sandbox: "https://sandbox-dev.clover.com",
+        sandbox: "https://sandbox.dev.clover.com",
         production: "https://api.clover.com",
       },
       spoton: {
