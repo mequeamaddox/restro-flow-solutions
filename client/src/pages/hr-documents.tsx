@@ -408,11 +408,52 @@ export default function HRDocumentsPage() {
                       <SelectValue placeholder="Select template" />
                     </SelectTrigger>
                     <SelectContent>
-                      {onboardingTemplates?.map(template => (
-                        <SelectItem key={template.id} value={template.id}>
-                          {template.name} ({template.estimatedDurationDays} days)
-                        </SelectItem>
-                      ))}
+                      {/* Group templates by category */}
+                      {onboardingTemplates && onboardingTemplates.length > 0 && (
+                        <>
+                          {/* Training Templates */}
+                          {onboardingTemplates.filter(t => t.category === 'training').length > 0 && (
+                            <>
+                              <div className="px-2 py-1.5 text-sm font-semibold text-gray-500">Training & Skills</div>
+                              {onboardingTemplates
+                                .filter(t => t.category === 'training')
+                                .map(template => (
+                                  <SelectItem key={template.id} value={template.id}>
+                                    {template.name} ({template.estimatedDurationDays} days)
+                                  </SelectItem>
+                                ))}
+                            </>
+                          )}
+                          
+                          {/* Document Templates */}
+                          {onboardingTemplates.filter(t => t.category === 'documents').length > 0 && (
+                            <>
+                              <div className="px-2 py-1.5 text-sm font-semibold text-gray-500">HR Documents & Paperwork</div>
+                              {onboardingTemplates
+                                .filter(t => t.category === 'documents')
+                                .map(template => (
+                                  <SelectItem key={template.id} value={template.id}>
+                                    {template.name} ({template.estimatedDurationDays} days)
+                                  </SelectItem>
+                                ))}
+                            </>
+                          )}
+                          
+                          {/* General Templates */}
+                          {onboardingTemplates.filter(t => !t.category || t.category === 'general').length > 0 && (
+                            <>
+                              <div className="px-2 py-1.5 text-sm font-semibold text-gray-500">General Onboarding</div>
+                              {onboardingTemplates
+                                .filter(t => !t.category || t.category === 'general')
+                                .map(template => (
+                                  <SelectItem key={template.id} value={template.id}>
+                                    {template.name} ({template.estimatedDurationDays} days)
+                                  </SelectItem>
+                                ))}
+                            </>
+                          )}
+                        </>
+                      )}
                     </SelectContent>
                   </Select>
                 </div>

@@ -1345,6 +1345,7 @@ export const onboardingTemplates = pgTable("onboarding_templates", {
   id: uuid("id").primaryKey().default(sql`gen_random_uuid()`),
   name: varchar("name", { length: 200 }).notNull(),
   description: text("description"),
+  category: varchar("category", { length: 50 }), // documents, training, orientation, general, etc.
   locationId: uuid("location_id").references(() => locations.id),
   positionId: uuid("position_id").references(() => positions.id),
   isDefault: boolean("is_default").default(false),
