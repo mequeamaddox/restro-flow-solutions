@@ -130,12 +130,12 @@ export function DigitalDocumentForm({ assignmentId, templateId, templateName, us
   const { toast } = useToast();
 
   // Fetch form fields for this template
-  const { data: formFields, isLoading: fieldsLoading } = useQuery({
+  const { data: formFields = [], isLoading: fieldsLoading } = useQuery<any[]>({
     queryKey: [`/api/document-templates/${templateId}/fields`],
   });
 
   // Fetch existing responses
-  const { data: existingResponses } = useQuery({
+  const { data: existingResponses = [] } = useQuery<any[]>({
     queryKey: [`/api/employee-documents/${assignmentId}/responses`],
   });
 
@@ -143,18 +143,20 @@ export function DigitalDocumentForm({ assignmentId, templateId, templateName, us
   const createFormSchema = (fields: any[] = []) => {
     const schema: Record<string, any> = {};
     fields.forEach((field: any) => {
-      let fieldSchema = z.string();
+      let fieldSchema: any;
       
       if (field.fieldType === 'email') {
-        fieldSchema = z.string().email('Please enter a valid email address');
+        fieldSchema = field.isRequired 
+          ? z.string().email('Please enter a valid email address').min(1, `${field.fieldLabel} is required`)
+          : z.string().email('Please enter a valid email address').optional();
       } else if (field.fieldType === 'number') {
-        fieldSchema = z.coerce.number();
-      }
-      
-      if (field.isRequired) {
-        fieldSchema = fieldSchema.min(1, `${field.fieldLabel} is required`);
+        fieldSchema = field.isRequired
+          ? z.coerce.number().min(0, `${field.fieldLabel} is required`)
+          : z.coerce.number().optional();
       } else {
-        fieldSchema = fieldSchema.optional();
+        fieldSchema = field.isRequired
+          ? z.string().min(1, `${field.fieldLabel} is required`)
+          : z.string().optional();
       }
       
       schema[field.fieldName] = fieldSchema;
