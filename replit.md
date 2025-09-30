@@ -35,6 +35,7 @@ Business Strategy: Modular add-on approach for employee management to enable sca
 - **Security**: SOC2-style standards including rate limiting, security headers, input validation, comprehensive audit logging, and role-based access control.
 - **Monetization**: Subscription-based OCR access with a freemium model and credit tracking.
 - **Invoice Processing**: Real database operations for invoice creation/statistics, advanced free OCR (PDF-to-image conversion, Tesseract), multi-page PDF support, and data sanitization.
+- **POS Integration**: Universal multi-provider connector supporting Clover (webhooks), Square (webhooks + pagination), SpotOn (scheduled polling with lag-window strategy), with comprehensive error handling, idempotency checks, and safeFetch helper. SpotOn connector includes near-realtime order polling (1-min intervals with 5-min replication lag buffer) and daily 26-hour backfill for reliability.
 - **AI Features**: Real-time analytics with alerts and intelligent cost optimization.
 - **SEO**: Comprehensive meta tags, Open Graph, Twitter Cards, Schema.org, and content optimization.
 - **Pricing Strategy**: Modular pricing with competitive analysis against MarginEdge, offering savings and annual discounts.
