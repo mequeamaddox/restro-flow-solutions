@@ -178,7 +178,7 @@ import {
   type InsertOwnerOnboardingStep,
 } from "@shared/schema";
 import { db } from "./db";
-import { eq, sql, desc, and, gte, lte, lt, ilike, sum, isNull, isNotNull, asc } from "drizzle-orm";
+import { eq, sql, desc, and, or, gte, lte, lt, ilike, sum, isNull, isNotNull, asc } from "drizzle-orm";
 
 // Local authentication user interface
 export interface LocalAuthUser {
@@ -3542,16 +3542,24 @@ export class DatabaseStorage implements IStorage {
     let query = db.select().from(onboardingTemplates);
     
     if (locationId && positionId) {
+      // Return templates that match location OR are general (location_id IS NULL)
+      // AND match position OR are general (position_id IS NULL)
       query = query.where(
         and(
-          eq(onboardingTemplates.locationId, locationId),
-          eq(onboardingTemplates.positionId, positionId)
+          or(eq(onboardingTemplates.locationId, locationId), isNull(onboardingTemplates.locationId)),
+          or(eq(onboardingTemplates.positionId, positionId), isNull(onboardingTemplates.positionId))
         )
       );
     } else if (locationId) {
-      query = query.where(eq(onboardingTemplates.locationId, locationId));
+      // Return location-specific templates OR general templates (location_id IS NULL)
+      query = query.where(
+        or(eq(onboardingTemplates.locationId, locationId), isNull(onboardingTemplates.locationId))
+      );
     } else if (positionId) {
-      query = query.where(eq(onboardingTemplates.positionId, positionId));
+      // Return position-specific templates OR general templates (position_id IS NULL)
+      query = query.where(
+        or(eq(onboardingTemplates.positionId, positionId), isNull(onboardingTemplates.positionId))
+      );
     }
     
     return await query;
