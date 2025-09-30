@@ -15,6 +15,7 @@ import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import { useAuth } from "@/hooks/useAuth";
 import { usePermissions, Permission } from "@/contexts/PermissionContext";
+import { useLocation } from "@/contexts/LocationContext";
 import { useEffect } from "react";
 
 interface Employee {
@@ -43,6 +44,7 @@ interface TimeEntry {
 export default function HRTimeClock() {
   const { user } = useAuth();
   const { hasPermission } = usePermissions();
+  const { currentLocation } = useLocation();
   const [selectedEmployeeId, setSelectedEmployeeId] = useState<string>("");
   const [editingEntry, setEditingEntry] = useState<TimeEntry | null>(null);
   const [showEditDialog, setShowEditDialog] = useState(false);
@@ -78,19 +80,13 @@ export default function HRTimeClock() {
   const queryClient = useQueryClient();
 
   const { data: employees = [], isLoading: employeesLoading } = useQuery<Employee[]>({
-    queryKey: ['/api/employees'],
-    queryFn: async () => {
-      const response = await apiRequest('GET', '/api/employees');
-      return response.json();
-    },
+    queryKey: ['/api/hr/employees', currentLocation?.id],
+    enabled: !!currentLocation,
   });
 
   const { data: timeEntries = [], isLoading: entriesLoading } = useQuery<TimeEntry[]>({
-    queryKey: ['/api/hr/time-entries'],
-    queryFn: async () => {
-      const response = await apiRequest('GET', '/api/hr/time-entries');
-      return response.json();
-    },
+    queryKey: ['/api/hr/time-entries', currentLocation?.id],
+    enabled: !!currentLocation,
   });
 
   const clockInMutation = useMutation({
