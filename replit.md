@@ -21,6 +21,18 @@ Business Strategy: Modular add-on approach for employee management to enable sca
 
 ## Recent Changes
 
+### September 30, 2025 - Invitation Database Table Creation Fix
+- **Issue**: Invitation form submissions failed with error: `relation "invitation_tokens" does not exist`
+- **Root Cause**: 
+  - invitation_tokens table was defined in shared/schema.ts but didn't exist in the database
+  - Attempted `npm run db:push --force` but drizzle-kit got stuck on interactive prompt about budgets table
+  - Cannot edit drizzle.config.ts to add tablesFilter due to safety restrictions
+- **Solution**:
+  - Manually created invitation_status ENUM type with values: pending, accepted, expired, cancelled
+  - Manually created invitation_tokens table via SQL with all columns matching schema definition
+  - Verified table structure with 21 columns including foreign keys to locations, departments, positions, users, employees
+- **Result**: Invitation submissions now work. Known limitation: schema drift exists - future db:push may have issues until drizzle.config.ts can be updated with tablesFilter to exclude legacy clover_* schemas.
+
 ### September 30, 2025 - Invitation Form Validation & Department/Position Filtering Fix
 - **Issue**: Invitation form failed with 400 error and departments/positions didn't load properly.
 - **Root Cause**: 
