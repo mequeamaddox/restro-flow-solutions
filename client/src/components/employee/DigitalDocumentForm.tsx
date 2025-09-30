@@ -251,7 +251,6 @@ export function DigitalDocumentForm({ assignmentId, templateId, templateName, us
   const renderField = (field: any) => {
     const commonProps = {
       disabled: completeMutation.isPending,
-      onBlur: (value: string) => handleFieldChange(field.fieldName, value),
     };
 
     switch (field.fieldType) {
