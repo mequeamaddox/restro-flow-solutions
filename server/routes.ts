@@ -619,7 +619,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Invoice Upload with Premium OCR Processing
+  // Invoice Upload with AWS Textract OCR Processing
   app.post('/api/invoices/upload', isAuthenticated, upload.single('invoice'), async (req, res) => {
     try {
       if (!req.file) {
@@ -627,16 +627,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       console.log('Processing file:', req.file.originalname, 'Type:', req.file.mimetype);
-      
-      // Check OCR access for current user - fix for session-based auth
-      const userId = req.user!.id;
-      if (!userId) {
-        console.log('Authentication failed - userId not found');
-        return res.status(401).json({ message: "User not authenticated" });
-      }
-      
-      const ocrAccess = await storage.checkOcrAccess(userId);
-      console.log('OCR access check:', ocrAccess);
       
       // Extract vendor hint from filename
       const filename = req.file.originalname.toLowerCase();
@@ -647,71 +637,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
       else if (filename.includes('c&c')) vendorHint = 'C&C Seafood';
       
       let ocrResult: { text: string; confidence: number };
-      let processingMethod = 'basic';
       
-      // Process with appropriate method based on user's subscription plan
-      if (ocrAccess.hasAccess && (ocrAccess.plan === 'professional' || ocrAccess.plan === 'enterprise')) {
-        // Premium OCR processing with full features
-        processingMethod = 'premium_ocr';
-        if (req.file.mimetype === 'application/pdf') {
-          console.log('Premium PDF processing with OCR...');
-          ocrResult = await OCRService.extractTextFromPDF(req.file.buffer);
-        } else if (req.file.mimetype.startsWith('image/')) {
-          console.log('Premium image processing with advanced OCR...');
-          ocrResult = await OCRService.extractTextFromImage(req.file.buffer);
-        } else if (req.file.mimetype === 'text/plain') {
-          console.log('Processing text file directly...');
-          const text = req.file.buffer.toString('utf-8')
-            .replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F-\x9F]/g, '') // Remove control characters
-            .trim();
-          ocrResult = { text, confidence: 100 };
-        } else {
-          throw new Error('Unsupported file type. Please upload PDF, image, or text files.');
-        }
-        
-        // Update OCR credits used for free users - this logic is handled below
-        // Premium users don't consume credits
-        
-      } else if (ocrAccess.hasAccess && ocrAccess.plan === 'free') {
-        // Limited OCR processing for free users
-        processingMethod = 'free_ocr';
-        console.log(`Free user OCR processing (${ocrAccess.creditsRemaining} credits remaining)...`);
-        
-        // Only allow text-based PDFs and text files for free users
-        if (req.file.mimetype === 'application/pdf') {
-          console.log('Free PDF processing (text extraction only)...');
-          ocrResult = await OCRService.extractTextFromPDF(req.file.buffer);
-        } else if (req.file.mimetype === 'text/plain') {
-          console.log('Processing text file directly...');
-          const text = req.file.buffer.toString('utf-8')
-            .replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F-\x9F]/g, '') // Remove control characters
-            .trim();
-          ocrResult = { text, confidence: 100 };
-        } else {
-          return res.status(403).json({
-            message: "Advanced OCR for images requires a premium subscription",
-            reason: "image_ocr_blocked",
-            plan: ocrAccess.plan,
-            creditsRemaining: ocrAccess.creditsRemaining,
-            upgradeRequired: true,
-            upgradeUrl: "/pricing"
-          });
-        }
-        
-        // Update OCR credits used for free users
-        const user = await storage.getUser(userId);
-        await storage.updateOcrCreditsUsed(userId, (user?.ocrCreditsUsed || 0) + 1);
-        
+      // Process file with AWS Textract OCR
+      if (req.file.mimetype === 'application/pdf') {
+        console.log('Processing PDF with AWS Textract OCR...');
+        ocrResult = await OCRService.extractTextFromPDF(req.file.buffer);
+      } else if (req.file.mimetype.startsWith('image/')) {
+        console.log('Processing image with AWS Textract OCR...');
+        ocrResult = await OCRService.extractTextFromImage(req.file.buffer);
+      } else if (req.file.mimetype === 'text/plain') {
+        console.log('Processing text file directly...');
+        const text = req.file.buffer.toString('utf-8')
+          .replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F-\x9F]/g, '')
+          .trim();
+        ocrResult = { text, confidence: 100 };
       } else {
-        // No OCR access remaining
-        return res.status(403).json({
-          message: "OCR processing limit exceeded. Upgrade to premium for unlimited access",
-          reason: "credits_exhausted",
-          plan: ocrAccess.plan,
-          creditsRemaining: ocrAccess.creditsRemaining,
-          upgradeRequired: true,
-          upgradeUrl: "/pricing"
-        });
+        throw new Error('Unsupported file type. Please upload PDF, image, or text files.');
       }
 
       console.log('OCR completed with confidence:', ocrResult.confidence);
@@ -839,10 +780,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         ...invoice,
         ocrConfidence: invoiceData.ocrConfidence,
         extractedData: parsedData,
-        processingMethod,
-        userPlan: ocrAccess.plan,
-        creditsRemaining: ocrAccess.creditsRemaining,
-        message: `Invoice processed successfully with ${processingMethod.replace('_', ' ')}`
+        message: 'Invoice processed successfully with AWS Textract OCR'
       });
 
     } catch (error) {
