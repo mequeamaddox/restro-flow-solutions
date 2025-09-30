@@ -383,7 +383,7 @@ export default function Recipes() {
               <View key={index} style={pdfStyles.checkbox}>
                 <View style={pdfStyles.checkboxSquare} />
                 <Text style={pdfStyles.ingredientText}>
-                  {ing.inventoryItem?.name || 'Unknown Item'} - {ing.quantity} {ing.unit}
+                  {ing.inventoryItem?.displayName || ing.inventoryItem?.name || 'Unknown Item'} - {ing.quantity} {ing.unit}
                 </Text>
               </View>
             ))}
@@ -1131,7 +1131,7 @@ export default function Recipes() {
                           <SelectContent>
                             {(inventoryItems as any[])?.map((item: any) => (
                               <SelectItem key={item.id} value={item.id}>
-                                {item.name}
+                                {item.displayName || item.name}
                               </SelectItem>
                             ))}
                           </SelectContent>
@@ -1509,7 +1509,7 @@ export default function Recipes() {
                   <div className="space-y-2">
                     {selectedRecipe.ingredients.map((ingredient: any, index: number) => (
                       <div key={index} className="flex justify-between items-center py-2 px-3 bg-slate-800 rounded">
-                        <span className="font-medium text-white">{ingredient.inventoryItem?.name}</span>
+                        <span className="font-medium text-white">{ingredient.inventoryItem?.displayName || ingredient.inventoryItem?.name}</span>
                         <span className="text-sm text-slate-300">
                           {ingredient.quantity} {ingredient.unit}
                         </span>
