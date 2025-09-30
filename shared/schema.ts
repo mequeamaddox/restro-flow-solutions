@@ -146,6 +146,7 @@ export const priceImports = pgTable("price_imports", {
 export const inventoryItems = pgTable("inventory_items", {
   id: uuid("id").primaryKey().default(sql`gen_random_uuid()`),
   name: varchar("name", { length: 200 }).notNull(),
+  displayName: varchar("display_name", { length: 100 }), // Simple name for team use (e.g., "Chicken" instead of full vendor product name)
   description: text("description"),
   categoryId: uuid("category_id").references(() => categories.id),
   locationId: uuid("location_id").references(() => locations.id).notNull(),
