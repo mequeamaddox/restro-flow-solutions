@@ -9,6 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
+import { Checkbox } from '@/components/ui/checkbox';
 import { ObjectUploader } from '@/components/ObjectUploader';
 import { 
   FileText, Upload, CheckCircle, Clock, AlertTriangle, Users, 
@@ -56,6 +57,25 @@ export default function HRDocumentsPage() {
   const [showOnboardingDialog, setShowOnboardingDialog] = useState(false);
   const [showInviteDialog, setShowInviteDialog] = useState(false);
   const [showAssignmentWizard, setShowAssignmentWizard] = useState(false);
+
+  // Upload Document form state
+  const [uploadEmployeeId, setUploadEmployeeId] = useState('');
+  const [uploadDocumentType, setUploadDocumentType] = useState('');
+  const [uploadDocumentName, setUploadDocumentName] = useState('');
+  const [uploadIsRequired, setUploadIsRequired] = useState(false);
+
+  // Start Onboarding form state
+  const [onboardingEmployeeId, setOnboardingEmployeeId] = useState('');
+  const [onboardingTemplateId, setOnboardingTemplateId] = useState('');
+  const [onboardingStartDate, setOnboardingStartDate] = useState(format(new Date(), 'yyyy-MM-dd'));
+  const [onboardingTargetDate, setOnboardingTargetDate] = useState('');
+  const [onboardingMentorId, setOnboardingMentorId] = useState('');
+
+  // Invite Employee form state
+  const [inviteEmployeeId, setInviteEmployeeId] = useState('');
+  const [inviteEmail, setInviteEmail] = useState('');
+  const [invitePhone, setInvitePhone] = useState('');
+  const [inviteSendMethod, setInviteSendMethod] = useState<'email' | 'text'>('email');
 
   // Fetch data
   const { data: employees } = useQuery<Employee[]>({
@@ -133,17 +153,86 @@ export default function HRDocumentsPage() {
 
   const handleDocumentUpload = async (result: any) => {
     const uploadedFile = result.successful[0];
-    if (uploadedFile) {
-      const formData = new FormData(document.getElementById('document-form') as HTMLFormElement);
-      
+    if (uploadedFile && uploadEmployeeId && uploadDocumentType && uploadDocumentName) {
       uploadDocumentMutation.mutate({
-        employeeId: formData.get('employeeId') as string,
-        documentType: formData.get('documentType') as string,
-        documentName: formData.get('documentName') as string,
-        isRequired: formData.get('isRequired') === 'true',
+        employeeId: uploadEmployeeId,
+        documentType: uploadDocumentType,
+        documentName: uploadDocumentName,
+        isRequired: uploadIsRequired,
         filePath: uploadedFile.uploadURL,
         fileSize: uploadedFile.size || 0,
         mimeType: uploadedFile.type || 'application/octet-stream',
+      });
+      // Reset form state
+      setUploadEmployeeId('');
+      setUploadDocumentType('');
+      setUploadDocumentName('');
+      setUploadIsRequired(false);
+    } else {
+      toast({
+        title: "Error",
+        description: "Please fill in all required fields",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleStartOnboarding = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (onboardingEmployeeId && onboardingTemplateId && onboardingStartDate && onboardingTargetDate) {
+      apiRequest('POST', '/api/hr/onboarding', {
+        employeeId: onboardingEmployeeId,
+        templateId: onboardingTemplateId,
+        startDate: onboardingStartDate,
+        targetCompletionDate: onboardingTargetDate,
+        assignedMentorId: onboardingMentorId || undefined,
+      }).then(() => {
+        queryClient.invalidateQueries({ queryKey: ['/api/hr/onboarding'] });
+        toast({
+          title: "Success",
+          description: "Onboarding process started successfully",
+        });
+        setShowOnboardingDialog(false);
+        // Reset form state
+        setOnboardingEmployeeId('');
+        setOnboardingTemplateId('');
+        setOnboardingStartDate(format(new Date(), 'yyyy-MM-dd'));
+        setOnboardingTargetDate('');
+        setOnboardingMentorId('');
+      }).catch(() => {
+        toast({
+          title: "Error",
+          description: "Failed to start onboarding",
+          variant: "destructive",
+        });
+      });
+    } else {
+      toast({
+        title: "Error",
+        description: "Please fill in all required fields",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleSendInvitation = () => {
+    if (inviteEmployeeId && inviteEmail) {
+      createInvitationMutation.mutate({
+        employeeId: inviteEmployeeId,
+        email: inviteEmail,
+        phone: invitePhone || undefined,
+        sendMethod: inviteSendMethod,
+      });
+      // Reset form state
+      setInviteEmployeeId('');
+      setInviteEmail('');
+      setInvitePhone('');
+      setInviteSendMethod('email');
+    } else {
+      toast({
+        title: "Error",
+        description: "Please fill in all required fields",
+        variant: "destructive",
       });
     }
   };
@@ -206,10 +295,10 @@ export default function HRDocumentsPage() {
               <DialogHeader>
                 <DialogTitle>Upload Employee Document</DialogTitle>
               </DialogHeader>
-              <form id="document-form" className="space-y-4">
+              <div className="space-y-4">
                 <div>
                   <Label htmlFor="employeeId">Employee</Label>
-                  <Select name="employeeId" required>
+                  <Select value={uploadEmployeeId} onValueChange={setUploadEmployeeId} required>
                     <SelectTrigger>
                       <SelectValue placeholder="Select employee" />
                     </SelectTrigger>
@@ -225,7 +314,7 @@ export default function HRDocumentsPage() {
                 
                 <div>
                   <Label htmlFor="documentType">Document Type</Label>
-                  <Select name="documentType" required>
+                  <Select value={uploadDocumentType} onValueChange={setUploadDocumentType} required>
                     <SelectTrigger>
                       <SelectValue placeholder="Select document type" />
                     </SelectTrigger>
@@ -245,11 +334,20 @@ export default function HRDocumentsPage() {
 
                 <div>
                   <Label htmlFor="documentName">Document Name</Label>
-                  <Input name="documentName" placeholder="Enter document name" required />
+                  <Input 
+                    value={uploadDocumentName} 
+                    onChange={(e) => setUploadDocumentName(e.target.value)}
+                    placeholder="Enter document name" 
+                    required 
+                  />
                 </div>
 
                 <div className="flex items-center space-x-2">
-                  <input type="checkbox" name="isRequired" value="true" className="rounded" />
+                  <Checkbox 
+                    id="isRequired"
+                    checked={uploadIsRequired} 
+                    onCheckedChange={(checked) => setUploadIsRequired(checked === true)}
+                  />
                   <Label htmlFor="isRequired">Required Document</Label>
                 </div>
 
@@ -271,7 +369,7 @@ export default function HRDocumentsPage() {
                     <span>Choose File</span>
                   </div>
                 </ObjectUploader>
-              </form>
+              </div>
             </DialogContent>
           </Dialog>
 
@@ -286,10 +384,10 @@ export default function HRDocumentsPage() {
               <DialogHeader>
                 <DialogTitle>Start Employee Onboarding</DialogTitle>
               </DialogHeader>
-              <form className="space-y-4">
+              <form onSubmit={handleStartOnboarding} className="space-y-4">
                 <div>
                   <Label htmlFor="employeeId">Employee</Label>
-                  <Select required>
+                  <Select value={onboardingEmployeeId} onValueChange={setOnboardingEmployeeId} required>
                     <SelectTrigger>
                       <SelectValue placeholder="Select employee" />
                     </SelectTrigger>
@@ -305,7 +403,7 @@ export default function HRDocumentsPage() {
                 
                 <div>
                   <Label htmlFor="templateId">Onboarding Template</Label>
-                  <Select required>
+                  <Select value={onboardingTemplateId} onValueChange={setOnboardingTemplateId} required>
                     <SelectTrigger>
                       <SelectValue placeholder="Select template" />
                     </SelectTrigger>
@@ -321,17 +419,27 @@ export default function HRDocumentsPage() {
 
                 <div>
                   <Label htmlFor="startDate">Start Date</Label>
-                  <Input type="date" defaultValue={format(new Date(), 'yyyy-MM-dd')} required />
+                  <Input 
+                    type="date" 
+                    value={onboardingStartDate}
+                    onChange={(e) => setOnboardingStartDate(e.target.value)}
+                    required 
+                  />
                 </div>
 
                 <div>
                   <Label htmlFor="targetDate">Target Completion Date</Label>
-                  <Input type="date" required />
+                  <Input 
+                    type="date" 
+                    value={onboardingTargetDate}
+                    onChange={(e) => setOnboardingTargetDate(e.target.value)}
+                    required 
+                  />
                 </div>
 
                 <div>
                   <Label htmlFor="mentorId">Assigned Mentor (Optional)</Label>
-                  <Select>
+                  <Select value={onboardingMentorId} onValueChange={setOnboardingMentorId}>
                     <SelectTrigger>
                       <SelectValue placeholder="Select mentor" />
                     </SelectTrigger>
@@ -361,10 +469,10 @@ export default function HRDocumentsPage() {
               <DialogHeader>
                 <DialogTitle>Send Onboarding Invitation</DialogTitle>
               </DialogHeader>
-              <form id="invite-form" className="space-y-4">
+              <div className="space-y-4">
                 <div>
                   <Label htmlFor="employeeId">Employee</Label>
-                  <Select name="employeeId" required>
+                  <Select value={inviteEmployeeId} onValueChange={setInviteEmployeeId} required>
                     <SelectTrigger>
                       <SelectValue placeholder="Select employee" />
                     </SelectTrigger>
@@ -380,17 +488,28 @@ export default function HRDocumentsPage() {
                 
                 <div>
                   <Label htmlFor="email">Email Address</Label>
-                  <Input name="email" type="email" placeholder="employee@example.com" required />
+                  <Input 
+                    value={inviteEmail}
+                    onChange={(e) => setInviteEmail(e.target.value)}
+                    type="email" 
+                    placeholder="employee@example.com" 
+                    required 
+                  />
                 </div>
 
                 <div>
                   <Label htmlFor="phone">Phone Number (Optional)</Label>
-                  <Input name="phone" type="tel" placeholder="+1 (555) 123-4567" />
+                  <Input 
+                    value={invitePhone}
+                    onChange={(e) => setInvitePhone(e.target.value)}
+                    type="tel" 
+                    placeholder="+1 (555) 123-4567" 
+                  />
                 </div>
 
                 <div>
                   <Label htmlFor="sendMethod">Send Method</Label>
-                  <Select name="sendMethod" defaultValue="email" required>
+                  <Select value={inviteSendMethod} onValueChange={(value) => setInviteSendMethod(value as 'email' | 'text')} required>
                     <SelectTrigger>
                       <SelectValue placeholder="How to send invitation" />
                     </SelectTrigger>
@@ -405,20 +524,15 @@ export default function HRDocumentsPage() {
                   <Button type="button" variant="outline" onClick={() => setShowInviteDialog(false)}>
                     Cancel
                   </Button>
-                  <Button type="submit" disabled={createInvitationMutation.isPending} onClick={(e) => {
-                    e.preventDefault();
-                    const formData = new FormData(document.getElementById('invite-form') as HTMLFormElement);
-                    createInvitationMutation.mutate({
-                      employeeId: formData.get('employeeId') as string,
-                      email: formData.get('email') as string,
-                      phone: formData.get('phone') as string || undefined,
-                      sendMethod: formData.get('sendMethod') as 'email' | 'text',
-                    });
-                  }}>
+                  <Button 
+                    type="button" 
+                    disabled={createInvitationMutation.isPending} 
+                    onClick={handleSendInvitation}
+                  >
                     {createInvitationMutation.isPending ? 'Sending...' : 'Send Invitation'}
                   </Button>
                 </div>
-              </form>
+              </div>
             </DialogContent>
           </Dialog>
         </div>
