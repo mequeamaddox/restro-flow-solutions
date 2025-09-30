@@ -19,6 +19,21 @@ POS Systems: Uses SpotOn POS at the bar, Clover at main restaurant - needs unive
 UI Preference: Single Analytics & Reports page instead of separate pages for streamlined navigation.
 Business Strategy: Modular add-on approach for employee management to enable scalable revenue growth and market segmentation.
 
+## Recent Changes
+
+### September 30, 2025 - Employee Data Synchronization Fix
+- **Issue**: Employee data displayed inconsistently across HR pages (Employees, Time Clock, Documents) due to mixed endpoint usage and HR addon access issues.
+- **Root Cause**: 
+  - HR Time Clock page used `/api/employees` instead of `/api/hr/employees`
+  - queryClient didn't append locationId for HR endpoints
+  - Bar & Grill location had HR addon disabled
+- **Solution**:
+  - Enabled HR addon for both locations
+  - Standardized all HR pages to use `/api/hr/employees` with locationId
+  - Extended queryClient to handle `/api/hr/` endpoints for location-specific data
+  - Implemented location display feature on employee time clock with MapPin icon
+- **Result**: All HR pages now show consistent employee counts and data across both locations.
+
 ## System Architecture
 
 ### UI/UX Decisions
