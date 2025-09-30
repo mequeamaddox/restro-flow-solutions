@@ -53,6 +53,8 @@ import {
   type InsertPurchaseOrderItem,
   type WasteEntry,
   type InsertWasteEntry,
+  sales,
+  salesItems,
   type InventoryTransaction,
   type InsertInventoryTransaction,
   posIntegrations,
@@ -113,6 +115,9 @@ import {
   paystubs,
   payrollDeductions,
   employeeDeductions,
+  payrollPeriods,
+  paychecks,
+  payStubs,
   type PayPeriod,
   type InsertPayPeriod,
   type Paystub,
@@ -121,6 +126,12 @@ import {
   type InsertPayrollDeduction,
   type EmployeeDeduction,
   type InsertEmployeeDeduction,
+  type PayrollPeriod,
+  type InsertPayrollPeriod,
+  type Paycheck,
+  type InsertPaycheck,
+  type PayStub,
+  type InsertPayStub,
   type DocumentTemplate,
   type InsertDocumentTemplate,
   type EmployeeDocumentAssignment,
@@ -4648,12 +4659,10 @@ export class DatabaseStorage implements IStorage {
   ): Promise<string> {
     try {
       // Create the sales transaction
-      const [salesTransaction] = await db.insert(salesTransactions).values({
+      const [salesTransaction] = await db.insert(sales).values({
         locationId,
         totalAmount: totalAmount.toString(),
         paymentMethod,
-        customerName,
-        createdBy,
         saleDate: new Date(),
         createdAt: new Date()
       }).returning();
@@ -4723,9 +4732,9 @@ export class DatabaseStorage implements IStorage {
   async getSalesTransactions(locationId: string, limit: number = 50) {
     const transactions = await db
       .select()
-      .from(salesTransactions)
-      .where(eq(salesTransactions.locationId, locationId))
-      .orderBy(desc(salesTransactions.saleDate))
+      .from(sales)
+      .where(eq(sales.locationId, locationId))
+      .orderBy(desc(sales.saleDate))
       .limit(limit);
 
     const transactionsWithItems = await Promise.all(
