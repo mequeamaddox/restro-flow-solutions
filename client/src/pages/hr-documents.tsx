@@ -165,7 +165,7 @@ export default function HRDocumentsPage() {
     }
   };
 
-  const getDocumentStatusColor = (status: string) => {
+  const getDocumentStatusColor = (status: string | null) => {
     switch (status) {
       case 'approved': return 'bg-green-100 text-green-800';
       case 'uploaded': return 'bg-blue-100 text-blue-800';
@@ -175,7 +175,7 @@ export default function HRDocumentsPage() {
     }
   };
 
-  const getOnboardingStatusColor = (status: string) => {
+  const getOnboardingStatusColor = (status: string | null) => {
     switch (status) {
       case 'completed': return 'bg-green-100 text-green-800';
       case 'in-progress': return 'bg-blue-100 text-blue-800';
