@@ -21,6 +21,22 @@ Business Strategy: Modular add-on approach for employee management to enable sca
 
 ## Recent Changes
 
+### September 30, 2025 - Invitation Form Validation & Department/Position Filtering Fix
+- **Issue**: Invitation form failed with 400 error and departments/positions didn't load properly.
+- **Root Cause**: 
+  - insertInvitationTokenSchema required invitedBy and expiresAt but frontend didn't provide them (should be server-side)
+  - hourlyRate schema expected string but frontend sent number
+  - InviteEmployeeDialog fetched departments/positions without locationId parameter, causing 400 errors
+  - form.watch('locationId') was called before form was initialized, causing runtime error
+- **Solution**:
+  - Updated insertInvitationTokenSchema to make invitedBy and expiresAt optional with server-side defaults
+  - Added transform for hourlyRate/salary to accept both string and number, converting to string
+  - routes.ts now sets expiresAt to 48 hours if not provided
+  - Fixed InviteEmployeeDialog to call form.watch() after useForm() initialization
+  - Added custom queryFn for departments/positions that explicitly passes locationId query parameter
+  - Added enabled flag to prevent queries until location is selected
+- **Result**: Invitation form now submits successfully, departments and positions load correctly based on selected location, and personalMessage remains optional.
+
 ### September 30, 2025 - Invitation Email Bug Fix
 - **Issue**: Invitation emails failed to display location, department, and position names - all showed as undefined.
 - **Root Cause**: 
