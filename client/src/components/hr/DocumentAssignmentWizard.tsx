@@ -14,6 +14,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import { queryClient } from "@/lib/queryClient";
+import { useLocation } from "@/contexts/LocationContext";
 import { CalendarIcon, Search, Users, FileText, Clock, CheckCircle, ArrowLeft, ArrowRight } from "lucide-react";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
@@ -49,6 +50,7 @@ const WIZARD_STEPS = [
 
 export function DocumentAssignmentWizard({ isOpen, onClose }: DocumentAssignmentWizardProps) {
   const { toast } = useToast();
+  const { currentLocation } = useLocation();
   const [currentStep, setCurrentStep] = useState(0);
   const [selectedEmployees, setSelectedEmployees] = useState<string[]>([]);
   const [selectedDocuments, setSelectedDocuments] = useState<string[]>([]);
@@ -59,7 +61,8 @@ export function DocumentAssignmentWizard({ isOpen, onClose }: DocumentAssignment
 
   // Fetch employees
   const { data: employees = [] } = useQuery<Employee[]>({
-    queryKey: ['/api/hr/employees'],
+    queryKey: ['/api/hr/employees', currentLocation?.id],
+    enabled: !!currentLocation,
   });
 
   // Fetch document templates
@@ -69,7 +72,8 @@ export function DocumentAssignmentWizard({ isOpen, onClose }: DocumentAssignment
 
   // Fetch departments for filtering
   const { data: departments = [] } = useQuery<Array<{id: string, name: string}>>({
-    queryKey: ['/api/hr/departments'],
+    queryKey: ['/api/hr/departments', currentLocation?.id],
+    enabled: !!currentLocation,
   });
 
   // Filter employees based on search and department
