@@ -342,7 +342,7 @@ export class PosService {
     const order = payload.order;
     
     // Check if order already exists (idempotency)
-    const existing = await storage.getPosSaleByOrderId(order.id);
+    const existing = await storage.getPosSaleByOrderId(integration.id, order.id);
     if (existing) {
       console.log(`SpotOn order ${order.id} already processed`);
       return;
@@ -376,7 +376,7 @@ export class PosService {
     const order = payload.data.object.order;
     
     // Check if order already exists (idempotency)
-    const existing = await storage.getPosSaleByOrderId(order.id);
+    const existing = await storage.getPosSaleByOrderId(integration.id, order.id);
     if (existing) {
       console.log(`Square order ${order.id} already processed`);
       return;

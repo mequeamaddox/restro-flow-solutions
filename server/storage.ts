@@ -340,7 +340,7 @@ export interface IStorage {
   getMenuPerformance(timeRange: string, locationId?: string): Promise<any[]>;
   getCostAnalysis(timeRange: string, locationId?: string): Promise<any>;
   getPosSales(locationId?: string): Promise<(PosSale & { items?: PosSaleItem[] })[]>;
-  getPosSaleByOrderId(orderId: string): Promise<PosSale | undefined>;
+  getPosSaleByOrderId(integrationId: string, orderId: string): Promise<PosSale | undefined>;
   createPosSale(sale: InsertPosSale): Promise<PosSale>;
   updatePosSale(id: string, sale: Partial<InsertPosSale>): Promise<PosSale>;
 
@@ -1087,9 +1087,12 @@ export class DatabaseStorage implements IStorage {
     return salesWithItems;
   }
 
-  async getPosSaleByOrderId(orderId: string): Promise<PosSale | undefined> {
+  async getPosSaleByOrderId(integrationId: string, orderId: string): Promise<PosSale | undefined> {
     const [sale] = await db.select().from(posSales)
-      .where(eq(posSales.posOrderId, orderId));
+      .where(and(
+        eq(posSales.posIntegrationId, integrationId),
+        eq(posSales.posOrderId, orderId)
+      ));
     return sale;
   }
 
