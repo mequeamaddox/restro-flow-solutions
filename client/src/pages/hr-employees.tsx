@@ -464,9 +464,9 @@ export default function HREmployees() {
 
       {/* POS Employees to Import */}
       {unlinkedPosEmployees.length > 0 && (
-        <Card className="mb-6 border-blue-200 bg-blue-50">
+        <Card className="mb-6 border-blue-500/30 bg-gradient-to-br from-blue-900/20 to-blue-800/10">
           <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-blue-900">
+            <CardTitle className="flex items-center gap-2">
               <Users className="h-5 w-5" />
               Employees from POS ({unlinkedPosEmployees.length})
             </CardTitle>
@@ -477,7 +477,7 @@ export default function HREmployees() {
           <CardContent>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
               {unlinkedPosEmployees.map((posEmployee: any) => (
-                <Card key={posEmployee.id} className="bg-white">
+                <Card key={posEmployee.id}>
                   <CardContent className="pt-6">
                     <div className="flex items-start justify-between mb-4">
                       <div className="flex items-center gap-3">
