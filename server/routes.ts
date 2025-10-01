@@ -1843,8 +1843,19 @@ print(json.dumps(rows))
             // Excel simple format: Category, Item, Avg Price, Cost
             const categoryName = row.Category || row.category;
             const itemName = row.Item || row.item;
-            const avgPrice = row['Avg Price'] || row['avg price'] || 0;
-            const cost = row.Cost || row.cost || 0;
+            const avgPriceRaw = row['Avg Price'] || row['avg price'] || '';
+            const costRaw = row.Cost || row.cost || '';
+
+            // Clean currency values - remove $, commas, and trim spaces
+            const cleanCurrency = (value: string | number): number => {
+              if (typeof value === 'number') return value;
+              const cleaned = String(value).replace(/[$,]/g, '').trim();
+              const parsed = parseFloat(cleaned);
+              return isNaN(parsed) ? 0 : parsed;
+            };
+
+            const avgPrice = cleanCurrency(avgPriceRaw);
+            const cost = cleanCurrency(costRaw);
 
             console.log(`📝 Row ${rowNumber}: category="${categoryName}", item="${itemName}", cost=${cost}`);
 
@@ -1859,6 +1870,10 @@ print(json.dumps(rows))
             const categoryMatch = categories.find(c => 
               c.name.toLowerCase() === (categoryName || '').toLowerCase()
             );
+
+            if (!categoryMatch) {
+              console.log(`⚠️ Row ${rowNumber}: Category "${categoryName}" not found - item will have no category`);
+            }
 
             let selectedVendorId = vendorId;
             if (!selectedVendorId && vendors.length > 0) {
