@@ -303,6 +303,9 @@ export interface IStorage {
   // POS menu items
   getPosMenuItems(integrationId: string): Promise<PosMenuItem[]>;
   upsertPosMenuItem(menuItem: InsertPosMenuItem): Promise<PosMenuItem>;
+  updatePosMenuItemRecipe(menuItemId: string, recipeId: string | null): Promise<PosMenuItem>;
+  getUnmappedMenuItems(locationId: string): Promise<(PosMenuItem & { integration: PosIntegration })[]>;
+  getSuggestedRecipes(menuItemName: string, locationId: string): Promise<Recipe[]>;
 
   // POS item mappings
   getPosItemMappings(integrationId?: string): Promise<(PosItemMapping & { posMenuItem?: PosMenuItem; inventoryItem?: InventoryItem })[]>;
@@ -1009,6 +1012,50 @@ export class DatabaseStorage implements IStorage {
       })
       .returning();
     return menuItem;
+  }
+
+  async updatePosMenuItemRecipe(menuItemId: string, recipeId: string | null): Promise<PosMenuItem> {
+    const [menuItem] = await db
+      .update(posMenuItems)
+      .set({ recipeId, updatedAt: new Date() })
+      .where(eq(posMenuItems.id, menuItemId))
+      .returning();
+    return menuItem;
+  }
+
+  async getUnmappedMenuItems(locationId: string): Promise<(PosMenuItem & { integration: PosIntegration })[]> {
+    const results = await db
+      .select()
+      .from(posMenuItems)
+      .leftJoin(posIntegrations, eq(posMenuItems.posIntegrationId, posIntegrations.id))
+      .where(
+        and(
+          isNull(posMenuItems.recipeId),
+          eq(posIntegrations.locationId, locationId),
+          eq(posMenuItems.isActive, true)
+        )
+      )
+      .orderBy(posMenuItems.name);
+
+    return results.map(row => ({
+      ...row.pos_menu_items,
+      integration: row.pos_integrations!,
+    }));
+  }
+
+  async getSuggestedRecipes(menuItemName: string, locationId: string): Promise<Recipe[]> {
+    const searchTerm = `%${menuItemName.toLowerCase()}%`;
+    return await db
+      .select()
+      .from(recipes)
+      .where(
+        and(
+          eq(recipes.locationId, locationId),
+          sql`LOWER(${recipes.name}) LIKE ${searchTerm}`
+        )
+      )
+      .orderBy(recipes.name)
+      .limit(10);
   }
 
   // POS Item Mappings
