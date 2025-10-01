@@ -75,18 +75,27 @@ const upload = multer({
   },
 });
 
-// Configure multer for CSV file uploads
+// Configure multer for CSV and Excel file uploads
 const csvUpload = multer({
   storage: multer.memoryStorage(),
   limits: {
-    fileSize: 5 * 1024 * 1024, // 5MB limit for CSV files
+    fileSize: 5 * 1024 * 1024, // 5MB limit for CSV/Excel files
   },
   fileFilter: (req, file, cb) => {
-    const allowedTypes = ['text/csv', 'application/vnd.ms-excel', 'application/csv'];
-    if (allowedTypes.includes(file.mimetype) || file.originalname.endsWith('.csv')) {
+    const allowedTypes = [
+      'text/csv', 
+      'application/vnd.ms-excel', 
+      'application/csv',
+      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', // .xlsx
+      'application/vnd.ms-excel.sheet.macroEnabled.12' // .xlsm
+    ];
+    if (allowedTypes.includes(file.mimetype) || 
+        file.originalname.endsWith('.csv') || 
+        file.originalname.endsWith('.xlsx') ||
+        file.originalname.endsWith('.xls')) {
       cb(null, true);
     } else {
-      cb(new Error('Invalid file type. Only CSV files are allowed.'));
+      cb(new Error('Invalid file type. Only CSV and Excel files are allowed.'));
     }
   },
 });
@@ -1581,41 +1590,98 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const categories = await storage.getCategories();
       const vendors = await storage.getVendors(locationId);
 
-      // Handle vendor CSVs with header rows before the actual column headers
-      const csvText = req.file.buffer.toString('utf-8');
-      const lines = csvText.split('\n');
-      
-      // Find the line with actual column headers (containing "Product Description" or "Pack Size")
-      let headerLineIndex = 0;
-      for (let i = 0; i < Math.min(20, lines.length); i++) {
-        const line = lines[i].toLowerCase();
-        if (line.includes('product description') || 
-            (line.includes('pack') && line.includes('size')) ||
-            line.includes('category name')) {
-          headerLineIndex = i;
-          console.log(`📍 Found actual CSV headers at line ${i + 1}`);
-          break;
-        }
-      }
+      // Check if file is Excel
+      const isExcel = req.file.originalname.endsWith('.xlsx') || req.file.originalname.endsWith('.xls');
 
-      // Parse CSV starting from the header line
-      const csvDataToRead = lines.slice(headerLineIndex).join('\n');
-      const stream = Readable.from(Buffer.from(csvDataToRead, 'utf-8'));
-      
-      await new Promise<void>((resolve, reject) => {
-        stream
-          .pipe(csv())
-          .on('data', (row) => {
+      if (isExcel) {
+        // Parse Excel file using Python
+        console.log('📊 Parsing Excel file...');
+        const { exec } = await import('child_process');
+        const { promisify } = await import('util');
+        const execPromise = promisify(exec);
+        const fs = await import('fs');
+        const path = await import('path');
+        
+        // Write buffer to temp file
+        const tempFilePath = path.join('/tmp', `import_${Date.now()}.xlsx`);
+        fs.writeFileSync(tempFilePath, req.file.buffer);
+        
+        try {
+          const { stdout } = await execPromise(`python3 -c "
+import openpyxl
+import json
+wb = openpyxl.load_workbook('${tempFilePath}')
+ws = wb.active
+rows = []
+header_found = False
+for row in ws.iter_rows(values_only=True):
+    if not any(row):
+        continue
+    if not header_found and row[0] == 'Category':
+        header_found = True
+        continue
+    if header_found and row[0] and row[1]:
+        rows.append({
+            'Category': str(row[0]) if row[0] else '',
+            'Item': str(row[1]) if row[1] else '',
+            'Avg Price': float(row[2]) if row[2] else 0,
+            'Cost': float(row[3]) if row[3] else 0
+        })
+print(json.dumps(rows))
+"`);
+          
+          const excelData = JSON.parse(stdout);
+          for (const row of excelData) {
             rowNumber++;
             results.push({ rowNumber, data: row });
-          })
-          .on('end', () => {
-            resolve();
-          })
-          .on('error', (error) => {
-            reject(error);
-          });
-      });
+          }
+          
+          // Clean up temp file
+          fs.unlinkSync(tempFilePath);
+        } catch (error) {
+          console.error('Error parsing Excel:', error);
+          if (fs.existsSync(tempFilePath)) {
+            fs.unlinkSync(tempFilePath);
+          }
+          return res.status(400).json({ message: 'Failed to parse Excel file' });
+        }
+      } else {
+        // Handle vendor CSVs with header rows before the actual column headers
+        const csvText = req.file.buffer.toString('utf-8');
+        const lines = csvText.split('\n');
+        
+        // Find the line with actual column headers (containing "Product Description" or "Pack Size")
+        let headerLineIndex = 0;
+        for (let i = 0; i < Math.min(20, lines.length); i++) {
+          const line = lines[i].toLowerCase();
+          if (line.includes('product description') || 
+              (line.includes('pack') && line.includes('size')) ||
+              line.includes('category name')) {
+            headerLineIndex = i;
+            console.log(`📍 Found actual CSV headers at line ${i + 1}`);
+            break;
+          }
+        }
+
+        // Parse CSV starting from the header line
+        const csvDataToRead = lines.slice(headerLineIndex).join('\n');
+        const stream = Readable.from(Buffer.from(csvDataToRead, 'utf-8'));
+        
+        await new Promise<void>((resolve, reject) => {
+          stream
+            .pipe(csv())
+            .on('data', (row) => {
+              rowNumber++;
+              results.push({ rowNumber, data: row });
+            })
+            .on('end', () => {
+              resolve();
+            })
+            .on('error', (error) => {
+              reject(error);
+            });
+        });
+      }
 
       console.log(`📊 Parsed ${results.length} rows from CSV`);
 
@@ -1625,13 +1691,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const firstRow = results[0]?.data || {};
       const columnNames = Object.keys(firstRow).map(k => k.toLowerCase().trim());
       
+      // Check for Excel simple format (Category, Item, Avg Price, Cost)
+      const hasExcelColumns = columnNames.includes('category') && 
+                              columnNames.includes('item') && 
+                              (columnNames.includes('avg price') || columnNames.includes('cost'));
+      
       const hasSizeColumn = columnNames.some(col => 
         col.includes('pack') || col.includes('size') || 
         col.match(/\b(pack|size|pkg|ct|count)\b/)
       );
       
       let detectedFormat = 'standard';
-      if (hasSizeColumn) {
+      
+      if (hasExcelColumns) {
+        detectedFormat = 'excel_simple';
+        console.log('📊 Detected Excel simple format (Category, Item, Avg Price, Cost)');
+      } else if (hasSizeColumn) {
         console.log(`🔍 Size column detected - sampling first rows for vendor format...`);
         const sampleRows = results.slice(0, Math.min(10, results.length));
         let vendorParseSuccesses = 0;
@@ -1760,6 +1835,60 @@ export async function registerRoutes(app: Express): Promise<Server> {
                 packSizeRaw: parsed.rawPackSize,
               };
             }
+          } else if (detectedFormat === 'excel_simple') {
+            // Excel simple format: Category, Item, Avg Price, Cost
+            const categoryName = row.Category || row.category;
+            const itemName = row.Item || row.item;
+            const avgPrice = row['Avg Price'] || row['avg price'] || 0;
+            const cost = row.Cost || row.cost || 0;
+
+            if (!itemName || itemName.trim() === '') {
+              errors.push({ row: rowNumber, field: 'Item', message: 'Item name is required' });
+              failedCount++;
+              continue;
+            }
+
+            // Match category by name
+            const categoryMatch = categories.find(c => 
+              c.name.toLowerCase() === (categoryName || '').toLowerCase()
+            );
+
+            let selectedVendorId = vendorId;
+            if (!selectedVendorId && vendors.length > 0) {
+              selectedVendorId = vendors[0].id;
+            }
+
+            itemData = {
+              name: itemName.trim(),
+              description: categoryName ? `${categoryName}` : null,
+              categoryId: categoryMatch?.id || null,
+              vendorId: selectedVendorId,
+              locationId,
+              quantity: "0",
+              unit: "each",
+              costPerUnit: cost.toString(),
+              purchaseUnit: "each",
+              recipeUnit: "each",
+              conversionFactor: "1",
+              costPerPurchaseUnit: cost.toString(),
+              reorderLevel: "0",
+              barcode: null,
+              packSize: null,
+              caseQuantity: null,
+              casePrice: cost.toString(),
+              pricePerLb: null,
+              pricePerGa: null,
+              pricePerOz: null,
+              pricePerInnerUnit: cost.toString(),
+              innerUnit: "each",
+              piecesPerLb: null,
+              ozPerPiece: null,
+              ozPerCup: null,
+              cupsPerGa: null,
+              yieldPct: null,
+              gradeLow: false,
+              gradeHigh: false,
+            };
           } else {
             if (!row.name || row.name.trim() === '') {
               errors.push({ row: rowNumber, field: 'name', message: 'Name is required' });
