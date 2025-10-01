@@ -81,8 +81,8 @@ interface InventoryItem {
   id: string;
   name: string;
   sku: string | null;
-  category: string;
   unit: string;
+  categoryId: string | null;
 }
 
 export default function PosIntegration() {
@@ -730,7 +730,7 @@ export default function PosIntegration() {
                                         .slice(0, 5)
                                         .map((invItem) => (
                                           <SelectItem key={invItem.id} value={invItem.id}>
-                                            {invItem.name} ({invItem.category})
+                                            {invItem.name}
                                           </SelectItem>
                                         ))}
                                       {inventoryItems.length > 5 && (
@@ -743,7 +743,7 @@ export default function PosIntegration() {
                                                          !item.name.toLowerCase().includes(i.name.toLowerCase()))
                                             .map((invItem) => (
                                               <SelectItem key={invItem.id} value={invItem.id}>
-                                                {invItem.name} ({invItem.category})
+                                                {invItem.name}
                                               </SelectItem>
                                             ))}
                                         </>
