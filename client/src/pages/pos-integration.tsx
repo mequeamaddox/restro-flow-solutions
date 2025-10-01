@@ -330,6 +330,27 @@ export default function PosIntegration() {
     },
   });
 
+  // Delete menu item mutation
+  const deleteMenuItemMutation = useMutation({
+    mutationFn: async (menuItemId: string) => {
+      await apiRequest("DELETE", `/api/pos/menu-items/${menuItemId}`);
+    },
+    onSuccess: () => {
+      toast({
+        title: "Item Deleted",
+        description: "POS menu item removed successfully",
+      });
+      queryClient.invalidateQueries({ queryKey: ["/api/pos/menu-items/unmapped"] });
+    },
+    onError: () => {
+      toast({
+        title: "Delete Failed",
+        description: "Failed to delete menu item",
+        variant: "destructive",
+      });
+    },
+  });
+
   if (!selectedLocation) {
     return (
       <div className="p-6">
@@ -678,6 +699,19 @@ export default function PosIntegration() {
                                   {item.price && <span className="text-sm text-muted-foreground">${item.price}</span>}
                                 </div>
                               </div>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => {
+                                  if (confirm(`Delete "${item.name}"? This cannot be undone.`)) {
+                                    deleteMenuItemMutation.mutate(item.id);
+                                  }
+                                }}
+                                disabled={deleteMenuItemMutation.isPending}
+                                data-testid={`button-delete-${item.id}`}
+                              >
+                                <Trash2 className="h-4 w-4 text-destructive" />
+                              </Button>
                             </div>
 
                             <div className="space-y-3">

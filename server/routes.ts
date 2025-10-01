@@ -2686,6 +2686,16 @@ print(json.dumps(rows))
     }
   });
 
+  app.delete("/api/pos/menu-items/:id", isAuthenticated, async (req, res) => {
+    try {
+      await storage.deletePosMenuItem(req.params.id);
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Error deleting menu item:", error);
+      res.status(500).json({ message: "Failed to delete menu item" });
+    }
+  });
+
   app.get("/api/pos/menu-items/:id/suggested-recipes", isAuthenticated, async (req, res) => {
     try {
       const menuItemId = req.params.id;

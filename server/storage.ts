@@ -1074,6 +1074,12 @@ export class DatabaseStorage implements IStorage {
       .limit(10);
   }
 
+  async deletePosMenuItem(menuItemId: string): Promise<void> {
+    await db
+      .delete(posMenuItems)
+      .where(eq(posMenuItems.id, menuItemId));
+  }
+
   // POS Item Mappings
   async getPosItemMappings(integrationId?: string): Promise<(PosItemMapping & { posMenuItem?: PosMenuItem; inventoryItem?: InventoryItem })[]> {
     let query = db.select().from(posItemMappings)
