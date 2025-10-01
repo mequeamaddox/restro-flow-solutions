@@ -18,6 +18,7 @@ import {
   vendorPriceCatalog
 } from "@shared/schema";
 import { posService } from "./posService";
+import { cloverService } from "./cloverService";
 import { OCRService } from "./ocrService";
 import { varianceService } from "./varianceService";
 import { ObjectStorageService, ObjectNotFoundError } from "./objectStorage";

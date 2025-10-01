@@ -88,6 +88,117 @@ interface InventoryItem {
   categoryId: string | null;
 }
 
+interface PosEmployee {
+  id: string;
+  posIntegrationId: string;
+  posEmployeeId: string;
+  displayName: string;
+  firstName: string | null;
+  lastName: string | null;
+  email: string | null;
+  roleTitle: string | null;
+  isActive: boolean;
+  lastSeenAt: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+function EmployeeSection({ integration }: { integration: PosIntegration }) {
+  const { toast } = useToast();
+  
+  // Fetch employees for this integration
+  const { data: employees = [], isLoading, refetch } = useQuery<PosEmployee[]>({
+    queryKey: ["/api/pos-employees", integration.id],
+  });
+
+  // Sync employees mutation
+  const syncEmployeesMutation = useMutation({
+    mutationFn: async () => {
+      return apiRequest("POST", `/api/pos-employees/sync/${integration.id}`, {});
+    },
+    onSuccess: (data: any) => {
+      toast({
+        title: "Employees synced",
+        description: `Successfully synced ${data.syncedCount} employees from ${integration.provider}`,
+      });
+      queryClient.invalidateQueries({ queryKey: ["/api/pos-employees", integration.id] });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Sync failed",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
+  return (
+    <div className="border rounded-lg p-4 space-y-4">
+      <div className="flex items-center justify-between">
+        <div>
+          <h3 className="font-semibold">{integration.name}</h3>
+          <p className="text-sm text-muted-foreground capitalize">{integration.provider} POS</p>
+        </div>
+        <Button
+          onClick={() => syncEmployeesMutation.mutate()}
+          disabled={syncEmployeesMutation.isPending}
+          data-testid="button-sync-employees"
+        >
+          <RefreshCw className={`h-4 w-4 mr-2 ${syncEmployeesMutation.isPending ? 'animate-spin' : ''}`} />
+          Sync Employees
+        </Button>
+      </div>
+
+      {isLoading ? (
+        <div className="text-center py-8 text-muted-foreground">Loading employees...</div>
+      ) : employees.length === 0 ? (
+        <Alert>
+          <AlertDescription>
+            No employees found. Click "Sync Employees" to import employees from {integration.provider}.
+          </AlertDescription>
+        </Alert>
+      ) : (
+        <div className="space-y-2">
+          <h4 className="text-sm font-semibold">{employees.length} Employees</h4>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+            {employees.map((employee) => (
+              <div
+                key={employee.id}
+                className="border rounded-lg p-3 space-y-2"
+                data-testid={`employee-card-${employee.id}`}
+              >
+                <div className="flex items-start justify-between">
+                  <div className="flex-1">
+                    <p className="font-semibold">{employee.displayName}</p>
+                    {employee.email && (
+                      <p className="text-sm text-muted-foreground">{employee.email}</p>
+                    )}
+                    {employee.roleTitle && (
+                      <Badge variant="outline" className="mt-1">
+                        {employee.roleTitle}
+                      </Badge>
+                    )}
+                  </div>
+                  {employee.isActive ? (
+                    <Badge variant="default" className="bg-green-500">Active</Badge>
+                  ) : (
+                    <Badge variant="secondary">Inactive</Badge>
+                  )}
+                </div>
+                {employee.lastSeenAt && (
+                  <p className="text-xs text-muted-foreground">
+                    Last seen: {new Date(employee.lastSeenAt).toLocaleDateString()}
+                  </p>
+                )}
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 export default function PosIntegration() {
   const { toast } = useToast();
   const { currentLocation: selectedLocation } = useLocation();
@@ -382,6 +493,7 @@ export default function PosIntegration() {
         <TabsList>
           <TabsTrigger value="integrations">Integrations</TabsTrigger>
           <TabsTrigger value="mapping">Recipe Mapping</TabsTrigger>
+          <TabsTrigger value="employees">Employees</TabsTrigger>
           <TabsTrigger value="webhooks">Webhooks</TabsTrigger>
           <TabsTrigger value="sales">Recent Sales</TabsTrigger>
           <TabsTrigger value="setup">Setup Guide</TabsTrigger>
@@ -1036,6 +1148,35 @@ export default function PosIntegration() {
                     </div>
                   ))}
                 </div>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="employees" className="space-y-6">
+          <Card>
+            <CardHeader>
+              <div className="flex items-center justify-between">
+                <div>
+                  <CardTitle>POS Employees</CardTitle>
+                  <CardDescription>
+                    View and sync employees from your POS systems
+                  </CardDescription>
+                </div>
+              </div>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              {integrations.length === 0 ? (
+                <Alert>
+                  <AlertTriangle className="h-4 w-4" />
+                  <AlertDescription>
+                    No integrations found. Please add a POS integration first to sync employees.
+                  </AlertDescription>
+                </Alert>
+              ) : (
+                integrations.map((integration) => (
+                  <EmployeeSection key={integration.id} integration={integration} />
+                ))
               )}
             </CardContent>
           </Card>
