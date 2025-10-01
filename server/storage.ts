@@ -2439,9 +2439,14 @@ export class DatabaseStorage implements IStorage {
     .leftJoin(departments, eq(employees.departmentId, departments.id))
     .leftJoin(positions, eq(employees.positionId, positions.id));
 
-    // Filter by location if provided (through department)
+    // Filter by location if provided (through department OR employees without a department)
     if (locationId) {
-      query = query.where(eq(departments.locationId, locationId));
+      query = query.where(
+        or(
+          eq(departments.locationId, locationId),
+          isNull(employees.departmentId)
+        )
+      );
     }
     
     const result = await query.orderBy(employees.lastName, employees.firstName);
@@ -2548,8 +2553,8 @@ export class DatabaseStorage implements IStorage {
     // 12. Delete employee document assignments  
     await db.delete(employeeDocumentAssignments).where(eq(employeeDocumentAssignments.employeeId, id));
     
-    // 13. Delete recipe assignments
-    await db.delete(recipeAssignments).where(eq(recipeAssignments.employeeId, id));
+    // 13. Delete POS employee mappings
+    await db.delete(posEmployeeMappings).where(eq(posEmployeeMappings.employeeId, id));
     
     // Finally, delete the employee record
     await db.delete(employees).where(eq(employees.id, id));
