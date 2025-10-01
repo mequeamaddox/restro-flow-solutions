@@ -1037,6 +1037,7 @@ export const posMenuItems = pgTable("pos_menu_items", {
   id: uuid("id").primaryKey().default(sql`gen_random_uuid()`),
   posItemId: varchar("pos_item_id").notNull(), // ID from the POS system
   posIntegrationId: uuid("pos_integration_id").references(() => posIntegrations.id).notNull(),
+  recipeId: uuid("recipe_id").references(() => recipes.id), // Link to recipe for inventory deduction
   name: varchar("name").notNull(),
   category: varchar("category"),
   price: decimal("price", { precision: 10, scale: 2 }),
@@ -1119,6 +1120,10 @@ export const posMenuItemsRelations = relations(posMenuItems, ({ one, many }) => 
   integration: one(posIntegrations, {
     fields: [posMenuItems.posIntegrationId],
     references: [posIntegrations.id],
+  }),
+  recipe: one(recipes, {
+    fields: [posMenuItems.recipeId],
+    references: [recipes.id],
   }),
   mappings: many(posItemMappings),
   saleItems: many(posSaleItems),
