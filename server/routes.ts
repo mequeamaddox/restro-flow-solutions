@@ -1858,6 +1858,7 @@ print(json.dumps(rows))
               selectedVendorId = vendors[0].id;
             }
 
+            // Only include fields that exist in the inventory_items schema
             itemData = {
               name: itemName.trim(),
               description: categoryName ? `${categoryName}` : null,
@@ -1872,22 +1873,6 @@ print(json.dumps(rows))
               conversionFactor: "1",
               costPerPurchaseUnit: cost.toString(),
               reorderLevel: "0",
-              barcode: null,
-              packSize: null,
-              caseQuantity: null,
-              casePrice: cost.toString(),
-              pricePerLb: null,
-              pricePerGa: null,
-              pricePerOz: null,
-              pricePerInnerUnit: cost.toString(),
-              innerUnit: "each",
-              piecesPerLb: null,
-              ozPerPiece: null,
-              ozPerCup: null,
-              cupsPerGa: null,
-              yieldPct: null,
-              gradeLow: false,
-              gradeHigh: false,
             };
           } else {
             if (!row.name || row.name.trim() === '') {
@@ -1977,7 +1962,8 @@ print(json.dumps(rows))
 
           successCount++;
         } catch (error: any) {
-          console.error(`Error processing row ${rowNumber}:`, error);
+          console.error(`❌ Error processing row ${rowNumber}:`, error);
+          console.error(`   Item data:`, JSON.stringify(itemData, null, 2));
           errors.push({ 
             row: rowNumber, 
             field: 'general', 
