@@ -15,7 +15,8 @@ import {
   wasteEntries,
   posSales,
   users,
-  vendorPriceCatalog
+  vendorPriceCatalog,
+  posEmployeeMappings
 } from "@shared/schema";
 import { posService } from "./posService";
 import { cloverService } from "./cloverService";
