@@ -1727,10 +1727,14 @@ print(json.dumps(rows))
       }
       
       console.log(`📋 Detected CSV format: ${detectedFormat} (columns: ${columnNames.slice(0, 5).join(', ')}...)`);
+      console.log(`🔄 Starting to process ${results.length} rows...`);
 
       for (const result of results) {
         const { rowNumber, data } = result;
         const row = data;
+        console.log(`🔍 Processing row ${rowNumber}, format check: ${detectedFormat === 'excel_simple' ? 'EXCEL_SIMPLE' : detectedFormat}`);
+        console.log(`   Row data keys:`, Object.keys(row));
+        console.log(`   Row data:`, JSON.stringify(row).substring(0, 200));
 
         try {
           let itemData: any;
