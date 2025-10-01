@@ -43,6 +43,9 @@ interface PosSale {
   id: string;
   posOrderId: string;
   total: string;
+  subtotal?: string;
+  tax?: string;
+  tip?: string;
   orderDate: string;
   inventoryProcessed: boolean;
   items?: Array<{
@@ -973,7 +976,8 @@ export default function PosIntegration() {
                   {sales.map((sale: PosSale) => (
                     <div
                       key={sale.id}
-                      className="border rounded-lg p-4 space-y-2"
+                      className="border rounded-lg p-4 space-y-3"
+                      data-testid={`sale-${sale.id}`}
                     >
                       <div className="flex items-center justify-between">
                         <div>
@@ -982,23 +986,53 @@ export default function PosIntegration() {
                             {new Date(sale.orderDate).toLocaleString()}
                           </p>
                         </div>
-                        <div className="text-right">
-                          <p className="font-semibold">${sale.total}</p>
-                          <Badge variant={sale.inventoryProcessed ? "default" : "secondary"}>
-                            {sale.inventoryProcessed ? "Processed" : "Pending"}
-                          </Badge>
-                        </div>
+                        <Badge variant={sale.inventoryProcessed ? "default" : "secondary"}>
+                          {sale.inventoryProcessed ? "Processed" : "Pending"}
+                        </Badge>
                       </div>
+                      
                       {sale.items && sale.items.length > 0 && (
-                        <div className="border-t pt-2">
-                          <p className="text-sm font-medium mb-1">Items:</p>
-                          {sale.items.map((item, index) => (
-                            <div key={index} className="text-sm text-muted-foreground">
-                              {item.quantity}x {item.itemName} - ${item.unitPrice}
-                            </div>
-                          ))}
+                        <div className="border-t pt-3">
+                          <p className="text-sm font-medium mb-2">Items:</p>
+                          <div className="space-y-1">
+                            {sale.items.map((item, index) => (
+                              <div key={index} className="flex items-center justify-between text-sm">
+                                <span className="text-muted-foreground">
+                                  {item.quantity}x {item.itemName}
+                                </span>
+                                <span className="font-medium">${Number(item.totalPrice).toFixed(2)}</span>
+                              </div>
+                            ))}
+                          </div>
                         </div>
                       )}
+
+                      <div className="border-t pt-3">
+                        <div className="space-y-1">
+                          {sale.subtotal && (
+                            <div className="flex items-center justify-between text-sm">
+                              <span className="text-muted-foreground">Subtotal</span>
+                              <span>${Number(sale.subtotal).toFixed(2)}</span>
+                            </div>
+                          )}
+                          {sale.tax && (
+                            <div className="flex items-center justify-between text-sm">
+                              <span className="text-muted-foreground">Tax</span>
+                              <span>${Number(sale.tax).toFixed(2)}</span>
+                            </div>
+                          )}
+                          {sale.tip && (
+                            <div className="flex items-center justify-between text-sm">
+                              <span className="text-muted-foreground">Tip</span>
+                              <span>${Number(sale.tip).toFixed(2)}</span>
+                            </div>
+                          )}
+                          <div className="flex items-center justify-between font-semibold pt-1 border-t">
+                            <span>Total</span>
+                            <span>${Number(sale.total).toFixed(2)}</span>
+                          </div>
+                        </div>
+                      </div>
                     </div>
                   ))}
                 </div>

@@ -1,6 +1,7 @@
 import { sql, relations } from 'drizzle-orm';
 import {
   index,
+  uniqueIndex,
   jsonb,
   pgTable,
   timestamp,
@@ -1059,12 +1060,66 @@ export const posItemMappings = pgTable("pos_item_mappings", {
   createdAt: timestamp("created_at").defaultNow(),
 });
 
+// POS Employees (from POS systems)
+export const posEmployees = pgTable("pos_employees", {
+  id: uuid("id").primaryKey().default(sql`gen_random_uuid()`),
+  posIntegrationId: uuid("pos_integration_id").references(() => posIntegrations.id).notNull(),
+  posEmployeeId: varchar("pos_employee_id").notNull(), // Provider's employee ID
+  displayName: varchar("display_name").notNull(),
+  firstName: varchar("first_name"),
+  lastName: varchar("last_name"),
+  email: varchar("email"),
+  phone: varchar("phone"),
+  roleTitle: varchar("role_title"),
+  isActive: boolean("is_active").default(true),
+  metadata: jsonb("metadata"), // Store additional POS-specific data
+  lastSeenAt: timestamp("last_seen_at"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => [
+  uniqueIndex("pos_employees_integration_employee_uq").on(table.posIntegrationId, table.posEmployeeId),
+]);
+
+// Mapping between POS employees and HR employees
+export const posEmployeeMappings = pgTable("pos_employee_mappings", {
+  id: uuid("id").primaryKey().default(sql`gen_random_uuid()`),
+  posEmployeeId: uuid("pos_employee_id").references(() => posEmployees.id).notNull().unique(),
+  employeeId: uuid("employee_id").references(() => employees.id).notNull(),
+  status: varchar("status").notNull(), // "auto" | "manual" | "ignored"
+  confidence: decimal("confidence", { precision: 3, scale: 2 }), // 0.00 to 1.00
+  matchRule: text("match_rule"), // Description of how the match was made
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// POS Time Clock entries
+export const posTimeclocks = pgTable("pos_timeclocks", {
+  id: uuid("id").primaryKey().default(sql`gen_random_uuid()`),
+  posIntegrationId: uuid("pos_integration_id").references(() => posIntegrations.id).notNull(),
+  posTimeEntryId: varchar("pos_time_entry_id").notNull(), // Provider's time entry/shift ID
+  posEmployeeId: uuid("pos_employee_id").references(() => posEmployees.id).notNull(),
+  locationId: uuid("location_id").references(() => locations.id).notNull(),
+  clockInAt: timestamp("clock_in_at").notNull(),
+  clockOutAt: timestamp("clock_out_at"), // Null for open shifts
+  breakSeconds: integer("break_seconds").default(0),
+  wageCents: integer("wage_cents"), // Hourly wage in cents
+  roleTitle: varchar("role_title"),
+  status: varchar("status").notNull(), // "open" | "closed" | "adjusted"
+  hrTimeEntryId: uuid("hr_time_entry_id").references(() => timeEntries.id), // Link to HR system
+  raw: jsonb("raw"), // Store raw POS data for provenance
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => [
+  uniqueIndex("pos_timeclocks_integration_entry_uq").on(table.posIntegrationId, table.posTimeEntryId),
+]);
+
 // Universal POS Sales transactions
 export const posSales = pgTable("pos_sales", {
   id: uuid("id").primaryKey().default(sql`gen_random_uuid()`),
   posOrderId: varchar("pos_order_id").notNull(),
   posIntegrationId: uuid("pos_integration_id").references(() => posIntegrations.id).notNull(),
   locationId: uuid("location_id").references(() => locations.id).notNull(),
+  cashierPosEmployeeId: uuid("cashier_pos_employee_id").references(() => posEmployees.id), // Employee who rang up the sale
   total: decimal("total", { precision: 10, scale: 2 }).notNull(),
   subtotal: decimal("subtotal", { precision: 10, scale: 2 }),
   tax: decimal("tax", { precision: 10, scale: 2 }),
@@ -1081,6 +1136,7 @@ export const posSaleItems = pgTable("pos_sale_items", {
   id: uuid("id").primaryKey().default(sql`gen_random_uuid()`),
   posSaleId: uuid("pos_sale_id").references(() => posSales.id).notNull(),
   posMenuItemId: uuid("pos_menu_item_id").references(() => posMenuItems.id),
+  servedByPosEmployeeId: uuid("served_by_pos_employee_id").references(() => posEmployees.id), // Employee who served this item
   itemName: varchar("item_name").notNull(),
   quantity: integer("quantity").notNull(),
   unitPrice: decimal("unit_price", { precision: 10, scale: 2 }).notNull(),
@@ -1106,6 +1162,9 @@ export const insertPosMenuItemSchema = createInsertSchema(posMenuItems).omit({ i
 export const insertPosItemMappingSchema = createInsertSchema(posItemMappings).omit({ id: true, createdAt: true });
 export const insertPosSaleSchema = createInsertSchema(posSales).omit({ id: true, createdAt: true });
 export const insertPosSaleItemSchema = createInsertSchema(posSaleItems).omit({ id: true, createdAt: true });
+export const insertPosEmployeeSchema = createInsertSchema(posEmployees).omit({ id: true, createdAt: true, updatedAt: true });
+export const insertPosEmployeeMappingSchema = createInsertSchema(posEmployeeMappings).omit({ id: true, createdAt: true, updatedAt: true });
+export const insertPosTimeclockSchema = createInsertSchema(posTimeclocks).omit({ id: true, createdAt: true, updatedAt: true });
 
 // Relations for POS tables
 export const posIntegrationsRelations = relations(posIntegrations, ({ one, many }) => ({
@@ -1503,6 +1562,12 @@ export type PosSale = typeof posSales.$inferSelect;
 export type InsertPosSale = z.infer<typeof insertPosSaleSchema>;
 export type PosSaleItem = typeof posSaleItems.$inferSelect;
 export type InsertPosSaleItem = z.infer<typeof insertPosSaleItemSchema>;
+export type PosEmployee = typeof posEmployees.$inferSelect;
+export type InsertPosEmployee = z.infer<typeof insertPosEmployeeSchema>;
+export type PosEmployeeMapping = typeof posEmployeeMappings.$inferSelect;
+export type InsertPosEmployeeMapping = z.infer<typeof insertPosEmployeeMappingSchema>;
+export type PosTimeclock = typeof posTimeclocks.$inferSelect;
+export type InsertPosTimeclock = z.infer<typeof insertPosTimeclockSchema>;
 export type InsertCategory = z.infer<typeof insertCategorySchema>;
 export type Vendor = typeof vendors.$inferSelect;
 export type InsertVendor = z.infer<typeof insertVendorSchema>;
