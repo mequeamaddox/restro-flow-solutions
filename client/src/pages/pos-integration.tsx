@@ -53,6 +53,30 @@ interface PosSale {
   }>;
 }
 
+interface UnmappedMenuItem {
+  id: string;
+  posItemId: string;
+  posIntegrationId: string;
+  recipeId: string | null;
+  name: string;
+  category: string | null;
+  price: string | null;
+  sku: string | null;
+  integration: {
+    id: string;
+    provider: string;
+    name: string;
+  };
+}
+
+interface Recipe {
+  id: string;
+  name: string;
+  description: string | null;
+  category: string;
+  sellingPrice: string | null;
+}
+
 export default function PosIntegration() {
   const { toast } = useToast();
   const { currentLocation: selectedLocation } = useLocation();
@@ -82,6 +106,18 @@ export default function PosIntegration() {
   // Fetch webhook status
   const { data: webhookStatus = [], isLoading: webhookStatusLoading } = useQuery<PosIntegration[]>({
     queryKey: ["/api/pos/webhook-status"],
+  });
+
+  // Fetch unmapped menu items
+  const { data: unmappedItems = [], isLoading: unmappedLoading } = useQuery<UnmappedMenuItem[]>({
+    queryKey: ["/api/pos/menu-items/unmapped", selectedLocation?.id],
+    enabled: !!selectedLocation?.id,
+  });
+
+  // Fetch recipes for the current location
+  const { data: recipes = [] } = useQuery<Recipe[]>({
+    queryKey: ["/api/recipes", selectedLocation?.id],
+    enabled: !!selectedLocation?.id,
   });
 
   // Create integration mutation
@@ -241,6 +277,36 @@ export default function PosIntegration() {
     },
   });
 
+  // Link menu item to recipe mutation
+  const linkRecipeMutation = useMutation({
+    mutationFn: async ({ menuItemId, recipeId }: { menuItemId: string; recipeId: string | null }) => {
+      const response = await fetch(`/api/pos/menu-items/${menuItemId}/recipe`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ recipeId }),
+      });
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.message || "Failed to link recipe");
+      }
+      return response.json();
+    },
+    onSuccess: () => {
+      toast({
+        title: "Recipe Linked",
+        description: "Menu item successfully linked to recipe",
+      });
+      queryClient.invalidateQueries({ queryKey: ["/api/pos/menu-items/unmapped"] });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Link Failed",
+        description: error.message || "Failed to link menu item to recipe",
+        variant: "destructive",
+      });
+    },
+  });
+
   if (!selectedLocation) {
     return (
       <div className="p-6">
@@ -268,6 +334,7 @@ export default function PosIntegration() {
       <Tabs defaultValue="integrations" className="w-full">
         <TabsList>
           <TabsTrigger value="integrations">Integrations</TabsTrigger>
+          <TabsTrigger value="mapping">Recipe Mapping</TabsTrigger>
           <TabsTrigger value="webhooks">Webhooks</TabsTrigger>
           <TabsTrigger value="sales">Recent Sales</TabsTrigger>
           <TabsTrigger value="setup">Setup Guide</TabsTrigger>
@@ -539,6 +606,114 @@ export default function PosIntegration() {
               ))
             )}
           </div>
+        </TabsContent>
+
+        <TabsContent value="mapping" className="space-y-6">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Link2 className="h-5 w-5" />
+                Recipe Mapping
+              </CardTitle>
+              <CardDescription>
+                Link POS menu items to recipes for automatic inventory deduction and cost tracking
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              {unmappedLoading ? (
+                <div className="flex items-center justify-center p-6">
+                  <RefreshCw className="h-6 w-6 animate-spin" />
+                  <span className="ml-2">Loading unmapped items...</span>
+                </div>
+              ) : unmappedItems.length === 0 ? (
+                <Alert>
+                  <CheckCircle className="h-4 w-4" />
+                  <AlertDescription>
+                    All menu items are mapped to recipes! When a sale occurs, inventory will be automatically deducted based on the recipe ingredients.
+                  </AlertDescription>
+                </Alert>
+              ) : (
+                <div className="space-y-4">
+                  <Alert>
+                    <AlertTriangle className="h-4 w-4" />
+                    <AlertDescription>
+                      {unmappedItems.length} menu items need to be linked to recipes. Unmapped items won't trigger inventory deductions when sold.
+                    </AlertDescription>
+                  </Alert>
+                  
+                  <div className="space-y-4">
+                    {unmappedItems.map((item) => (
+                      <Card key={item.id}>
+                        <CardContent className="pt-6">
+                          <div className="space-y-4">
+                            <div className="flex items-center justify-between">
+                              <div>
+                                <h4 className="font-semibold text-lg">{item.name}</h4>
+                                <div className="flex items-center gap-2 mt-1">
+                                  <Badge variant="outline">{item.integration.provider}</Badge>
+                                  {item.category && <Badge variant="secondary">{item.category}</Badge>}
+                                  {item.price && <span className="text-sm text-muted-foreground">${item.price}</span>}
+                                </div>
+                              </div>
+                            </div>
+
+                            <div className="space-y-2">
+                              <Label htmlFor={`recipe-${item.id}`}>Link to Recipe</Label>
+                              <div className="flex gap-2">
+                                <Select
+                                  onValueChange={(value) => {
+                                    if (value === "none") {
+                                      linkRecipeMutation.mutate({ menuItemId: item.id, recipeId: null });
+                                    } else {
+                                      linkRecipeMutation.mutate({ menuItemId: item.id, recipeId: value });
+                                    }
+                                  }}
+                                >
+                                  <SelectTrigger className="flex-1" id={`recipe-${item.id}`}>
+                                    <SelectValue placeholder="Select a recipe..." />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    <SelectItem value="none">No Recipe</SelectItem>
+                                    {recipes
+                                      .filter((r) => r.name.toLowerCase().includes(item.name.toLowerCase()) || 
+                                                     item.name.toLowerCase().includes(r.name.toLowerCase()))
+                                      .slice(0, 5)
+                                      .map((recipe) => (
+                                        <SelectItem key={recipe.id} value={recipe.id}>
+                                          {recipe.name} ({recipe.category})
+                                        </SelectItem>
+                                      ))}
+                                    {recipes.length > 5 && (
+                                      <>
+                                        <SelectItem value="divider" disabled>
+                                          ──── All Recipes ────
+                                        </SelectItem>
+                                        {recipes
+                                          .filter((r) => !r.name.toLowerCase().includes(item.name.toLowerCase()) && 
+                                                       !item.name.toLowerCase().includes(r.name.toLowerCase()))
+                                          .map((recipe) => (
+                                            <SelectItem key={recipe.id} value={recipe.id}>
+                                              {recipe.name} ({recipe.category})
+                                            </SelectItem>
+                                          ))}
+                                      </>
+                                    )}
+                                  </SelectContent>
+                                </Select>
+                              </div>
+                              <p className="text-xs text-muted-foreground">
+                                Matching recipes appear first. Once linked, sales of this item will deduct recipe ingredients from inventory.
+                              </p>
+                            </div>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </CardContent>
+          </Card>
         </TabsContent>
 
         <TabsContent value="webhooks" className="space-y-6">

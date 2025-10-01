@@ -532,16 +532,76 @@ export class PosService {
   private async processInventoryDeductions(saleId: string): Promise<void> {
     try {
       const sale = await storage.getPosSaleById(saleId);
-      if (!sale) return;
+      if (!sale || !sale.items) return;
 
-      // TODO: Look up mappings and write inventory movements here
-      // For now, mark as processed
+      console.log(`Processing inventory deductions for sale ${saleId} with ${sale.items.length} items`);
+
+      const menuItems = await storage.getPosMenuItems(sale.posIntegrationId);
+      const failures: string[] = [];
+
+      for (const saleItem of sale.items) {
+        try {
+          const menuItem = menuItems.find(mi => 
+            mi.name.toLowerCase() === saleItem.itemName.toLowerCase()
+          );
+
+          if (!menuItem) {
+            console.warn(`No menu item found for sale item: ${saleItem.itemName}`);
+            failures.push(`No menu item found: ${saleItem.itemName}`);
+            continue;
+          }
+
+          if (!menuItem.recipeId) {
+            console.warn(`Menu item "${menuItem.name}" has no recipe linked`);
+            failures.push(`No recipe linked: ${menuItem.name}`);
+            continue;
+          }
+
+          const recipe = await storage.getRecipe(menuItem.recipeId);
+          if (!recipe || !recipe.ingredients) {
+            console.warn(`Recipe not found or has no ingredients for menu item: ${menuItem.name}`);
+            failures.push(`Recipe missing or incomplete: ${menuItem.name}`);
+            continue;
+          }
+
+          console.log(`Deducting ingredients for "${menuItem.name}" (quantity: ${saleItem.quantity})`);
+
+          for (const ingredient of recipe.ingredients) {
+            const deductionAmount = Number(ingredient.quantity) * saleItem.quantity;
+            
+            await storage.createInventoryTransaction({
+              inventoryItemId: ingredient.inventoryItemId,
+              locationId: sale.locationId,
+              type: "sale",
+              quantity: -deductionAmount,
+              unit: ingredient.unit,
+              notes: `POS sale deduction: ${saleItem.quantity}x ${menuItem.name} (Recipe: ${recipe.name})`,
+              createdBy: "system",
+            });
+
+            console.log(`  - Deducted ${deductionAmount} ${ingredient.unit} of ${ingredient.inventoryItem.name}`);
+          }
+        } catch (itemError) {
+          const errorMsg = `Failed to process ${saleItem.itemName}: ${itemError instanceof Error ? itemError.message : String(itemError)}`;
+          console.error(errorMsg);
+          failures.push(errorMsg);
+        }
+      }
+
+      if (failures.length > 0) {
+        console.error(`Inventory deduction incomplete for sale ${saleId}: ${failures.length} items could not be processed:`, failures);
+        return;
+      }
+
       await storage.updatePosSale(saleId, {
         inventoryProcessed: true,
         processedAt: new Date().toISOString() as any,
       });
+
+      console.log(`Successfully processed inventory deductions for sale ${saleId}`);
     } catch (error) {
       console.error("Failed to process inventory deductions:", error);
+      throw error;
     }
   }
 }
