@@ -2484,6 +2484,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.post("/api/pos/integrations/:id/sync-sales", isAuthenticated, async (req, res) => {
+    try {
+      const count = await posService.syncHistoricalSales(req.params.id);
+      res.json({ message: `Synced ${count} sales successfully`, count });
+    } catch (error) {
+      console.error("Error syncing sales:", error);
+      res.status(500).json({ message: "Failed to sync sales data" });
+    }
+  });
+
   app.put("/api/pos/integrations/:id", isAuthenticated, async (req, res) => {
     try {
       const integrationData = insertPosIntegrationSchema.partial().parse(req.body);

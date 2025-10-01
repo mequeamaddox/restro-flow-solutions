@@ -140,6 +140,24 @@ export class PosService {
     }
   }
 
+  async syncHistoricalSales(integrationId: string): Promise<number> {
+    try {
+      const integration = await storage.getPosIntegration(integrationId);
+      if (!integration) throw new Error("Integration not found");
+
+      // For now, only Clover is supported
+      if (integration.provider === "clover") {
+        const { cloverService } = await import("./cloverService");
+        return await cloverService.syncHistoricalOrders(integrationId);
+      }
+
+      throw new Error(`Historical sales sync not yet supported for ${integration.provider}`);
+    } catch (error) {
+      console.error("Historical sales sync failed:", error);
+      throw error;
+    }
+  }
+
   private async syncCloverMenuItems(baseUrl: string, integration: any, credentials: PosCredentials): Promise<void> {
     const limit = 100;
     for (let offset = 0; ; offset += limit) {

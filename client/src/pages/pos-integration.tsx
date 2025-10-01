@@ -151,6 +151,10 @@ export default function PosIntegration() {
       const response = await fetch(`/api/pos/integrations/${integrationId}/sync`, {
         method: "POST",
       });
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.message || "Failed to sync menu items");
+      }
       return response.json();
     },
     onSuccess: () => {
@@ -160,10 +164,38 @@ export default function PosIntegration() {
       });
       queryClient.invalidateQueries({ queryKey: ["/api/pos/integrations"] });
     },
-    onError: () => {
+    onError: (error: Error) => {
       toast({
         title: "Sync Failed",
-        description: "Failed to sync menu items from POS",
+        description: error.message || "Failed to sync menu items from POS",
+        variant: "destructive",
+      });
+    },
+  });
+
+  // Sync sales data mutation
+  const syncSalesMutation = useMutation({
+    mutationFn: async (integrationId: string) => {
+      const response = await fetch(`/api/pos/integrations/${integrationId}/sync-sales`, {
+        method: "POST",
+      });
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.message || "Failed to sync sales");
+      }
+      return response.json();
+    },
+    onSuccess: (data) => {
+      toast({
+        title: "Sales Synced",
+        description: `Successfully synced ${data.count} sales from POS`,
+      });
+      queryClient.invalidateQueries({ queryKey: ["/api/pos/sales"] });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Sync Failed",
+        description: error.message || "Failed to sync sales data from POS",
         variant: "destructive",
       });
     },
@@ -453,7 +485,21 @@ export default function PosIntegration() {
                         ) : (
                           <RefreshCw className="h-4 w-4 mr-2" />
                         )}
-                        Sync Menu Items
+                        Sync Menu
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => syncSalesMutation.mutate(integration.id)}
+                        disabled={syncSalesMutation.isPending}
+                        data-testid="button-sync-sales"
+                      >
+                        {syncSalesMutation.isPending ? (
+                          <RefreshCw className="h-4 w-4 animate-spin mr-2" />
+                        ) : (
+                          <DollarSign className="h-4 w-4 mr-2" />
+                        )}
+                        Sync Sales
                       </Button>
                       <Button
                         variant={integration.isActive ? "destructive" : "default"}

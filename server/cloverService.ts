@@ -267,6 +267,82 @@ export class CloverService {
   }
 
   /**
+   * Sync historical orders from Clover (last 30 days)
+   */
+  async syncHistoricalOrders(integrationId: string): Promise<number> {
+    try {
+      const integration = await storage.getPosIntegration(integrationId);
+      if (!integration || !integration.isActive) {
+        throw new Error('Integration not found or inactive');
+      }
+
+      const baseUrl = integration.environment === 'production' 
+        ? 'https://api.clover.com'
+        : 'https://sandbox.dev.clover.com';
+
+      const raw = integration.credentials;
+      const accessToken = typeof raw === 'object' && raw !== null ? (raw as any).accessToken : undefined;
+      if (!accessToken || typeof accessToken !== 'string') {
+        throw new Error('Clover integration missing valid accessToken in credentials');
+      }
+
+      // Fetch orders from last 30 days
+      const thirtyDaysAgo = new Date();
+      thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+      const startTime = thirtyDaysAgo.getTime();
+
+      console.log(`Fetching Clover orders since ${thirtyDaysAgo.toISOString()}`);
+
+      const response = await fetch(
+        `${baseUrl}/v3/merchants/${integration.merchantId}/orders?filter=createdTime>=${startTime}&expand=lineItems&limit=1000`,
+        {
+          headers: {
+            'Authorization': `Bearer ${accessToken}`,
+            'Content-Type': 'application/json',
+          },
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error(`Clover API error: ${response.status} ${response.statusText}`);
+      }
+
+      const data = await response.json();
+      const orders = data.elements || [];
+
+      console.log(`Found ${orders.length} orders from Clover`);
+
+      let processedCount = 0;
+      for (const order of orders) {
+        try {
+          // Check if order already exists
+          const existing = await storage.getPosSaleByOrderId(integration.id, order.id);
+          if (existing) {
+            console.log(`Order ${order.id} already exists, skipping`);
+            continue;
+          }
+
+          await this.processOrder(integration, order);
+          processedCount++;
+        } catch (error) {
+          console.error(`Error processing order ${order.id}:`, error);
+        }
+      }
+
+      await storage.updatePosIntegration(integration.id, {
+        lastSyncAt: new Date(),
+      });
+
+      console.log(`Successfully synced ${processedCount} new orders from Clover`);
+      return processedCount;
+      
+    } catch (error) {
+      console.error('Error syncing historical orders:', error);
+      throw error;
+    }
+  }
+
+  /**
    * Test Clover API connection
    */
   async testConnection(integrationId: string): Promise<boolean> {
