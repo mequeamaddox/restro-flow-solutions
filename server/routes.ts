@@ -2924,14 +2924,11 @@ print(json.dumps(rows))
           const firstName = posEmployee.firstName || nameParts[0] || 'Unknown';
           const lastName = posEmployee.lastName || nameParts.slice(1).join(' ') || '';
 
-          // Generate unique email for employees without one
-          const email = posEmployee.email || `noemail-${posEmployee.id.substring(0, 8)}@placeholder.local`;
-          
           // Create HR employee from POS employee
           const hrEmployee = await storage.createEmployee({
             firstName,
             lastName,
-            email,
+            email: posEmployee.email || null,
             phone: '',
             status: 'active',
             hireDate: new Date().toISOString().split('T')[0],
