@@ -2847,17 +2847,11 @@ print(json.dumps(rows))
         .limit(1);
       
       if (existingMapping.length > 0) {
-        const existingEmployee = await storage.getEmployeeById(existingMapping[0].employeeId);
+        const existingEmployee = await storage.getEmployee(existingMapping[0].employeeId);
         return res.json({ 
           message: "Employee already imported",
           employee: existingEmployee
         });
-      }
-
-      // Get the integration to find the location
-      const integration = await storage.getPosIntegration(posEmployee.posIntegrationId);
-      if (!integration) {
-        return res.status(404).json({ message: "Integration not found" });
       }
 
       // Safely parse name from displayName
@@ -2867,7 +2861,6 @@ print(json.dumps(rows))
 
       // Create HR employee from POS employee
       const hrEmployee = await storage.createEmployee({
-        locationId: integration.locationId,
         firstName,
         lastName,
         email: posEmployee.email || '',
@@ -2916,9 +2909,49 @@ print(json.dumps(rows))
         return res.status(400).json({ message: `Employee sync not supported for provider: ${integration.provider}` });
       }
 
+      // Automatically create HR employees for any POS employees without mappings
+      const unlinkedEmployees = await storage.getUnlinkedPosEmployees(integration.locationId);
+      let autoCreatedCount = 0;
+      
+      for (const posEmployee of unlinkedEmployees) {
+        try {
+          // Safely parse name from displayName
+          const nameParts = (posEmployee.displayName || '').trim().split(/\s+/);
+          const firstName = posEmployee.firstName || nameParts[0] || 'Unknown';
+          const lastName = posEmployee.lastName || nameParts.slice(1).join(' ') || '';
+
+          // Create HR employee from POS employee
+          const hrEmployee = await storage.createEmployee({
+            firstName,
+            lastName,
+            email: posEmployee.email || '',
+            phone: '',
+            status: 'active',
+            hireDate: new Date().toISOString().split('T')[0],
+            departmentId: null,
+            positionId: null,
+          });
+
+          // Create mapping between POS employee and HR employee
+          await db.insert(posEmployeeMappings).values({
+            posEmployeeId: posEmployee.id,
+            employeeId: hrEmployee.id,
+            status: 'auto',
+            confidence: '1.00',
+            matchRule: 'Auto-imported during POS sync'
+          });
+
+          autoCreatedCount++;
+        } catch (error) {
+          console.error(`Failed to auto-create HR employee for POS employee ${posEmployee.id}:`, error);
+          // Continue with next employee even if one fails
+        }
+      }
+
       res.json({ 
-        message: `Successfully synced ${syncedCount} employees`,
-        syncedCount 
+        message: `Successfully synced ${syncedCount} employees and auto-imported ${autoCreatedCount} to HR system`,
+        syncedCount,
+        autoCreatedCount
       });
     } catch (error) {
       console.error("Error syncing employees:", error);
