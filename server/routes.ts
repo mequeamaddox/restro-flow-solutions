@@ -1736,9 +1736,10 @@ print(json.dumps(rows))
         console.log(`   Row data keys:`, Object.keys(row));
         console.log(`   Row data:`, JSON.stringify(row).substring(0, 200));
 
+        let itemData: any = null;
+        let vendorPricingData: any = null;
+
         try {
-          let itemData: any;
-          let vendorPricingData: any = null;
 
           if (detectedFormat === 'vendor') {
             const parsed = parseVendorCsvRow(row);
