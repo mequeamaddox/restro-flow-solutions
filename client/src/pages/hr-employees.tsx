@@ -59,6 +59,36 @@ export default function HREmployees() {
     queryKey: ['/api/hr/positions'],
   });
 
+  const { data: unlinkedPosEmployees = [] } = useQuery<any[]>({
+    queryKey: ['/api/pos-employees/unlinked', currentLocation?.id],
+    queryFn: async () => {
+      if (!currentLocation?.id) return [];
+      const response = await fetch(`/api/pos-employees/unlinked/${currentLocation.id}`);
+      if (!response.ok) throw new Error('Failed to fetch unlinked POS employees');
+      return response.json();
+    },
+    enabled: !!currentLocation,
+  });
+
+  const importPosEmployeeMutation = useMutation({
+    mutationFn: async ({ posEmployeeId, departmentId, positionId }: { posEmployeeId: string; departmentId?: string; positionId?: string }) => {
+      return await apiRequest('POST', `/api/pos-employees/import/${posEmployeeId}`, { departmentId, positionId });
+    },
+    onSuccess: () => {
+      toast({ title: "Success", description: "Employee imported from POS successfully" });
+      queryClient.invalidateQueries({ queryKey: ['/api/hr/employees'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/hr/employees', currentLocation?.id] });
+      queryClient.invalidateQueries({ queryKey: ['/api/pos-employees/unlinked', currentLocation?.id] });
+    },
+    onError: (error: any) => {
+      toast({ 
+        title: "Error", 
+        description: error.message || "Failed to import employee",
+        variant: "destructive" 
+      });
+    },
+  });
+
   const createEmployeeMutation = useMutation({
     mutationFn: async (employeeData: any) => {
       return await apiRequest('POST', '/api/hr/employees', employeeData);
@@ -431,6 +461,63 @@ export default function HREmployees() {
           </Select>
         </div>
       </div>
+
+      {/* POS Employees to Import */}
+      {unlinkedPosEmployees.length > 0 && (
+        <Card className="mb-6 border-blue-200 bg-blue-50">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-blue-900">
+              <Users className="h-5 w-5" />
+              Employees from POS ({unlinkedPosEmployees.length})
+            </CardTitle>
+            <CardDescription>
+              These employees are synced from your POS system but haven't been imported into your HR system yet. Import them to manage scheduling, time tracking, and more.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {unlinkedPosEmployees.map((posEmployee: any) => (
+                <Card key={posEmployee.id} className="bg-white">
+                  <CardContent className="pt-6">
+                    <div className="flex items-start justify-between mb-4">
+                      <div className="flex items-center gap-3">
+                        <Avatar className="h-10 w-10">
+                          <AvatarFallback>{(posEmployee.displayName || 'Employee').split(' ').map((n: string) => n[0]).join('').slice(0,2)}</AvatarFallback>
+                        </Avatar>
+                        <div>
+                          <p className="font-semibold">{posEmployee.displayName || 'Unknown Employee'}</p>
+                          <p className="text-xs text-gray-500">{posEmployee.roleTitle || 'Employee'}</p>
+                        </div>
+                      </div>
+                      <Badge variant="outline" className="text-xs">POS</Badge>
+                    </div>
+                    
+                    {posEmployee.email && (
+                      <div className="flex items-center gap-2 text-sm text-gray-600 mb-3">
+                        <Mail className="h-3 w-3" />
+                        {posEmployee.email}
+                      </div>
+                    )}
+                    
+                    {hasPermission(Permission.MANAGE_EMPLOYEES) && (
+                      <Button
+                        size="sm"
+                        className="w-full"
+                        onClick={() => importPosEmployeeMutation.mutate({ posEmployeeId: posEmployee.id })}
+                        disabled={importPosEmployeeMutation.isPending}
+                        data-testid={`import-pos-employee-${posEmployee.id}`}
+                      >
+                        <UserPlus className="h-4 w-4 mr-2" />
+                        Import to HR
+                      </Button>
+                    )}
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Employee Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">

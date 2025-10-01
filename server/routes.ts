@@ -2827,7 +2827,7 @@ print(json.dumps(rows))
     }
   });
 
-  app.post("/api/pos-employees/import/:posEmployeeId", isAuthenticated, async (req, res) => {
+  app.post("/api/pos-employees/import/:posEmployeeId", isAuthenticated, requireAnyPermission([Permission.MANAGE_EMPLOYEES]), async (req, res) => {
     try {
       const { posEmployeeId } = req.params;
       const { departmentId, positionId } = req.body;
@@ -2838,17 +2838,37 @@ print(json.dumps(rows))
         return res.status(404).json({ message: "POS employee not found" });
       }
 
+      // Check if already imported (idempotency)
+      const existingMapping = await db
+        .select()
+        .from(posEmployeeMappings)
+        .where(eq(posEmployeeMappings.posEmployeeId, posEmployee.id))
+        .limit(1);
+      
+      if (existingMapping.length > 0) {
+        const existingEmployee = await storage.getEmployeeById(existingMapping[0].employeeId);
+        return res.json({ 
+          message: "Employee already imported",
+          employee: existingEmployee
+        });
+      }
+
       // Get the integration to find the location
       const integration = await storage.getPosIntegration(posEmployee.posIntegrationId);
       if (!integration) {
         return res.status(404).json({ message: "Integration not found" });
       }
 
+      // Safely parse name from displayName
+      const nameParts = (posEmployee.displayName || '').trim().split(/\s+/);
+      const firstName = posEmployee.firstName || nameParts[0] || 'Unknown';
+      const lastName = posEmployee.lastName || nameParts.slice(1).join(' ') || '';
+
       // Create HR employee from POS employee
       const hrEmployee = await storage.createEmployee({
         locationId: integration.locationId,
-        firstName: posEmployee.firstName || posEmployee.displayName.split(' ')[0],
-        lastName: posEmployee.lastName || posEmployee.displayName.split(' ').slice(1).join(' ') || '',
+        firstName,
+        lastName,
         email: posEmployee.email || '',
         phone: '',
         status: 'active',
