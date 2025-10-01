@@ -2805,6 +2805,46 @@ print(json.dumps(rows))
     }
   });
 
+  // POS Employee routes
+  app.get("/api/pos-employees/:integrationId", isAuthenticated, async (req, res) => {
+    try {
+      const employees = await storage.getPosEmployees(req.params.integrationId);
+      res.json(employees);
+    } catch (error) {
+      console.error("Error fetching POS employees:", error);
+      res.status(500).json({ message: "Failed to fetch employees" });
+    }
+  });
+
+  app.post("/api/pos-employees/sync/:integrationId", isAuthenticated, async (req, res) => {
+    try {
+      const { integrationId } = req.params;
+      const integration = await storage.getPosIntegration(integrationId);
+      
+      if (!integration) {
+        return res.status(404).json({ message: "Integration not found" });
+      }
+
+      let syncedCount = 0;
+      if (integration.provider === 'clover') {
+        syncedCount = await cloverService.syncEmployees(integrationId);
+      } else {
+        return res.status(400).json({ message: `Employee sync not supported for provider: ${integration.provider}` });
+      }
+
+      res.json({ 
+        message: `Successfully synced ${syncedCount} employees`,
+        syncedCount 
+      });
+    } catch (error) {
+      console.error("Error syncing employees:", error);
+      res.status(500).json({ 
+        message: "Failed to sync employees",
+        error: error instanceof Error ? error.message : 'Unknown error'
+      });
+    }
+  });
+
   // Analytics routes
   app.get('/api/analytics/alerts', isAuthenticated, async (req: any, res) => {
     try {
