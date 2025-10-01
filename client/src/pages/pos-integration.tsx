@@ -77,6 +77,14 @@ interface Recipe {
   sellingPrice: string | null;
 }
 
+interface InventoryItem {
+  id: string;
+  name: string;
+  sku: string | null;
+  category: string;
+  unit: string;
+}
+
 export default function PosIntegration() {
   const { toast } = useToast();
   const { currentLocation: selectedLocation } = useLocation();
@@ -119,6 +127,15 @@ export default function PosIntegration() {
     queryKey: ["/api/recipes", selectedLocation?.id],
     enabled: !!selectedLocation?.id,
   });
+
+  // Fetch inventory items for the current location
+  const { data: inventoryItems = [] } = useQuery<InventoryItem[]>({
+    queryKey: ["/api/inventory", selectedLocation?.id],
+    enabled: !!selectedLocation?.id,
+  });
+
+  // State to track mapping type for each menu item
+  const [mappingTypes, setMappingTypes] = useState<Record<string, 'recipe' | 'inventory'>>({});
 
   // Create integration mutation
   const createIntegrationMutation = useMutation({
@@ -277,24 +294,30 @@ export default function PosIntegration() {
     },
   });
 
-  // Link menu item to recipe mutation
+  // Link menu item to recipe or inventory item mutation
   const linkRecipeMutation = useMutation({
-    mutationFn: async ({ menuItemId, recipeId }: { menuItemId: string; recipeId: string | null }) => {
+    mutationFn: async ({ menuItemId, recipeId, inventoryItemId }: { 
+      menuItemId: string; 
+      recipeId?: string | null;
+      inventoryItemId?: string | null;
+    }) => {
       const response = await fetch(`/api/pos/menu-items/${menuItemId}/recipe`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ recipeId }),
+        body: JSON.stringify({ recipeId: recipeId || null, inventoryItemId: inventoryItemId || null }),
       });
       if (!response.ok) {
         const error = await response.json();
-        throw new Error(error.message || "Failed to link recipe");
+        throw new Error(error.message || "Failed to link item");
       }
       return response.json();
     },
-    onSuccess: () => {
+    onSuccess: (_, variables) => {
       toast({
-        title: "Recipe Linked",
-        description: "Menu item successfully linked to recipe",
+        title: variables.recipeId ? "Recipe Linked" : "Inventory Item Linked",
+        description: variables.recipeId 
+          ? "Menu item successfully linked to recipe" 
+          : "Menu item successfully linked to inventory item",
       });
       queryClient.invalidateQueries({ queryKey: ["/api/pos/menu-items/unmapped"] });
     },
@@ -629,7 +652,7 @@ export default function PosIntegration() {
                 <Alert>
                   <CheckCircle className="h-4 w-4" />
                   <AlertDescription>
-                    All menu items are mapped to recipes! When a sale occurs, inventory will be automatically deducted based on the recipe ingredients.
+                    All menu items are mapped! When a sale occurs, inventory will be automatically deducted (recipes deduct ingredients, direct items deduct 1 unit).
                   </AlertDescription>
                 </Alert>
               ) : (
@@ -637,7 +660,7 @@ export default function PosIntegration() {
                   <Alert>
                     <AlertTriangle className="h-4 w-4" />
                     <AlertDescription>
-                      {unmappedItems.length} menu items need to be linked to recipes. Unmapped items won't trigger inventory deductions when sold.
+                      {unmappedItems.length} menu items need to be linked. Choose "Recipe" for cocktails/prepared food or "Inventory Item" for beer/bottles. Unmapped items won't trigger inventory deductions when sold.
                     </AlertDescription>
                   </Alert>
                   
@@ -657,53 +680,128 @@ export default function PosIntegration() {
                               </div>
                             </div>
 
-                            <div className="space-y-2">
-                              <Label htmlFor={`recipe-${item.id}`}>Link to Recipe</Label>
-                              <div className="flex gap-2">
-                                <Select
-                                  onValueChange={(value) => {
-                                    if (value === "none") {
-                                      linkRecipeMutation.mutate({ menuItemId: item.id, recipeId: null });
-                                    } else {
-                                      linkRecipeMutation.mutate({ menuItemId: item.id, recipeId: value });
-                                    }
-                                  }}
-                                >
-                                  <SelectTrigger className="flex-1" id={`recipe-${item.id}`}>
-                                    <SelectValue placeholder="Select a recipe..." />
-                                  </SelectTrigger>
-                                  <SelectContent>
-                                    <SelectItem value="none">No Recipe</SelectItem>
-                                    {recipes
-                                      .filter((r) => r.name.toLowerCase().includes(item.name.toLowerCase()) || 
-                                                     item.name.toLowerCase().includes(r.name.toLowerCase()))
-                                      .slice(0, 5)
-                                      .map((recipe) => (
-                                        <SelectItem key={recipe.id} value={recipe.id}>
-                                          {recipe.name} ({recipe.category})
-                                        </SelectItem>
-                                      ))}
-                                    {recipes.length > 5 && (
-                                      <>
-                                        <SelectItem value="divider" disabled>
-                                          ──── All Recipes ────
-                                        </SelectItem>
-                                        {recipes
-                                          .filter((r) => !r.name.toLowerCase().includes(item.name.toLowerCase()) && 
-                                                       !item.name.toLowerCase().includes(r.name.toLowerCase()))
-                                          .map((recipe) => (
-                                            <SelectItem key={recipe.id} value={recipe.id}>
-                                              {recipe.name} ({recipe.category})
-                                            </SelectItem>
-                                          ))}
-                                      </>
-                                    )}
-                                  </SelectContent>
-                                </Select>
+                            <div className="space-y-3">
+                              <div className="space-y-2">
+                                <Label>Link Type</Label>
+                                <div className="flex gap-2">
+                                  <Button
+                                    type="button"
+                                    variant={mappingTypes[item.id] !== 'inventory' ? "default" : "outline"}
+                                    size="sm"
+                                    className="flex-1"
+                                    onClick={() => setMappingTypes(prev => ({ ...prev, [item.id]: 'recipe' }))}
+                                    data-testid={`button-recipe-type-${item.id}`}
+                                  >
+                                    Recipe (Cocktails/Food)
+                                  </Button>
+                                  <Button
+                                    type="button"
+                                    variant={mappingTypes[item.id] === 'inventory' ? "default" : "outline"}
+                                    size="sm"
+                                    className="flex-1"
+                                    onClick={() => setMappingTypes(prev => ({ ...prev, [item.id]: 'inventory' }))}
+                                    data-testid={`button-inventory-type-${item.id}`}
+                                  >
+                                    Inventory Item (Beer/Bottles)
+                                  </Button>
+                                </div>
                               </div>
-                              <p className="text-xs text-muted-foreground">
-                                Matching recipes appear first. Once linked, sales of this item will deduct recipe ingredients from inventory.
-                              </p>
+
+                              {mappingTypes[item.id] === 'inventory' ? (
+                                <div className="space-y-2">
+                                  <Label htmlFor={`inventory-${item.id}`}>Link to Inventory Item</Label>
+                                  <Select
+                                    onValueChange={(value) => {
+                                      if (value === "none") {
+                                        linkRecipeMutation.mutate({ menuItemId: item.id, inventoryItemId: null });
+                                      } else {
+                                        linkRecipeMutation.mutate({ menuItemId: item.id, inventoryItemId: value });
+                                      }
+                                    }}
+                                  >
+                                    <SelectTrigger className="flex-1" id={`inventory-${item.id}`} data-testid={`select-inventory-${item.id}`}>
+                                      <SelectValue placeholder="Select an inventory item..." />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                      <SelectItem value="none">No Item</SelectItem>
+                                      {inventoryItems
+                                        .filter((i) => i.name.toLowerCase().includes(item.name.toLowerCase()) || 
+                                                       item.name.toLowerCase().includes(i.name.toLowerCase()))
+                                        .slice(0, 5)
+                                        .map((invItem) => (
+                                          <SelectItem key={invItem.id} value={invItem.id}>
+                                            {invItem.name} ({invItem.category})
+                                          </SelectItem>
+                                        ))}
+                                      {inventoryItems.length > 5 && (
+                                        <>
+                                          <SelectItem value="divider" disabled>
+                                            ──── All Items ────
+                                          </SelectItem>
+                                          {inventoryItems
+                                            .filter((i) => !i.name.toLowerCase().includes(item.name.toLowerCase()) && 
+                                                         !item.name.toLowerCase().includes(i.name.toLowerCase()))
+                                            .map((invItem) => (
+                                              <SelectItem key={invItem.id} value={invItem.id}>
+                                                {invItem.name} ({invItem.category})
+                                              </SelectItem>
+                                            ))}
+                                        </>
+                                      )}
+                                    </SelectContent>
+                                  </Select>
+                                  <p className="text-xs text-muted-foreground">
+                                    For beer/bottled drinks. Deducts 1 unit from inventory when sold.
+                                  </p>
+                                </div>
+                              ) : (
+                                <div className="space-y-2">
+                                  <Label htmlFor={`recipe-${item.id}`}>Link to Recipe</Label>
+                                  <Select
+                                    onValueChange={(value) => {
+                                      if (value === "none") {
+                                        linkRecipeMutation.mutate({ menuItemId: item.id, recipeId: null });
+                                      } else {
+                                        linkRecipeMutation.mutate({ menuItemId: item.id, recipeId: value });
+                                      }
+                                    }}
+                                  >
+                                    <SelectTrigger className="flex-1" id={`recipe-${item.id}`} data-testid={`select-recipe-${item.id}`}>
+                                      <SelectValue placeholder="Select a recipe..." />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                      <SelectItem value="none">No Recipe</SelectItem>
+                                      {recipes
+                                        .filter((r) => r.name.toLowerCase().includes(item.name.toLowerCase()) || 
+                                                       item.name.toLowerCase().includes(r.name.toLowerCase()))
+                                        .slice(0, 5)
+                                        .map((recipe) => (
+                                          <SelectItem key={recipe.id} value={recipe.id}>
+                                            {recipe.name} ({recipe.category})
+                                          </SelectItem>
+                                        ))}
+                                      {recipes.length > 5 && (
+                                        <>
+                                          <SelectItem value="divider" disabled>
+                                            ──── All Recipes ────
+                                          </SelectItem>
+                                          {recipes
+                                            .filter((r) => !r.name.toLowerCase().includes(item.name.toLowerCase()) && 
+                                                         !item.name.toLowerCase().includes(r.name.toLowerCase()))
+                                            .map((recipe) => (
+                                              <SelectItem key={recipe.id} value={recipe.id}>
+                                                {recipe.name} ({recipe.category})
+                                              </SelectItem>
+                                            ))}
+                                        </>
+                                      )}
+                                    </SelectContent>
+                                  </Select>
+                                  <p className="text-xs text-muted-foreground">
+                                    For cocktails/prepared food. Deducts recipe ingredients from inventory when sold.
+                                  </p>
+                                </div>
+                              )}
                             </div>
                           </div>
                         </CardContent>
