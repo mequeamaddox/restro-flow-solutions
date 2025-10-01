@@ -65,24 +65,9 @@ export class PosService {
   }
 
   private async testCloverConnection(baseUrl: string, merchantId: string, accessToken: string): Promise<boolean> {
-    const url = `${baseUrl}/v3/merchants/${merchantId}/orders`;
-    console.log('🔍 Testing Clover connection:', { url, merchantId });
-    
-    const response = await fetch(url, {
+    const response = await fetch(`${baseUrl}/v3/merchants/${merchantId}/orders`, {
       headers: { Authorization: `Bearer ${accessToken}` },
     });
-    
-    if (!response.ok) {
-      const errorText = await response.text();
-      console.error('❌ Clover connection test failed:', {
-        status: response.status,
-        statusText: response.statusText,
-        error: errorText
-      });
-    } else {
-      console.log('✅ Clover connection test successful');
-    }
-    
     return response.ok;
   }
 
