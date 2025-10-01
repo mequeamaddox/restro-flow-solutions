@@ -1063,7 +1063,7 @@ export const posItemMappings = pgTable("pos_item_mappings", {
 // POS Employees (from POS systems)
 export const posEmployees = pgTable("pos_employees", {
   id: uuid("id").primaryKey().default(sql`gen_random_uuid()`),
-  posIntegrationId: uuid("pos_integration_id").references(() => posIntegrations.id).notNull(),
+  posIntegrationId: uuid("pos_integration_id").references(() => posIntegrations.id, { onDelete: "cascade" }).notNull(),
   posEmployeeId: varchar("pos_employee_id").notNull(), // Provider's employee ID
   displayName: varchar("display_name").notNull(),
   firstName: varchar("first_name"),
@@ -1083,8 +1083,8 @@ export const posEmployees = pgTable("pos_employees", {
 // Mapping between POS employees and HR employees
 export const posEmployeeMappings = pgTable("pos_employee_mappings", {
   id: uuid("id").primaryKey().default(sql`gen_random_uuid()`),
-  posEmployeeId: uuid("pos_employee_id").references(() => posEmployees.id).notNull().unique(),
-  employeeId: uuid("employee_id").references(() => employees.id).notNull(),
+  posEmployeeId: uuid("pos_employee_id").references(() => posEmployees.id, { onDelete: "cascade" }).notNull().unique(),
+  employeeId: uuid("employee_id").references(() => employees.id, { onDelete: "cascade" }).notNull(),
   status: varchar("status").notNull(), // "auto" | "manual" | "ignored"
   confidence: decimal("confidence", { precision: 3, scale: 2 }), // 0.00 to 1.00
   matchRule: text("match_rule"), // Description of how the match was made
@@ -1095,22 +1095,23 @@ export const posEmployeeMappings = pgTable("pos_employee_mappings", {
 // POS Time Clock entries
 export const posTimeclocks = pgTable("pos_timeclocks", {
   id: uuid("id").primaryKey().default(sql`gen_random_uuid()`),
-  posIntegrationId: uuid("pos_integration_id").references(() => posIntegrations.id).notNull(),
+  posIntegrationId: uuid("pos_integration_id").references(() => posIntegrations.id, { onDelete: "cascade" }).notNull(),
   posTimeEntryId: varchar("pos_time_entry_id").notNull(), // Provider's time entry/shift ID
-  posEmployeeId: uuid("pos_employee_id").references(() => posEmployees.id).notNull(),
-  locationId: uuid("location_id").references(() => locations.id).notNull(),
+  posEmployeeId: uuid("pos_employee_id").references(() => posEmployees.id, { onDelete: "cascade" }).notNull(),
+  locationId: uuid("location_id").references(() => locations.id, { onDelete: "cascade" }).notNull(),
   clockInAt: timestamp("clock_in_at").notNull(),
   clockOutAt: timestamp("clock_out_at"), // Null for open shifts
   breakSeconds: integer("break_seconds").default(0),
   wageCents: integer("wage_cents"), // Hourly wage in cents
   roleTitle: varchar("role_title"),
   status: varchar("status").notNull(), // "open" | "closed" | "adjusted"
-  hrTimeEntryId: uuid("hr_time_entry_id").references(() => timeEntries.id), // Link to HR system
+  hrTimeEntryId: uuid("hr_time_entry_id").references(() => timeEntries.id, { onDelete: "set null" }), // Link to HR system
   raw: jsonb("raw"), // Store raw POS data for provenance
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 }, (table) => [
   uniqueIndex("pos_timeclocks_integration_entry_uq").on(table.posIntegrationId, table.posTimeEntryId),
+  index("pos_timeclocks_employee_clockin_idx").on(table.posEmployeeId, table.clockInAt),
 ]);
 
 // Universal POS Sales transactions
@@ -1119,7 +1120,7 @@ export const posSales = pgTable("pos_sales", {
   posOrderId: varchar("pos_order_id").notNull(),
   posIntegrationId: uuid("pos_integration_id").references(() => posIntegrations.id).notNull(),
   locationId: uuid("location_id").references(() => locations.id).notNull(),
-  cashierPosEmployeeId: uuid("cashier_pos_employee_id").references(() => posEmployees.id), // Employee who rang up the sale
+  cashierPosEmployeeId: uuid("cashier_pos_employee_id").references(() => posEmployees.id, { onDelete: "set null" }), // Employee who rang up the sale
   total: decimal("total", { precision: 10, scale: 2 }).notNull(),
   subtotal: decimal("subtotal", { precision: 10, scale: 2 }),
   tax: decimal("tax", { precision: 10, scale: 2 }),
@@ -1129,21 +1130,25 @@ export const posSales = pgTable("pos_sales", {
   inventoryProcessed: boolean("inventory_processed").default(false),
   metadata: jsonb("metadata"), // Store additional POS-specific data
   createdAt: timestamp("created_at").defaultNow(),
-});
+}, (table) => [
+  index("pos_sales_cashier_idx").on(table.cashierPosEmployeeId),
+]);
 
 // Universal POS Sale items
 export const posSaleItems = pgTable("pos_sale_items", {
   id: uuid("id").primaryKey().default(sql`gen_random_uuid()`),
   posSaleId: uuid("pos_sale_id").references(() => posSales.id).notNull(),
   posMenuItemId: uuid("pos_menu_item_id").references(() => posMenuItems.id),
-  servedByPosEmployeeId: uuid("served_by_pos_employee_id").references(() => posEmployees.id), // Employee who served this item
+  servedByPosEmployeeId: uuid("served_by_pos_employee_id").references(() => posEmployees.id, { onDelete: "set null" }), // Employee who served this item
   itemName: varchar("item_name").notNull(),
   quantity: integer("quantity").notNull(),
   unitPrice: decimal("unit_price", { precision: 10, scale: 2 }).notNull(),
   totalPrice: decimal("total_price", { precision: 10, scale: 2 }).notNull(),
   modifiers: jsonb("modifiers"), // Store item modifications as JSON
   createdAt: timestamp("created_at").defaultNow(),
-});
+}, (table) => [
+  index("pos_sale_items_server_idx").on(table.servedByPosEmployeeId),
+]);
 
 // Webhook Events for idempotency
 export const webhookEvents = pgTable("webhook_events", {
@@ -1165,6 +1170,13 @@ export const insertPosSaleItemSchema = createInsertSchema(posSaleItems).omit({ i
 export const insertPosEmployeeSchema = createInsertSchema(posEmployees).omit({ id: true, createdAt: true, updatedAt: true });
 export const insertPosEmployeeMappingSchema = createInsertSchema(posEmployeeMappings).omit({ id: true, createdAt: true, updatedAt: true });
 export const insertPosTimeclockSchema = createInsertSchema(posTimeclocks).omit({ id: true, createdAt: true, updatedAt: true });
+
+export type PosEmployee = typeof posEmployees.$inferSelect;
+export type InsertPosEmployee = z.infer<typeof insertPosEmployeeSchema>;
+export type PosEmployeeMapping = typeof posEmployeeMappings.$inferSelect;
+export type InsertPosEmployeeMapping = z.infer<typeof insertPosEmployeeMappingSchema>;
+export type PosTimeclock = typeof posTimeclocks.$inferSelect;
+export type InsertPosTimeclock = z.infer<typeof insertPosTimeclockSchema>;
 
 // Relations for POS tables
 export const posIntegrationsRelations = relations(posIntegrations, ({ one, many }) => ({
@@ -1213,6 +1225,10 @@ export const posSalesRelations = relations(posSales, ({ one, many }) => ({
     fields: [posSales.locationId],
     references: [locations.id],
   }),
+  cashier: one(posEmployees, {
+    fields: [posSales.cashierPosEmployeeId],
+    references: [posEmployees.id],
+  }),
   items: many(posSaleItems),
 }));
 
@@ -1224,6 +1240,54 @@ export const posSaleItemsRelations = relations(posSaleItems, ({ one }) => ({
   posMenuItem: one(posMenuItems, {
     fields: [posSaleItems.posMenuItemId],
     references: [posMenuItems.id],
+  }),
+  server: one(posEmployees, {
+    fields: [posSaleItems.servedByPosEmployeeId],
+    references: [posEmployees.id],
+  }),
+}));
+
+export const posEmployeesRelations = relations(posEmployees, ({ one, many }) => ({
+  integration: one(posIntegrations, {
+    fields: [posEmployees.posIntegrationId],
+    references: [posIntegrations.id],
+  }),
+  mapping: one(posEmployeeMappings, {
+    fields: [posEmployees.id],
+    references: [posEmployeeMappings.posEmployeeId],
+  }),
+  timeclocks: many(posTimeclocks),
+  sales: many(posSales),
+  servedItems: many(posSaleItems),
+}));
+
+export const posEmployeeMappingsRelations = relations(posEmployeeMappings, ({ one }) => ({
+  posEmployee: one(posEmployees, {
+    fields: [posEmployeeMappings.posEmployeeId],
+    references: [posEmployees.id],
+  }),
+  hrEmployee: one(employees, {
+    fields: [posEmployeeMappings.employeeId],
+    references: [employees.id],
+  }),
+}));
+
+export const posTimeclocksRelations = relations(posTimeclocks, ({ one }) => ({
+  integration: one(posIntegrations, {
+    fields: [posTimeclocks.posIntegrationId],
+    references: [posIntegrations.id],
+  }),
+  posEmployee: one(posEmployees, {
+    fields: [posTimeclocks.posEmployeeId],
+    references: [posEmployees.id],
+  }),
+  location: one(locations, {
+    fields: [posTimeclocks.locationId],
+    references: [locations.id],
+  }),
+  hrTimeEntry: one(timeEntries, {
+    fields: [posTimeclocks.hrTimeEntryId],
+    references: [timeEntries.id],
   }),
 }));
 
