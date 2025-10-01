@@ -22,7 +22,8 @@ import {
   DollarSign,
   Activity,
   AlertTriangle,
-  CreditCard
+  CreditCard,
+  Trash2
 } from "lucide-react";
 
 interface PosIntegration {
@@ -184,6 +185,27 @@ export default function PosIntegration() {
         description: "Integration status updated",
       });
       queryClient.invalidateQueries({ queryKey: ["/api/pos/integrations"] });
+    },
+  });
+
+  // Delete integration mutation
+  const deleteIntegrationMutation = useMutation({
+    mutationFn: async (id: string) => {
+      await apiRequest("DELETE", `/api/pos/integrations/${id}`);
+    },
+    onSuccess: () => {
+      toast({
+        title: "Integration Deleted",
+        description: "POS integration removed successfully",
+      });
+      queryClient.invalidateQueries({ queryKey: ["/api/pos/integrations"] });
+    },
+    onError: () => {
+      toast({
+        title: "Delete Failed",
+        description: "Failed to delete POS integration",
+        variant: "destructive",
+      });
     },
   });
 
@@ -404,12 +426,13 @@ export default function PosIntegration() {
                     </div>
                   </CardHeader>
                   <CardContent>
-                    <div className="flex gap-2">
+                    <div className="flex gap-2 flex-wrap">
                       <Button
                         variant="outline"
                         size="sm"
                         onClick={() => testConnectionMutation.mutate(integration.id)}
                         disabled={testConnectionMutation.isPending}
+                        data-testid="button-test-connection"
                       >
                         {testConnectionMutation.isPending ? (
                           <RefreshCw className="h-4 w-4 animate-spin mr-2" />
@@ -423,6 +446,7 @@ export default function PosIntegration() {
                         size="sm"
                         onClick={() => syncMenuItemsMutation.mutate(integration.id)}
                         disabled={syncMenuItemsMutation.isPending}
+                        data-testid="button-sync-menu"
                       >
                         {syncMenuItemsMutation.isPending ? (
                           <RefreshCw className="h-4 w-4 animate-spin mr-2" />
@@ -441,8 +465,27 @@ export default function PosIntegration() {
                           })
                         }
                         disabled={toggleIntegrationMutation.isPending}
+                        data-testid="button-toggle-integration"
                       >
                         {integration.isActive ? "Disable" : "Enable"}
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => {
+                          if (window.confirm(`Are you sure you want to delete "${integration.name}"?`)) {
+                            deleteIntegrationMutation.mutate(integration.id);
+                          }
+                        }}
+                        disabled={deleteIntegrationMutation.isPending}
+                        data-testid="button-delete-integration"
+                      >
+                        {deleteIntegrationMutation.isPending ? (
+                          <RefreshCw className="h-4 w-4 animate-spin mr-2" />
+                        ) : (
+                          <Trash2 className="h-4 w-4 mr-2" />
+                        )}
+                        Delete
                       </Button>
                     </div>
                   </CardContent>
