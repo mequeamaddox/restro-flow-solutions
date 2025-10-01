@@ -65,7 +65,7 @@ export class PosService {
   }
 
   private async testCloverConnection(baseUrl: string, merchantId: string, accessToken: string): Promise<boolean> {
-    const url = `${baseUrl}/v3/merchants/${merchantId}`;
+    const url = `${baseUrl}/v3/merchants/${merchantId}/orders`;
     console.log('🔍 Testing Clover connection:', { url, merchantId });
     
     const response = await fetch(url, {
