@@ -21,6 +21,22 @@ Business Strategy: Modular add-on approach for employee management to enable sca
 
 ## Recent Changes
 
+### October 1, 2025 - Recipe-Based POS Integration Architecture
+- **Context**: User identified that POS menu items should link to recipes (not standalone) since there's no dedicated menu item feature. This enables Universal Recipe Costing across multiple POS systems.
+- **Implementation**:
+  - **Schema**: Added recipe_id FK to pos_menu_items table for linking menu items to recipes
+  - **Storage**: Added updatePosMenuItemRecipe(), getUnmappedMenuItems(), getSuggestedRecipes() methods
+  - **API**: Added endpoints for fetching unmapped items, linking recipes, and getting suggestions
+  - **UI**: New "Recipe Mapping" tab on POS Integration page with smart recipe suggestions (matching names first)
+  - **Inventory Deduction**: Updated processInventoryDeductions() to use recipe-based deduction:
+    - Fetches POS menu items once per sale (performance optimization)
+    - For each sale item, finds matching menu item and linked recipe
+    - Deducts recipe ingredients from inventory (quantity × ingredient amount)
+    - Tracks failures without throwing to prevent batch processing interruption
+    - Only marks sale as processed if ALL items successfully deducted
+    - Logs warnings for unmapped items (no menu item, no recipe, or recipe missing ingredients)
+- **Result**: POS sales now automatically deduct recipe ingredients from inventory. Unmapped items are tracked and prevent sales from being marked as processed until recipes are linked. This enables true Universal Recipe Costing where the same recipe can be used across Clover, SpotOn, Square, etc.
+
 ### September 30, 2025 - POS Integration TypeScript Fixes
 - **Issue**: 21 TypeScript errors in POS integration code (15 in CloverService, 6 in frontend)
 - **Root Cause**:
