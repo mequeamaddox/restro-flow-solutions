@@ -109,7 +109,7 @@ export class CloverService {
   }
 
   /**
-   * Process order and automatically deduct inventory
+   * Process order and automatically deduct inventory using recipe-based system
    */
   private async processOrder(
     integration: PosIntegration,
@@ -143,63 +143,20 @@ export class CloverService {
         // Create sale item record
         const saleItemData: InsertPosSaleItem = {
           posSaleId: sale.id,
-          posMenuItemId: null, // Will be set if mapping exists
           itemName: lineItem.name,
           quantity: quantity,
           unitPrice: unitPrice.toString(),
           totalPrice: (unitPrice * quantity).toString(),
         };
 
-        const saleItem = await storage.createPosSaleItem(saleItemData);
-
-        // Check if we have an inventory mapping for this item
-        if (lineItem.item?.id) {
-          const mapping = await storage.getPosItemMappingByPosItemId(lineItem.item.id);
-          if (mapping) {
-            // Calculate total quantity to deduct
-            const quantityToDeduct = parseFloat(mapping.quantityUsed) * (lineItem.quantity || 1);
-            
-            // Create inventory transaction for deduction
-            const transactionData: InsertInventoryTransaction = {
-              inventoryItemId: mapping.inventoryItemId,
-              locationId: integration.locationId,
-              type: "out",
-              quantity: quantityToDeduct.toString(),
-              reference: `POS Sale: ${orderData.id}`,
-              notes: `Automatic deduction from Clover POS sale - ${lineItem.name}`,
-              createdBy: null, // System transaction
-            };
-
-            await storage.createInventoryTransaction(transactionData);
-
-            // Update inventory item quantity
-            const inventoryItem = await storage.getInventoryItem(mapping.inventoryItemId);
-            if (inventoryItem) {
-              const currentQuantity = parseFloat(inventoryItem.quantity);
-              const newQuantity = Math.max(0, currentQuantity - quantityToDeduct);
-              
-              await storage.updateInventoryItem(mapping.inventoryItemId, {
-                quantity: newQuantity.toString(),
-              });
-
-              console.log(`Deducted ${quantityToDeduct} ${mapping.unit} of ${inventoryItem.name}`);
-            }
-
-            // Update sale item with mapping info
-            await storage.updatePosSaleItem(saleItem.id, {
-              posMenuItemId: mapping.posMenuItemId,
-            });
-          }
-        }
+        await storage.createPosSaleItem(saleItemData);
       }
 
-      // Mark sale as inventory processed
-      await storage.updatePosSale(sale.id, {
-        inventoryProcessed: true,
-        processedAt: new Date(),
-      });
+      // Use the new recipe-based inventory deduction system
+      const posService = await import('./posService');
+      await posService.posService.processInventoryDeductions(sale.id);
 
-      console.log(`Successfully processed Clover order ${orderData.id} with inventory deductions`);
+      console.log(`Successfully processed Clover order ${orderData.id} with recipe-based inventory deductions`);
       
     } catch (error) {
       console.error('Error processing order:', error);

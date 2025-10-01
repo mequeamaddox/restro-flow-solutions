@@ -21,6 +21,21 @@ Business Strategy: Modular add-on approach for employee management to enable sca
 
 ## Recent Changes
 
+### October 1, 2025 - Clover Sales Sync Fixed to Use Recipe-Based System
+- **Issue**: Sales data wasn't syncing properly after implementing recipe-based POS architecture.
+- **Root Cause**: 
+  - CloverService still used old direct inventory mapping system (getPosItemMappingByPosItemId)
+  - processInventoryDeductions was private and couldn't be called from CloverService
+  - TypeScript errors: missing "items" on sale object, wrong transaction type, unit field not in schema
+- **Solution**:
+  - Updated CloverService.processOrder() to use new recipe-based system via posService.processInventoryDeductions()
+  - Made processInventoryDeductions public to allow external calls
+  - Fixed sale items fetching by querying getPosSales() and filtering by ID
+  - Changed transaction type from "sale" to "out" (valid enum value)
+  - Removed "unit" field from inventory transactions (not in schema)
+  - Added proper reference field (POS order ID) to transactions
+- **Result**: Clover sales now correctly sync using the recipe-based inventory deduction system. Both webhook-triggered and manual sync operations work properly with Universal Recipe Costing.
+
 ### October 1, 2025 - Recipe-Based POS Integration Architecture
 - **Context**: User identified that POS menu items should link to recipes (not standalone) since there's no dedicated menu item feature. This enables Universal Recipe Costing across multiple POS systems.
 - **Implementation**:

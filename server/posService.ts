@@ -529,17 +529,25 @@ export class PosService {
     await this.processInventoryDeductions(posSale.id);
   }
 
-  private async processInventoryDeductions(saleId: string): Promise<void> {
+  public async processInventoryDeductions(saleId: string): Promise<void> {
     try {
       const sale = await storage.getPosSaleById(saleId);
-      if (!sale || !sale.items) return;
+      if (!sale) return;
 
-      console.log(`Processing inventory deductions for sale ${saleId} with ${sale.items.length} items`);
+      // Fetch sale items separately
+      const allSales = await storage.getPosSales();
+      const saleWithItems = allSales.find(s => s.id === saleId);
+      if (!saleWithItems || !saleWithItems.items || saleWithItems.items.length === 0) {
+        console.log(`No items found for sale ${saleId}`);
+        return;
+      }
+
+      console.log(`Processing inventory deductions for sale ${saleId} with ${saleWithItems.items.length} items`);
 
       const menuItems = await storage.getPosMenuItems(sale.posIntegrationId);
       const failures: string[] = [];
 
-      for (const saleItem of sale.items) {
+      for (const saleItem of saleWithItems.items) {
         try {
           const menuItem = menuItems.find(mi => 
             mi.name.toLowerCase() === saleItem.itemName.toLowerCase()
@@ -572,9 +580,9 @@ export class PosService {
             await storage.createInventoryTransaction({
               inventoryItemId: ingredient.inventoryItemId,
               locationId: sale.locationId,
-              type: "sale",
-              quantity: -deductionAmount,
-              unit: ingredient.unit,
+              type: "out",
+              quantity: (-deductionAmount).toString(),
+              reference: `POS-${sale.posOrderId}`,
               notes: `POS sale deduction: ${saleItem.quantity}x ${menuItem.name} (Recipe: ${recipe.name})`,
               createdBy: "system",
             });
