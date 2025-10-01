@@ -2673,12 +2673,20 @@ print(json.dumps(rows))
 
   app.put("/api/pos/menu-items/:id/recipe", isAuthenticated, async (req, res) => {
     try {
-      const { recipeId } = req.body;
-      const menuItem = await storage.updatePosMenuItemRecipe(req.params.id, recipeId);
+      const { recipeId, inventoryItemId } = req.body;
+      
+      // Validate mutual exclusivity: only one or neither can be set, not both
+      if (recipeId && inventoryItemId) {
+        return res.status(400).json({ 
+          message: "Cannot link both recipe and inventory item. Please select only one." 
+        });
+      }
+      
+      const menuItem = await storage.updatePosMenuItemRecipe(req.params.id, recipeId, inventoryItemId);
       res.json(menuItem);
     } catch (error) {
-      console.error("Error linking menu item to recipe:", error);
-      res.status(500).json({ message: "Failed to link menu item to recipe" });
+      console.error("Error linking menu item:", error);
+      res.status(500).json({ message: "Failed to link menu item" });
     }
   });
 

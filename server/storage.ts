@@ -303,7 +303,7 @@ export interface IStorage {
   // POS menu items
   getPosMenuItems(integrationId: string): Promise<PosMenuItem[]>;
   upsertPosMenuItem(menuItem: InsertPosMenuItem): Promise<PosMenuItem>;
-  updatePosMenuItemRecipe(menuItemId: string, recipeId: string | null): Promise<PosMenuItem>;
+  updatePosMenuItemRecipe(menuItemId: string, recipeId: string | null, inventoryItemId?: string | null): Promise<PosMenuItem>;
   getUnmappedMenuItems(locationId: string): Promise<(PosMenuItem & { integration: PosIntegration })[]>;
   getSuggestedRecipes(menuItemName: string, locationId: string): Promise<Recipe[]>;
 
@@ -1014,10 +1014,25 @@ export class DatabaseStorage implements IStorage {
     return menuItem;
   }
 
-  async updatePosMenuItemRecipe(menuItemId: string, recipeId: string | null): Promise<PosMenuItem> {
+  async updatePosMenuItemRecipe(menuItemId: string, recipeId: string | null, inventoryItemId?: string | null): Promise<PosMenuItem> {
+    // Enforce mutual exclusivity: if one is set, the other must be null
+    const update: any = { updatedAt: new Date() };
+    
+    if (recipeId !== null) {
+      update.recipeId = recipeId;
+      update.inventoryItemId = null; // Clear inventory item when setting recipe
+    } else if (inventoryItemId !== undefined && inventoryItemId !== null) {
+      update.inventoryItemId = inventoryItemId;
+      update.recipeId = null; // Clear recipe when setting inventory item
+    } else {
+      // Both are null - clear both
+      update.recipeId = null;
+      update.inventoryItemId = null;
+    }
+
     const [menuItem] = await db
       .update(posMenuItems)
-      .set({ recipeId, updatedAt: new Date() })
+      .set(update)
       .where(eq(posMenuItems.id, menuItemId))
       .returning();
     return menuItem;
@@ -1031,6 +1046,7 @@ export class DatabaseStorage implements IStorage {
       .where(
         and(
           isNull(posMenuItems.recipeId),
+          isNull(posMenuItems.inventoryItemId),
           eq(posIntegrations.locationId, locationId),
           eq(posMenuItems.isActive, true)
         )
