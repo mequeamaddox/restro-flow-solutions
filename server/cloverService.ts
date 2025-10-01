@@ -269,18 +269,20 @@ export class CloverService {
 
       console.log(`Found ${orders.length} orders from Clover`);
 
-      let processedCount = 0;
+      let newCount = 0;
+      let existingCount = 0;
       for (const order of orders) {
         try {
           // Check if order already exists
           const existing = await storage.getPosSaleByOrderId(integration.id, order.id);
           if (existing) {
             console.log(`Order ${order.id} already exists, skipping`);
+            existingCount++;
             continue;
           }
 
           await this.processOrder(integration, order);
-          processedCount++;
+          newCount++;
         } catch (error) {
           console.error(`Error processing order ${order.id}:`, error);
         }
@@ -290,8 +292,8 @@ export class CloverService {
         lastSyncAt: new Date(),
       });
 
-      console.log(`Successfully synced ${processedCount} new orders from Clover`);
-      return processedCount;
+      console.log(`Sync complete: ${newCount} new, ${existingCount} already existed (${orders.length} total)`);
+      return newCount;
       
     } catch (error) {
       console.error('Error syncing historical orders:', error);

@@ -2486,8 +2486,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post("/api/pos/integrations/:id/sync-sales", isAuthenticated, async (req, res) => {
     try {
-      const count = await posService.syncHistoricalSales(req.params.id);
-      res.json({ message: `Synced ${count} sales successfully`, count });
+      const newCount = await posService.syncHistoricalSales(req.params.id);
+      const message = newCount > 0 
+        ? `Successfully synced ${newCount} new sales`
+        : `All sales are already up to date (0 new sales found)`;
+      res.json({ message, count: newCount });
     } catch (error) {
       console.error("Error syncing sales:", error);
       res.status(500).json({ message: "Failed to sync sales data" });
