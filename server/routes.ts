@@ -2515,6 +2515,55 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // POS Menu Items & Recipe Mapping
+  app.get("/api/pos/menu-items/unmapped", isAuthenticated, async (req, res) => {
+    try {
+      const locationId = req.query.locationId as string;
+      if (!locationId) {
+        return res.status(400).json({ message: "locationId is required" });
+      }
+      const menuItems = await storage.getUnmappedMenuItems(locationId);
+      res.json(menuItems);
+    } catch (error) {
+      console.error("Error fetching unmapped menu items:", error);
+      res.status(500).json({ message: "Failed to fetch unmapped menu items" });
+    }
+  });
+
+  app.put("/api/pos/menu-items/:id/recipe", isAuthenticated, async (req, res) => {
+    try {
+      const { recipeId } = req.body;
+      const menuItem = await storage.updatePosMenuItemRecipe(req.params.id, recipeId);
+      res.json(menuItem);
+    } catch (error) {
+      console.error("Error linking menu item to recipe:", error);
+      res.status(500).json({ message: "Failed to link menu item to recipe" });
+    }
+  });
+
+  app.get("/api/pos/menu-items/:id/suggested-recipes", isAuthenticated, async (req, res) => {
+    try {
+      const menuItemId = req.params.id;
+      const menuItems = await storage.getPosMenuItems(req.query.integrationId as string);
+      const menuItem = menuItems.find(item => item.id === menuItemId);
+      
+      if (!menuItem) {
+        return res.status(404).json({ message: "Menu item not found" });
+      }
+
+      const integration = await storage.getPosIntegration(menuItem.posIntegrationId);
+      if (!integration) {
+        return res.status(404).json({ message: "Integration not found" });
+      }
+
+      const suggestions = await storage.getSuggestedRecipes(menuItem.name, integration.locationId);
+      res.json(suggestions);
+    } catch (error) {
+      console.error("Error getting suggested recipes:", error);
+      res.status(500).json({ message: "Failed to get suggested recipes" });
+    }
+  });
+
   // POS Sales data
   app.get("/api/pos/sales", isAuthenticated, async (req, res) => {
     try {
