@@ -172,47 +172,61 @@ function EmployeeSection({ integration }: { integration: PosIntegration }) {
         </Alert>
       ) : (
         <div className="space-y-2">
-          <h4 className="text-sm font-semibold">{employees.length} Employees</h4>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-            {employees.map((employee) => (
-              <div
-                key={employee.id}
-                className="border rounded-lg p-3 space-y-2"
-                data-testid={`employee-card-${employee.id}`}
-              >
-                <div className="flex items-start justify-between">
-                  <div className="flex-1">
-                    <p className="font-semibold">{employee.displayName}</p>
-                    {employee.email && (
-                      <p className="text-sm text-muted-foreground">{employee.email}</p>
-                    )}
-                    <div className="flex gap-2 mt-1 flex-wrap">
-                      {employee.roleTitle && (
-                        <Badge variant="outline">
-                          {employee.roleTitle}
-                        </Badge>
-                      )}
-                      {employee.mapping && (
-                        <Badge variant="default" className="bg-blue-500">
-                          ✓ Synced to HR
-                        </Badge>
+          {/* Only show employees that are NOT synced to HR */}
+          {employees.filter(emp => !emp.mapping).length === 0 ? (
+            <Alert>
+              <AlertDescription>
+                All {employees.length} employees have been synced to the HR system.
+              </AlertDescription>
+            </Alert>
+          ) : (
+            <>
+              <h4 className="text-sm font-semibold">
+                {employees.filter(emp => !emp.mapping).length} Unsynced Employees 
+                ({employees.filter(emp => emp.mapping).length} synced to HR)
+              </h4>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                {employees.filter(emp => !emp.mapping).map((employee) => (
+                  <div
+                    key={employee.id}
+                    className="border rounded-lg p-3 space-y-2"
+                    data-testid={`employee-card-${employee.id}`}
+                  >
+                    <div className="flex items-start justify-between">
+                      <div className="flex-1">
+                        <p className="font-semibold">{employee.displayName}</p>
+                        {employee.email && (
+                          <p className="text-sm text-muted-foreground">{employee.email}</p>
+                        )}
+                        <div className="flex gap-2 mt-1 flex-wrap">
+                          {employee.roleTitle && (
+                            <Badge variant="outline">
+                              {employee.roleTitle}
+                            </Badge>
+                          )}
+                          {employee.mapping && (
+                            <Badge variant="default" className="bg-blue-500">
+                              ✓ Synced to HR
+                            </Badge>
+                          )}
+                        </div>
+                      </div>
+                      {employee.isActive ? (
+                        <Badge variant="default" className="bg-green-500">Active</Badge>
+                      ) : (
+                        <Badge variant="secondary">Inactive</Badge>
                       )}
                     </div>
+                    {employee.lastSeenAt && (
+                      <p className="text-xs text-muted-foreground">
+                        Last seen: {new Date(employee.lastSeenAt).toLocaleDateString()}
+                      </p>
+                    )}
                   </div>
-                  {employee.isActive ? (
-                    <Badge variant="default" className="bg-green-500">Active</Badge>
-                  ) : (
-                    <Badge variant="secondary">Inactive</Badge>
-                  )}
-                </div>
-                {employee.lastSeenAt && (
-                  <p className="text-xs text-muted-foreground">
-                    Last seen: {new Date(employee.lastSeenAt).toLocaleDateString()}
-                  </p>
-                )}
+                ))}
               </div>
-            ))}
-          </div>
+            </>
+          )}
         </div>
       )}
     </div>
