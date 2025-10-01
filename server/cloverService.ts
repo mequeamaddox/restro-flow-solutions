@@ -3,7 +3,8 @@ import {
   PosIntegration, 
   InsertPosSale, 
   InsertPosSaleItem,
-  InsertInventoryTransaction 
+  InsertInventoryTransaction,
+  InsertPosEmployee 
 } from "@shared/schema";
 
 export interface CloverOrderResponse {
@@ -26,6 +27,16 @@ export interface CloverWebhookPayload {
   objectId: string;
   type: "ORDER";
   merchantId: string;
+}
+
+export interface CloverEmployee {
+  id: string;
+  name: string;
+  nickname?: string;
+  email?: string;
+  customId?: string;
+  role?: 'ADMIN' | 'MANAGER' | 'EMPLOYEE';
+  deletedTime?: number;
 }
 
 export class CloverService {
@@ -298,6 +309,101 @@ export class CloverService {
     } catch (error) {
       console.error('Error syncing historical orders:', error);
       throw error;
+    }
+  }
+
+  /**
+   * Sync employees from Clover
+   */
+  async syncEmployees(integrationId: string): Promise<number> {
+    try {
+      const integration = await storage.getPosIntegration(integrationId);
+      if (!integration) {
+        throw new Error('Integration not found');
+      }
+
+      const employees = await this.fetchEmployeesFromClover(integration);
+      if (!employees) {
+        throw new Error('Failed to fetch employees from Clover');
+      }
+
+      let syncedCount = 0;
+      for (const employee of employees) {
+        try {
+          // Skip deleted employees
+          if (employee.deletedTime) {
+            continue;
+          }
+
+          const employeeData: InsertPosEmployee = {
+            posIntegrationId: integration.id,
+            posEmployeeId: employee.id,
+            displayName: employee.name,
+            firstName: employee.name.split(' ')[0] || employee.name,
+            lastName: employee.name.split(' ').slice(1).join(' ') || undefined,
+            email: employee.email || undefined,
+            roleTitle: employee.role || undefined,
+            isActive: true,
+            metadata: {
+              customId: employee.customId,
+              nickname: employee.nickname,
+              cloverRole: employee.role,
+            },
+            lastSeenAt: new Date(),
+          };
+
+          await storage.upsertPosEmployee(employeeData);
+          syncedCount++;
+        } catch (error) {
+          console.error(`Error syncing employee ${employee.id}:`, error);
+        }
+      }
+
+      console.log(`Successfully synced ${syncedCount} employees from Clover`);
+      return syncedCount;
+    } catch (error) {
+      console.error('Error syncing employees:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Fetch employees from Clover API
+   */
+  private async fetchEmployeesFromClover(
+    integration: PosIntegration
+  ): Promise<CloverEmployee[] | null> {
+    try {
+      const baseUrl = integration.environment === 'production' 
+        ? 'https://api.clover.com'
+        : 'https://sandbox.dev.clover.com';
+      
+      const raw = integration.credentials;
+      const accessToken = typeof raw === 'object' && raw !== null ? (raw as any).accessToken : undefined;
+      if (!accessToken || typeof accessToken !== 'string') {
+        console.error('Clover integration missing valid accessToken in credentials');
+        return null;
+      }
+      
+      const response = await fetch(
+        `${baseUrl}/v3/merchants/${integration.merchantId}/employees`,
+        {
+          headers: {
+            'Authorization': `Bearer ${accessToken}`,
+            'Content-Type': 'application/json',
+          },
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error(`Clover API error: ${response.status} ${response.statusText}`);
+      }
+
+      const data = await response.json();
+      return data.elements || [];
+    } catch (error) {
+      console.error('Error fetching employees from Clover:', error);
+      return null;
     }
   }
 
