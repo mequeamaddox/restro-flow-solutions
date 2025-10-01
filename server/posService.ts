@@ -559,35 +559,51 @@ export class PosService {
             continue;
           }
 
-          if (!menuItem.recipeId) {
-            console.warn(`Menu item "${menuItem.name}" has no recipe linked`);
-            failures.push(`No recipe linked: ${menuItem.name}`);
-            continue;
-          }
-
-          const recipe = await storage.getRecipe(menuItem.recipeId);
-          if (!recipe || !recipe.ingredients) {
-            console.warn(`Recipe not found or has no ingredients for menu item: ${menuItem.name}`);
-            failures.push(`Recipe missing or incomplete: ${menuItem.name}`);
-            continue;
-          }
-
-          console.log(`Deducting ingredients for "${menuItem.name}" (quantity: ${saleItem.quantity})`);
-
-          for (const ingredient of recipe.ingredients) {
-            const deductionAmount = Number(ingredient.quantity) * saleItem.quantity;
+          // Check if this is a direct inventory item (beer, bottled drinks)
+          if (menuItem.inventoryItemId) {
+            console.log(`Deducting direct inventory item for "${menuItem.name}" (quantity: ${saleItem.quantity})`);
             
             await storage.createInventoryTransaction({
-              inventoryItemId: ingredient.inventoryItemId,
+              inventoryItemId: menuItem.inventoryItemId,
               locationId: sale.locationId,
               type: "out",
-              quantity: (-deductionAmount).toString(),
-              reference: `POS-${sale.posOrderId}`,
-              notes: `POS sale deduction: ${saleItem.quantity}x ${menuItem.name} (Recipe: ${recipe.name})`,
+              quantity: saleItem.quantity.toString(),
+              reference: `POS Sale ${sale.posOrderId}`,
               createdBy: "system",
             });
+          }
+          // Check if this is a recipe-based item (cocktails, prepared food)
+          else if (menuItem.recipeId) {
+            const recipe = await storage.getRecipe(menuItem.recipeId);
+            if (!recipe || !recipe.ingredients) {
+              console.warn(`Recipe not found or has no ingredients for menu item: ${menuItem.name}`);
+              failures.push(`Recipe missing or incomplete: ${menuItem.name}`);
+              continue;
+            }
 
-            console.log(`  - Deducted ${deductionAmount} ${ingredient.unit} of ${ingredient.inventoryItem.name}`);
+            console.log(`Deducting recipe ingredients for "${menuItem.name}" (quantity: ${saleItem.quantity})`);
+
+            for (const ingredient of recipe.ingredients) {
+              const deductionAmount = Number(ingredient.quantity) * saleItem.quantity;
+              
+              await storage.createInventoryTransaction({
+                inventoryItemId: ingredient.inventoryItemId,
+                locationId: sale.locationId,
+                type: "out",
+                quantity: (-deductionAmount).toString(),
+                reference: `POS-${sale.posOrderId}`,
+                notes: `POS sale deduction: ${saleItem.quantity}x ${menuItem.name} (Recipe: ${recipe.name})`,
+                createdBy: "system",
+              });
+
+              console.log(`  - Deducted ${deductionAmount} ${ingredient.unit} of ${ingredient.inventoryItem.name}`);
+            }
+          }
+          // Neither recipe nor direct inventory item linked
+          else {
+            console.warn(`Menu item "${menuItem.name}" has no recipe or inventory item linked`);
+            failures.push(`Not mapped: ${menuItem.name}`);
+            continue;
           }
         } catch (itemError) {
           const errorMsg = `Failed to process ${saleItem.itemName}: ${itemError instanceof Error ? itemError.message : String(itemError)}`;
