@@ -109,6 +109,15 @@ function EmployeeSection({ integration }: { integration: PosIntegration }) {
   // Fetch employees for this integration
   const { data: employees = [], isLoading, refetch } = useQuery<PosEmployee[]>({
     queryKey: ["/api/pos-employees", integration.id],
+    queryFn: async () => {
+      const response = await fetch(`/api/pos-employees/${integration.id}`, {
+        credentials: 'include'
+      });
+      if (!response.ok) {
+        throw new Error('Failed to fetch employees');
+      }
+      return response.json();
+    }
   });
 
   // Sync employees mutation
