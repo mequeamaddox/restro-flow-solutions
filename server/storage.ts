@@ -61,6 +61,9 @@ import {
   posItemMappings,
   posSales,
   posSaleItems,
+  posEmployees,
+  posEmployeeMappings,
+  posTimeclocks,
   webhookEvents,
   type PosIntegration,
   type InsertPosIntegration,
@@ -72,6 +75,12 @@ import {
   type InsertPosSale,
   type PosSaleItem,
   type InsertPosSaleItem,
+  type PosEmployee,
+  type InsertPosEmployee,
+  type PosEmployeeMapping,
+  type InsertPosEmployeeMapping,
+  type PosTimeclock,
+  type InsertPosTimeclock,
   // HR imports
   departments,
   positions,
@@ -1218,6 +1227,45 @@ export class DatabaseStorage implements IStorage {
       receivedAt: new Date(record.receivedAt),
       rawPayload: record.raw,
     });
+  }
+
+  // POS Employees
+  async upsertPosEmployee(employeeData: InsertPosEmployee): Promise<PosEmployee> {
+    // Try to find existing employee by integration + posEmployeeId
+    const [existing] = await db.select().from(posEmployees)
+      .where(and(
+        eq(posEmployees.posIntegrationId, employeeData.posIntegrationId),
+        eq(posEmployees.posEmployeeId, employeeData.posEmployeeId)
+      ));
+
+    if (existing) {
+      // Update existing
+      const [updated] = await db
+        .update(posEmployees)
+        .set({ ...employeeData, updatedAt: new Date() })
+        .where(eq(posEmployees.id, existing.id))
+        .returning();
+      return updated;
+    } else {
+      // Insert new
+      const [inserted] = await db
+        .insert(posEmployees)
+        .values(employeeData)
+        .returning();
+      return inserted;
+    }
+  }
+
+  async getPosEmployees(integrationId: string): Promise<PosEmployee[]> {
+    return await db.select().from(posEmployees)
+      .where(eq(posEmployees.posIntegrationId, integrationId))
+      .orderBy(posEmployees.displayName);
+  }
+
+  async getPosEmployee(id: string): Promise<PosEmployee | undefined> {
+    const [employee] = await db.select().from(posEmployees)
+      .where(eq(posEmployees.id, id));
+    return employee;
   }
 
   // Inventory operations
