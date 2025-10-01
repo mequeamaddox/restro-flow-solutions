@@ -1842,7 +1842,10 @@ print(json.dumps(rows))
             const avgPrice = row['Avg Price'] || row['avg price'] || 0;
             const cost = row.Cost || row.cost || 0;
 
+            console.log(`📝 Row ${rowNumber}: category="${categoryName}", item="${itemName}", cost=${cost}`);
+
             if (!itemName || itemName.trim() === '') {
+              console.error(`❌ Row ${rowNumber}: Item name is missing`);
               errors.push({ row: rowNumber, field: 'Item', message: 'Item name is required' });
               failedCount++;
               continue;
