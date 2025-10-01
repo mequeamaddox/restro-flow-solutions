@@ -2811,7 +2811,27 @@ print(json.dumps(rows))
   app.get("/api/pos-employees/:integrationId", isAuthenticated, async (req, res) => {
     try {
       const employees = await storage.getPosEmployees(req.params.integrationId);
-      res.json(employees);
+      
+      // Fetch mapping info for each employee
+      const employeesWithMappings = await Promise.all(
+        employees.map(async (emp) => {
+          const [mapping] = await db
+            .select()
+            .from(posEmployeeMappings)
+            .where(eq(posEmployeeMappings.posEmployeeId, emp.id))
+            .limit(1);
+          
+          return {
+            ...emp,
+            mapping: mapping ? {
+              employeeId: mapping.employeeId,
+              status: mapping.status
+            } : null
+          };
+        })
+      );
+      
+      res.json(employeesWithMappings);
     } catch (error) {
       console.error("Error fetching POS employees:", error);
       res.status(500).json({ message: "Failed to fetch employees" });

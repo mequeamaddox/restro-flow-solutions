@@ -101,6 +101,10 @@ interface PosEmployee {
   lastSeenAt: string | null;
   createdAt: string;
   updatedAt: string;
+  mapping?: {
+    employeeId: string;
+    status: string;
+  };
 }
 
 function EmployeeSection({ integration }: { integration: PosIntegration }) {
@@ -182,11 +186,18 @@ function EmployeeSection({ integration }: { integration: PosIntegration }) {
                     {employee.email && (
                       <p className="text-sm text-muted-foreground">{employee.email}</p>
                     )}
-                    {employee.roleTitle && (
-                      <Badge variant="outline" className="mt-1">
-                        {employee.roleTitle}
-                      </Badge>
-                    )}
+                    <div className="flex gap-2 mt-1 flex-wrap">
+                      {employee.roleTitle && (
+                        <Badge variant="outline">
+                          {employee.roleTitle}
+                        </Badge>
+                      )}
+                      {employee.mapping && (
+                        <Badge variant="default" className="bg-blue-500">
+                          ✓ Synced to HR
+                        </Badge>
+                      )}
+                    </div>
                   </div>
                   {employee.isActive ? (
                     <Badge variant="default" className="bg-green-500">Active</Badge>
