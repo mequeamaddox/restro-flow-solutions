@@ -2910,11 +2910,15 @@ print(json.dumps(rows))
       }
 
       // Automatically create HR employees for any POS employees without mappings
+      console.log('🔍 Checking for unlinked POS employees to auto-import...');
       const unlinkedEmployees = await storage.getUnlinkedPosEmployees(integration.locationId);
+      console.log(`📊 Found ${unlinkedEmployees.length} unlinked POS employees`);
       let autoCreatedCount = 0;
       
       for (const posEmployee of unlinkedEmployees) {
         try {
+          console.log(`👤 Auto-importing: ${posEmployee.displayName || 'Unknown'} (${posEmployee.email || 'no email'})`);
+          
           // Safely parse name from displayName
           const nameParts = (posEmployee.displayName || '').trim().split(/\s+/);
           const firstName = posEmployee.firstName || nameParts[0] || 'Unknown';
@@ -2942,11 +2946,15 @@ print(json.dumps(rows))
           });
 
           autoCreatedCount++;
+          console.log(`✅ Auto-imported ${firstName} ${lastName} successfully`);
         } catch (error) {
-          console.error(`Failed to auto-create HR employee for POS employee ${posEmployee.id}:`, error);
+          console.error(`❌ Failed to auto-create HR employee for POS employee ${posEmployee.id}:`, error);
           // Continue with next employee even if one fails
         }
       }
+      
+      console.log(`📊 Auto-import complete: ${autoCreatedCount} employees imported to HR`);
+
 
       res.json({ 
         message: `Successfully synced ${syncedCount} employees and auto-imported ${autoCreatedCount} to HR system`,
