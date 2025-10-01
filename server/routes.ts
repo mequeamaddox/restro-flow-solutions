@@ -2817,6 +2817,68 @@ print(json.dumps(rows))
     }
   });
 
+  app.get("/api/pos-employees/unlinked/:locationId", isAuthenticated, async (req, res) => {
+    try {
+      const employees = await storage.getUnlinkedPosEmployees(req.params.locationId);
+      res.json(employees);
+    } catch (error) {
+      console.error("Error fetching unlinked POS employees:", error);
+      res.status(500).json({ message: "Failed to fetch unlinked employees" });
+    }
+  });
+
+  app.post("/api/pos-employees/import/:posEmployeeId", isAuthenticated, async (req, res) => {
+    try {
+      const { posEmployeeId } = req.params;
+      const { departmentId, positionId } = req.body;
+      
+      // Get the POS employee
+      const posEmployee = await storage.getPosEmployee(posEmployeeId);
+      if (!posEmployee) {
+        return res.status(404).json({ message: "POS employee not found" });
+      }
+
+      // Get the integration to find the location
+      const integration = await storage.getPosIntegration(posEmployee.posIntegrationId);
+      if (!integration) {
+        return res.status(404).json({ message: "Integration not found" });
+      }
+
+      // Create HR employee from POS employee
+      const hrEmployee = await storage.createEmployee({
+        locationId: integration.locationId,
+        firstName: posEmployee.firstName || posEmployee.displayName.split(' ')[0],
+        lastName: posEmployee.lastName || posEmployee.displayName.split(' ').slice(1).join(' ') || '',
+        email: posEmployee.email || '',
+        phone: '',
+        status: 'active',
+        hireDate: new Date().toISOString().split('T')[0],
+        departmentId: departmentId || null,
+        positionId: positionId || null,
+      });
+
+      // Create mapping between POS employee and HR employee
+      await db.insert(posEmployeeMappings).values({
+        posEmployeeId: posEmployee.id,
+        employeeId: hrEmployee.id,
+        status: 'manual',
+        confidence: '1.00',
+        matchRule: 'Manual import from POS Integration'
+      });
+
+      res.json({ 
+        message: "Employee imported successfully",
+        employee: hrEmployee
+      });
+    } catch (error) {
+      console.error("Error importing POS employee:", error);
+      res.status(500).json({ 
+        message: "Failed to import employee",
+        error: error instanceof Error ? error.message : 'Unknown error'
+      });
+    }
+  });
+
   app.post("/api/pos-employees/sync/:integrationId", isAuthenticated, async (req, res) => {
     try {
       const { integrationId } = req.params;

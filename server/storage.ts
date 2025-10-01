@@ -1268,6 +1268,25 @@ export class DatabaseStorage implements IStorage {
     return employee;
   }
 
+  async getUnlinkedPosEmployees(locationId: string): Promise<PosEmployee[]> {
+    // Get POS employees from integrations at this location that don't have HR mappings
+    const results = await db
+      .select({
+        posEmployee: posEmployees
+      })
+      .from(posEmployees)
+      .leftJoin(posEmployeeMappings, eq(posEmployees.id, posEmployeeMappings.posEmployeeId))
+      .innerJoin(posIntegrations, eq(posEmployees.posIntegrationId, posIntegrations.id))
+      .where(and(
+        eq(posIntegrations.locationId, locationId),
+        eq(posEmployees.isActive, true),
+        sql`${posEmployeeMappings.id} IS NULL` // No mapping exists
+      ))
+      .orderBy(posEmployees.displayName);
+    
+    return results.map(r => r.posEmployee);
+  }
+
   // Inventory operations
   async getInventoryItems(locationId?: string): Promise<(InventoryItem & { category?: Category; vendor?: Vendor })[]> {
     let query = db
