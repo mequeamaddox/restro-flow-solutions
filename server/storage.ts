@@ -2290,10 +2290,10 @@ export class DatabaseStorage implements IStorage {
       startDate.setDate(startDate.getDate() - days);
 
       const conditions = [
-        gte(businessIntelligence.date, startDate.toISOString().split('T')[0])
+        gte(businessIntelligence.reportDate, startDate)
       ];
       
-      if (locationId) {
+      if (locationId && locationId !== 'all') {
         conditions.push(eq(businessIntelligence.locationId, locationId));
       }
 
@@ -2301,15 +2301,17 @@ export class DatabaseStorage implements IStorage {
         .select()
         .from(businessIntelligence)
         .where(and(...conditions))
-        .orderBy(businessIntelligence.date);
+        .orderBy(businessIntelligence.reportDate);
 
       return biData.map(row => ({
-        date: row.date,
-        revenue: row.totalRevenue || 0,
-        cogs: row.totalCogs || 0,
-        grossProfit: (row.totalRevenue || 0) - (row.totalCogs || 0),
-        foodCostPercentage: row.foodCostPercentage || 0,
-        grossMarginPercentage: row.avgOrderValue ? ((row.totalRevenue - row.totalCogs) / row.totalRevenue * 100) : 0
+        date: row.reportDate,
+        revenue: parseFloat(row.totalRevenue || '0'),
+        cogs: parseFloat(row.totalCogs || '0'),
+        grossProfit: parseFloat(row.totalRevenue || '0') - parseFloat(row.totalCogs || '0'),
+        foodCostPercentage: parseFloat(row.foodCostPercentage || '0'),
+        grossMarginPercentage: row.totalRevenue && parseFloat(row.totalRevenue) > 0 
+          ? ((parseFloat(row.totalRevenue) - parseFloat(row.totalCogs || '0')) / parseFloat(row.totalRevenue) * 100) 
+          : 0
       }));
     } catch (error) {
       console.error('Error fetching daily P&L:', error);
@@ -2324,10 +2326,10 @@ export class DatabaseStorage implements IStorage {
       startDate.setDate(startDate.getDate() - days);
 
       const conditions = [
-        gte(businessIntelligence.date, startDate.toISOString().split('T')[0])
+        gte(businessIntelligence.reportDate, startDate)
       ];
       
-      if (locationId) {
+      if (locationId && locationId !== 'all') {
         conditions.push(eq(businessIntelligence.locationId, locationId));
       }
 
@@ -2347,8 +2349,8 @@ export class DatabaseStorage implements IStorage {
         };
       }
 
-      const avgFoodCost = biData.reduce((sum, row) => sum + (row.foodCostPercentage || 0), 0) / biData.length;
-      const avgOrderValue = biData.reduce((sum, row) => sum + (row.avgOrderValue || 0), 0) / biData.length;
+      const avgFoodCost = biData.reduce((sum, row) => sum + parseFloat(row.foodCostPercentage || '0'), 0) / biData.length;
+      const avgOrderValue = biData.reduce((sum, row) => sum + parseFloat(row.avgOrderValue || '0'), 0) / biData.length;
       const totalCustomers = biData.reduce((sum, row) => sum + (row.customerCount || 0), 0);
       const avgGrossMargin = 100 - avgFoodCost;
 
@@ -2403,7 +2405,7 @@ export class DatabaseStorage implements IStorage {
         gte(posSales.orderDate, startDate)
       ];
       
-      if (locationId) {
+      if (locationId && locationId !== 'all') {
         conditions.push(eq(posSales.locationId, locationId));
       }
 
@@ -2455,7 +2457,7 @@ export class DatabaseStorage implements IStorage {
         gte(purchaseOrders.orderDate, startDate)
       ];
       
-      if (locationId) {
+      if (locationId && locationId !== 'all') {
         conditions.push(eq(purchaseOrders.locationId, locationId));
       }
 
