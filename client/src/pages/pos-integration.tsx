@@ -275,7 +275,7 @@ function EmployeeSection({ integration }: { integration: PosIntegration }) {
   );
 }
 
-export default function PosIntegration() {
+export function PosIntegrationTab() {
   const { toast } = useToast();
   const { currentLocation: selectedLocation } = useLocation();
   const [expandedSales, setExpandedSales] = useState<Set<string>>(new Set());

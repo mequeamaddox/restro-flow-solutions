@@ -19,7 +19,6 @@ import Recipes from "@/pages/recipes";
 import Vendors from "@/pages/vendors";
 import PurchaseOrders from "@/pages/purchase-orders";
 import WasteTracking from "@/pages/waste-tracking";
-import PosIntegration from "@/pages/pos-integration";
 import Analytics from "@/pages/analytics";
 import BarcodeTest from "@/pages/barcode-test";
 import Settings from "@/pages/settings";
@@ -126,7 +125,6 @@ function Router() {
                 <Route path="/vendors" component={Vendors} />
                 <Route path="/purchase-orders" component={PurchaseOrders} />
                 <Route path="/waste-tracking" component={WasteTracking} />
-                <Route path="/pos-integration" component={PosIntegration} />
                 <Route path="/analytics" component={Analytics} />
                 <Route path="/invoice-processing" component={InvoiceProcessing} />
                 <Route path="/barcode-test" component={BarcodeTest} />
