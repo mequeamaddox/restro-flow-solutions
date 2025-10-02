@@ -410,21 +410,15 @@ export default function HRTimeClock() {
                       <p className="text-sm text-slate-400 mt-1">
                         {formatDuration(entry.clockInTime)}
                       </p>
-                      {entry.source === 'manual' ? (
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          className="mt-2"
-                          onClick={() => clockOutMutation.mutate(entry.id)}
-                          disabled={clockOutMutation.isPending}
-                        >
-                          Clock Out
-                        </Button>
-                      ) : (
-                        <Badge variant="outline" className="mt-2 text-xs">
-                          POS Synced
-                        </Badge>
-                      )}
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="mt-2"
+                        onClick={() => clockOutMutation.mutate(entry.id)}
+                        disabled={clockOutMutation.isPending}
+                      >
+                        Clock Out
+                      </Button>
                     </div>
                   </div>
                 );
@@ -646,32 +640,24 @@ export default function HRTimeClock() {
                     
                     {/* Manager Controls */}
                     <div className="mt-3 flex gap-2">
-                      {entry.source === 'manual' ? (
-                        <>
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={() => handleEditEntry(entry)}
-                            data-testid={`button-edit-${entry.id}`}
-                          >
-                            <Edit className="h-3 w-3 mr-1" />
-                            Edit
-                          </Button>
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={() => handleDeleteEntry(entry.id)}
-                            data-testid={`button-delete-${entry.id}`}
-                          >
-                            <Trash2 className="h-3 w-3 mr-1" />
-                            Delete
-                          </Button>
-                        </>
-                      ) : (
-                        <Badge variant="outline" className="text-xs">
-                          POS Synced - Read Only
-                        </Badge>
-                      )}
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => handleEditEntry(entry)}
+                        data-testid={`button-edit-${entry.id}`}
+                      >
+                        <Edit className="h-3 w-3 mr-1" />
+                        Edit
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => handleDeleteEntry(entry.id)}
+                        data-testid={`button-delete-${entry.id}`}
+                      >
+                        <Trash2 className="h-3 w-3 mr-1" />
+                        Delete
+                      </Button>
                     </div>
                   </div>
                 );
