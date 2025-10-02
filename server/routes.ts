@@ -8,7 +8,7 @@ import multer from "multer";
 import csv from "csv-parser";
 import { Readable } from "stream";
 import { db } from "./db";
-import { sql, eq, desc } from "drizzle-orm";
+import { sql, eq, desc, and } from "drizzle-orm";
 import { 
   inventoryItems,
   recipes,
@@ -3042,28 +3042,30 @@ print(json.dumps(rows))
         dateFilter = sql`${posSales.orderDate} >= CURRENT_DATE - INTERVAL '7 days'`;
       }
       
+      // Build proper where conditions
+      let whereConditions = [dateFilter];
+      if (locationId) {
+        whereConditions.push(sql`${posSales.locationId} = ${locationId}`);
+      }
+      
       // Get sales data from POS
       const salesData = await db.select({
         totalSales: sql<number>`COALESCE(SUM(CAST(${posSales.total} AS DECIMAL)), 0)`,
         orderCount: sql<number>`COUNT(*)`,
         customerCount: sql<number>`COUNT(DISTINCT ${posSales.employeeId})`
-      }).from(posSales).where(
-        sql`${dateFilter}
-        ${locationId ? sql`AND ${posSales.locationId} = ${locationId}` : sql``}`
-      );
+      }).from(posSales).where(and(...whereConditions));
       
       const sales = salesData[0] || { totalSales: 0, orderCount: 0, customerCount: 0 };
       const avgOrderValue = sales.orderCount > 0 ? Number(sales.totalSales) / Number(sales.orderCount) : 0;
       
       // Get top selling items
+      let topItemsWhere = [...whereConditions, sql`${posSales.itemName} IS NOT NULL`];
       const topItems = await db.select({
         name: posSales.itemName,
         quantity: sql<number>`COUNT(*)`,
         revenue: sql<number>`COALESCE(SUM(CAST(${posSales.total} AS DECIMAL)), 0)`
       }).from(posSales)
-      .where(sql`${dateFilter}
-        ${locationId ? sql`AND ${posSales.locationId} = ${locationId}` : sql``}
-        AND ${posSales.itemName} IS NOT NULL`)
+      .where(and(...topItemsWhere))
       .groupBy(posSales.itemName)
       .orderBy(sql`COUNT(*) DESC`)
       .limit(10);
