@@ -435,64 +435,57 @@ export class CloverService {
         return 0;
       }
 
-      // Create a map of Clover employee ID to our POS employee record
-      const employeeMap = new Map(
-        posEmployees.map(emp => [emp.posEmployeeId, emp])
-      );
-
-      // Fetch all shifts at once from merchant-level endpoint (more efficient)
-      const shifts = await this.fetchAllShiftsFromClover(integration, daysBack);
-      if (!shifts || shifts.length === 0) {
-        console.log('No shifts found in Clover');
-        return 0;
-      }
-
-      console.log(`Found ${shifts.length} shifts from Clover`);
+      console.log(`Starting shift sync for ${posEmployees.length} employees...`);
       let totalShifts = 0;
-
-      // Process each shift
-      for (const shift of shifts) {
+      
+      // Fetch shifts for each employee with rate limiting
+      for (let i = 0; i < posEmployees.length; i++) {
+        const posEmployee = posEmployees[i];
+        
         try {
-          // Get the employee this shift belongs to
-          const cloverEmployeeId = shift.employee?.id;
-          if (!cloverEmployeeId) {
-            console.log(`Shift ${shift.id} has no employee ID, skipping`);
-            continue;
-          }
+          const shifts = await this.fetchShiftsForEmployee(integration, posEmployee.posEmployeeId, daysBack);
+          if (!shifts) continue;
 
-          const posEmployee = employeeMap.get(cloverEmployeeId);
-          if (!posEmployee) {
-            console.log(`No matching employee found for Clover employee ${cloverEmployeeId}, skipping shift`);
-            continue;
-          }
+          // Process each shift
+          for (const shift of shifts) {
+            try {
+              const clockInAt = shift.overrideInTime 
+                ? new Date(shift.overrideInTime) 
+                : new Date(shift.inTime);
+              
+              const clockOutAt = shift.overrideOutTime 
+                ? new Date(shift.overrideOutTime) 
+                : shift.outTime 
+                  ? new Date(shift.outTime) 
+                  : null;
 
-          const clockInAt = shift.overrideInTime 
-            ? new Date(shift.overrideInTime) 
-            : new Date(shift.inTime);
+              const timeclockData = {
+                posIntegrationId: integration.id,
+                posTimeEntryId: shift.id,
+                posEmployeeId: posEmployee.id,
+                locationId: integration.locationId,
+                clockInAt,
+                clockOutAt,
+                breakSeconds: 0,
+                roleTitle: posEmployee.roleTitle,
+                status: clockOutAt ? 'closed' : 'open',
+                raw: shift,
+              };
+
+              await storage.upsertPosTimeclock(timeclockData);
+              totalShifts++;
+            } catch (error) {
+              console.error(`Error processing shift ${shift.id}:`, error);
+            }
+          }
           
-          const clockOutAt = shift.overrideOutTime 
-            ? new Date(shift.overrideOutTime) 
-            : shift.outTime 
-              ? new Date(shift.outTime) 
-              : null;
-
-          const timeclockData = {
-            posIntegrationId: integration.id,
-            posTimeEntryId: shift.id,
-            posEmployeeId: posEmployee.id,
-            locationId: integration.locationId,
-            clockInAt,
-            clockOutAt,
-            breakSeconds: 0,
-            roleTitle: posEmployee.roleTitle,
-            status: clockOutAt ? 'closed' : 'open',
-            raw: shift,
-          };
-
-          await storage.upsertPosTimeclock(timeclockData);
-          totalShifts++;
+          // Rate limiting: wait 250ms between employee requests to avoid 429 errors
+          if (i < posEmployees.length - 1) {
+            await new Promise(resolve => setTimeout(resolve, 250));
+          }
         } catch (error) {
-          console.error(`Error processing shift ${shift.id}:`, error);
+          console.error(`Error syncing shifts for employee ${posEmployee.posEmployeeId}:`, error);
+          // Continue with next employee even if this one fails
         }
       }
 
@@ -505,11 +498,11 @@ export class CloverService {
   }
 
   /**
-   * Fetch all shifts from Clover API (merchant-level endpoint)
-   * More efficient than fetching per-employee
+   * Fetch shifts for a single employee from Clover API
    */
-  private async fetchAllShiftsFromClover(
+  private async fetchShiftsForEmployee(
     integration: PosIntegration,
+    employeeId: string,
     daysBack: number = 7
   ): Promise<CloverShift[] | null> {
     try {
@@ -528,9 +521,9 @@ export class CloverService {
       const startTime = new Date();
       startTime.setDate(startTime.getDate() - daysBack);
       
-      // Use merchant-level endpoint to get all shifts at once
+      // Use per-employee endpoint (merchant-level /shifts endpoint doesn't exist)
       const response = await fetch(
-        `${baseUrl}/v3/merchants/${integration.merchantId}/shifts?filter=inTime>=${startTime.getTime()}&expand=employee`,
+        `${baseUrl}/v3/merchants/${integration.merchantId}/employees/${employeeId}/shifts?filter=inTime>=${startTime.getTime()}`,
         {
           headers: {
             'Authorization': `Bearer ${accessToken}`,
@@ -540,55 +533,22 @@ export class CloverService {
       );
 
       if (!response.ok) {
-        // Try to get the error details from response body
-        const errorText = await response.text();
-        console.error(`Clover shifts API error: ${response.status} ${response.statusText}`);
-        console.error(`Error details: ${errorText}`);
-        console.error(`Request URL: ${baseUrl}/v3/merchants/${integration.merchantId}/shifts?filter=inTime>=${startTime.getTime()}&expand=employee`);
-        
-        // 404 might mean no shifts exist or Shifts app not enabled
+        // 404 might mean no shifts exist for this employee
         if (response.status === 404) {
-          console.log('No shifts endpoint available - merchant may not be using Clover Shifts app');
           return [];
         }
         
-        // 400 might mean the filter syntax is wrong or the endpoint doesn't support filters
-        if (response.status === 400) {
-          console.log('Bad request - trying without filter...');
-          // Try again without filter
-          const retryResponse = await fetch(
-            `${baseUrl}/v3/merchants/${integration.merchantId}/shifts?expand=employee`,
-            {
-              headers: {
-                'Authorization': `Bearer ${accessToken}`,
-                'Content-Type': 'application/json',
-              },
-            }
-          );
-          
-          if (!retryResponse.ok) {
-            console.log('Shifts endpoint not available even without filter - merchant not using Clover Shifts app');
-            return [];
-          }
-          
-          const allData = await retryResponse.json();
-          const allShifts = allData.elements || [];
-          console.log(`Fetched ${allShifts.length} total shifts from Clover (unfiltered)`);
-          
-          // Filter client-side
-          const filtered = allShifts.filter((shift: CloverShift) => shift.inTime >= startTime.getTime());
-          console.log(`After filtering: ${filtered.length} shifts from last ${daysBack} days`);
-          return filtered;
-        }
-        
+        // Log other errors but don't throw - continue with other employees
+        const errorText = await response.text();
+        console.error(`Error fetching shifts for employee ${employeeId}: ${response.status} ${response.statusText}`);
+        console.error(`Details: ${errorText}`);
         return [];
       }
 
       const data = await response.json();
-      console.log(`Fetched ${data.elements?.length || 0} shifts from Clover`);
       return data.elements || [];
     } catch (error) {
-      console.error('Error fetching shifts from Clover:', error);
+      console.error(`Error fetching shifts for employee ${employeeId}:`, error);
       return null;
     }
   }
