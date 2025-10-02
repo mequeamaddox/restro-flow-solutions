@@ -11,16 +11,20 @@ export interface CloverOrderResponse {
   id: string;
   total: number;
   createdTime: number;
-  lineItems: Array<{
-    id: string;
-    name: string;
-    price: number;
-    quantity?: number;
-    item?: {
+  taxAmount?: number; // Tax in cents
+  tipAmount?: number; // Tip in cents
+  lineItems?: {
+    elements: Array<{
       id: string;
       name: string;
-    };
-  }>;
+      price: number;
+      quantity?: number;
+      item?: {
+        id: string;
+        name: string;
+      };
+    }>;
+  };
 }
 
 export interface CloverWebhookPayload {
@@ -136,20 +140,37 @@ export class CloverService {
         return;
       }
 
-      // Create sale record
+      // Calculate subtotal from line items
+      const lineItems = orderData.lineItems?.elements || [];
+      const subtotal = lineItems.reduce((sum: number, item) => sum + (item.price || 0), 0);
+      
+      // Extract tax and tip from Clover totals (if available)
+      // Clover API may provide totals object or we calculate from order total
+      const taxAmount = orderData.taxAmount || 0; // Tax amount in cents
+      const tipAmount = orderData.tipAmount || 0; // Tip amount in cents
+      
+      console.log(`💰 Order financial breakdown:
+        Subtotal: $${(subtotal / 100).toFixed(2)}
+        Tax: $${(taxAmount / 100).toFixed(2)}
+        Tip: $${(tipAmount / 100).toFixed(2)}
+        Total: $${(orderData.total / 100).toFixed(2)}`);
+      
+      // Create sale record with complete financial data
       const saleData: InsertPosSale = {
         posOrderId: orderData.id,
         posIntegrationId: integration.id,
         locationId: integration.locationId,
         total: (orderData.total / 100).toString(), // Clover amounts are in cents
+        subtotal: (subtotal / 100).toString(),
+        tax: taxAmount > 0 ? (taxAmount / 100).toString() : null,
+        tip: tipAmount > 0 ? (tipAmount / 100).toString() : null,
         orderDate: new Date(orderData.createdTime),
         inventoryProcessed: false,
       };
 
       const sale = await storage.createPosSale(saleData);
 
-      // Process each line item - Clover sends lineItems as {elements: [...]}
-      const lineItems = orderData.lineItems?.elements || [];
+      // Process each line item
       console.log('📊 Line items count:', lineItems.length);
       
       if (lineItems.length === 0) {
