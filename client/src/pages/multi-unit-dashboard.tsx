@@ -1,13 +1,15 @@
 import { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useLocation } from "@/contexts/LocationContext";
+import { Link } from "wouter";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { AlertTriangle, Package, TrendingDown, TrendingUp, Calculator } from "lucide-react";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import { AlertTriangle, Package, TrendingDown, TrendingUp, Calculator, ChevronDown, ChevronUp, ExternalLink } from "lucide-react";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
@@ -63,6 +65,7 @@ export default function MultiUnitDashboard() {
   const [saleQuantity, setSaleQuantity] = useState("");
   const [unitPrice, setUnitPrice] = useState("");
   const [isRecordingSale, setIsRecordingSale] = useState(false);
+  const [expandedTransactions, setExpandedTransactions] = useState<Set<string>>(new Set());
 
   const { data: stockLevels, isLoading: loadingStock } = useQuery({
     queryKey: ['/api/inventory/stock-levels', currentLocation?.id],
@@ -360,34 +363,89 @@ export default function MultiUnitDashboard() {
                 ) : analytics?.recentTransactions?.length === 0 ? (
                   <p className="text-muted-foreground">No sales transactions recorded yet.</p>
                 ) : (
-                  analytics?.recentTransactions?.map((transaction) => (
-                    <Card key={transaction.id}>
-                      <CardContent className="p-4">
-                        <div className="flex items-center justify-between mb-2">
-                          <div>
-                            <p className="font-semibold">${parseFloat(transaction.totalAmount).toFixed(2)}</p>
-                            <p className="text-sm text-muted-foreground">
-                              {new Date(transaction.saleDate).toLocaleDateString()} - {transaction.paymentMethod}
-                            </p>
-                            {transaction.customerName && (
-                              <p className="text-sm text-muted-foreground">{transaction.customerName}</p>
-                            )}
-                          </div>
-                        </div>
-                        
-                        <div className="space-y-2">
-                          {transaction.items?.map((item, index) => (
-                            <div key={index} className="flex justify-between text-sm">
-                              <span>{item.inventoryItem.name}</span>
-                              <span>
-                                {parseFloat(item.quantitySold).toFixed(1)} {item.inventoryItem.recipeUnit} × ${parseFloat(item.unitPrice).toFixed(2)}
-                              </span>
+                  analytics?.recentTransactions?.map((transaction) => {
+                    const isExpanded = expandedTransactions.has(transaction.id);
+                    return (
+                      <Card key={transaction.id} data-testid={`card-transaction-${transaction.id}`}>
+                        <CardContent className="p-4">
+                          <Collapsible
+                            open={isExpanded}
+                            onOpenChange={() => {
+                              const newExpanded = new Set(expandedTransactions);
+                              if (isExpanded) {
+                                newExpanded.delete(transaction.id);
+                              } else {
+                                newExpanded.add(transaction.id);
+                              }
+                              setExpandedTransactions(newExpanded);
+                            }}
+                          >
+                            <div className="flex items-center justify-between mb-2">
+                              <div className="flex-1">
+                                <p className="font-semibold" data-testid={`text-amount-${transaction.id}`}>
+                                  ${parseFloat(transaction.totalAmount).toFixed(2)}
+                                </p>
+                                <p className="text-sm text-muted-foreground" data-testid={`text-date-${transaction.id}`}>
+                                  {new Date(transaction.saleDate).toLocaleDateString()} - {transaction.paymentMethod}
+                                </p>
+                                {transaction.customerName && (
+                                  <p className="text-sm text-muted-foreground" data-testid={`text-customer-${transaction.id}`}>
+                                    {transaction.customerName}
+                                  </p>
+                                )}
+                              </div>
+                              <CollapsibleTrigger asChild>
+                                <Button 
+                                  variant="ghost" 
+                                  size="sm"
+                                  data-testid={`button-expand-${transaction.id}`}
+                                >
+                                  {isExpanded ? (
+                                    <ChevronUp className="h-4 w-4" />
+                                  ) : (
+                                    <ChevronDown className="h-4 w-4" />
+                                  )}
+                                </Button>
+                              </CollapsibleTrigger>
                             </div>
-                          ))}
-                        </div>
-                      </CardContent>
-                    </Card>
-                  ))
+                            
+                            <CollapsibleContent>
+                              <div className="space-y-3 pt-2 border-t">
+                                <div className="space-y-2">
+                                  <p className="text-sm font-medium">Items Sold:</p>
+                                  {transaction.items?.map((item, index) => (
+                                    <div 
+                                      key={index} 
+                                      className="flex justify-between text-sm pl-2"
+                                      data-testid={`item-${transaction.id}-${index}`}
+                                    >
+                                      <span>{item.inventoryItem.name}</span>
+                                      <span>
+                                        {parseFloat(item.quantitySold).toFixed(1)} {item.inventoryItem.recipeUnit} × ${parseFloat(item.unitPrice).toFixed(2)}
+                                      </span>
+                                    </div>
+                                  ))}
+                                </div>
+                                <div className="pt-2">
+                                  <Link href="/analytics">
+                                    <Button 
+                                      variant="outline" 
+                                      size="sm" 
+                                      className="w-full"
+                                      data-testid={`button-view-analytics-${transaction.id}`}
+                                    >
+                                      <ExternalLink className="h-4 w-4 mr-2" />
+                                      View Detailed Analytics
+                                    </Button>
+                                  </Link>
+                                </div>
+                              </div>
+                            </CollapsibleContent>
+                          </Collapsible>
+                        </CardContent>
+                      </Card>
+                    );
+                  })
                 )}
               </div>
             </CardContent>
