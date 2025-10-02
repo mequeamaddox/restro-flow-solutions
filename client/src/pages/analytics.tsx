@@ -549,15 +549,14 @@ export default function Analytics() {
         {/* Real-Time Analytics Tab */}
         <TabsContent value="real-time" className="space-y-6">
           {/* Live Metrics */}
-          <div className="grid grid-cols-2 md:grid-cols-6 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <Card className="bg-slate-800/50 border-slate-700">
               <CardContent className="p-4 text-center">
                 <DollarSign className="h-6 w-6 text-green-400 mx-auto mb-2" />
                 <div className="text-xl font-bold text-green-400">
                   ${realTimeData?.currentSales?.toLocaleString() || '0'}
                 </div>
-                <div className="text-xs text-slate-400">Sales Today</div>
-                <div className="text-xs text-green-400 mt-1">↑ 15% vs yesterday</div>
+                <div className="text-xs text-slate-400">Sales (Last 7 Days)</div>
               </CardContent>
             </Card>
 
@@ -565,8 +564,7 @@ export default function Analytics() {
               <CardContent className="p-4 text-center">
                 <ShoppingCart className="h-6 w-6 text-blue-400 mx-auto mb-2" />
                 <div className="text-xl font-bold text-white">{realTimeData?.ordersToday || 0}</div>
-                <div className="text-xs text-slate-400">Orders Today</div>
-                <div className="text-xs text-blue-400 mt-1">↑ 8% vs avg</div>
+                <div className="text-xs text-slate-400">Orders (Last 7 Days)</div>
               </CardContent>
             </Card>
 
@@ -574,35 +572,7 @@ export default function Analytics() {
               <CardContent className="p-4 text-center">
                 <Target className="h-6 w-6 text-purple-400 mx-auto mb-2" />
                 <div className="text-xl font-bold text-white">${realTimeData?.avgOrderValue?.toFixed(2) || '0.00'}</div>
-                <div className="text-xs text-slate-400">Avg Order</div>
-                <div className="text-xs text-green-400 mt-1">↑ $2.15</div>
-              </CardContent>
-            </Card>
-
-            <Card className="bg-slate-800/50 border-slate-700">
-              <CardContent className="p-4 text-center">
-                <Users className="h-6 w-6 text-orange-400 mx-auto mb-2" />
-                <div className="text-xl font-bold text-white">{realTimeData?.activeTables || 0}</div>
-                <div className="text-xs text-slate-400">Active Tables</div>
-                <div className="text-xs text-orange-400 mt-1">78% capacity</div>
-              </CardContent>
-            </Card>
-
-            <Card className="bg-slate-800/50 border-slate-700">
-              <CardContent className="p-4 text-center">
-                <Clock className="h-6 w-6 text-yellow-400 mx-auto mb-2" />
-                <div className="text-xl font-bold text-white">{realTimeData?.kitchenWaitTime?.toFixed(1) || '0.0'}m</div>
-                <div className="text-xs text-slate-400">Kitchen Time</div>
-                <div className="text-xs text-green-400 mt-1">↓ 2m faster</div>
-              </CardContent>
-            </Card>
-
-            <Card className="bg-slate-800/50 border-slate-700">
-              <CardContent className="p-4 text-center">
-                <Zap className="h-6 w-6 text-pink-400 mx-auto mb-2" />
-                <div className="text-xl font-bold text-white">97.3%</div>
-                <div className="text-xs text-slate-400">Item Availability</div>
-                <div className="text-xs text-green-400 mt-1">Excellent</div>
+                <div className="text-xs text-slate-400">Avg Order Value</div>
               </CardContent>
             </Card>
           </div>

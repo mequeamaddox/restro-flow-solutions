@@ -4131,9 +4131,7 @@ print(json.dumps(rows))
       res.json({
         currentSales: Number(recentSales.totalSales),
         ordersToday: Number(recentSales.orderCount),
-        avgOrderValue: Number(avgOrderValue),
-        kitchenWaitTime: 8.5, // This would come from POS integration
-        topSellingItems: [] // This would be calculated from POS data
+        avgOrderValue: Number(avgOrderValue)
       });
     } catch (error) {
       console.error("Error fetching real-time data:", error);
