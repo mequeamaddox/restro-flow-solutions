@@ -57,8 +57,18 @@ export const getQueryFn: <T>(options: {
     // Handle location-specific queries
     if (queryKey.length > 1 && queryKey[1]) {
       const locationId = queryKey[1] as string;
-      if (url.includes('/api/inventory') || url.includes('/api/dashboard') || url.includes('/api/waste') || url.includes('/api/hr/') || url.includes('/api/pos/')) {
+      if (url.includes('/api/inventory') || url.includes('/api/dashboard') || url.includes('/api/waste') || url.includes('/api/hr/') || url.includes('/api/pos/') || url.includes('/api/variance') || url.includes('/api/analytics')) {
         url += url.includes('?') ? `&locationId=${locationId}` : `?locationId=${locationId}`;
+      }
+    }
+    
+    // Handle date range parameters for variance reports
+    if (url.includes('/api/variance/report') || url.includes('/api/variance/production')) {
+      if (queryKey.length > 2 && queryKey[2]) {
+        url += `&startDate=${encodeURIComponent(queryKey[2] as string)}`;
+      }
+      if (queryKey.length > 3 && queryKey[3]) {
+        url += `&endDate=${encodeURIComponent(queryKey[3] as string)}`;
       }
     }
 

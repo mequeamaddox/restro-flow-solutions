@@ -140,9 +140,13 @@ export class CloverService {
         return;
       }
 
-      // Calculate subtotal from line items
+      // Calculate subtotal from line items (price * quantity for each item)
       const lineItems = orderData.lineItems?.elements || [];
-      const subtotal = lineItems.reduce((sum: number, item) => sum + (item.price || 0), 0);
+      const subtotal = lineItems.reduce((sum: number, item) => {
+        const price = item.price || 0;
+        const quantity = item.quantity || 1;
+        return sum + (price * quantity);
+      }, 0);
       
       // Extract tax and tip from Clover totals (if available)
       // Clover API may provide totals object or we calculate from order total

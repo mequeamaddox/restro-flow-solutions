@@ -5551,9 +5551,13 @@ print(json.dumps(rows))
   });
 
   // Get remaining stock levels with multi-unit conversion
-  app.get('/api/inventory/stock-levels/:locationId', isAuthenticated, async (req, res) => {
+  app.get('/api/inventory/stock-levels', isAuthenticated, async (req, res) => {
     try {
-      const { locationId } = req.params;
+      const locationId = req.query.locationId as string;
+      
+      if (!locationId) {
+        return res.status(400).json({ message: 'Location ID is required' });
+      }
       
       const stockLevels = await storage.getRemainingStockLevels(locationId);
       res.json(stockLevels);
