@@ -38,6 +38,10 @@ export class PosService {
     try {
       const integration = await storage.getPosIntegration(integrationId);
       if (!integration) return false;
+      if (!integration.environment) {
+        console.error('POS integration missing environment configuration');
+        return false;
+      }
 
       const credentials = integration.credentials as PosCredentials;
       const baseUrl = this.getBaseUrl(integration.provider, integration.environment);
@@ -97,6 +101,9 @@ export class PosService {
     try {
       const integration = await storage.getPosIntegration(integrationId);
       if (!integration) throw new Error("Integration not found");
+      if (!integration.environment) {
+        throw new Error("POS integration missing environment configuration");
+      }
 
       const credentials = integration.credentials as PosCredentials;
       const baseUrl = this.getBaseUrl(integration.provider, integration.environment);
@@ -237,10 +244,18 @@ export class PosService {
   async pollSpotOnOrders(integrationId: string): Promise<{ ordersProcessed: number }> {
     const integration = await storage.getPosIntegration(integrationId);
     if (!integration || !integration.isActive) return { ordersProcessed: 0 };
+    if (!integration.environment) {
+      console.error('SpotOn integration missing environment configuration');
+      return { ordersProcessed: 0 };
+    }
     const credentials = integration.credentials as PosCredentials;
     if (!credentials.apiKey) throw new Error("Missing SpotOn API key");
 
     const baseUrl = this.getBaseUrl("spoton", integration.environment);
+    if (!baseUrl) {
+      console.error('Unable to determine SpotOn API base URL');
+      return { ordersProcessed: 0 };
+    }
     const lagMin = Number(process.env.SPOTON_LAG_MINUTES ?? 5);
     const intervalMin = Number(process.env.SPOTON_POLL_INTERVAL_MINUTES ?? 1);
 
@@ -298,16 +313,24 @@ export class PosService {
       count++;
     }
 
-    await storage.updatePosIntegration(integration.id, { lastSyncAt: new Date().toISOString() });
+    await storage.updatePosIntegration(integration.id, { lastSyncAt: new Date() });
     return { ordersProcessed: count };
   }
 
   async pollSpotOnTimeclock(integrationId: string): Promise<{ punchesProcessed: number }> {
     const integration = await storage.getPosIntegration(integrationId);
     if (!integration || !integration.isActive) return { punchesProcessed: 0 };
+    if (!integration.environment) {
+      console.error('SpotOn integration missing environment configuration');
+      return { punchesProcessed: 0 };
+    }
     const credentials = integration.credentials as PosCredentials;
     if (!credentials.apiKey) throw new Error("Missing SpotOn API key");
     const baseUrl = this.getBaseUrl("spoton", integration.environment);
+    if (!baseUrl) {
+      console.error('Unable to determine SpotOn API base URL');
+      return { punchesProcessed: 0 };
+    }
 
     const lagMin = Number(process.env.SPOTON_LAG_MINUTES ?? 5);
     const intervalMin = Number(process.env.SPOTON_POLL_INTERVAL_MINUTES ?? 1);
