@@ -4217,6 +4217,24 @@ print(json.dumps(rows))
     }
   });
 
+  // Manual backfill endpoint for business intelligence (admin only)
+  app.post('/api/analytics/backfill-bi', isAuthenticated, async (req: any, res) => {
+    try {
+      // Only allow owner role to trigger backfill
+      if (req.user.role !== 'owner') {
+        return res.status(403).json({ message: "Only owners can trigger BI backfill" });
+      }
+      
+      const { computeBusinessIntelligence } = await import('./jobs/analyticsScheduler');
+      await computeBusinessIntelligence(true); // true = full recompute
+      
+      res.json({ message: "Business intelligence backfill completed successfully" });
+    } catch (error) {
+      console.error("Error running BI backfill:", error);
+      res.status(500).json({ message: "Failed to run BI backfill" });
+    }
+  });
+
   app.get('/api/waste/summary', isAuthenticated, async (req, res) => {
     try {
       const locationId = req.query.locationId as string;

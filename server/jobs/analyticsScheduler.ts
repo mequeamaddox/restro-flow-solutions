@@ -33,7 +33,7 @@ export function startAnalyticsScheduler() {
   console.log("Analytics ETL scheduler started successfully");
 }
 
-async function computeBusinessIntelligence(fullRecompute = false) {
+export async function computeBusinessIntelligence(fullRecompute = false) {
   // Get all locations
   const locations = await db.execute(sql`SELECT id FROM locations`);
   
