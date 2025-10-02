@@ -3245,36 +3245,36 @@ export class DatabaseStorage implements IStorage {
       const allTasks = await tasksQuery;
       const allMessages = await messagesQuery;
       
-      // Get time entries without breaking timestamps - filter by location via employee
-      let timeEntryCountQuery = db.select({ count: sql<number>`count(*)` }).from(timeEntries);
-      let currentlyWorkingQuery = db.select({ count: sql<number>`count(*)` })
-        .from(timeEntries)
-        .where(sql`clock_out_time IS NULL`);
-        
+      // Get currently working count - only from employees at this location
+      let currentlyWorkingManualCount = 0;
+      let currentlyWorkingPosCount = 0;
+      
+      // Only count if we have a location and employees
       if (locationId && employeeIds.length > 0) {
-        timeEntryCountQuery = timeEntryCountQuery.where(inArray(timeEntries.employeeId, employeeIds));
-        currentlyWorkingQuery = currentlyWorkingQuery.where(
-          and(
-            sql`clock_out_time IS NULL`,
-            inArray(timeEntries.employeeId, employeeIds)
-          )
-        );
-      }
-      
-      const timeEntryCount = await timeEntryCountQuery;
-      const currentlyWorkingCount = await currentlyWorkingQuery;
-      
-      // Get POS timeclock entries that are currently clocked in
-      let currentlyWorkingPosQuery = db.select({ count: sql<number>`count(*)` })
-        .from(posTimeclocks)
-        .where(eq(posTimeclocks.status, 'open'));
+        // Count manual time entries
+        const manualResult = await db.select({ count: sql<number>`count(*)` })
+          .from(timeEntries)
+          .where(
+            and(
+              sql`clock_out_time IS NULL`,
+              inArray(timeEntries.employeeId, employeeIds)
+            )
+          );
+        currentlyWorkingManualCount = manualResult[0]?.count || 0;
         
-      if (locationId) {
-        currentlyWorkingPosQuery = currentlyWorkingPosQuery.where(eq(posTimeclocks.locationId, locationId));
+        // Count POS timeclock entries
+        const posResult = await db.select({ count: sql<number>`count(*)` })
+          .from(posTimeclocks)
+          .where(
+            and(
+              eq(posTimeclocks.status, 'open'),
+              eq(posTimeclocks.locationId, locationId)
+            )
+          );
+        currentlyWorkingPosCount = posResult[0]?.count || 0;
       }
       
-      const currentlyWorkingPosCount = await currentlyWorkingPosQuery;
-      const totalCurrentlyWorking = (currentlyWorkingCount[0]?.count || 0) + (currentlyWorkingPosCount[0]?.count || 0);
+      const totalCurrentlyWorking = currentlyWorkingManualCount + currentlyWorkingPosCount;
 
       // Calculate analytics safely
       const today = new Date().toISOString().split('T')[0];
