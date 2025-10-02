@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Users, Clock, CheckSquare, Calendar, MessageSquare, TrendingUp, DollarSign, Target, Activity, Briefcase, UserCheck, Timer, Calculator, FileText, Download } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
-import { useLocation } from "@/hooks/use-location";
+import { useLocation } from "@/contexts/LocationContext";
 
 export default function HRAnalytics() {
   const [selectedPeriod, setSelectedPeriod] = useState("current-month");
