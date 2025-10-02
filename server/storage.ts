@@ -189,7 +189,7 @@ import {
   type InsertOwnerOnboardingStep,
 } from "@shared/schema";
 import { db } from "./db";
-import { eq, sql, desc, and, or, gte, lte, lt, ilike, sum, isNull, isNotNull, asc } from "drizzle-orm";
+import { eq, sql, desc, and, or, gte, lte, lt, ilike, sum, isNull, isNotNull, asc, inArray } from "drizzle-orm";
 
 // Local authentication user interface
 export interface LocalAuthUser {
@@ -3227,10 +3227,18 @@ export class DatabaseStorage implements IStorage {
       
       // Filter by employees from the selected location
       if (locationId && employeeIds.length > 0) {
-        shiftsQuery = shiftsQuery.where(sql`${shifts.employeeId} IN (${employeeIds.map(id => `'${id}'`).join(',')})`);
-        tasksQuery = tasksQuery.where(sql`${tasks.assignedTo} IN (${employeeIds.map(id => `'${id}'`).join(',')})`);
+        shiftsQuery = shiftsQuery.where(inArray(shifts.employeeId, employeeIds));
+        tasksQuery = tasksQuery.where(inArray(tasks.assignedTo, employeeIds));
         // Messages can be location-specific or employee-specific
-        messagesQuery = messagesQuery.where(sql`${messages.recipientId} IN (${employeeIds.map(id => `'${id}'`).join(',')}) OR (${messages.recipientType} = 'location' AND ${messages.recipientId} = ${locationId})`);
+        messagesQuery = messagesQuery.where(
+          or(
+            inArray(messages.recipientId, employeeIds),
+            and(
+              eq(messages.recipientType, 'location'),
+              eq(messages.recipientId, locationId)
+            )
+          )
+        );
       }
       
       const allShifts = await shiftsQuery;
@@ -3244,10 +3252,13 @@ export class DatabaseStorage implements IStorage {
         .where(sql`clock_out_time IS NULL`);
         
       if (locationId && employeeIds.length > 0) {
-        timeEntryCountQuery = timeEntryCountQuery
-          .where(sql`${timeEntries.employeeId} IN (${employeeIds.map(id => `'${id}'`).join(',')})`);
-        currentlyWorkingQuery = currentlyWorkingQuery
-          .where(sql`clock_out_time IS NULL AND ${timeEntries.employeeId} IN (${employeeIds.map(id => `'${id}'`).join(',')})`);
+        timeEntryCountQuery = timeEntryCountQuery.where(inArray(timeEntries.employeeId, employeeIds));
+        currentlyWorkingQuery = currentlyWorkingQuery.where(
+          and(
+            sql`clock_out_time IS NULL`,
+            inArray(timeEntries.employeeId, employeeIds)
+          )
+        );
       }
       
       const timeEntryCount = await timeEntryCountQuery;
