@@ -1289,6 +1289,39 @@ export class DatabaseStorage implements IStorage {
     return results.map(r => r.posEmployee);
   }
 
+  // POS Timeclock
+  async upsertPosTimeclock(timeclockData: InsertPosTimeclock): Promise<PosTimeclock> {
+    // Try to find existing timeclock entry by integration + posTimeEntryId
+    const [existing] = await db.select().from(posTimeclocks)
+      .where(and(
+        eq(posTimeclocks.posIntegrationId, timeclockData.posIntegrationId),
+        eq(posTimeclocks.posTimeEntryId, timeclockData.posTimeEntryId)
+      ));
+
+    if (existing) {
+      // Update existing
+      const [updated] = await db
+        .update(posTimeclocks)
+        .set({ ...timeclockData, updatedAt: new Date() })
+        .where(eq(posTimeclocks.id, existing.id))
+        .returning();
+      return updated;
+    } else {
+      // Insert new
+      const [inserted] = await db
+        .insert(posTimeclocks)
+        .values(timeclockData)
+        .returning();
+      return inserted;
+    }
+  }
+
+  async getPosTimeclocks(integrationId: string): Promise<PosTimeclock[]> {
+    return await db.select().from(posTimeclocks)
+      .where(eq(posTimeclocks.posIntegrationId, integrationId))
+      .orderBy(desc(posTimeclocks.clockInAt));
+  }
+
   // Inventory operations
   async getInventoryItems(locationId?: string): Promise<(InventoryItem & { category?: Category; vendor?: Vendor })[]> {
     let query = db

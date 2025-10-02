@@ -348,7 +348,34 @@ export class PosService {
 
     let count = 0;
     for (const p of punches ?? []) {
-      count++;
+      try {
+        // Find matching POS employee by posEmployeeId
+        const posEmployees = await storage.getPosEmployees(integration.id);
+        const posEmployee = posEmployees.find(emp => emp.posEmployeeId === p.employeeId);
+        
+        if (!posEmployee) {
+          console.warn(`No POS employee found for employeeId: ${p.employeeId}`);
+          continue;
+        }
+
+        const timeclockData = {
+          posIntegrationId: integration.id,
+          posTimeEntryId: p.id,
+          posEmployeeId: posEmployee.id,
+          locationId: integration.locationId,
+          clockInAt: new Date(p.clockInAt),
+          clockOutAt: p.clockOutAt ? new Date(p.clockOutAt) : null,
+          breakSeconds: p.breakSeconds || 0,
+          roleTitle: p.roleTitle || posEmployee.roleTitle,
+          status: p.clockOutAt ? 'closed' : 'open',
+          raw: p,
+        };
+
+        await storage.upsertPosTimeclock(timeclockData);
+        count++;
+      } catch (err) {
+        console.error(`Error processing timeclock entry ${p.id}:`, err);
+      }
     }
     return { punchesProcessed: count };
   }

@@ -9,6 +9,7 @@ const POLL = process.env.SPOTON_POLL_INTERVAL_MINUTES
 export function startSpotOnSchedulers() {
   console.log("Starting SpotOn schedulers...");
 
+  // Poll for orders every minute
   cron.schedule(POLL, async () => {
     const integrations = await storage.getPosIntegrations();
     for (const i of integrations) {
@@ -20,6 +21,22 @@ export function startSpotOnSchedulers() {
         }
       } catch (e) {
         console.error("SpotOn poll failed", { integrationId: i.id, err: String(e) });
+      }
+    }
+  });
+
+  // Poll for time clock entries every minute
+  cron.schedule(POLL, async () => {
+    const integrations = await storage.getPosIntegrations();
+    for (const i of integrations) {
+      if (!i.isActive || i.provider !== "spoton") continue;
+      try {
+        const result = await posService.pollSpotOnTimeclock(i.id);
+        if (result.punchesProcessed > 0) {
+          console.log(`SpotOn timeclock poll: ${result.punchesProcessed} punches processed for integration ${i.id}`);
+        }
+      } catch (e) {
+        console.error("SpotOn timeclock poll failed", { integrationId: i.id, err: String(e) });
       }
     }
   });
