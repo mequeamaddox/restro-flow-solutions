@@ -5,6 +5,7 @@ import { setupVite, serveStatic, log } from "./vite";
 import { securityHeaders, apiLimiter } from "./securityMiddleware";
 import { startSpotOnSchedulers } from "./jobs/spoton.scheduler";
 import { startAnalyticsScheduler } from "./jobs/analyticsScheduler";
+import { startCloverScheduler } from "./jobs/clover.scheduler";
 
 // Global error handlers to prevent crashes
 process.on('uncaughtException', (error) => {
@@ -92,5 +93,6 @@ app.use((req, res, next) => {
     log(`serving on port ${port}`);
     startSpotOnSchedulers();
     startAnalyticsScheduler();
+    startCloverScheduler();
   });
 })();
