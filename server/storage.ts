@@ -2227,18 +2227,58 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getBudgetTracking(locationId?: string): Promise<any> {
-    return {
-      monthlySpend: 28500.00,
-      spendVariance: 8.5,
-      foodCostPercentage: 29.2,
-      categoryBreakdown: [
-        { name: "Proteins", actual: 12000, budget: 11500, variance: 4.3 },
-        { name: "Produce", actual: 6500, budget: 7000, variance: -7.1 },
-        { name: "Dairy", actual: 3200, budget: 3000, variance: 6.7 },
-        { name: "Dry Goods", actual: 4800, budget: 5000, variance: -4.0 },
-        { name: "Beverages", actual: 2000, budget: 2200, variance: -9.1 }
-      ]
-    };
+    try {
+      const now = new Date();
+      const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+      
+      const conditions = [
+        gte(purchaseOrders.orderDate, startOfMonth)
+      ];
+      
+      if (locationId && locationId !== 'all') {
+        conditions.push(eq(purchaseOrders.locationId, locationId));
+      }
+
+      const monthlyOrders = await db
+        .select()
+        .from(purchaseOrders)
+        .where(and(...conditions));
+
+      const monthlySpend = monthlyOrders.reduce((sum, order) => sum + parseFloat(order.total), 0);
+      
+      // Get budget from budgets table if exists
+      const budgets = await db.select().from(budgets);
+      const totalBudget = budgets.reduce((sum, budget) => sum + parseFloat(budget.amount), 0);
+      const spendVariance = totalBudget > 0 ? ((monthlySpend - totalBudget) / totalBudget * 100) : 0;
+
+      const categoryBreakdown: any = {};
+      
+      monthlyOrders.forEach(order => {
+        const items = order.items as any[];
+        items?.forEach((item: any) => {
+          const category = item.category || 'Other';
+          if (!categoryBreakdown[category]) {
+            categoryBreakdown[category] = { name: category, actual: 0, budget: 0, variance: 0 };
+          }
+          categoryBreakdown[category].actual += parseFloat(item.total || 0);
+        });
+      });
+
+      return {
+        monthlySpend,
+        spendVariance: parseFloat(spendVariance.toFixed(1)),
+        foodCostPercentage: 0, // Would need sales data to calculate
+        categoryBreakdown: Object.values(categoryBreakdown)
+      };
+    } catch (error) {
+      console.error('Error fetching budget tracking:', error);
+      return {
+        monthlySpend: 0,
+        spendVariance: 0,
+        foodCostPercentage: 0,
+        categoryBreakdown: []
+      };
+    }
   }
 
   async getDailyPnL(timeRange: string, locationId?: string): Promise<any[]> {
