@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
+import { Link } from "wouter";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -9,6 +10,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { useToast } from "@/hooks/use-toast";
 import { useLocation } from "@/contexts/LocationContext";
 import { apiRequest, queryClient } from "@/lib/queryClient";
@@ -23,7 +25,10 @@ import {
   Activity,
   AlertTriangle,
   CreditCard,
-  Trash2
+  Trash2,
+  ChevronDown,
+  ChevronUp,
+  ExternalLink
 } from "lucide-react";
 
 interface PosIntegration {
@@ -236,6 +241,7 @@ function EmployeeSection({ integration }: { integration: PosIntegration }) {
 export default function PosIntegration() {
   const { toast } = useToast();
   const { currentLocation: selectedLocation } = useLocation();
+  const [expandedSales, setExpandedSales] = useState<Set<string>>(new Set());
   const [newIntegration, setNewIntegration] = useState({
     provider: "spoton" as "spoton" | "clover" | "square" | "toast" | "revel",
     name: "",
@@ -1119,68 +1125,125 @@ export default function PosIntegration() {
                 </div>
               ) : (
                 <div className="space-y-4">
-                  {sales.map((sale: PosSale) => (
-                    <div
-                      key={sale.id}
-                      className="border rounded-lg p-4 space-y-3"
-                      data-testid={`sale-${sale.id}`}
-                    >
-                      <div className="flex items-center justify-between">
-                        <div>
-                          <p className="font-semibold">Order #{sale.posOrderId}</p>
-                          <p className="text-sm text-muted-foreground">
-                            {new Date(sale.orderDate).toLocaleString()}
-                          </p>
-                        </div>
-                        <Badge variant={sale.inventoryProcessed ? "default" : "secondary"}>
-                          {sale.inventoryProcessed ? "Processed" : "Pending"}
-                        </Badge>
-                      </div>
-                      
-                      {sale.items && sale.items.length > 0 && (
-                        <div className="border-t pt-3">
-                          <p className="text-sm font-medium mb-2">Items:</p>
-                          <div className="space-y-1">
-                            {sale.items.map((item, index) => (
-                              <div key={index} className="flex items-center justify-between text-sm">
-                                <span className="text-muted-foreground">
-                                  {item.quantity}x {item.itemName}
-                                </span>
-                                <span className="font-medium">${Number(item.totalPrice).toFixed(2)}</span>
+                  {sales.map((sale: PosSale) => {
+                    const isExpanded = expandedSales.has(sale.id);
+                    return (
+                      <Card
+                        key={sale.id}
+                        className="border rounded-lg"
+                        data-testid={`sale-${sale.id}`}
+                      >
+                        <CardContent className="p-4">
+                          <Collapsible
+                            open={isExpanded}
+                            onOpenChange={() => {
+                              const newExpanded = new Set(expandedSales);
+                              if (isExpanded) {
+                                newExpanded.delete(sale.id);
+                              } else {
+                                newExpanded.add(sale.id);
+                              }
+                              setExpandedSales(newExpanded);
+                            }}
+                          >
+                            <div className="flex items-center justify-between">
+                              <div className="flex-1">
+                                <p className="font-semibold" data-testid={`text-order-${sale.id}`}>
+                                  Order #{sale.posOrderId}
+                                </p>
+                                <p className="text-sm text-muted-foreground" data-testid={`text-date-${sale.id}`}>
+                                  {new Date(sale.orderDate).toLocaleString()}
+                                </p>
                               </div>
-                            ))}
-                          </div>
-                        </div>
-                      )}
+                              <div className="flex items-center gap-2">
+                                <Badge variant={sale.inventoryProcessed ? "default" : "secondary"}>
+                                  {sale.inventoryProcessed ? "Processed" : "Pending"}
+                                </Badge>
+                                <CollapsibleTrigger asChild>
+                                  <Button 
+                                    variant="ghost" 
+                                    size="sm"
+                                    data-testid={`button-expand-${sale.id}`}
+                                  >
+                                    {isExpanded ? (
+                                      <ChevronUp className="h-4 w-4" />
+                                    ) : (
+                                      <ChevronDown className="h-4 w-4" />
+                                    )}
+                                  </Button>
+                                </CollapsibleTrigger>
+                              </div>
+                            </div>
+                            
+                            <CollapsibleContent>
+                              <div className="space-y-3 pt-3 border-t mt-3">
+                                {sale.items && sale.items.length > 0 && (
+                                  <div>
+                                    <p className="text-sm font-medium mb-2">Items:</p>
+                                    <div className="space-y-1 pl-2">
+                                      {sale.items.map((item, index) => (
+                                        <div 
+                                          key={index} 
+                                          className="flex items-center justify-between text-sm"
+                                          data-testid={`item-${sale.id}-${index}`}
+                                        >
+                                          <span className="text-muted-foreground">
+                                            {item.quantity}x {item.itemName}
+                                          </span>
+                                          <span className="font-medium">${Number(item.totalPrice).toFixed(2)}</span>
+                                        </div>
+                                      ))}
+                                    </div>
+                                  </div>
+                                )}
 
-                      <div className="border-t pt-3">
-                        <div className="space-y-1">
-                          {sale.subtotal && (
-                            <div className="flex items-center justify-between text-sm">
-                              <span className="text-muted-foreground">Subtotal</span>
-                              <span>${Number(sale.subtotal).toFixed(2)}</span>
-                            </div>
-                          )}
-                          {sale.tax && (
-                            <div className="flex items-center justify-between text-sm">
-                              <span className="text-muted-foreground">Tax</span>
-                              <span>${Number(sale.tax).toFixed(2)}</span>
-                            </div>
-                          )}
-                          {sale.tip && (
-                            <div className="flex items-center justify-between text-sm">
-                              <span className="text-muted-foreground">Tip</span>
-                              <span>${Number(sale.tip).toFixed(2)}</span>
-                            </div>
-                          )}
-                          <div className="flex items-center justify-between font-semibold pt-1 border-t">
-                            <span>Total</span>
-                            <span>${Number(sale.total).toFixed(2)}</span>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  ))}
+                                <div className="border-t pt-3">
+                                  <div className="space-y-1">
+                                    {sale.subtotal && (
+                                      <div className="flex items-center justify-between text-sm">
+                                        <span className="text-muted-foreground">Subtotal</span>
+                                        <span>${Number(sale.subtotal).toFixed(2)}</span>
+                                      </div>
+                                    )}
+                                    {sale.tax && (
+                                      <div className="flex items-center justify-between text-sm">
+                                        <span className="text-muted-foreground">Tax</span>
+                                        <span>${Number(sale.tax).toFixed(2)}</span>
+                                      </div>
+                                    )}
+                                    {sale.tip && (
+                                      <div className="flex items-center justify-between text-sm">
+                                        <span className="text-muted-foreground">Tip</span>
+                                        <span>${Number(sale.tip).toFixed(2)}</span>
+                                      </div>
+                                    )}
+                                    <div className="flex items-center justify-between font-semibold pt-1 border-t">
+                                      <span>Total</span>
+                                      <span>${Number(sale.total).toFixed(2)}</span>
+                                    </div>
+                                  </div>
+                                </div>
+
+                                <div className="pt-2">
+                                  <Link href="/analytics">
+                                    <Button 
+                                      variant="outline" 
+                                      size="sm" 
+                                      className="w-full"
+                                      data-testid={`button-view-analytics-${sale.id}`}
+                                    >
+                                      <ExternalLink className="h-4 w-4 mr-2" />
+                                      View Detailed Analytics
+                                    </Button>
+                                  </Link>
+                                </div>
+                              </div>
+                            </CollapsibleContent>
+                          </Collapsible>
+                        </CardContent>
+                      </Card>
+                    );
+                  })}
                 </div>
               )}
             </CardContent>
