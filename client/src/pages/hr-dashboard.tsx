@@ -84,7 +84,8 @@ export default function HRDashboard() {
   }, 0);
 
   const avgHourlyRate = analytics?.avgHourlyRate ?? 15.50;
-  const estimatedWeeklyLabor = weeklyHours * avgHourlyRate;
+  const estimatedWeeklyLabor = analytics?.estimatedWeeklyLabor ?? (weeklyHours * avgHourlyRate);
+  const activeEmployeesCount = analytics?.activeEmployees ?? employees.filter((e: any) => e.status === 'active').length;
 
   // Show upgrade prompt if HR access is not enabled for this location
   if (!hasHRAccess) {
@@ -191,11 +192,6 @@ export default function HRDashboard() {
           <CardContent>
             <div className="text-3xl font-bold">{weeklyHours.toFixed(1)}</div>
             <p className="text-sm text-gray-600 mt-1">Total scheduled hours this week</p>
-            <div className="flex items-center gap-2 mt-2">
-              <Badge variant="outline">
-                {(weeklyHours / employees.length).toFixed(1)} hrs/employee
-              </Badge>
-            </div>
           </CardContent>
         </Card>
 
@@ -208,12 +204,6 @@ export default function HRDashboard() {
           </CardHeader>
           <CardContent>
             <div className="text-3xl font-bold">${estimatedWeeklyLabor.toFixed(0)}</div>
-            <p className="text-sm text-gray-600 mt-1">Based on avg rate ${avgHourlyRate.toFixed(2)}/hr</p>
-            <div className="flex items-center gap-2 mt-2">
-              <Badge variant="outline" className="text-green-600">
-                ~{((estimatedWeeklyLabor / (weeklyHours || 1)) * 100 / 25).toFixed(1)}% of target
-              </Badge>
-            </div>
           </CardContent>
         </Card>
 

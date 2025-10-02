@@ -8,7 +8,8 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Users, UserPlus, Search, Filter, Mail, Phone, MapPin, User, Edit, Trash2 } from "lucide-react";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { Users, UserPlus, Search, Filter, Mail, Phone, MapPin, User, Edit, Trash2, MoreVertical, UserX, Ban } from "lucide-react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
@@ -111,6 +112,21 @@ export default function HREmployees() {
     },
     onError: () => {
       toast({ title: "Error", description: "Failed to delete employee", variant: "destructive" });
+    },
+  });
+
+  const updateStatusMutation = useMutation({
+    mutationFn: async ({ id, status }: { id: string; status: 'active' | 'inactive' | 'terminated' }) => {
+      return await apiRequest('PUT', `/api/hr/employees/${id}`, { status });
+    },
+    onSuccess: (_, variables) => {
+      const statusLabels = { active: 'Active', inactive: 'Inactive', terminated: 'Terminated' };
+      toast({ title: "Success", description: `Employee marked as ${statusLabels[variables.status]}` });
+      queryClient.invalidateQueries({ queryKey: ['/api/hr/employees'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/hr/analytics'] });
+    },
+    onError: () => {
+      toast({ title: "Error", description: "Failed to update employee status", variant: "destructive" });
     },
   });
 
@@ -520,19 +536,58 @@ export default function HREmployees() {
                       Edit
                     </Button>
                     
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="text-red-600 hover:text-red-700 hover:bg-red-50"
-                      onClick={() => {
-                        if (window.confirm(`Are you sure you want to delete ${employee.firstName} ${employee.lastName}? This action cannot be undone.`)) {
-                          deleteEmployeeMutation.mutate(employee.id);
-                        }
-                      }}
-                      data-testid={`delete-employee-${employee.id}`}
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </Button>
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          data-testid={`actions-menu-${employee.id}`}
+                        >
+                          <MoreVertical className="w-4 h-4" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        {employee.status !== 'inactive' && (
+                          <DropdownMenuItem
+                            onClick={() => updateStatusMutation.mutate({ id: employee.id, status: 'inactive' })}
+                            data-testid={`mark-inactive-${employee.id}`}
+                          >
+                            <Ban className="w-4 h-4 mr-2" />
+                            Mark Inactive
+                          </DropdownMenuItem>
+                        )}
+                        {employee.status !== 'terminated' && (
+                          <DropdownMenuItem
+                            onClick={() => updateStatusMutation.mutate({ id: employee.id, status: 'terminated' })}
+                            data-testid={`mark-terminated-${employee.id}`}
+                          >
+                            <UserX className="w-4 h-4 mr-2" />
+                            Mark Terminated
+                          </DropdownMenuItem>
+                        )}
+                        {employee.status !== 'active' && (
+                          <DropdownMenuItem
+                            onClick={() => updateStatusMutation.mutate({ id: employee.id, status: 'active' })}
+                            data-testid={`mark-active-${employee.id}`}
+                          >
+                            <User className="w-4 h-4 mr-2" />
+                            Mark Active
+                          </DropdownMenuItem>
+                        )}
+                        <DropdownMenuItem
+                          className="text-red-600"
+                          onClick={() => {
+                            if (window.confirm(`Are you sure you want to delete ${employee.firstName} ${employee.lastName}? This action cannot be undone.`)) {
+                              deleteEmployeeMutation.mutate(employee.id);
+                            }
+                          }}
+                          data-testid={`delete-employee-${employee.id}`}
+                        >
+                          <Trash2 className="w-4 h-4 mr-2" />
+                          Delete
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
                   </>
                 )}
               </div>
