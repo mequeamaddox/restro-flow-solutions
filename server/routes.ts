@@ -3008,6 +3008,38 @@ print(json.dumps(rows))
     }
   });
 
+  app.post("/api/pos-employees/sync-shifts/:integrationId", isAuthenticated, async (req, res) => {
+    try {
+      const { integrationId } = req.params;
+      const { daysBack = 7 } = req.body;
+      
+      const integration = await storage.getPosIntegration(integrationId);
+      
+      if (!integration) {
+        return res.status(404).json({ message: "Integration not found" });
+      }
+
+      let syncedCount = 0;
+      if (integration.provider === 'clover') {
+        syncedCount = await cloverService.syncShifts(integrationId, daysBack);
+      } else {
+        return res.status(400).json({ message: `Shift sync not supported for provider: ${integration.provider}` });
+      }
+
+      res.json({ 
+        message: `Successfully synced ${syncedCount} shifts from the last ${daysBack} days`,
+        syncedCount,
+        daysBack
+      });
+    } catch (error) {
+      console.error("Error syncing shifts:", error);
+      res.status(500).json({ 
+        message: "Failed to sync shifts",
+        error: error instanceof Error ? error.message : 'Unknown error'
+      });
+    }
+  });
+
   // Analytics routes
   app.get('/api/analytics/alerts', isAuthenticated, async (req: any, res) => {
     try {
