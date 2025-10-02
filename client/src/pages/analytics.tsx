@@ -169,20 +169,20 @@ export default function Analytics() {
   }, []);
 
   // Fetch real-time sales data from POS integrations
-  const { data: realTimeData, isLoading: realTimeLoading } = useQuery<RealTimeData>({
+  const { data: realTimeData } = useQuery<RealTimeData>({
     queryKey: ['/api/analytics/realtime', currentLocation?.id],
     enabled: !!currentLocation,
     refetchInterval: 30000, // Refresh every 30 seconds
   });
 
   // Fetch sales trend data
-  const { data: salesTrendData = [], isLoading: salesTrendLoading } = useQuery({
+  const { data: salesTrendData = [] } = useQuery({
     queryKey: ['/api/analytics/sales-trend', currentLocation?.id, timeRange],
     enabled: !!currentLocation,
   });
 
   // Fetch inventory alerts (low stock items)
-  const { data: lowStockItems = [], isLoading: inventoryAlertsLoading } = useQuery({
+  const { data: lowStockItems = [] } = useQuery({
     queryKey: ['/api/inventory/low-stock', currentLocation?.id],
     enabled: !!currentLocation,
   });
@@ -198,7 +198,7 @@ export default function Analytics() {
   }));
 
   // Fetch waste data
-  const { data: wasteData = [], isLoading: wasteLoading } = useQuery<WasteData[]>({
+  const { data: wasteData = [] } = useQuery<WasteData[]>({
     queryKey: ['/api/waste/summary', currentLocation?.id, timeRange],
     enabled: !!currentLocation,
   });
@@ -218,7 +218,7 @@ export default function Analytics() {
   });
 
   // Fetch business intelligence data
-  const { data: biData, isLoading: biLoading } = useQuery<BusinessIntelligence | null>({
+  const { data: biData } = useQuery<BusinessIntelligence | null>({
     queryKey: ["/api/analytics/business-intelligence", currentLocation?.id, selectedPeriod],
     queryFn: async () => {
       const response = await fetch(`/api/analytics/business-intelligence?locationId=${currentLocation?.id}&period=${selectedPeriod}`);
