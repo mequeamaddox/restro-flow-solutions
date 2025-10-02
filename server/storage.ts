@@ -2707,17 +2707,17 @@ export class DatabaseStorage implements IStorage {
 
   // HR Shift operations
   async getShifts(locationId?: string): Promise<(Shift & { employee?: Employee })[]> {
-    const baseQuery = db.select({
+    const query = db.select({
       shift: shifts,
       employee: employees,
     })
     .from(shifts)
     .leftJoin(employees, eq(shifts.employeeId, employees.id));
     
-    // Filter by location if provided
+    // Filter by location if provided and order by startTime
     const result = locationId
-      ? await baseQuery.where(eq(shifts.locationId, locationId)).orderBy(shifts.startTime)
-      : await baseQuery.orderBy(shifts.startTime);
+      ? await query.where(eq(shifts.locationId, locationId))
+      : await query;
     
     return result.map(r => ({ ...r.shift, employee: r.employee || undefined }));
   }
@@ -2759,7 +2759,7 @@ export class DatabaseStorage implements IStorage {
 
   // HR Task operations
   async getTasks(locationId?: string): Promise<(Task & { assignedEmployee?: Employee })[]> {
-    const baseQuery = db.select({
+    const query = db.select({
       task: tasks,
       assignedEmployee: employees,
     })
@@ -2768,8 +2768,8 @@ export class DatabaseStorage implements IStorage {
     
     // Filter by location if provided
     const result = locationId
-      ? await baseQuery.where(eq(tasks.locationId, locationId)).orderBy(tasks.dueDate)
-      : await baseQuery.orderBy(tasks.dueDate);
+      ? await query.where(eq(tasks.locationId, locationId))
+      : await query;
     
     return result.map(r => ({ ...r.task, assignedEmployee: r.assignedEmployee || undefined }));
   }
@@ -3275,29 +3275,34 @@ export class DatabaseStorage implements IStorage {
       sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
       
       // Get all time entries (both regular and POS) from the past week
-      let weeklyTimeEntriesQuery = db.select().from(timeEntries)
-        .where(gte(timeEntries.clockInTime, sevenDaysAgo));
-      
-      if (locationId && employeeIds.length > 0) {
-        weeklyTimeEntriesQuery = weeklyTimeEntriesQuery.where(inArray(timeEntries.employeeId, employeeIds));
-      }
-      
-      const weeklyTimeEntries = await weeklyTimeEntriesQuery;
+      const weeklyTimeEntries = locationId && employeeIds.length > 0
+        ? await db.select().from(timeEntries)
+            .where(
+              and(
+                gte(timeEntries.clockInTime, sevenDaysAgo),
+                inArray(timeEntries.employeeId, employeeIds)
+              )
+            )
+        : await db.select().from(timeEntries)
+            .where(gte(timeEntries.clockInTime, sevenDaysAgo));
       
       // Get POS time entries from the past week (only completed entries with clockOutAt)
-      let weeklyPosTimeEntriesQuery = db.select().from(posTimeclocks)
-        .where(
-          and(
-            gte(posTimeclocks.clockInAt, sevenDaysAgo),
-            isNotNull(posTimeclocks.clockOutAt)
-          )
-        );
-      
-      if (locationId) {
-        weeklyPosTimeEntriesQuery = weeklyPosTimeEntriesQuery.where(eq(posTimeclocks.locationId, locationId));
-      }
-      
-      const weeklyPosTimeEntries = await weeklyPosTimeEntriesQuery;
+      const weeklyPosTimeEntries = locationId
+        ? await db.select().from(posTimeclocks)
+            .where(
+              and(
+                gte(posTimeclocks.clockInAt, sevenDaysAgo),
+                isNotNull(posTimeclocks.clockOutAt),
+                eq(posTimeclocks.locationId, locationId)
+              )
+            )
+        : await db.select().from(posTimeclocks)
+            .where(
+              and(
+                gte(posTimeclocks.clockInAt, sevenDaysAgo),
+                isNotNull(posTimeclocks.clockOutAt)
+              )
+            );
       
       // Calculate total hours from regular time entries (only completed entries)
       const regularHours = weeklyTimeEntries.reduce((total, entry: any) => {
@@ -3317,12 +3322,7 @@ export class DatabaseStorage implements IStorage {
         return total;
       }, 0);
       
-      console.log('🕐 Weekly Hours Calculation:');
-      console.log('  Manual time entries:', weeklyTimeEntries.length, 'entries,', regularHours.toFixed(2), 'hours');
-      console.log('  POS time entries:', weeklyPosTimeEntries.length, 'entries,', posHours.toFixed(2), 'hours');
-      
       const totalWeeklyHours = regularHours + posHours;
-      console.log('  TOTAL Weekly Hours:', totalWeeklyHours.toFixed(2));
       
       // Calculate average hourly rate from employees
       const employeesWithWage = employees.filter((emp: any) => emp.hourlyWage > 0);
