@@ -96,27 +96,6 @@ export default function HRDashboard() {
       <div className="mb-8">
         <h1 className="text-3xl font-bold mb-2">Employee Management</h1>
         <p className="text-gray-600">Comprehensive HR system for managing your restaurant team</p>
-        <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-lg p-4 mt-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <div className="bg-blue-500 text-white px-2 py-1 rounded text-xs font-semibold">ADD-ON</div>
-              <span className="text-blue-700 font-medium">Employee Management System Active</span>
-            </div>
-            <div className="flex items-center gap-4 text-sm">
-              <div className="flex items-center gap-1">
-                <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
-                <span className="text-green-700">{analytics?.activeEmployees || employees.filter((emp: any) => emp.status === 'active').length} Active Staff</span>
-              </div>
-              <div className="flex items-center gap-1">
-                <div className="w-2 h-2 bg-blue-500 rounded-full animate-pulse"></div>
-                <span className="text-blue-700">{currentlyWorking} Working Now</span>
-              </div>
-            </div>
-          </div>
-          <p className="text-blue-600 text-sm mt-1">
-            Includes: Employee Directory, Scheduling, Time Clock, Task Management, Team Messaging & Payroll
-          </p>
-        </div>
       </div>
 
       {/* Key Metrics */}

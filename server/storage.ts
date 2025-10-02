@@ -3332,13 +3332,36 @@ export class DatabaseStorage implements IStorage {
       
       const totalWeeklyHours = regularHours + posHours;
       
-      // Calculate average hourly rate from employees
+      // Calculate actual labor cost based on individual employee hours and rates (not averages)
+      let estimatedWeeklyLabor = 0;
+      
+      // Calculate cost from manual time entries
+      for (const entry of weeklyTimeEntries) {
+        if (entry.clockOutTime) {
+          const employee = employees.find((emp: any) => emp.id === entry.employeeId);
+          if (employee && employee.hourlyRate) {
+            const hours = (new Date(entry.clockOutTime).getTime() - new Date(entry.clockInTime).getTime()) / (1000 * 60 * 60);
+            estimatedWeeklyLabor += hours * employee.hourlyRate;
+          }
+        }
+      }
+      
+      // Calculate cost from POS time entries
+      for (const entry of weeklyPosTimeEntries) {
+        if (entry.clockOutAt && entry.employeeId) {
+          const employee = employees.find((emp: any) => emp.id === entry.employeeId);
+          if (employee && employee.hourlyRate) {
+            const hours = (new Date(entry.clockOutAt).getTime() - new Date(entry.clockInAt).getTime()) / (1000 * 60 * 60);
+            estimatedWeeklyLabor += hours * employee.hourlyRate;
+          }
+        }
+      }
+      
+      // Calculate average rate for display purposes only
       const employeesWithWage = employees.filter((emp: any) => emp.hourlyRate && emp.hourlyRate > 0);
       const avgHourlyRate = employeesWithWage.length > 0
         ? employeesWithWage.reduce((sum: number, emp: any) => sum + (emp.hourlyRate || 0), 0) / employeesWithWage.length
-        : 15.50; // Default if no wage data
-      
-      const estimatedWeeklyLabor = totalWeeklyHours * avgHourlyRate;
+        : 0;
       
       // Calculate task completion rate properly
       const completedTasks = allTasks.filter((task: any) => task.status === 'completed').length;
