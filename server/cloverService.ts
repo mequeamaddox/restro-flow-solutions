@@ -112,7 +112,9 @@ export class CloverService {
         throw new Error(`Clover API error: ${response.status} ${response.statusText}`);
       }
 
-      return await response.json();
+      const orderData = await response.json();
+      console.log('🔍 RAW Clover Order Data:', JSON.stringify(orderData, null, 2));
+      return orderData;
     } catch (error) {
       console.error('Error fetching order from Clover:', error);
       return null;
@@ -147,9 +149,18 @@ export class CloverService {
       const sale = await storage.createPosSale(saleData);
 
       // Process each line item
-      for (const lineItem of orderData.lineItems) {
+      console.log('🔍 Order line items:', JSON.stringify(orderData.lineItems, null, 2));
+      console.log('📊 Line items count:', orderData.lineItems?.length || 0);
+      
+      if (!orderData.lineItems || orderData.lineItems.length === 0) {
+        console.warn('⚠️ No line items found in order:', orderData.id);
+      }
+      
+      for (const lineItem of orderData.lineItems || []) {
         const unitPrice = (lineItem.price / 100);
         const quantity = lineItem.quantity || 1;
+        
+        console.log(`📝 Creating sale item: ${lineItem.name} x${quantity} @ $${unitPrice}`);
         
         // Create sale item record
         const saleItemData: InsertPosSaleItem = {
@@ -161,6 +172,7 @@ export class CloverService {
         };
 
         await storage.createPosSaleItem(saleItemData);
+        console.log(`✅ Sale item created for: ${lineItem.name}`);
       }
 
       // Use the new recipe-based inventory deduction system
@@ -279,6 +291,9 @@ export class CloverService {
       const orders = data.elements || [];
 
       console.log(`Found ${orders.length} orders from Clover`);
+      if (orders.length > 0) {
+        console.log('🔍 First order sample:', JSON.stringify(orders[0], null, 2));
+      }
 
       let newCount = 0;
       let existingCount = 0;
