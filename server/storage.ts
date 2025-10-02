@@ -2589,14 +2589,9 @@ export class DatabaseStorage implements IStorage {
     .leftJoin(departments, eq(employees.departmentId, departments.id))
     .leftJoin(positions, eq(employees.positionId, positions.id));
 
-    // Filter by location if provided (through department OR employees without a department)
+    // Filter by location if provided using direct employee location assignment
     if (locationId) {
-      query = query.where(
-        or(
-          eq(departments.locationId, locationId),
-          isNull(employees.departmentId)
-        )
-      );
+      query = query.where(eq(employees.locationId, locationId));
     }
     
     const result = await query.orderBy(employees.lastName, employees.firstName);
