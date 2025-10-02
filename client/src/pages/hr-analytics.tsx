@@ -74,15 +74,23 @@ export default function HRAnalytics() {
   const weeklyLaborCost = weeklyHours * avgHourlyRate;
   const monthlyLaborCost = weeklyLaborCost * 4.33;
 
-  // Mock payroll tax data - in real app, this would be calculated from payroll periods
-  const mockPayrollTaxData = {
-    monthlyGrossPay: 12500,
-    socialSecurityMatch: 775, // 6.2%
-    medicareMatch: 181.25, // 1.45%
-    suta: 337.50, // 2.7%
-    futa: 42, // 0.6% on first $7,000 per employee
-    workersComp: 62.50, // 0.5%
-    totalEmployerTaxes: 1398.25
+  // Calculate real payroll tax data based on actual labor costs
+  const monthlyGrossPay = monthlyLaborCost;
+  const socialSecurityMatch = monthlyGrossPay * 0.062; // 6.2%
+  const medicareMatch = monthlyGrossPay * 0.0145; // 1.45%
+  const suta = monthlyGrossPay * 0.027; // 2.7% (state average)
+  const futa = Math.min(totalEmployees * 7000 * 0.006 / 12, monthlyGrossPay * 0.006); // 0.6% on first $7,000 per employee annually
+  const workersComp = monthlyGrossPay * 0.005; // 0.5% (industry average)
+  const totalEmployerTaxes = socialSecurityMatch + medicareMatch + suta + futa + workersComp;
+  
+  const payrollTaxData = {
+    monthlyGrossPay,
+    socialSecurityMatch,
+    medicareMatch,
+    suta,
+    futa,
+    workersComp,
+    totalEmployerTaxes
   };
 
   return (
@@ -358,7 +366,7 @@ export default function HRAnalytics() {
               <Calculator className="h-4 w-4 text-red-600" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold text-red-800">${mockPayrollTaxData.socialSecurityMatch.toFixed(2)}</div>
+              <div className="text-2xl font-bold text-red-800">${payrollTaxData.socialSecurityMatch.toFixed(2)}</div>
               <p className="text-xs text-red-600">6.2% of gross pay</p>
             </CardContent>
           </Card>
@@ -369,7 +377,7 @@ export default function HRAnalytics() {
               <Calculator className="h-4 w-4 text-red-600" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold text-red-800">${mockPayrollTaxData.medicareMatch.toFixed(2)}</div>
+              <div className="text-2xl font-bold text-red-800">${payrollTaxData.medicareMatch.toFixed(2)}</div>
               <p className="text-xs text-red-600">1.45% of gross pay</p>
             </CardContent>
           </Card>
@@ -380,7 +388,7 @@ export default function HRAnalytics() {
               <Calculator className="h-4 w-4 text-yellow-600" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold text-yellow-800">${mockPayrollTaxData.suta.toFixed(2)}</div>
+              <div className="text-2xl font-bold text-yellow-800">${payrollTaxData.suta.toFixed(2)}</div>
               <p className="text-xs text-yellow-600">2.7% state unemployment</p>
             </CardContent>
           </Card>
@@ -391,7 +399,7 @@ export default function HRAnalytics() {
               <Calculator className="h-4 w-4 text-orange-600" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold text-orange-800">${mockPayrollTaxData.workersComp.toFixed(2)}</div>
+              <div className="text-2xl font-bold text-orange-800">${payrollTaxData.workersComp.toFixed(2)}</div>
               <p className="text-xs text-orange-600">0.5% of gross pay</p>
             </CardContent>
           </Card>
@@ -411,39 +419,39 @@ export default function HRAnalytics() {
               <div className="space-y-4">
                 <div className="flex justify-between items-center">
                   <span className="text-sm font-medium">Gross Payroll</span>
-                  <span className="font-semibold">${mockPayrollTaxData.monthlyGrossPay.toFixed(2)}</span>
+                  <span className="font-semibold">${payrollTaxData.monthlyGrossPay.toFixed(2)}</span>
                 </div>
                 <div className="space-y-2 pl-4 border-l-2 border-red-200">
                   <div className="flex justify-between items-center text-sm">
                     <span className="text-red-700">Social Security Match (6.2%)</span>
-                    <span className="text-red-800 font-medium">${mockPayrollTaxData.socialSecurityMatch.toFixed(2)}</span>
+                    <span className="text-red-800 font-medium">${payrollTaxData.socialSecurityMatch.toFixed(2)}</span>
                   </div>
                   <div className="flex justify-between items-center text-sm">
                     <span className="text-red-700">Medicare Match (1.45%)</span>
-                    <span className="text-red-800 font-medium">${mockPayrollTaxData.medicareMatch.toFixed(2)}</span>
+                    <span className="text-red-800 font-medium">${payrollTaxData.medicareMatch.toFixed(2)}</span>
                   </div>
                   <div className="flex justify-between items-center text-sm">
                     <span className="text-yellow-700">SUTA Tax (2.7%)</span>
-                    <span className="text-yellow-800 font-medium">${mockPayrollTaxData.suta.toFixed(2)}</span>
+                    <span className="text-yellow-800 font-medium">${payrollTaxData.suta.toFixed(2)}</span>
                   </div>
                   <div className="flex justify-between items-center text-sm">
                     <span className="text-blue-700">FUTA Tax (0.6%)</span>
-                    <span className="text-blue-800 font-medium">${mockPayrollTaxData.futa.toFixed(2)}</span>
+                    <span className="text-blue-800 font-medium">${payrollTaxData.futa.toFixed(2)}</span>
                   </div>
                   <div className="flex justify-between items-center text-sm">
                     <span className="text-orange-700">Workers' Comp (0.5%)</span>
-                    <span className="text-orange-800 font-medium">${mockPayrollTaxData.workersComp.toFixed(2)}</span>
+                    <span className="text-orange-800 font-medium">${payrollTaxData.workersComp.toFixed(2)}</span>
                   </div>
                 </div>
                 <div className="pt-3 border-t border-gray-200">
                   <div className="flex justify-between items-center">
                     <span className="font-semibold text-gray-800">Total Employer Taxes</span>
-                    <span className="text-xl font-bold text-red-900">${mockPayrollTaxData.totalEmployerTaxes.toFixed(2)}</span>
+                    <span className="text-xl font-bold text-red-900">${payrollTaxData.totalEmployerTaxes.toFixed(2)}</span>
                   </div>
                   <div className="flex justify-between items-center mt-2 pt-2 border-t">
                     <span className="font-bold text-gray-900">TOTAL PAYROLL COST</span>
                     <span className="text-xl font-bold text-gray-900">
-                      ${(mockPayrollTaxData.monthlyGrossPay + mockPayrollTaxData.totalEmployerTaxes).toFixed(2)}
+                      ${(payrollTaxData.monthlyGrossPay + payrollTaxData.totalEmployerTaxes).toFixed(2)}
                     </span>
                   </div>
                 </div>
@@ -465,7 +473,7 @@ export default function HRAnalytics() {
                   <div className="flex justify-between items-center mb-2">
                     <span className="text-sm font-medium">Effective Employer Tax Rate</span>
                     <span className="font-bold text-red-600">
-                      {((mockPayrollTaxData.totalEmployerTaxes / mockPayrollTaxData.monthlyGrossPay) * 100).toFixed(2)}%
+                      {((payrollTaxData.totalEmployerTaxes / payrollTaxData.monthlyGrossPay) * 100).toFixed(2)}%
                     </span>
                   </div>
                   <div className="text-xs text-gray-600">

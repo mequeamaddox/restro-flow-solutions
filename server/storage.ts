@@ -3267,6 +3267,58 @@ export class DatabaseStorage implements IStorage {
       // Calculate analytics safely
       const today = new Date().toISOString().split('T')[0];
       
+      // Calculate actual weekly hours from time entries
+      const sevenDaysAgo = new Date();
+      sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+      
+      // Get all time entries (both regular and POS) from the past week
+      let weeklyTimeEntriesQuery = db.select().from(timeEntries)
+        .where(gte(timeEntries.clockInTime, sevenDaysAgo));
+      
+      if (locationId && employeeIds.length > 0) {
+        weeklyTimeEntriesQuery = weeklyTimeEntriesQuery.where(inArray(timeEntries.employeeId, employeeIds));
+      }
+      
+      const weeklyTimeEntries = await weeklyTimeEntriesQuery;
+      
+      // Get POS time entries from the past week
+      let weeklyPosTimeEntriesQuery = db.select().from(posTimeclocks)
+        .where(gte(posTimeclocks.clockInTime, sevenDaysAgo));
+      
+      if (locationId) {
+        weeklyPosTimeEntriesQuery = weeklyPosTimeEntriesQuery.where(eq(posTimeclocks.locationId, locationId));
+      }
+      
+      const weeklyPosTimeEntries = await weeklyPosTimeEntriesQuery;
+      
+      // Calculate total hours from regular time entries
+      const regularHours = weeklyTimeEntries.reduce((total, entry: any) => {
+        if (entry.clockOutTime) {
+          const hours = (new Date(entry.clockOutTime).getTime() - new Date(entry.clockInTime).getTime()) / (1000 * 60 * 60);
+          return total + hours;
+        }
+        return total;
+      }, 0);
+      
+      // Calculate total hours from POS time entries
+      const posHours = weeklyPosTimeEntries.reduce((total, entry: any) => {
+        if (entry.clockOutTime) {
+          const hours = (new Date(entry.clockOutTime).getTime() - new Date(entry.clockInTime).getTime()) / (1000 * 60 * 60);
+          return total + hours;
+        }
+        return total;
+      }, 0);
+      
+      const totalWeeklyHours = regularHours + posHours;
+      
+      // Calculate average hourly rate from employees
+      const employeesWithWage = employees.filter((emp: any) => emp.hourlyWage > 0);
+      const avgHourlyRate = employeesWithWage.length > 0
+        ? employeesWithWage.reduce((sum: number, emp: any) => sum + (emp.hourlyWage || 0), 0) / employeesWithWage.length
+        : 15.50; // Default if no wage data
+      
+      const estimatedWeeklyLabor = totalWeeklyHours * avgHourlyRate;
+      
       const analytics = {
         // Basic counts (now location-filtered)
         totalEmployees: employees.length,
@@ -3284,17 +3336,17 @@ export class DatabaseStorage implements IStorage {
         pendingTimeOff: 0,
         approvedTimeOff: 0,
         
-        // Weekly analytics (simplified)
+        // Weekly analytics (now calculated from actual data)
         weeklyShifts: allShifts.length,
-        totalWeeklyHours: 320, // Placeholder calculation
+        totalWeeklyHours: Math.round(totalWeeklyHours * 100) / 100,
         
         // Performance metrics
         taskCompletionRate: allTasks.length > 0 ? 
           ((allTasks.length - allTasks.filter((task: any) => task.status !== 'completed').length) / allTasks.length) * 100 : 85,
         
-        // Labor cost estimates  
-        avgHourlyRate: 15.50,
-        estimatedWeeklyLabor: 320 * 15.50,
+        // Labor cost (now calculated from actual data)
+        avgHourlyRate: Math.round(avgHourlyRate * 100) / 100,
+        estimatedWeeklyLabor: Math.round(estimatedWeeklyLabor * 100) / 100,
         
         // Recent activity
         recentMessages: allMessages.slice(0, 5),
