@@ -39,6 +39,8 @@ interface TimeEntry {
   status: 'clocked-in' | 'clocked-out' | 'on-break';
   notes?: string;
   employee?: Employee;
+  source?: 'manual' | 'pos';
+  posProvider?: string;
 }
 
 export default function HRTimeClock() {
@@ -373,7 +375,14 @@ export default function HRTimeClock() {
                         <AvatarFallback>{getInitials(employee.firstName, employee.lastName)}</AvatarFallback>
                       </Avatar>
                       <div>
-                        <p className="font-medium text-white">{employee.firstName} {employee.lastName}</p>
+                        <div className="flex items-center gap-2">
+                          <p className="font-medium text-white">{employee.firstName} {employee.lastName}</p>
+                          {entry.source === 'pos' && entry.posProvider && (
+                            <Badge variant="outline" className="text-xs bg-blue-900/30 text-blue-300 border-blue-600">
+                              {entry.posProvider.toUpperCase()}
+                            </Badge>
+                          )}
+                        </div>
                         <p className="text-sm text-slate-400">{employee.position?.title}</p>
                         <p className="text-xs text-slate-500">
                           Started: {new Date(entry.clockInTime).toLocaleTimeString()}
@@ -388,15 +397,21 @@ export default function HRTimeClock() {
                       <p className="text-sm text-slate-400 mt-1">
                         {formatDuration(entry.clockInTime)}
                       </p>
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        className="mt-2"
-                        onClick={() => clockOutMutation.mutate(entry.id)}
-                        disabled={clockOutMutation.isPending}
-                      >
-                        Clock Out
-                      </Button>
+                      {entry.source === 'manual' ? (
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="mt-2"
+                          onClick={() => clockOutMutation.mutate(entry.id)}
+                          disabled={clockOutMutation.isPending}
+                        >
+                          Clock Out
+                        </Button>
+                      ) : (
+                        <Badge variant="outline" className="mt-2 text-xs">
+                          POS Synced
+                        </Badge>
+                      )}
                     </div>
                   </div>
                 );
@@ -575,8 +590,15 @@ export default function HRTimeClock() {
                           {getInitials(employee.firstName, employee.lastName)}
                         </AvatarFallback>
                       </Avatar>
-                      <div>
-                        <p className="font-medium text-sm">{employee.firstName} {employee.lastName}</p>
+                      <div className="flex-1">
+                        <div className="flex items-center gap-2">
+                          <p className="font-medium text-sm">{employee.firstName} {employee.lastName}</p>
+                          {entry.source === 'pos' && entry.posProvider && (
+                            <Badge variant="outline" className="text-xs bg-blue-900/30 text-blue-300 border-blue-600">
+                              {entry.posProvider.toUpperCase()}
+                            </Badge>
+                          )}
+                        </div>
                         <p className="text-xs text-gray-500">{employee.position?.title}</p>
                       </div>
                     </div>
@@ -611,24 +633,32 @@ export default function HRTimeClock() {
                     
                     {/* Manager Controls */}
                     <div className="mt-3 flex gap-2">
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={() => handleEditEntry(entry)}
-                        data-testid={`button-edit-${entry.id}`}
-                      >
-                        <Edit className="h-3 w-3 mr-1" />
-                        Edit
-                      </Button>
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={() => handleDeleteEntry(entry.id)}
-                        data-testid={`button-delete-${entry.id}`}
-                      >
-                        <Trash2 className="h-3 w-3 mr-1" />
-                        Delete
-                      </Button>
+                      {entry.source === 'manual' ? (
+                        <>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => handleEditEntry(entry)}
+                            data-testid={`button-edit-${entry.id}`}
+                          >
+                            <Edit className="h-3 w-3 mr-1" />
+                            Edit
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => handleDeleteEntry(entry.id)}
+                            data-testid={`button-delete-${entry.id}`}
+                          >
+                            <Trash2 className="h-3 w-3 mr-1" />
+                            Delete
+                          </Button>
+                        </>
+                      ) : (
+                        <Badge variant="outline" className="text-xs">
+                          POS Synced - Read Only
+                        </Badge>
+                      )}
                     </div>
                   </div>
                 );
