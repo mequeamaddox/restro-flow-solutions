@@ -765,7 +765,7 @@ export default function Analytics() {
                   {formatCurrency(biData?.totalRevenue || 0)}
                 </div>
                 <p className="text-xs text-muted-foreground">
-                  +20.1% from last period
+                  {selectedPeriod === 'today' ? 'Today' : selectedPeriod === 'week' ? 'This Week' : selectedPeriod === 'month' ? 'This Month' : 'This Quarter'}
                 </p>
               </CardContent>
             </Card>
@@ -795,7 +795,7 @@ export default function Analytics() {
                   {formatCurrency(biData?.avgOrderValue || 0)}
                 </div>
                 <p className="text-xs text-muted-foreground">
-                  +5.2% from last period
+                  {selectedPeriod === 'today' ? 'Today' : selectedPeriod === 'week' ? 'This Week' : selectedPeriod === 'month' ? 'This Month' : 'This Quarter'}
                 </p>
               </CardContent>
             </Card>
@@ -810,7 +810,7 @@ export default function Analytics() {
                   {biData?.customerCount || 0}
                 </div>
                 <p className="text-xs text-muted-foreground">
-                  +12% from last period
+                  {selectedPeriod === 'today' ? 'Today' : selectedPeriod === 'week' ? 'This Week' : selectedPeriod === 'month' ? 'This Month' : 'This Quarter'}
                 </p>
               </CardContent>
             </Card>

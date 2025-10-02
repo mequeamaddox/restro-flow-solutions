@@ -3029,21 +3029,57 @@ print(json.dumps(rows))
       const locationId = req.query.locationId;
       const period = req.query.period || 'today';
       
-      let dateCondition = sql`DATE(report_date) = CURRENT_DATE`;
-      if (period === 'week') {
-        dateCondition = sql`report_date >= CURRENT_DATE - INTERVAL '7 days'`;
+      let dateFilter;
+      if (period === 'today') {
+        dateFilter = sql`DATE(${posSales.orderDate}) = CURRENT_DATE`;
+      } else if (period === 'week') {
+        dateFilter = sql`${posSales.orderDate} >= CURRENT_DATE - INTERVAL '7 days'`;
       } else if (period === 'month') {
-        dateCondition = sql`report_date >= CURRENT_DATE - INTERVAL '30 days'`;
+        dateFilter = sql`${posSales.orderDate} >= CURRENT_DATE - INTERVAL '30 days'`;
+      } else if (period === 'quarter') {
+        dateFilter = sql`${posSales.orderDate} >= CURRENT_DATE - INTERVAL '90 days'`;
+      } else {
+        dateFilter = sql`${posSales.orderDate} >= CURRENT_DATE - INTERVAL '7 days'`;
       }
       
-      const result = await db.execute(sql`
-        SELECT * FROM business_intelligence 
-        WHERE location_id = ${locationId}::uuid AND report_date >= CURRENT_DATE - INTERVAL '30 days'
-        ORDER BY report_date DESC
-        LIMIT 1
-      `);
+      // Get sales data from POS
+      const salesData = await db.select({
+        totalSales: sql<number>`COALESCE(SUM(CAST(${posSales.total} AS DECIMAL)), 0)`,
+        orderCount: sql<number>`COUNT(*)`,
+        customerCount: sql<number>`COUNT(DISTINCT ${posSales.employeeId})`
+      }).from(posSales).where(
+        sql`${dateFilter}
+        ${locationId ? sql`AND ${posSales.locationId} = ${locationId}` : sql``}`
+      );
       
-      res.json(result.rows[0] || null);
+      const sales = salesData[0] || { totalSales: 0, orderCount: 0, customerCount: 0 };
+      const avgOrderValue = sales.orderCount > 0 ? Number(sales.totalSales) / Number(sales.orderCount) : 0;
+      
+      // Get top selling items
+      const topItems = await db.select({
+        name: posSales.itemName,
+        quantity: sql<number>`COUNT(*)`,
+        revenue: sql<number>`COALESCE(SUM(CAST(${posSales.total} AS DECIMAL)), 0)`
+      }).from(posSales)
+      .where(sql`${dateFilter}
+        ${locationId ? sql`AND ${posSales.locationId} = ${locationId}` : sql``}
+        AND ${posSales.itemName} IS NOT NULL`)
+      .groupBy(posSales.itemName)
+      .orderBy(sql`COUNT(*) DESC`)
+      .limit(10);
+      
+      res.json({
+        totalRevenue: Number(sales.totalSales),
+        avgOrderValue: avgOrderValue,
+        customerCount: Number(sales.customerCount),
+        foodCostPercentage: 0, // Would need recipe costing data
+        topSellingItems: topItems.map(item => ({
+          name: item.name,
+          quantity: Number(item.quantity),
+          revenue: Number(item.revenue)
+        })),
+        lowPerformingItems: [] // Would need recipe costing data
+      });
     } catch (error) {
       console.error("Error fetching business intelligence:", error);
       res.status(500).json({ message: "Failed to fetch analytics data" });
