@@ -3263,6 +3263,18 @@ export class DatabaseStorage implements IStorage {
       
       const timeEntryCount = await timeEntryCountQuery;
       const currentlyWorkingCount = await currentlyWorkingQuery;
+      
+      // Get POS timeclock entries that are currently clocked in
+      let currentlyWorkingPosQuery = db.select({ count: sql<number>`count(*)` })
+        .from(posTimeclocks)
+        .where(eq(posTimeclocks.status, 'open'));
+        
+      if (locationId) {
+        currentlyWorkingPosQuery = currentlyWorkingPosQuery.where(eq(posTimeclocks.locationId, locationId));
+      }
+      
+      const currentlyWorkingPosCount = await currentlyWorkingPosQuery;
+      const totalCurrentlyWorking = (currentlyWorkingCount[0]?.count || 0) + (currentlyWorkingPosCount[0]?.count || 0);
 
       // Calculate analytics safely
       const today = new Date().toISOString().split('T')[0];
@@ -3281,9 +3293,14 @@ export class DatabaseStorage implements IStorage {
       
       const weeklyTimeEntries = await weeklyTimeEntriesQuery;
       
-      // Get POS time entries from the past week
+      // Get POS time entries from the past week (only completed entries with clockOutAt)
       let weeklyPosTimeEntriesQuery = db.select().from(posTimeclocks)
-        .where(gte(posTimeclocks.clockInTime, sevenDaysAgo));
+        .where(
+          and(
+            gte(posTimeclocks.clockInAt, sevenDaysAgo),
+            isNotNull(posTimeclocks.clockOutAt)
+          )
+        );
       
       if (locationId) {
         weeklyPosTimeEntriesQuery = weeklyPosTimeEntriesQuery.where(eq(posTimeclocks.locationId, locationId));
@@ -3291,7 +3308,7 @@ export class DatabaseStorage implements IStorage {
       
       const weeklyPosTimeEntries = await weeklyPosTimeEntriesQuery;
       
-      // Calculate total hours from regular time entries
+      // Calculate total hours from regular time entries (only completed entries)
       const regularHours = weeklyTimeEntries.reduce((total, entry: any) => {
         if (entry.clockOutTime) {
           const hours = (new Date(entry.clockOutTime).getTime() - new Date(entry.clockInTime).getTime()) / (1000 * 60 * 60);
@@ -3300,10 +3317,10 @@ export class DatabaseStorage implements IStorage {
         return total;
       }, 0);
       
-      // Calculate total hours from POS time entries
+      // Calculate total hours from POS time entries (only completed entries)
       const posHours = weeklyPosTimeEntries.reduce((total, entry: any) => {
-        if (entry.clockOutTime) {
-          const hours = (new Date(entry.clockOutTime).getTime() - new Date(entry.clockInTime).getTime()) / (1000 * 60 * 60);
+        if (entry.clockOutAt) {
+          const hours = (new Date(entry.clockOutAt).getTime() - new Date(entry.clockInAt).getTime()) / (1000 * 60 * 60);
           return total + hours;
         }
         return total;
@@ -3319,11 +3336,17 @@ export class DatabaseStorage implements IStorage {
       
       const estimatedWeeklyLabor = totalWeeklyHours * avgHourlyRate;
       
+      // Calculate task completion rate properly
+      const completedTasks = allTasks.filter((task: any) => task.status === 'completed').length;
+      const taskCompletionRate = allTasks.length > 0 
+        ? (completedTasks / allTasks.length) * 100 
+        : 0;
+      
       const analytics = {
         // Basic counts (now location-filtered)
         totalEmployees: employees.length,
         activeEmployees: employees.filter((emp: any) => emp.status === 'active').length,
-        currentlyWorking: currentlyWorkingCount[0]?.count || 0,
+        currentlyWorking: totalCurrentlyWorking,
         
         // Today's metrics  
         todayShifts: allShifts.filter((shift: any) => 
@@ -3341,8 +3364,7 @@ export class DatabaseStorage implements IStorage {
         totalWeeklyHours: Math.round(totalWeeklyHours * 100) / 100,
         
         // Performance metrics
-        taskCompletionRate: allTasks.length > 0 ? 
-          ((allTasks.length - allTasks.filter((task: any) => task.status !== 'completed').length) / allTasks.length) * 100 : 85,
+        taskCompletionRate: Math.round(taskCompletionRate * 100) / 100,
         
         // Labor cost (now calculated from actual data)
         avgHourlyRate: Math.round(avgHourlyRate * 100) / 100,
