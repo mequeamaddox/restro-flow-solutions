@@ -3741,9 +3741,60 @@ print(json.dumps(rows))
       if (!isOwnerOrAdmin && req.params.employeeId !== userId) {
         return res.status(403).json({ message: 'Access denied - can only view your own time entries' });
       }
-      const timeEntries = await storage.getEmployeeTimeEntries(req.params.employeeId);
-      console.log('🕐 Found time entries:', timeEntries.length);
-      res.json(timeEntries);
+      
+      // Get manual time entries
+      const manualTimeEntries = await storage.getEmployeeTimeEntries(req.params.employeeId);
+      console.log('🕐 Found manual time entries:', manualTimeEntries.length);
+      
+      // Get POS timeclock entries for this employee
+      const posResult = await db.execute(sql`
+        SELECT 
+          pt.id,
+          pt.clock_in_at::text as clock_in_at,
+          pt.clock_out_at::text as clock_out_at,
+          pt.break_seconds,
+          pt.status,
+          pt.role_title,
+          pi.provider
+        FROM pos_timeclocks pt
+        INNER JOIN pos_employee_mappings pem ON pt.pos_employee_id = pem.pos_employee_id
+        INNER JOIN pos_integrations pi ON pt.pos_integration_id = pi.id
+        WHERE pem.employee_id = ${req.params.employeeId}
+        ORDER BY pt.clock_in_at DESC
+        LIMIT 100
+      `);
+      
+      const posTimeEntries = posResult.rows.map((row: any) => {
+        const clockIn = row.clock_in_at ? new Date(row.clock_in_at) : new Date();
+        const clockOut = row.clock_out_at ? new Date(row.clock_out_at) : null;
+        
+        let totalHours = null;
+        if (clockOut) {
+          const hours = (clockOut.getTime() - clockIn.getTime()) / (1000 * 60 * 60);
+          const breakHours = (row.break_seconds || 0) / 3600;
+          totalHours = (hours - breakHours).toFixed(2);
+        }
+        
+        return {
+          id: `pos-${row.id}`,
+          employeeId: req.params.employeeId,
+          clockInTime: clockIn.toISOString(),
+          clockOutTime: clockOut ? clockOut.toISOString() : null,
+          totalHours,
+          status: row.status === 'open' ? 'clocked-in' : 'clocked-out',
+          notes: `Synced from ${row.provider?.toUpperCase() || 'POS'} - ${row.role_title || 'Employee'}`,
+          source: 'pos',
+          posProvider: row.provider
+        };
+      });
+      
+      // Combine and sort
+      const allEntries = [...manualTimeEntries, ...posTimeEntries].sort((a: any, b: any) => 
+        new Date(b.clockInTime).getTime() - new Date(a.clockInTime).getTime()
+      );
+      
+      console.log(`🕐 Total entries: ${allEntries.length} (${manualTimeEntries.length} manual + ${posTimeEntries.length} POS)`);
+      res.json(allEntries);
     } catch (error) {
       console.error('Error fetching employee time entries:', error);
       res.status(500).json({ message: 'Failed to fetch time entries' });
