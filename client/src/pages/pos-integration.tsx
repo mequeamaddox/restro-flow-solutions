@@ -1,6 +1,5 @@
 import { useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
-import { Link } from "wouter";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -27,8 +26,7 @@ import {
   CreditCard,
   Trash2,
   ChevronDown,
-  ChevronUp,
-  ExternalLink
+  ChevronUp
 } from "lucide-react";
 
 interface PosIntegration {
@@ -1224,19 +1222,6 @@ export default function PosIntegration() {
                                   </div>
                                 </div>
 
-                                <div className="pt-2">
-                                  <Link href="/analytics">
-                                    <Button 
-                                      variant="outline" 
-                                      size="sm" 
-                                      className="w-full"
-                                      data-testid={`button-view-analytics-${sale.id}`}
-                                    >
-                                      <ExternalLink className="h-4 w-4 mr-2" />
-                                      View Detailed Analytics
-                                    </Button>
-                                  </Link>
-                                </div>
                               </div>
                             </CollapsibleContent>
                           </Collapsible>

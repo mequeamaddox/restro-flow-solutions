@@ -148,15 +148,15 @@ export class CloverService {
 
       const sale = await storage.createPosSale(saleData);
 
-      // Process each line item
-      console.log('🔍 Order line items:', JSON.stringify(orderData.lineItems, null, 2));
-      console.log('📊 Line items count:', orderData.lineItems?.length || 0);
+      // Process each line item - Clover sends lineItems as {elements: [...]}
+      const lineItems = orderData.lineItems?.elements || [];
+      console.log('📊 Line items count:', lineItems.length);
       
-      if (!orderData.lineItems || orderData.lineItems.length === 0) {
+      if (lineItems.length === 0) {
         console.warn('⚠️ No line items found in order:', orderData.id);
       }
       
-      for (const lineItem of orderData.lineItems || []) {
+      for (const lineItem of lineItems) {
         const unitPrice = (lineItem.price / 100);
         const quantity = lineItem.quantity || 1;
         
