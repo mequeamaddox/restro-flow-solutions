@@ -148,6 +148,34 @@ function EmployeeSection({ integration }: { integration: PosIntegration }) {
     },
   });
 
+  // Sync shifts mutation
+  const syncShiftsMutation = useMutation({
+    mutationFn: async () => {
+      const today = new Date();
+      const startDate = new Date(today);
+      startDate.setDate(today.getDate() - 7); // Last 7 days
+      
+      return apiRequest("POST", `/api/pos-employees/sync-shifts/${integration.id}`, {
+        startDate: startDate.toISOString().split('T')[0],
+        endDate: today.toISOString().split('T')[0]
+      });
+    },
+    onSuccess: (data: any) => {
+      toast({
+        title: "Shifts synced",
+        description: `Successfully synced ${data.syncedCount || 0} shifts from ${integration.provider}`,
+      });
+      queryClient.invalidateQueries({ queryKey: ["/api/hr/time-entries"] });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Sync failed",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
   return (
     <div className="border rounded-lg p-4 space-y-4">
       <div className="flex items-center justify-between">
@@ -155,14 +183,25 @@ function EmployeeSection({ integration }: { integration: PosIntegration }) {
           <h3 className="font-semibold">{integration.name}</h3>
           <p className="text-sm text-muted-foreground capitalize">{integration.provider} POS</p>
         </div>
-        <Button
-          onClick={() => syncEmployeesMutation.mutate()}
-          disabled={syncEmployeesMutation.isPending}
-          data-testid="button-sync-employees"
-        >
-          <RefreshCw className={`h-4 w-4 mr-2 ${syncEmployeesMutation.isPending ? 'animate-spin' : ''}`} />
-          Sync Employees
-        </Button>
+        <div className="flex gap-2">
+          <Button
+            onClick={() => syncEmployeesMutation.mutate()}
+            disabled={syncEmployeesMutation.isPending}
+            data-testid="button-sync-employees"
+          >
+            <RefreshCw className={`h-4 w-4 mr-2 ${syncEmployeesMutation.isPending ? 'animate-spin' : ''}`} />
+            Sync Employees
+          </Button>
+          <Button
+            onClick={() => syncShiftsMutation.mutate()}
+            disabled={syncShiftsMutation.isPending}
+            variant="outline"
+            data-testid="button-sync-shifts"
+          >
+            <RefreshCw className={`h-4 w-4 mr-2 ${syncShiftsMutation.isPending ? 'animate-spin' : ''}`} />
+            Sync Shifts (Last 7 Days)
+          </Button>
+        </div>
       </div>
 
       {isLoading ? (
