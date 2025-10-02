@@ -125,6 +125,19 @@ interface VarianceSummary {
   totalAnalyzedItems: number;
 }
 
+interface RealTimeData {
+  currentSales: number;
+  ordersToday: number;
+  avgOrderValue: number;
+  activeTables?: number;
+  kitchenWaitTime: number;
+  topSellingItems: Array<{
+    name: string;
+    sold: number;
+    revenue: number;
+  }>;
+}
+
 export default function Analytics() {
   const { currentLocation } = useLocation();
   const queryClient = useQueryClient();
@@ -148,7 +161,7 @@ export default function Analytics() {
   }, []);
 
   // Fetch real-time sales data from POS integrations
-  const { data: realTimeData, isLoading: realTimeLoading } = useQuery({
+  const { data: realTimeData, isLoading: realTimeLoading } = useQuery<RealTimeData>({
     queryKey: ['/api/analytics/realtime', currentLocation?.id],
     enabled: !!currentLocation,
     refetchInterval: 30000, // Refresh every 30 seconds
@@ -682,6 +695,7 @@ export default function Analytics() {
               <CardContent>
                 <div className="space-y-3">
                   {realTimeData?.topSellingItems?.map((item, index) => (
+
                     <div key={index} className="flex items-center justify-between p-3 bg-slate-700/30 rounded-lg">
                       <div>
                         <div className="font-medium text-white">{item.name}</div>
