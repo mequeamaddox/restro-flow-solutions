@@ -522,8 +522,9 @@ export class CloverService {
       startTime.setDate(startTime.getDate() - daysBack);
       
       // Use per-employee endpoint (merchant-level /shifts endpoint doesn't exist)
+      // Note: field name is in_time (with underscore), not inTime
       const response = await fetch(
-        `${baseUrl}/v3/merchants/${integration.merchantId}/employees/${employeeId}/shifts?filter=inTime>=${startTime.getTime()}`,
+        `${baseUrl}/v3/merchants/${integration.merchantId}/employees/${employeeId}/shifts?filter=in_time>=${startTime.getTime()}`,
         {
           headers: {
             'Authorization': `Bearer ${accessToken}`,
