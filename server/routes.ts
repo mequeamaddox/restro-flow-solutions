@@ -16,7 +16,8 @@ import {
   posSales,
   users,
   vendorPriceCatalog,
-  posEmployeeMappings
+  posEmployeeMappings,
+  businessIntelligence
 } from "@shared/schema";
 import { posService } from "./posService";
 import { cloverService } from "./cloverService";
@@ -3031,56 +3032,53 @@ print(json.dumps(rows))
       
       let dateFilter;
       if (period === 'today') {
-        dateFilter = sql`DATE(${posSales.orderDate}) = CURRENT_DATE`;
+        dateFilter = sql`DATE(${businessIntelligence.reportDate}) = CURRENT_DATE`;
       } else if (period === 'week') {
-        dateFilter = sql`${posSales.orderDate} >= CURRENT_DATE - INTERVAL '7 days'`;
+        dateFilter = sql`${businessIntelligence.reportDate} >= CURRENT_DATE - INTERVAL '7 days'`;
       } else if (period === 'month') {
-        dateFilter = sql`${posSales.orderDate} >= CURRENT_DATE - INTERVAL '30 days'`;
+        dateFilter = sql`${businessIntelligence.reportDate} >= CURRENT_DATE - INTERVAL '30 days'`;
       } else if (period === 'quarter') {
-        dateFilter = sql`${posSales.orderDate} >= CURRENT_DATE - INTERVAL '90 days'`;
+        dateFilter = sql`${businessIntelligence.reportDate} >= CURRENT_DATE - INTERVAL '90 days'`;
       } else {
-        dateFilter = sql`${posSales.orderDate} >= CURRENT_DATE - INTERVAL '7 days'`;
+        dateFilter = sql`${businessIntelligence.reportDate} >= CURRENT_DATE - INTERVAL '7 days'`;
       }
       
       // Build proper where conditions
       let whereConditions = [dateFilter];
       if (locationId) {
-        whereConditions.push(sql`${posSales.locationId} = ${locationId}`);
+        whereConditions.push(sql`${businessIntelligence.locationId} = ${locationId}`);
       }
       
-      // Get sales data from POS
-      const salesData = await db.select({
-        totalSales: sql<number>`COALESCE(SUM(CAST(${posSales.total} AS DECIMAL)), 0)`,
-        orderCount: sql<number>`COUNT(*)`,
-        customerCount: sql<number>`COUNT(DISTINCT ${posSales.employeeId})`
-      }).from(posSales).where(and(...whereConditions));
+      // Get aggregated data from business_intelligence table
+      const biData = await db.select({
+        totalRevenue: sql<number>`COALESCE(SUM(CAST(${businessIntelligence.totalRevenue} AS DECIMAL)), 0)`,
+        totalCogs: sql<number>`COALESCE(SUM(CAST(${businessIntelligence.totalCogs} AS DECIMAL)), 0)`,
+        avgOrderValue: sql<number>`COALESCE(AVG(CAST(${businessIntelligence.avgOrderValue} AS DECIMAL)), 0)`,
+        customerCount: sql<number>`COALESCE(SUM(${businessIntelligence.customerCount}), 0)`,
+        foodCostPercentage: sql<number>`COALESCE(AVG(CAST(${businessIntelligence.foodCostPercentage} AS DECIMAL)), 0)`
+      }).from(businessIntelligence).where(and(...whereConditions));
       
-      const sales = salesData[0] || { totalSales: 0, orderCount: 0, customerCount: 0 };
-      const avgOrderValue = sales.orderCount > 0 ? Number(sales.totalSales) / Number(sales.orderCount) : 0;
+      const data = biData[0] || { totalRevenue: 0, totalCogs: 0, avgOrderValue: 0, customerCount: 0, foodCostPercentage: 0 };
       
-      // Get top selling items
-      let topItemsWhere = [...whereConditions, sql`${posSales.itemName} IS NOT NULL`];
-      const topItems = await db.select({
-        name: posSales.itemName,
-        quantity: sql<number>`COUNT(*)`,
-        revenue: sql<number>`COALESCE(SUM(CAST(${posSales.total} AS DECIMAL)), 0)`
-      }).from(posSales)
-      .where(and(...topItemsWhere))
-      .groupBy(posSales.itemName)
-      .orderBy(sql`COUNT(*) DESC`)
-      .limit(10);
+      // Get latest top selling items from most recent BI record
+      const latestBi = await db.select({
+        topSellingItems: businessIntelligence.topSellingItems,
+        lowPerformingItems: businessIntelligence.lowPerformingItems
+      }).from(businessIntelligence)
+      .where(and(...whereConditions))
+      .orderBy(desc(businessIntelligence.reportDate))
+      .limit(1);
+      
+      const topSellingItems = latestBi[0]?.topSellingItems || [];
+      const lowPerformingItems = latestBi[0]?.lowPerformingItems || [];
       
       res.json({
-        totalRevenue: Number(sales.totalSales),
-        avgOrderValue: avgOrderValue,
-        customerCount: Number(sales.customerCount),
-        foodCostPercentage: 0, // Would need recipe costing data
-        topSellingItems: topItems.map(item => ({
-          name: item.name,
-          quantity: Number(item.quantity),
-          revenue: Number(item.revenue)
-        })),
-        lowPerformingItems: [] // Would need recipe costing data
+        totalRevenue: Number(data.totalRevenue),
+        avgOrderValue: Number(data.avgOrderValue),
+        customerCount: Number(data.customerCount),
+        foodCostPercentage: Number(data.foodCostPercentage),
+        topSellingItems,
+        lowPerformingItems
       });
     } catch (error) {
       console.error("Error fetching business intelligence:", error);
