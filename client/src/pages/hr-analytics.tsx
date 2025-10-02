@@ -6,35 +6,38 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Users, Clock, CheckSquare, Calendar, MessageSquare, TrendingUp, DollarSign, Target, Activity, Briefcase, UserCheck, Timer, Calculator, FileText, Download } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { useLocation } from "@/contexts/LocationContext";
+import type { Employee } from "@shared/schema";
+
+interface HRAnalytics {
+  totalEmployees: number;
+  activeEmployees: number;
+  currentlyWorking: number;
+  todayShifts: number;
+  pendingTasks: number;
+  unreadMessages: number;
+  pendingTimeOff: number;
+  approvedTimeOff: number;
+  weeklyShifts: number;
+  totalWeeklyHours: number;
+  taskCompletionRate: number;
+  avgHourlyRate: number;
+  estimatedWeeklyLabor: number;
+  recentMessages: any[];
+  upcomingShifts: any[];
+}
 
 export default function HRAnalytics() {
   const [selectedPeriod, setSelectedPeriod] = useState("current-month");
   const { currentLocation } = useLocation();
   
-  const { data: analytics, isLoading } = useQuery({
+  const { data: analytics, isLoading } = useQuery<HRAnalytics>({
     queryKey: ['/api/hr/analytics', currentLocation?.id],
     enabled: !!currentLocation,
   });
 
-  const { data: employees = [] } = useQuery({
+  const { data: employees = [] } = useQuery<Employee[]>({
     queryKey: ['/api/hr/employees', currentLocation?.id],
     enabled: !!currentLocation,
-  });
-
-  const { data: shifts = [] } = useQuery({
-    queryKey: ['/api/hr/shifts', currentLocation?.id],
-    enabled: !!currentLocation,
-  });
-
-  const { data: timeEntries = [] } = useQuery({
-    queryKey: [`/api/hr/time-entries?includeHistory=true`, currentLocation?.id],
-    enabled: !!currentLocation,
-  });
-
-  // Mock payroll periods data - in real app, this would come from API
-  const { data: payrollPeriods = [] } = useQuery({
-    queryKey: ['/api/payroll-periods'],
-    select: (data) => data || []
   });
 
   if (isLoading) {
