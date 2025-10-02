@@ -63,8 +63,6 @@ export default function HRDashboard() {
     enabled: !!currentLocation,
   });
 
-  const isLoading = loadingEmployees || loadingShifts || loadingTasks || loadingMessages || 
-                   loadingTimeEntries || loadingTimeOff || loadingAnalytics;
 
   // Use analytics data when available, fallback to calculated values
   const currentlyWorking = analytics?.currentlyWorking ?? timeEntries.filter((entry: any) => entry.status === 'clocked-in').length;
