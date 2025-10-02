@@ -5,24 +5,30 @@ import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Users, Clock, CheckSquare, Calendar, MessageSquare, TrendingUp, DollarSign, Target, Activity, Briefcase, UserCheck, Timer, Calculator, FileText, Download } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
+import { useLocation } from "@/hooks/use-location";
 
 export default function HRAnalytics() {
   const [selectedPeriod, setSelectedPeriod] = useState("current-month");
+  const { currentLocation } = useLocation();
   
   const { data: analytics, isLoading } = useQuery({
-    queryKey: ['/api/hr/analytics'],
+    queryKey: ['/api/hr/analytics', currentLocation?.id],
+    enabled: !!currentLocation,
   });
 
   const { data: employees = [] } = useQuery({
-    queryKey: ['/api/hr/employees'],
+    queryKey: ['/api/hr/employees', currentLocation?.id],
+    enabled: !!currentLocation,
   });
 
   const { data: shifts = [] } = useQuery({
-    queryKey: ['/api/hr/shifts'],
+    queryKey: ['/api/hr/shifts', currentLocation?.id],
+    enabled: !!currentLocation,
   });
 
   const { data: timeEntries = [] } = useQuery({
-    queryKey: ['/api/hr/time-entries'],
+    queryKey: [`/api/hr/time-entries?includeHistory=true`, currentLocation?.id],
+    enabled: !!currentLocation,
   });
 
   // Mock payroll periods data - in real app, this would come from API
