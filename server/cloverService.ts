@@ -43,6 +43,17 @@ export interface CloverEmployee {
   deletedTime?: number;
 }
 
+export interface CloverShift {
+  id: string;
+  employee: {
+    id: string;
+  };
+  inTime: number; // Unix timestamp in milliseconds
+  outTime?: number; // Unix timestamp in milliseconds
+  overrideInTime?: number;
+  overrideOutTime?: number;
+}
+
 export class CloverService {
   private static instance: CloverService;
   
@@ -404,6 +415,126 @@ export class CloverService {
     } catch (error) {
       console.error('Error syncing employees:', error);
       throw error;
+    }
+  }
+
+  /**
+   * Sync shifts/timeclock from Clover
+   */
+  async syncShifts(integrationId: string, daysBack: number = 7): Promise<number> {
+    try {
+      const integration = await storage.getPosIntegration(integrationId);
+      if (!integration) {
+        throw new Error('Integration not found');
+      }
+
+      // Get all active POS employees for this integration
+      const posEmployees = await storage.getPosEmployees(integrationId);
+      if (!posEmployees || posEmployees.length === 0) {
+        console.log('No employees found, sync employees first');
+        return 0;
+      }
+
+      let totalShifts = 0;
+      
+      // Fetch shifts for each employee
+      for (const posEmployee of posEmployees) {
+        try {
+          const shifts = await this.fetchShiftsFromClover(integration, posEmployee.posEmployeeId, daysBack);
+          if (!shifts) continue;
+
+          // Process each shift
+          for (const shift of shifts) {
+            try {
+              const clockInAt = shift.overrideInTime 
+                ? new Date(shift.overrideInTime) 
+                : new Date(shift.inTime);
+              
+              const clockOutAt = shift.overrideOutTime 
+                ? new Date(shift.overrideOutTime) 
+                : shift.outTime 
+                  ? new Date(shift.outTime) 
+                  : null;
+
+              const timeclockData = {
+                posIntegrationId: integration.id,
+                posTimeEntryId: shift.id,
+                posEmployeeId: posEmployee.id,
+                locationId: integration.locationId,
+                clockInAt,
+                clockOutAt,
+                breakSeconds: 0,
+                roleTitle: posEmployee.roleTitle,
+                status: clockOutAt ? 'closed' : 'open',
+                raw: shift,
+              };
+
+              await storage.upsertPosTimeclock(timeclockData);
+              totalShifts++;
+            } catch (error) {
+              console.error(`Error processing shift ${shift.id}:`, error);
+            }
+          }
+        } catch (error) {
+          console.error(`Error syncing shifts for employee ${posEmployee.posEmployeeId}:`, error);
+        }
+      }
+
+      console.log(`Successfully synced ${totalShifts} shifts from Clover`);
+      return totalShifts;
+    } catch (error) {
+      console.error('Error syncing shifts:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Fetch shifts for an employee from Clover API
+   */
+  private async fetchShiftsFromClover(
+    integration: PosIntegration,
+    employeeId: string,
+    daysBack: number = 7
+  ): Promise<CloverShift[] | null> {
+    try {
+      const baseUrl = integration.environment === 'production' 
+        ? 'https://api.clover.com'
+        : 'https://sandbox.dev.clover.com';
+      
+      const raw = integration.credentials;
+      const accessToken = typeof raw === 'object' && raw !== null ? (raw as any).accessToken : undefined;
+      if (!accessToken || typeof accessToken !== 'string') {
+        console.error('Clover integration missing valid accessToken in credentials');
+        return null;
+      }
+
+      // Calculate start time for filtering (daysBack ago)
+      const startTime = new Date();
+      startTime.setDate(startTime.getDate() - daysBack);
+      
+      const response = await fetch(
+        `${baseUrl}/v3/merchants/${integration.merchantId}/employees/${employeeId}/shifts?filter=inTime>=${startTime.getTime()}`,
+        {
+          headers: {
+            'Authorization': `Bearer ${accessToken}`,
+            'Content-Type': 'application/json',
+          },
+        }
+      );
+
+      if (!response.ok) {
+        // 404 might mean no shifts exist, which is valid
+        if (response.status === 404) {
+          return [];
+        }
+        throw new Error(`Clover API error: ${response.status} ${response.statusText}`);
+      }
+
+      const data = await response.json();
+      return data.elements || [];
+    } catch (error) {
+      console.error(`Error fetching shifts for employee ${employeeId}:`, error);
+      return null;
     }
   }
 
