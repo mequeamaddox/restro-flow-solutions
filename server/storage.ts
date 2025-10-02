@@ -2249,8 +2249,8 @@ export class DatabaseStorage implements IStorage {
       const monthlySpend = monthlyOrders.reduce((sum, order) => sum + parseFloat(order.total), 0);
       
       // Get budget from budgets table if exists
-      const budgets = await db.select().from(budgets);
-      const totalBudget = budgets.reduce((sum, budget) => sum + parseFloat(budget.amount), 0);
+      const budgetData = await db.select().from(budgets);
+      const totalBudget = budgetData.reduce((sum, budget) => sum + parseFloat(budget.amount), 0);
       const spendVariance = totalBudget > 0 ? ((monthlySpend - totalBudget) / totalBudget * 100) : 0;
 
       const categoryBreakdown: any = {};

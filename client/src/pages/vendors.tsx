@@ -25,7 +25,10 @@ export default function Vendors() {
 
   const { data: vendors, isLoading } = useQuery({
     queryKey: ['/api/vendors', currentLocation?.id],
-    queryFn: () => apiRequest('GET', `/api/vendors?locationId=${currentLocation?.id}`),
+    queryFn: async () => {
+      const res = await apiRequest('GET', `/api/vendors?locationId=${currentLocation?.id}`);
+      return res.json();
+    },
     enabled: !!currentLocation,
   });
 
