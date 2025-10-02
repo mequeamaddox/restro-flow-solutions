@@ -24,6 +24,8 @@ import {
   employeeDocumentResponses,
   recipeAssignments,
   invitationTokens,
+  businessIntelligence,
+  budgets,
   type User,
   type UpsertUser,
   type Location,
