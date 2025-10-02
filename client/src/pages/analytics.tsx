@@ -602,9 +602,15 @@ export default function Analytics() {
                     <AreaChart data={salesTrendData}>
                       <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
                       <XAxis 
-                        dataKey="hour" 
+                        dataKey="date" 
                         stroke="#9CA3AF"
-                        tickFormatter={(hour) => `${hour}:00`}
+                        tickFormatter={(date) => {
+                          try {
+                            return date ? format(new Date(date), 'MMM d') : '';
+                          } catch {
+                            return '';
+                          }
+                        }}
                       />
                       <YAxis stroke="#9CA3AF" />
                       <Tooltip 

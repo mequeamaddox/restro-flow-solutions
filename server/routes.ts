@@ -4182,34 +4182,37 @@ print(json.dumps(rows))
       const locationId = req.query.locationId as string;
       const timeRange = req.query.timeRange as string || '7d';
       
-      // Query real POS sales data grouped by hour from the last 7 days
-      const salesByHour = await db
+      // Determine days to show based on timeRange
+      const days = timeRange === '30d' ? 30 : 7;
+      
+      // Query real POS sales data grouped by day
+      const salesByDay = await db
         .select({
-          hour: sql<number>`EXTRACT(HOUR FROM ${posSales.orderDate})`,
+          date: sql<string>`DATE(${posSales.orderDate})`,
           sales: sql<number>`COALESCE(SUM(CAST(${posSales.total} AS DECIMAL)), 0)`,
           orders: sql<number>`COUNT(*)`,
         })
         .from(posSales)
         .where(
-          sql`${posSales.orderDate} >= CURRENT_DATE - INTERVAL '7 days'
+          sql`${posSales.orderDate} >= CURRENT_DATE - INTERVAL '${sql.raw(days.toString())} days'
           ${locationId ? sql`AND ${posSales.locationId} = ${locationId}` : sql``}`
         )
-        .groupBy(sql`EXTRACT(HOUR FROM ${posSales.orderDate})`);
+        .groupBy(sql`DATE(${posSales.orderDate})`)
+        .orderBy(sql`DATE(${posSales.orderDate})`);
       
-      // Create 24-hour array with all hours (0-23), filling in zeros for hours with no sales
-      const hourlyData = Array.from({ length: 24 }, (_, hour) => {
-        const hourData = salesByHour.find(s => Number(s.hour) === hour);
-        const sales = hourData ? Number(hourData.sales) : 0;
-        const orders = hourData ? Number(hourData.orders) : 0;
+      // Format the data for the chart
+      const dailyData = salesByDay.map(day => {
+        const sales = Number(day.sales);
+        const orders = Number(day.orders);
         return {
-          hour,
+          date: day.date,
           sales,
           orders,
           avgOrder: orders > 0 ? sales / orders : 0
         };
       });
       
-      res.json(hourlyData);
+      res.json(dailyData);
     } catch (error) {
       console.error("Error fetching sales trend:", error);
       res.status(500).json({ message: "Failed to fetch sales trend" });
