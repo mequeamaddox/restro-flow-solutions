@@ -33,6 +33,7 @@ import {
 } from "lucide-react";
 import { format, subDays, startOfWeek, endOfWeek, startOfMonth, endOfMonth } from "date-fns";
 import { apiRequest } from "@/lib/queryClient";
+import type { Recipe } from "@shared/schema";
 import { 
   LineChart, 
   Line, 
@@ -291,7 +292,7 @@ export default function Analytics() {
   });
 
   // Variance analysis queries
-  const { data: recipes = [] } = useQuery({
+  const { data: recipes = [] } = useQuery<Recipe[]>({
     queryKey: ['/api/recipes'],
   });
 
