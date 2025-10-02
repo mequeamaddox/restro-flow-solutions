@@ -3540,6 +3540,9 @@ print(json.dumps(rows))
     try {
       const locationId = req.query.locationId as string;
       const analytics = await storage.getHRAnalytics(locationId);
+      res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+      res.setHeader('Pragma', 'no-cache');
+      res.setHeader('Expires', '0');
       res.json(analytics);
     } catch (error) {
       console.error('Error fetching HR analytics:', error);
