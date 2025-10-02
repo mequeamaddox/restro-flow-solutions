@@ -3053,7 +3053,7 @@ print(json.dumps(rows))
   app.get('/api/analytics/profit-loss', isAuthenticated, async (req: any, res) => {
     try {
       const locationId = req.query.locationId;
-      const period = req.query.period || 'today';
+      const period = req.query.period || 'month';
       
       // Calculate date range
       let startDate = new Date();
@@ -4108,7 +4108,12 @@ print(json.dumps(rows))
     try {
       const locationId = req.query.locationId as string;
       
-      // Get basic metrics from POS sales if available
+      // Disable caching for real-time data
+      res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
+      res.setHeader('Pragma', 'no-cache');
+      res.setHeader('Expires', '0');
+      
+      // Get basic metrics from POS sales - show last 7 days of data
       const salesData = await db
         .select({
           totalSales: sql<number>`COALESCE(SUM(CAST(${posSales.total} AS DECIMAL)), 0)`,
@@ -4116,16 +4121,16 @@ print(json.dumps(rows))
         })
         .from(posSales)
         .where(
-          sql`${posSales.orderDate} >= CURRENT_DATE 
+          sql`${posSales.orderDate} >= CURRENT_DATE - INTERVAL '7 days'
           ${locationId ? sql`AND ${posSales.locationId} = ${locationId}` : sql``}`
         );
       
-      const todaysSales = salesData[0] || { totalSales: 0, orderCount: 0 };
-      const avgOrderValue = todaysSales.orderCount > 0 ? todaysSales.totalSales / todaysSales.orderCount : 0;
+      const recentSales = salesData[0] || { totalSales: 0, orderCount: 0 };
+      const avgOrderValue = recentSales.orderCount > 0 ? recentSales.totalSales / recentSales.orderCount : 0;
       
       res.json({
-        currentSales: Number(todaysSales.totalSales),
-        ordersToday: Number(todaysSales.orderCount),
+        currentSales: Number(recentSales.totalSales),
+        ordersToday: Number(recentSales.orderCount),
         avgOrderValue: Number(avgOrderValue),
         kitchenWaitTime: 8.5, // This would come from POS integration
         topSellingItems: [] // This would be calculated from POS data
@@ -4141,18 +4146,32 @@ print(json.dumps(rows))
       const locationId = req.query.locationId as string;
       const timeRange = req.query.timeRange as string || '7d';
       
-      // Generate hourly sales data based on actual POS data or simulate if no data
-      const hourlyData = [];
-      for (let hour = 0; hour < 24; hour++) {
-        // In a real implementation, this would query actual POS data grouped by hour
-        const salesForHour = Math.floor(Math.random() * 500 + 100); // Placeholder
-        hourlyData.push({
+      // Query real POS sales data grouped by hour from the last 7 days
+      const salesByHour = await db
+        .select({
+          hour: sql<number>`EXTRACT(HOUR FROM ${posSales.orderDate})`,
+          sales: sql<number>`COALESCE(SUM(CAST(${posSales.total} AS DECIMAL)), 0)`,
+          orders: sql<number>`COUNT(*)`,
+        })
+        .from(posSales)
+        .where(
+          sql`${posSales.orderDate} >= CURRENT_DATE - INTERVAL '7 days'
+          ${locationId ? sql`AND ${posSales.locationId} = ${locationId}` : sql``}`
+        )
+        .groupBy(sql`EXTRACT(HOUR FROM ${posSales.orderDate})`);
+      
+      // Create 24-hour array with all hours (0-23), filling in zeros for hours with no sales
+      const hourlyData = Array.from({ length: 24 }, (_, hour) => {
+        const hourData = salesByHour.find(s => Number(s.hour) === hour);
+        const sales = hourData ? Number(hourData.sales) : 0;
+        const orders = hourData ? Number(hourData.orders) : 0;
+        return {
           hour,
-          sales: salesForHour,
-          orders: Math.floor(salesForHour / 25),
-          avgOrder: 25
-        });
-      }
+          sales,
+          orders,
+          avgOrder: orders > 0 ? sales / orders : 0
+        };
+      });
       
       res.json(hourlyData);
     } catch (error) {
