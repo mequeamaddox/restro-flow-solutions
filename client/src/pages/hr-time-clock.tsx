@@ -87,7 +87,7 @@ export default function HRTimeClock() {
   });
 
   const { data: timeEntries = [], isLoading: entriesLoading } = useQuery<TimeEntry[]>({
-    queryKey: ['/api/hr/time-entries', currentLocation?.id],
+    queryKey: [`/api/hr/time-entries?includeHistory=true`, currentLocation?.id],
     enabled: !!currentLocation,
   });
 
@@ -98,6 +98,7 @@ export default function HRTimeClock() {
     onSuccess: () => {
       toast({ title: "Success", description: "Clocked in successfully" });
       queryClient.invalidateQueries({ queryKey: ['/api/hr/time-entries'] });
+      queryClient.invalidateQueries({ queryKey: [`/api/hr/time-entries?includeHistory=true`] });
     },
     onError: () => {
       toast({ title: "Error", description: "Failed to clock in", variant: "destructive" });
@@ -111,6 +112,7 @@ export default function HRTimeClock() {
     onSuccess: () => {
       toast({ title: "Success", description: "Clocked out successfully" });
       queryClient.invalidateQueries({ queryKey: ['/api/hr/time-entries'] });
+      queryClient.invalidateQueries({ queryKey: [`/api/hr/time-entries?includeHistory=true`] });
     },
     onError: () => {
       toast({ title: "Error", description: "Failed to clock out", variant: "destructive" });
@@ -124,6 +126,7 @@ export default function HRTimeClock() {
     onSuccess: () => {
       toast({ title: "Success", description: "Time entry updated successfully" });
       queryClient.invalidateQueries({ queryKey: ['/api/hr/time-entries'] });
+      queryClient.invalidateQueries({ queryKey: [`/api/hr/time-entries?includeHistory=true`] });
       setShowEditDialog(false);
       setEditingEntry(null);
     },
@@ -139,6 +142,7 @@ export default function HRTimeClock() {
     onSuccess: () => {
       toast({ title: "Success", description: "Time entry deleted successfully" });
       queryClient.invalidateQueries({ queryKey: ['/api/hr/time-entries'] });
+      queryClient.invalidateQueries({ queryKey: [`/api/hr/time-entries?includeHistory=true`] });
     },
     onError: () => {
       toast({ title: "Error", description: "Failed to delete time entry", variant: "destructive" });
@@ -152,6 +156,7 @@ export default function HRTimeClock() {
     onSuccess: () => {
       toast({ title: "Success", description: "Manual time entry created successfully" });
       queryClient.invalidateQueries({ queryKey: ['/api/hr/time-entries'] });
+      queryClient.invalidateQueries({ queryKey: [`/api/hr/time-entries?includeHistory=true`] });
       setShowManualEntryDialog(false);
       setManualEntryForm({
         employeeId: '',
