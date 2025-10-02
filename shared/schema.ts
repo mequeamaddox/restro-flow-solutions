@@ -672,6 +672,7 @@ export const employees = pgTable("employees", {
   hireDate: date("hire_date").notNull(),
   terminationDate: date("termination_date"),
   status: varchar("status").default("active"),
+  locationId: uuid("location_id").references(() => locations.id), // Direct location assignment
   departmentId: uuid("department_id").references(() => departments.id),
   positionId: uuid("position_id").references(() => positions.id),
   hourlyRate: decimal("hourly_rate", { precision: 10, scale: 2 }),
