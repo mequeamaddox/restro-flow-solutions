@@ -36,7 +36,7 @@ interface TimeEntry {
   breakStartTime?: string;
   breakEndTime?: string;
   totalHours?: string;
-  status: 'clocked-in' | 'clocked-out' | 'on-break';
+  status: 'clocked-in' | 'clocked-out' | 'on-break' | 'open' | 'closed';
   notes?: string;
   employee?: Employee;
   source?: 'manual' | 'pos';
@@ -181,7 +181,7 @@ export default function HRTimeClock() {
 
   // Get active time entries (employees currently clocked in)
   const activeEntries = timeEntries.filter((entry: TimeEntry) => 
-    entry.status === 'clocked-in' || entry.status === 'on-break'
+    entry.status === 'clocked-in' || entry.status === 'on-break' || entry.status === 'open'
   );
 
   // Filter completed entries based on selected date range and employee

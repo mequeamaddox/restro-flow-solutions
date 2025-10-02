@@ -161,9 +161,10 @@ function EmployeeSection({ integration }: { integration: PosIntegration }) {
       });
     },
     onSuccess: (data: any) => {
+      const count = Number(data.syncedCount) || 0;
       toast({
         title: "Shifts synced",
-        description: `Successfully synced ${data.syncedCount || 0} shifts from ${integration.provider}`,
+        description: `Successfully synced ${count} shifts from ${integration.provider}`,
       });
       queryClient.invalidateQueries({ queryKey: ["/api/hr/time-entries"] });
     },
