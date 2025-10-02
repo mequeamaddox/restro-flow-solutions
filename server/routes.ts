@@ -1500,6 +1500,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Get remaining stock levels with multi-unit conversion
+  app.get('/api/inventory/stock-levels', isAuthenticated, async (req, res) => {
+    try {
+      const locationId = req.query.locationId as string;
+      
+      if (!locationId) {
+        return res.status(400).json({ message: 'Location ID is required' });
+      }
+      
+      const stockLevels = await storage.getRemainingStockLevels(locationId);
+      res.json(stockLevels);
+    } catch (error) {
+      console.error('Error fetching stock levels:', error);
+      res.status(500).json({ message: 'Failed to fetch stock levels' });
+    }
+  });
+
   app.get('/api/inventory/:id', isAuthenticated, async (req, res) => {
     try {
       const { id } = req.params;
@@ -5547,23 +5564,6 @@ print(json.dumps(rows))
     } catch (error) {
       console.error('Error fetching sales transactions:', error);
       res.status(500).json({ message: 'Failed to fetch sales transactions' });
-    }
-  });
-
-  // Get remaining stock levels with multi-unit conversion
-  app.get('/api/inventory/stock-levels', isAuthenticated, async (req, res) => {
-    try {
-      const locationId = req.query.locationId as string;
-      
-      if (!locationId) {
-        return res.status(400).json({ message: 'Location ID is required' });
-      }
-      
-      const stockLevels = await storage.getRemainingStockLevels(locationId);
-      res.json(stockLevels);
-    } catch (error) {
-      console.error('Error fetching stock levels:', error);
-      res.status(500).json({ message: 'Failed to fetch stock levels' });
     }
   });
 
