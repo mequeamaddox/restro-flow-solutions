@@ -169,20 +169,20 @@ export default function Analytics() {
   }, []);
 
   // Fetch real-time sales data from POS integrations
-  const { data: realTimeData } = useQuery<RealTimeData>({
+  const { data: realTimeData, isLoading: realTimeLoading } = useQuery<RealTimeData>({
     queryKey: ['/api/analytics/realtime', currentLocation?.id],
     enabled: !!currentLocation,
     refetchInterval: 30000, // Refresh every 30 seconds
   });
 
   // Fetch sales trend data
-  const { data: salesTrendData = [] } = useQuery({
+  const { data: salesTrendData = [], isLoading: salesTrendLoading } = useQuery<any[]>({
     queryKey: ['/api/analytics/sales-trend', currentLocation?.id, timeRange],
     enabled: !!currentLocation,
   });
 
   // Fetch inventory alerts (low stock items)
-  const { data: lowStockItems = [] } = useQuery({
+  const { data: lowStockItems = [], isLoading: inventoryAlertsLoading } = useQuery<any[]>({
     queryKey: ['/api/inventory/low-stock', currentLocation?.id],
     enabled: !!currentLocation,
   });
@@ -198,7 +198,7 @@ export default function Analytics() {
   }));
 
   // Fetch waste data
-  const { data: wasteData = [] } = useQuery<WasteData[]>({
+  const { data: wasteData = [], isLoading: wasteLoading } = useQuery<WasteData[]>({
     queryKey: ['/api/waste/summary', currentLocation?.id, timeRange],
     enabled: !!currentLocation,
   });
@@ -218,7 +218,7 @@ export default function Analytics() {
   });
 
   // Fetch business intelligence data
-  const { data: biData } = useQuery<BusinessIntelligence | null>({
+  const { data: biData, isLoading: biLoading } = useQuery<BusinessIntelligence | null>({
     queryKey: ["/api/analytics/business-intelligence", currentLocation?.id, selectedPeriod],
     queryFn: async () => {
       const response = await fetch(`/api/analytics/business-intelligence?locationId=${currentLocation?.id}&period=${selectedPeriod}`);
@@ -314,15 +314,11 @@ export default function Analytics() {
   // Record recipe production mutation
   const recordProductionMutation = useMutation({
     mutationFn: async (data: { recipeId: string; quantity: number; batchNumber?: string }) => {
-      return apiRequest('/api/variance/production', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          recipeId: data.recipeId,
-          locationId: currentLocation?.id,
-          quantityProduced: data.quantity,
-          batchNumber: data.batchNumber
-        }),
+      return apiRequest('POST', '/api/variance/production', {
+        recipeId: data.recipeId,
+        locationId: currentLocation?.id,
+        quantityProduced: data.quantity,
+        batchNumber: data.batchNumber
       });
     },
     onSuccess: () => {
@@ -335,14 +331,10 @@ export default function Analytics() {
   // Generate variance report mutation
   const generateReportMutation = useMutation({
     mutationFn: async () => {
-      return apiRequest('/api/variance/generate', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          locationId: currentLocation?.id,
-          startDate: varianceDateRange.startDate,
-          endDate: varianceDateRange.endDate
-        }),
+      return apiRequest('POST', '/api/variance/generate', {
+        locationId: currentLocation?.id,
+        startDate: varianceDateRange.startDate,
+        endDate: varianceDateRange.endDate
       });
     },
     onSuccess: () => {
@@ -549,33 +541,47 @@ export default function Analytics() {
         {/* Real-Time Analytics Tab */}
         <TabsContent value="real-time" className="space-y-6">
           {/* Live Metrics */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <Card className="bg-slate-800/50 border-slate-700">
-              <CardContent className="p-4 text-center">
-                <DollarSign className="h-6 w-6 text-green-400 mx-auto mb-2" />
-                <div className="text-xl font-bold text-green-400">
-                  ${realTimeData?.currentSales?.toLocaleString() || '0'}
-                </div>
-                <div className="text-xs text-slate-400">Sales (Last 7 Days)</div>
-              </CardContent>
-            </Card>
+          {realTimeLoading ? (
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              {[1, 2, 3].map((i) => (
+                <Card key={i} className="bg-slate-800/50 border-slate-700">
+                  <CardContent className="p-4 text-center">
+                    <div className="h-6 w-6 bg-slate-700 rounded mx-auto mb-2 animate-pulse" />
+                    <div className="h-6 bg-slate-700 rounded w-24 mx-auto mb-2 animate-pulse" />
+                    <div className="h-4 bg-slate-700 rounded w-32 mx-auto animate-pulse" />
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <Card className="bg-slate-800/50 border-slate-700">
+                <CardContent className="p-4 text-center">
+                  <DollarSign className="h-6 w-6 text-green-400 mx-auto mb-2" />
+                  <div className="text-xl font-bold text-green-400">
+                    ${realTimeData?.currentSales?.toLocaleString() || '0'}
+                  </div>
+                  <div className="text-xs text-slate-400">Sales (Last 7 Days)</div>
+                </CardContent>
+              </Card>
 
-            <Card className="bg-slate-800/50 border-slate-700">
-              <CardContent className="p-4 text-center">
-                <ShoppingCart className="h-6 w-6 text-blue-400 mx-auto mb-2" />
-                <div className="text-xl font-bold text-white">{realTimeData?.ordersToday || 0}</div>
-                <div className="text-xs text-slate-400">Orders (Last 7 Days)</div>
-              </CardContent>
-            </Card>
+              <Card className="bg-slate-800/50 border-slate-700">
+                <CardContent className="p-4 text-center">
+                  <ShoppingCart className="h-6 w-6 text-blue-400 mx-auto mb-2" />
+                  <div className="text-xl font-bold text-white">{realTimeData?.ordersToday || 0}</div>
+                  <div className="text-xs text-slate-400">Orders (Last 7 Days)</div>
+                </CardContent>
+              </Card>
 
-            <Card className="bg-slate-800/50 border-slate-700">
-              <CardContent className="p-4 text-center">
-                <Target className="h-6 w-6 text-purple-400 mx-auto mb-2" />
-                <div className="text-xl font-bold text-white">${realTimeData?.avgOrderValue?.toFixed(2) || '0.00'}</div>
-                <div className="text-xs text-slate-400">Avg Order Value</div>
-              </CardContent>
-            </Card>
-          </div>
+              <Card className="bg-slate-800/50 border-slate-700">
+                <CardContent className="p-4 text-center">
+                  <Target className="h-6 w-6 text-purple-400 mx-auto mb-2" />
+                  <div className="text-xl font-bold text-white">${realTimeData?.avgOrderValue?.toFixed(2) || '0.00'}</div>
+                  <div className="text-xs text-slate-400">Avg Order Value</div>
+                </CardContent>
+              </Card>
+            </div>
+          )}
 
           {/* Live Sales Trend */}
           <Card className="bg-slate-800/50 border-slate-700">
@@ -586,40 +592,46 @@ export default function Analytics() {
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="h-64">
-                <ResponsiveContainer width="100%" height="100%">
-                  <AreaChart data={salesTrendData}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
-                    <XAxis 
-                      dataKey="hour" 
-                      stroke="#9CA3AF"
-                      tickFormatter={(hour) => `${hour}:00`}
-                    />
-                    <YAxis stroke="#9CA3AF" />
-                    <Tooltip 
-                      contentStyle={{ 
-                        backgroundColor: '#1F2937', 
-                        border: '1px solid #374151', 
-                        borderRadius: '6px',
-                        color: '#F3F4F6'
-                      }}
-                    />
-                    <Area
-                      type="monotone"
-                      dataKey="sales"
-                      stroke="#10B981"
-                      fill="url(#salesGradient)"
-                      strokeWidth={2}
-                    />
-                    <defs>
-                      <linearGradient id="salesGradient" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="5%" stopColor="#10B981" stopOpacity={0.8}/>
-                        <stop offset="95%" stopColor="#10B981" stopOpacity={0.1}/>
-                      </linearGradient>
-                    </defs>
-                  </AreaChart>
-                </ResponsiveContainer>
-              </div>
+              {salesTrendLoading ? (
+                <div className="h-64 flex items-center justify-center">
+                  <div className="animate-pulse text-slate-400">Loading chart data...</div>
+                </div>
+              ) : (
+                <div className="h-64">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <AreaChart data={salesTrendData}>
+                      <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
+                      <XAxis 
+                        dataKey="hour" 
+                        stroke="#9CA3AF"
+                        tickFormatter={(hour) => `${hour}:00`}
+                      />
+                      <YAxis stroke="#9CA3AF" />
+                      <Tooltip 
+                        contentStyle={{ 
+                          backgroundColor: '#1F2937', 
+                          border: '1px solid #374151', 
+                          borderRadius: '6px',
+                          color: '#F3F4F6'
+                        }}
+                      />
+                      <Area
+                        type="monotone"
+                        dataKey="sales"
+                        stroke="#10B981"
+                        fill="url(#salesGradient)"
+                        strokeWidth={2}
+                      />
+                      <defs>
+                        <linearGradient id="salesGradient" x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="5%" stopColor="#10B981" stopOpacity={0.8}/>
+                          <stop offset="95%" stopColor="#10B981" stopOpacity={0.1}/>
+                        </linearGradient>
+                      </defs>
+                    </AreaChart>
+                  </ResponsiveContainer>
+                </div>
+              )}
             </CardContent>
           </Card>
 
@@ -634,7 +646,7 @@ export default function Analytics() {
               </CardHeader>
               <CardContent>
                 <div className="space-y-3">
-                  {inventoryAlerts.map((alert, index) => (
+                  {inventoryAlerts.map((alert: any, index: number) => (
                     <div key={index} className={`p-3 rounded-lg border-l-4 ${
                       alert.severity === 'high' ? 'bg-red-500/10 border-red-500' :
                       alert.severity === 'medium' ? 'bg-yellow-500/10 border-yellow-500' :
