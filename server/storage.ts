@@ -3244,11 +3244,6 @@ export class DatabaseStorage implements IStorage {
       let currentlyWorkingManualCount = 0;
       let currentlyWorkingPosCount = 0;
       
-      console.log('🔍 HR Analytics - Currently Working Debug:');
-      console.log('  Location ID:', locationId);
-      console.log('  Employee IDs count:', employeeIds.length);
-      console.log('  First 3 employee IDs:', employeeIds.slice(0, 3));
-      
       // Only count if we have a location and employees
       if (locationId && employeeIds.length > 0) {
         // Count manual time entries
@@ -3261,7 +3256,6 @@ export class DatabaseStorage implements IStorage {
             )
           );
         currentlyWorkingManualCount = Number(manualResult[0]?.count) || 0;
-        console.log('  Manual time entries count:', currentlyWorkingManualCount);
         
         // Count POS timeclock entries
         const posResult = await db.select({ count: sql<number>`count(*)` })
@@ -3273,11 +3267,9 @@ export class DatabaseStorage implements IStorage {
             )
           );
         currentlyWorkingPosCount = Number(posResult[0]?.count) || 0;
-        console.log('  POS timeclock entries count:', currentlyWorkingPosCount);
       }
       
       const totalCurrentlyWorking = currentlyWorkingManualCount + currentlyWorkingPosCount;
-      console.log('  TOTAL Currently Working:', totalCurrentlyWorking);
 
       // Calculate analytics safely
       const today = new Date().toISOString().split('T')[0];

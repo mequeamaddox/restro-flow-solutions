@@ -7,40 +7,58 @@ import { useQuery } from "@tanstack/react-query";
 import { useLocation } from "@/contexts/LocationContext";
 import { HRUpgradePrompt } from "@/components/hr/hr-upgrade-prompt";
 
+interface HRAnalytics {
+  totalEmployees: number;
+  activeEmployees: number;
+  currentlyWorking: number;
+  todayShifts: number;
+  pendingTasks: number;
+  unreadMessages: number;
+  pendingTimeOff: number;
+  approvedTimeOff: number;
+  weeklyShifts: number;
+  totalWeeklyHours: number;
+  taskCompletionRate: number;
+  avgHourlyRate: number;
+  estimatedWeeklyLabor: number;
+  recentMessages: any[];
+  upcomingShifts: any[];
+}
+
 export default function HRDashboard() {
   const { currentLocation, hasHRAccess } = useLocation();
 
-  const { data: employees = [], isLoading: loadingEmployees } = useQuery({
+  const { data: employees = [], isLoading: loadingEmployees } = useQuery<any[]>({
     queryKey: ['/api/hr/employees', currentLocation?.id],
     enabled: !!currentLocation,
   });
 
-  const { data: shifts = [], isLoading: loadingShifts } = useQuery({
+  const { data: shifts = [], isLoading: loadingShifts } = useQuery<any[]>({
     queryKey: ['/api/hr/shifts', currentLocation?.id],
     enabled: !!currentLocation,
   });
 
-  const { data: tasks = [], isLoading: loadingTasks } = useQuery({
+  const { data: tasks = [], isLoading: loadingTasks } = useQuery<any[]>({
     queryKey: ['/api/hr/tasks', currentLocation?.id],
     enabled: !!currentLocation,
   });
 
-  const { data: messages = [], isLoading: loadingMessages } = useQuery({
+  const { data: messages = [], isLoading: loadingMessages } = useQuery<any[]>({
     queryKey: ['/api/hr/messages', currentLocation?.id],
     enabled: !!currentLocation,
   });
 
-  const { data: timeEntries = [], isLoading: loadingTimeEntries } = useQuery({
+  const { data: timeEntries = [], isLoading: loadingTimeEntries } = useQuery<any[]>({
     queryKey: ['/api/hr/time-entries', currentLocation?.id],
     enabled: !!currentLocation,
   });
 
-  const { data: timeOffRequests = [], isLoading: loadingTimeOff } = useQuery({
+  const { data: timeOffRequests = [], isLoading: loadingTimeOff } = useQuery<any[]>({
     queryKey: ['/api/hr/time-off-requests', currentLocation?.id],
     enabled: !!currentLocation,
   });
 
-  const { data: analytics, isLoading: loadingAnalytics } = useQuery({
+  const { data: analytics, isLoading: loadingAnalytics } = useQuery<HRAnalytics>({
     queryKey: ['/api/hr/analytics', currentLocation?.id],
     enabled: !!currentLocation,
   });
@@ -72,7 +90,7 @@ export default function HRDashboard() {
 
   // Show upgrade prompt if HR access is not enabled for this location
   if (!hasHRAccess) {
-    return <HRUpgradePrompt locationName={currentLocation.name} />;
+    return <HRUpgradePrompt locationName={currentLocation?.name || ''} />;
   }
 
   return (
