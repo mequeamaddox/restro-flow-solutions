@@ -3593,39 +3593,113 @@ print(json.dumps(rows))
   // HR Time Clock
   app.get('/api/hr/time-entries', isAuthenticated, requireHRAccess, async (req, res) => {
     try {
-      // Direct SQL approach to get real timestamp data
-      const result = await db.execute(sql`
+      const { locationId, includeHistory = 'false' } = req.query;
+      
+      // Get manual HR time entries
+      const manualResult = await db.execute(sql`
         SELECT te.id, te.employee_id, te.status, te.notes, te.total_hours,
                te.clock_in_time::text as clock_in_time,
+               te.clock_out_time::text as clock_out_time,
                te.created_at::text as created_at,
-               e.first_name, e.last_name
+               e.first_name, e.last_name, e.employee_number
         FROM time_entries te
         LEFT JOIN employees e ON te.employee_id = e.id
-        WHERE te.status = 'clocked-in'
-        ORDER BY te.created_at DESC
-        LIMIT 50
+        ${includeHistory === 'true' ? sql`ORDER BY te.created_at DESC LIMIT 100` : sql`WHERE te.status = 'clocked-in' ORDER BY te.created_at DESC LIMIT 50`}
       `);
       
-      const timeEntries = result.rows.map((row: any) => ({
+      const manualEntries = manualResult.rows.map((row: any) => ({
         id: row.id,
         employeeId: row.employee_id,
         clockInTime: row.clock_in_time ? new Date(row.clock_in_time).toISOString() : new Date().toISOString(),
-        clockOutTime: null,
+        clockOutTime: row.clock_out_time ? new Date(row.clock_out_time).toISOString() : null,
         breakStartTime: null,
         breakEndTime: null,
         totalHours: row.total_hours,
         status: row.status || 'clocked-in',
         notes: row.notes,
+        source: 'manual',
         createdAt: row.created_at ? new Date(row.created_at).toISOString() : new Date().toISOString(),
         updatedAt: row.created_at ? new Date(row.created_at).toISOString() : new Date().toISOString(),
         employee: row.first_name ? {
           id: row.employee_id,
+          employeeNumber: row.employee_number,
           firstName: row.first_name,
           lastName: row.last_name
         } : undefined
       }));
       
-      res.json(timeEntries);
+      // Get POS timeclock entries and map them to HR employees
+      const posResult = await db.execute(sql`
+        SELECT 
+          pt.id,
+          pt.clock_in_at::text as clock_in_at,
+          pt.clock_out_at::text as clock_out_at,
+          pt.break_seconds,
+          pt.status,
+          pt.role_title,
+          pe.display_name as pos_employee_name,
+          pem.employee_id as hr_employee_id,
+          e.first_name,
+          e.last_name,
+          e.employee_number,
+          pi.provider
+        FROM pos_timeclocks pt
+        INNER JOIN pos_employees pe ON pt.pos_employee_id = pe.id
+        LEFT JOIN pos_employee_mappings pem ON pe.id = pem.pos_employee_id
+        LEFT JOIN employees e ON pem.employee_id = e.id
+        INNER JOIN pos_integrations pi ON pt.pos_integration_id = pi.id
+        WHERE ${locationId ? sql`pt.location_id = ${locationId}::uuid AND` : sql``} 
+        ${includeHistory === 'true' ? sql`TRUE` : sql`pt.status = 'open'`}
+        ORDER BY pt.clock_in_at DESC
+        LIMIT 100
+      `);
+      
+      const posEntries = posResult.rows.map((row: any) => {
+        const clockIn = row.clock_in_at ? new Date(row.clock_in_at) : new Date();
+        const clockOut = row.clock_out_at ? new Date(row.clock_out_at) : null;
+        
+        // Calculate total hours if clocked out
+        let totalHours = null;
+        if (clockOut) {
+          const hours = (clockOut.getTime() - clockIn.getTime()) / (1000 * 60 * 60);
+          const breakHours = (row.break_seconds || 0) / 3600;
+          totalHours = (hours - breakHours).toFixed(2);
+        }
+        
+        return {
+          id: `pos-${row.id}`,
+          employeeId: row.hr_employee_id || null,
+          clockInTime: clockIn.toISOString(),
+          clockOutTime: clockOut ? clockOut.toISOString() : null,
+          breakStartTime: null,
+          breakEndTime: null,
+          totalHours,
+          status: row.status === 'open' ? 'clocked-in' : 'clocked-out',
+          notes: `Synced from ${row.provider?.toUpperCase() || 'POS'} - ${row.role_title || 'Employee'}`,
+          source: 'pos',
+          posProvider: row.provider,
+          createdAt: clockIn.toISOString(),
+          updatedAt: clockIn.toISOString(),
+          employee: row.hr_employee_id ? {
+            id: row.hr_employee_id,
+            employeeNumber: row.employee_number,
+            firstName: row.first_name,
+            lastName: row.last_name
+          } : {
+            id: null,
+            employeeNumber: null,
+            firstName: row.pos_employee_name?.split(' ')[0] || 'Unknown',
+            lastName: row.pos_employee_name?.split(' ').slice(1).join(' ') || 'POS Employee'
+          }
+        };
+      });
+      
+      // Combine and sort all entries
+      const allEntries = [...manualEntries, ...posEntries].sort((a, b) => 
+        new Date(b.clockInTime).getTime() - new Date(a.clockInTime).getTime()
+      );
+      
+      res.json(allEntries);
     } catch (error) {
       console.error('Error fetching time entries:', error);
       res.status(500).json({ message: 'Failed to fetch time entries' });
