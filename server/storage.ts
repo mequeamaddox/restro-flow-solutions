@@ -2242,137 +2242,210 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getDailyPnL(timeRange: string, locationId?: string): Promise<any[]> {
-    const days = timeRange === '7d' ? 7 : timeRange === '30d' ? 30 : 90;
-    const pnlData = [];
-    
-    for (let i = days - 1; i >= 0; i--) {
-      const date = new Date();
-      date.setDate(date.getDate() - i);
+    try {
+      const days = timeRange === '7d' ? 7 : timeRange === '30d' ? 30 : 90;
+      const startDate = new Date();
+      startDate.setDate(startDate.getDate() - days);
+
+      const conditions = [
+        gte(businessIntelligence.date, startDate.toISOString().split('T')[0])
+      ];
       
-      // Simulate realistic restaurant P&L data
-      const baseRevenue = 8000;
-      const dayOfWeek = date.getDay();
-      const weekendMultiplier = dayOfWeek === 0 || dayOfWeek === 6 ? 1.3 : 1.0;
-      const randomVariation = 0.8 + (Math.random() * 0.4);
-      
-      const revenue = Math.round(baseRevenue * weekendMultiplier * randomVariation);
-      const cogs = Math.round(revenue * (0.25 + Math.random() * 0.1));
-      const grossProfit = revenue - cogs;
-      
-      pnlData.push({
-        date: date.toISOString().split('T')[0],
-        revenue,
-        cogs,
-        grossProfit,
-        foodCostPercentage: parseFloat((cogs / revenue * 100).toFixed(1)),
-        grossMarginPercentage: parseFloat((grossProfit / revenue * 100).toFixed(1))
-      });
+      if (locationId) {
+        conditions.push(eq(businessIntelligence.locationId, locationId));
+      }
+
+      const biData = await db
+        .select()
+        .from(businessIntelligence)
+        .where(and(...conditions))
+        .orderBy(businessIntelligence.date);
+
+      return biData.map(row => ({
+        date: row.date,
+        revenue: row.totalRevenue || 0,
+        cogs: row.totalCogs || 0,
+        grossProfit: (row.totalRevenue || 0) - (row.totalCogs || 0),
+        foodCostPercentage: row.foodCostPercentage || 0,
+        grossMarginPercentage: row.avgOrderValue ? ((row.totalRevenue - row.totalCogs) / row.totalRevenue * 100) : 0
+      }));
+    } catch (error) {
+      console.error('Error fetching daily P&L:', error);
+      return [];
     }
-    
-    return pnlData;
   }
 
   async getKPIMetrics(timeRange: string, locationId?: string): Promise<any> {
-    return {
-      grossMargin: 68.5,
-      marginVariance: 2.3,
-      foodCostPercentage: 29.2,
-      avgOrderValue: 47.50,
-      aovVariance: 5.8,
-      customerCount: 1250
-    };
+    try {
+      const days = timeRange === '7d' ? 7 : timeRange === '30d' ? 30 : 90;
+      const startDate = new Date();
+      startDate.setDate(startDate.getDate() - days);
+
+      const conditions = [
+        gte(businessIntelligence.date, startDate.toISOString().split('T')[0])
+      ];
+      
+      if (locationId) {
+        conditions.push(eq(businessIntelligence.locationId, locationId));
+      }
+
+      const biData = await db
+        .select()
+        .from(businessIntelligence)
+        .where(and(...conditions));
+
+      if (biData.length === 0) {
+        return {
+          grossMargin: 0,
+          marginVariance: 0,
+          foodCostPercentage: 0,
+          avgOrderValue: 0,
+          aovVariance: 0,
+          customerCount: 0
+        };
+      }
+
+      const avgFoodCost = biData.reduce((sum, row) => sum + (row.foodCostPercentage || 0), 0) / biData.length;
+      const avgOrderValue = biData.reduce((sum, row) => sum + (row.avgOrderValue || 0), 0) / biData.length;
+      const totalCustomers = biData.reduce((sum, row) => sum + (row.customerCount || 0), 0);
+      const avgGrossMargin = 100 - avgFoodCost;
+
+      return {
+        grossMargin: parseFloat(avgGrossMargin.toFixed(1)),
+        marginVariance: 0,
+        foodCostPercentage: parseFloat(avgFoodCost.toFixed(1)),
+        avgOrderValue: parseFloat(avgOrderValue.toFixed(2)),
+        aovVariance: 0,
+        customerCount: totalCustomers
+      };
+    } catch (error) {
+      console.error('Error fetching KPI metrics:', error);
+      return {
+        grossMargin: 0,
+        marginVariance: 0,
+        foodCostPercentage: 0,
+        avgOrderValue: 0,
+        aovVariance: 0,
+        customerCount: 0
+      };
+    }
   }
 
   async getProfitabilityAnalysis(timeRange: string, locationId?: string): Promise<any[]> {
-    return [
-      { name: "Gross Profit Margin", value: "68.5%", target: "65-70%" },
-      { name: "Food Cost Percentage", value: "29.2%", target: "28-32%" },
-      { name: "Labor Cost Percentage", value: "32.8%", target: "28-35%" },
-      { name: "Prime Cost", value: "62.0%", target: "<60%" },
-      { name: "Net Profit Margin", value: "12.4%", target: "10-15%" },
-      { name: "EBITDA", value: "18.7%", target: "15-20%" },
-      { name: "Inventory Turnover", value: "24.5x", target: "20-30x" },
-      { name: "Average Check Size", value: "$47.50", target: "$45-50" }
-    ];
+    try {
+      const kpis = await this.getKPIMetrics(timeRange, locationId);
+      
+      return [
+        { name: "Gross Profit Margin", value: `${kpis.grossMargin}%`, target: "65-70%" },
+        { name: "Food Cost Percentage", value: `${kpis.foodCostPercentage}%`, target: "28-32%" },
+        { name: "Labor Cost Percentage", value: "N/A", target: "28-35%" },
+        { name: "Prime Cost", value: "N/A", target: "<60%" },
+        { name: "Net Profit Margin", value: "N/A", target: "10-15%" },
+        { name: "EBITDA", value: "N/A", target: "15-20%" },
+        { name: "Inventory Turnover", value: "N/A", target: "20-30x" },
+        { name: "Average Check Size", value: `$${kpis.avgOrderValue.toFixed(2)}`, target: "$45-50" }
+      ];
+    } catch (error) {
+      console.error('Error fetching profitability analysis:', error);
+      return [];
+    }
   }
 
   async getMenuPerformance(timeRange: string, locationId?: string): Promise<any[]> {
-    return [
-      { 
-        name: "Classic Burger", 
-        unitsSold: 245, 
-        margin: 72.5, 
-        profit: 890.25,
-        category: "Burgers"
-      },
-      { 
-        name: "Grilled Salmon", 
-        unitsSold: 156, 
-        margin: 68.2, 
-        profit: 1250.80,
-        category: "Seafood"
-      },
-      { 
-        name: "Caesar Salad", 
-        unitsSold: 189, 
-        margin: 81.3, 
-        profit: 567.45,
-        category: "Salads"
-      },
-      { 
-        name: "Ribeye Steak", 
-        unitsSold: 98, 
-        margin: 65.8, 
-        profit: 1580.50,
-        category: "Steaks"
-      },
-      { 
-        name: "Margherita Pizza", 
-        unitsSold: 203, 
-        margin: 75.6, 
-        profit: 745.20,
-        category: "Pizza"
-      },
-      { 
-        name: "Fish Tacos", 
-        unitsSold: 167, 
-        margin: 70.4, 
-        profit: 623.85,
-        category: "Mexican"
-      },
-      { 
-        name: "BBQ Ribs", 
-        unitsSold: 124, 
-        margin: 64.2, 
-        profit: 987.60,
-        category: "BBQ"
-      },
-      { 
-        name: "Chicken Wings", 
-        unitsSold: 298, 
-        margin: 78.9, 
-        profit: 1124.50,
-        category: "Appetizers"
+    try {
+      const days = timeRange === '7d' ? 7 : timeRange === '30d' ? 30 : 90;
+      const startDate = new Date();
+      startDate.setDate(startDate.getDate() - days);
+
+      const conditions = [
+        gte(posSales.orderDate, startDate)
+      ];
+      
+      if (locationId) {
+        conditions.push(eq(posSales.locationId, locationId));
       }
-    ];
+
+      const sales = await db
+        .select()
+        .from(posSales)
+        .where(and(...conditions));
+
+      const itemPerformance: any = {};
+      
+      sales.forEach(sale => {
+        const items = sale.items as any[];
+        items?.forEach((item: any) => {
+          const itemName = item.name || 'Unknown Item';
+          if (!itemPerformance[itemName]) {
+            itemPerformance[itemName] = {
+              name: itemName,
+              unitsSold: 0,
+              revenue: 0,
+              category: item.category || 'Other'
+            };
+          }
+          itemPerformance[itemName].unitsSold += item.quantity || 1;
+          itemPerformance[itemName].revenue += parseFloat(item.price || 0) * (item.quantity || 1);
+        });
+      });
+
+      return Object.values(itemPerformance)
+        .sort((a: any, b: any) => b.revenue - a.revenue)
+        .slice(0, 10)
+        .map((item: any) => ({
+          ...item,
+          margin: 70, // Default margin - needs recipe costing integration
+          profit: item.revenue * 0.70
+        }));
+    } catch (error) {
+      console.error('Error fetching menu performance:', error);
+      return [];
+    }
   }
 
   async getCostAnalysis(timeRange: string, locationId?: string): Promise<any> {
-    return {
-      categoryBreakdown: [
-        { name: "Proteins", value: 12000 },
-        { name: "Produce", value: 6500 },
-        { name: "Dairy", value: 3200 },
-        { name: "Beverages", value: 2800 },
-        { name: "Dry Goods", value: 2500 }
-      ],
-      monthlyBreakdown: [
-        { month: "Oct", food: 25000, labor: 32000, overhead: 8000 },
-        { month: "Nov", food: 27000, labor: 33500, overhead: 8200 },
-        { month: "Dec", food: 28500, labor: 35000, overhead: 8500 },
-        { month: "Jan", food: 26800, labor: 34200, overhead: 8100 }
-      ]
-    };
+    try {
+      const days = timeRange === '7d' ? 7 : timeRange === '30d' ? 30 : 90;
+      const startDate = new Date();
+      startDate.setDate(startDate.getDate() - days);
+
+      const conditions = [
+        gte(purchaseOrders.orderDate, startDate)
+      ];
+      
+      if (locationId) {
+        conditions.push(eq(purchaseOrders.locationId, locationId));
+      }
+
+      const orders = await db
+        .select()
+        .from(purchaseOrders)
+        .where(and(...conditions));
+
+      const categoryBreakdown: any = {};
+      
+      orders.forEach(order => {
+        const items = order.items as any[];
+        items?.forEach((item: any) => {
+          const category = item.category || 'Other';
+          if (!categoryBreakdown[category]) {
+            categoryBreakdown[category] = { name: category, value: 0 };
+          }
+          categoryBreakdown[category].value += parseFloat(item.total || 0);
+        });
+      });
+
+      return {
+        categoryBreakdown: Object.values(categoryBreakdown),
+        monthlyBreakdown: []
+      };
+    } catch (error) {
+      console.error('Error fetching cost analysis:', error);
+      return {
+        categoryBreakdown: [],
+        monthlyBreakdown: []
+      };
+    }
   }
   // HR Department operations
   async getDepartments(): Promise<Department[]> {
