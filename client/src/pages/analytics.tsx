@@ -138,6 +138,13 @@ interface RealTimeData {
   }>;
 }
 
+interface WasteData {
+  category: string;
+  amount: number;
+  cost: number;
+  color: string;
+}
+
 export default function Analytics() {
   const { currentLocation } = useLocation();
   const queryClient = useQueryClient();
@@ -190,7 +197,7 @@ export default function Analytics() {
   }));
 
   // Fetch waste data
-  const { data: wasteData = [], isLoading: wasteLoading } = useQuery({
+  const { data: wasteData = [], isLoading: wasteLoading } = useQuery<WasteData[]>({
     queryKey: ['/api/waste/summary', currentLocation?.id, timeRange],
     enabled: !!currentLocation,
   });
