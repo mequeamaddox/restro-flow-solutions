@@ -24,7 +24,11 @@ Business Strategy: Modular add-on approach for employee management to enable sca
 ### UI/UX Decisions
 - **Mobile App**: Progressive Web App (PWA) with a mobile-first, touch-optimized interface, responsive dashboard, and role-based UX.
 - **Visual Identity**: Dark theme with gradient backgrounds, custom color schemes, and interactive elements.
-- **Reporting**: Consolidated Analytics & Reports page for streamlined navigation.
+- **Analytics**: Consolidated 4-tab structure for streamlined navigation:
+  - **Overview**: Real-time metrics, live sales data, BI summary cards, top/low performing items
+  - **Performance Insights**: Detailed business intelligence KPIs, menu performance analysis, profitability metrics, and trend analysis
+  - **Cost & Waste**: Budget tracking, cost trends, variance analysis (inventory/production/record production), and price monitoring
+  - **Reports & Exports**: P&L statements, daily controllable P&L charts, and data export functionality
 
 ### Technical Implementations
 - **Frontend**: React 18 with TypeScript and Vite, using shadcn/ui (Radix UI + Tailwind CSS), TanStack Query, Wouter, and React Hook Form with Zod.

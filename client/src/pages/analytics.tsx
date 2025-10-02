@@ -525,21 +525,18 @@ export default function Analytics() {
         </CardContent>
       </Card>
 
-      <Tabs defaultValue="real-time" className="w-full">
+      <Tabs defaultValue="overview" className="w-full">
         <div className="w-full overflow-x-auto">
           <TabsList className="inline-flex h-12 items-center justify-start rounded-md bg-muted p-1 text-muted-foreground min-w-max">
-            <TabsTrigger value="real-time" className="whitespace-nowrap px-4 py-2 text-sm">Real-Time</TabsTrigger>
             <TabsTrigger value="overview" className="whitespace-nowrap px-4 py-2 text-sm">Overview</TabsTrigger>
-            <TabsTrigger value="profit-loss" className="whitespace-nowrap px-4 py-2 text-sm">P&L Report</TabsTrigger>
-            <TabsTrigger value="cost-analysis" className="whitespace-nowrap px-4 py-2 text-sm">Cost Analysis</TabsTrigger>
-            <TabsTrigger value="business-intelligence" className="whitespace-nowrap px-4 py-2 text-sm">Business Intelligence</TabsTrigger>
-            <TabsTrigger value="variance-analysis" className="whitespace-nowrap px-4 py-2 text-sm">Variance Analysis</TabsTrigger>
-            <TabsTrigger value="trends" className="whitespace-nowrap px-4 py-2 text-sm">Trends</TabsTrigger>
+            <TabsTrigger value="performance" className="whitespace-nowrap px-4 py-2 text-sm">Performance Insights</TabsTrigger>
+            <TabsTrigger value="cost-waste" className="whitespace-nowrap px-4 py-2 text-sm">Cost & Waste</TabsTrigger>
+            <TabsTrigger value="reports" className="whitespace-nowrap px-4 py-2 text-sm">Reports & Exports</TabsTrigger>
           </TabsList>
         </div>
 
-        {/* Real-Time Analytics Tab */}
-        <TabsContent value="real-time" className="space-y-6">
+        {/* Overview Tab - Real-Time Metrics + Dashboard */}
+        <TabsContent value="overview" className="space-y-6">
           {/* Live Metrics */}
           {realTimeLoading ? (
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -708,70 +705,7 @@ export default function Analytics() {
             </Card>
           </div>
 
-          {/* Today's Waste Breakdown */}
-          <Card className="bg-slate-800/50 border-slate-700">
-            <CardHeader>
-              <CardTitle className="text-white flex items-center gap-2">
-                <Eye className="h-5 w-5 text-purple-400" />
-                Today's Waste Breakdown
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div className="h-64">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <RechartsPieChart>
-                      <Pie
-                        data={wasteData}
-                        cx="50%"
-                        cy="50%"
-                        outerRadius={80}
-                        fill="#8884d8"
-                        dataKey="amount"
-                        label={({category, amount}) => `${category}: ${amount}lbs`}
-                      >
-                        {wasteData.map((entry, index) => (
-                          <Cell key={`cell-${index}`} fill={entry.color} />
-                        ))}
-                      </Pie>
-                      <Tooltip />
-                    </RechartsPieChart>
-                  </ResponsiveContainer>
-                </div>
-                <div className="space-y-3">
-                  {wasteData.map((waste, index) => (
-                    <div key={index} className="flex items-center justify-between p-3 bg-slate-700/30 rounded-lg">
-                      <div className="flex items-center gap-3">
-                        <div 
-                          className="w-4 h-4 rounded-full"
-                          style={{ backgroundColor: waste.color }}
-                        />
-                        <div>
-                          <div className="text-white font-medium">{waste.category}</div>
-                          <div className="text-sm text-slate-400">{waste.amount} lbs</div>
-                        </div>
-                      </div>
-                      <div className="text-right">
-                        <div className="text-red-400 font-semibold">${waste.cost}</div>
-                        <div className="text-xs text-slate-400">cost</div>
-                      </div>
-                    </div>
-                  ))}
-                  <div className="pt-3 border-t border-slate-600">
-                    <div className="flex justify-between text-white font-semibold">
-                      <span>Total Waste Today:</span>
-                      <span className="text-red-400">${wasteData.reduce((sum, w) => sum + w.cost, 0)}</span>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        {/* Overview Tab */}
-        <TabsContent value="overview" className="space-y-6">
-          {/* Key Metrics Cards */}
+          {/* Period-based Business Intelligence Metrics */}
           {biLoading ? (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
               {[1, 2, 3, 4].map((i) => (
@@ -851,7 +785,7 @@ export default function Analytics() {
             </div>
           )}
 
-          {/* Top Selling Items */}
+          {/* Top/Low Performing Items */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             <Card>
               <CardHeader>
@@ -911,8 +845,243 @@ export default function Analytics() {
           </div>
         </TabsContent>
 
-        {/* P&L Tab */}
-        <TabsContent value="profit-loss" className="space-y-6">
+        {/* Performance Insights Tab - Business Intelligence + Trends */}
+        <TabsContent value="performance" className="space-y-6">
+          {/* KPI Overview Cards */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+            <Card className="bg-slate-800/80 backdrop-blur-sm border-slate-700">
+              <CardContent className="p-6">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm text-slate-400">Gross Profit Margin</p>
+                    <p className="text-2xl font-bold text-white">
+                      {formatPercentage(kpiMetrics?.grossMargin || 0)}
+                    </p>
+                    <div className="flex items-center text-xs mt-1">
+                      {(kpiMetrics?.marginVariance || 0) > 0 ? (
+                        <TrendingUp className="h-3 w-3 text-green-400 mr-1" />
+                      ) : (
+                        <TrendingDown className="h-3 w-3 text-red-400 mr-1" />
+                      )}
+                      <span className={getVarianceColor(kpiMetrics?.marginVariance || 0)}>
+                        {Math.abs(kpiMetrics?.marginVariance || 0).toFixed(1)}%
+                      </span>
+                    </div>
+                  </div>
+                  <Target className="h-8 w-8 text-green-400" />
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card className="bg-slate-800/80 backdrop-blur-sm border-slate-700">
+              <CardContent className="p-6">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm text-slate-400">Food Cost %</p>
+                    <p className="text-2xl font-bold text-white">
+                      {formatPercentage(kpiMetrics?.foodCostPercentage || 0)}
+                    </p>
+                    <div className="flex items-center text-xs mt-1">
+                      <span className="text-slate-400">Target: 28-32%</span>
+                    </div>
+                  </div>
+                  <DollarSign className="h-8 w-8 text-orange-400" />
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card className="bg-slate-800/80 backdrop-blur-sm border-slate-700">
+              <CardContent className="p-6">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm text-slate-400">Average Order Value</p>
+                    <p className="text-2xl font-bold text-white">
+                      {formatCurrency(kpiMetrics?.avgOrderValue || 0)}
+                    </p>
+                    <div className="flex items-center text-xs mt-1">
+                      {(kpiMetrics?.aovVariance || 0) > 0 ? (
+                        <TrendingUp className="h-3 w-3 text-green-400 mr-1" />
+                      ) : (
+                        <TrendingDown className="h-3 w-3 text-red-400 mr-1" />
+                      )}
+                      <span className={getVarianceColor(kpiMetrics?.aovVariance || 0)}>
+                        {formatPercentage(Math.abs(kpiMetrics?.aovVariance || 0))}
+                      </span>
+                    </div>
+                  </div>
+                  <ShoppingCart className="h-8 w-8 text-blue-400" />
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card className="bg-slate-800/80 backdrop-blur-sm border-slate-700">
+              <CardContent className="p-6">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm text-slate-400">Customer Count</p>
+                    <p className="text-2xl font-bold text-white">
+                      {kpiMetrics?.customerCount?.toLocaleString() || 0}
+                    </p>
+                    <div className="flex items-center text-xs mt-1">
+                      <span className="text-slate-400">vs last period</span>
+                    </div>
+                  </div>
+                  <Users className="h-8 w-8 text-purple-400" />
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Menu Performance */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <Card className="bg-slate-800/80 backdrop-blur-sm border-slate-700">
+              <CardHeader>
+                <CardTitle className="text-white">Top Performing Items</CardTitle>
+                <CardDescription className="text-slate-400">
+                  Highest profit margin and volume
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-4">
+                  {menuPerformance.slice(0, 8).map((item: any, index: number) => (
+                    <div key={index} className="flex justify-between items-center">
+                      <div className="flex items-center">
+                        <div className="w-8 h-8 rounded bg-green-500/20 flex items-center justify-center mr-3">
+                          <span className="text-green-400 text-sm font-bold">{index + 1}</span>
+                        </div>
+                        <div>
+                          <p className="text-white font-medium">{item.name}</p>
+                          <p className="text-slate-400 text-xs">
+                            {item.unitsSold} sold • {formatPercentage(item.margin)} margin
+                          </p>
+                        </div>
+                      </div>
+                      <div className="text-right">
+                        <p className="text-white font-bold">{formatCurrency(item.profit)}</p>
+                        <p className="text-green-400 text-xs">profit</p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card className="bg-slate-800/80 backdrop-blur-sm border-slate-700">
+              <CardHeader>
+                <CardTitle className="text-white">Improvement Opportunities</CardTitle>
+                <CardDescription className="text-slate-400">
+                  Items needing attention
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-4">
+                  {profitabilityAnalysis.slice(0, 8).map((item: any, index: number) => (
+                    <div key={index} className="flex justify-between items-center">
+                      <div>
+                        <p className="text-white font-medium">{item.name}</p>
+                        <p className="text-slate-400 text-xs">
+                          {formatPercentage(item.currentMargin)} margin (Target: {formatPercentage(item.targetMargin)})
+                        </p>
+                      </div>
+                      <div className="flex items-center space-x-2">
+                        <Badge variant="outline" className="text-orange-400 border-orange-400">
+                          {item.improvement > 0 ? '+' : ''}{formatCurrency(item.improvement)}
+                        </Badge>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Profitability Analysis Chart */}
+          <Card className="bg-slate-800/80 backdrop-blur-sm border-slate-700">
+            <CardHeader>
+              <CardTitle className="text-white flex items-center">
+                <PieChart className="h-5 w-5 mr-2" />
+                Product Category Profitability
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <ResponsiveContainer width="100%" height={400}>
+                <BarChart data={profitabilityAnalysis}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
+                  <XAxis dataKey="name" stroke="#9CA3AF" />
+                  <YAxis stroke="#9CA3AF" />
+                  <Tooltip 
+                    contentStyle={{ 
+                      backgroundColor: '#1F2937', 
+                      border: '1px solid #374151',
+                      borderRadius: '8px',
+                      color: '#F3F4F6'
+                    }}
+                  />
+                  <Bar dataKey="currentMargin" fill="#F97316" name="Current Margin" />
+                  <Bar dataKey="targetMargin" fill="#10B981" name="Target Margin" />
+                </BarChart>
+              </ResponsiveContainer>
+            </CardContent>
+          </Card>
+
+          {/* Trends Section */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <Card>
+              <CardHeader>
+                <CardTitle>Inventory Trends</CardTitle>
+                <CardDescription>Inventory turnover and performance</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-4">
+                  <div className="flex justify-between items-center">
+                    <span>Inventory Turnover</span>
+                    <span className="font-medium">
+                      {biData?.inventoryTurnover || 0}x
+                    </span>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span>Days of Inventory</span>
+                    <span className="font-medium">
+                      {Math.round(365 / parseFloat(biData?.inventoryTurnover || '1'))} days
+                    </span>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle>Cost Breakdown</CardTitle>
+                <CardDescription>Current period cost analysis</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-4">
+                  <div className="flex justify-between items-center">
+                    <span>Food Cost</span>
+                    <span className="font-medium">
+                      {formatPercentage(biData?.foodCostPercentage || 0)}
+                    </span>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span>Waste</span>
+                    <span className="font-medium">
+                      {formatPercentage(biData?.wastePercentage || 0)}
+                    </span>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span>Gross Margin</span>
+                    <span className="font-medium text-green-600">
+                      {formatPercentage(biData?.grossMargin || 0)}
+                    </span>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        </TabsContent>
+
+        {/* Reports & Exports Tab */}
+        <TabsContent value="reports" className="space-y-6">
           <Card>
             <CardHeader>
               <CardTitle>Profit & Loss Statement</CardTitle>
@@ -1036,8 +1205,8 @@ export default function Analytics() {
           </Card>
         </TabsContent>
 
-        {/* Cost Analysis Tab */}
-        <TabsContent value="cost-analysis" className="space-y-6">
+        {/* Cost & Waste Tab */}
+        <TabsContent value="cost-waste" className="space-y-6">
           {/* Budget Overview Cards */}
           <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
             <Card className="bg-slate-800/80 backdrop-blur-sm border-slate-700">
@@ -1283,226 +1452,8 @@ export default function Analytics() {
               </div>
             </CardContent>
           </Card>
-        </TabsContent>
 
-        {/* Business Intelligence Tab */}
-        <TabsContent value="business-intelligence" className="space-y-6">
-          {/* KPI Overview Cards */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-            <Card className="bg-slate-800/80 backdrop-blur-sm border-slate-700">
-              <CardContent className="p-6">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm text-slate-400">Gross Profit Margin</p>
-                    <p className="text-2xl font-bold text-white">
-                      {formatPercentage(kpiMetrics?.grossMargin || 0)}
-                    </p>
-                    <div className="flex items-center text-xs mt-1">
-                      {(kpiMetrics?.marginVariance || 0) > 0 ? (
-                        <TrendingUp className="h-3 w-3 text-green-400 mr-1" />
-                      ) : (
-                        <TrendingDown className="h-3 w-3 text-red-400 mr-1" />
-                      )}
-                      <span className={getVarianceColor(kpiMetrics?.marginVariance || 0)}>
-                        {Math.abs(kpiMetrics?.marginVariance || 0).toFixed(1)}%
-                      </span>
-                    </div>
-                  </div>
-                  <Target className="h-8 w-8 text-green-400" />
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card className="bg-slate-800/80 backdrop-blur-sm border-slate-700">
-              <CardContent className="p-6">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm text-slate-400">Food Cost %</p>
-                    <p className="text-2xl font-bold text-white">
-                      {formatPercentage(kpiMetrics?.foodCostPercentage || 0)}
-                    </p>
-                    <div className="flex items-center text-xs mt-1">
-                      <span className="text-slate-400">Target: 28-32%</span>
-                    </div>
-                  </div>
-                  <DollarSign className="h-8 w-8 text-orange-400" />
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card className="bg-slate-800/80 backdrop-blur-sm border-slate-700">
-              <CardContent className="p-6">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm text-slate-400">Average Order Value</p>
-                    <p className="text-2xl font-bold text-white">
-                      {formatCurrency(kpiMetrics?.avgOrderValue || 0)}
-                    </p>
-                    <div className="flex items-center text-xs mt-1">
-                      {(kpiMetrics?.aovVariance || 0) > 0 ? (
-                        <TrendingUp className="h-3 w-3 text-green-400 mr-1" />
-                      ) : (
-                        <TrendingDown className="h-3 w-3 text-red-400 mr-1" />
-                      )}
-                      <span className={getVarianceColor(kpiMetrics?.aovVariance || 0)}>
-                        {formatPercentage(Math.abs(kpiMetrics?.aovVariance || 0))}
-                      </span>
-                    </div>
-                  </div>
-                  <ShoppingCart className="h-8 w-8 text-blue-400" />
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card className="bg-slate-800/80 backdrop-blur-sm border-slate-700">
-              <CardContent className="p-6">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm text-slate-400">Customer Count</p>
-                    <p className="text-2xl font-bold text-white">
-                      {kpiMetrics?.customerCount?.toLocaleString() || 0}
-                    </p>
-                    <div className="flex items-center text-xs mt-1">
-                      <span className="text-slate-400">vs last period</span>
-                    </div>
-                  </div>
-                  <Users className="h-8 w-8 text-purple-400" />
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-
-          {/* Menu Performance */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            <Card className="bg-slate-800/80 backdrop-blur-sm border-slate-700">
-              <CardHeader>
-                <CardTitle className="text-white">Top Performing Items</CardTitle>
-                <CardDescription className="text-slate-400">
-                  Highest profit margin and volume
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
-                  {menuPerformance.slice(0, 8).map((item: any, index: number) => (
-                    <div key={index} className="flex justify-between items-center">
-                      <div className="flex items-center">
-                        <div className="w-8 h-8 rounded bg-green-500/20 flex items-center justify-center mr-3">
-                          <span className="text-green-400 text-sm font-bold">{index + 1}</span>
-                        </div>
-                        <div>
-                          <p className="text-white font-medium">{item.name}</p>
-                          <p className="text-slate-400 text-xs">
-                            {item.unitsSold} sold • {formatPercentage(item.margin)} margin
-                          </p>
-                        </div>
-                      </div>
-                      <div className="text-right">
-                        <p className="text-white font-bold">{formatCurrency(item.profit)}</p>
-                        <p className="text-green-400 text-xs">profit</p>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card className="bg-slate-800/80 backdrop-blur-sm border-slate-700">
-              <CardHeader>
-                <CardTitle className="text-white">Performance Alerts</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-3">
-                  <div className="flex items-center p-3 rounded-lg bg-green-900/20 border border-green-500/30">
-                    <CheckCircle className="h-5 w-5 text-green-400 mr-3" />
-                    <div>
-                      <p className="text-white text-sm font-medium">Food cost within target</p>
-                      <p className="text-green-400 text-xs">29.2% (Target: 28-32%)</p>
-                    </div>
-                  </div>
-                  
-                  <div className="flex items-center p-3 rounded-lg bg-orange-900/20 border border-orange-500/30">
-                    <AlertTriangle className="h-5 w-5 text-orange-400 mr-3" />
-                    <div>
-                      <p className="text-white text-sm font-medium">Labor cost trending high</p>
-                      <p className="text-orange-400 text-xs">34.8% (+2.3% vs target)</p>
-                    </div>
-                  </div>
-                  
-                  <div className="flex items-center p-3 rounded-lg bg-red-900/20 border border-red-500/30">
-                    <AlertTriangle className="h-5 w-5 text-red-400 mr-3" />
-                    <div>
-                      <p className="text-white text-sm font-medium">Waste above threshold</p>
-                      <p className="text-red-400 text-xs">4.2% (Target: &lt;3%)</p>
-                    </div>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-
-          {/* Profitability Analysis */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            <Card className="bg-slate-800/80 backdrop-blur-sm border-slate-700">
-              <CardHeader>
-                <CardTitle className="text-white">Profitability Metrics</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
-                  {profitabilityAnalysis.map((metric: any, index: number) => (
-                    <div key={index} className="flex justify-between items-center">
-                      <span className="text-slate-300">{metric.name}</span>
-                      <div className="text-right">
-                        <span className="text-white font-bold">{metric.value}</span>
-                        {metric.target && (
-                          <div className="text-xs text-slate-400">
-                            Target: {metric.target}
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card className="bg-slate-800/80 backdrop-blur-sm border-slate-700">
-              <CardHeader>
-                <CardTitle className="text-white">Category Performance</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <ResponsiveContainer width="100%" height={300}>
-                  <RechartsPieChart>
-                    <Pie
-                      data={costAnalysis?.categoryBreakdown || []}
-                      cx="50%"
-                      cy="50%"
-                      outerRadius={100}
-                      fill="#8884d8"
-                      dataKey="value"
-                      label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
-                    >
-                      {(costAnalysis?.categoryBreakdown || []).map((entry: any, index: number) => (
-                        <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                      ))}
-                    </Pie>
-                    <Tooltip 
-                      contentStyle={{ 
-                        backgroundColor: '#1F2937', 
-                        border: '1px solid #374151',
-                        borderRadius: '8px',
-                        color: '#F3F4F6'
-                      }}
-                    />
-                  </RechartsPieChart>
-                </ResponsiveContainer>
-              </CardContent>
-            </Card>
-          </div>
-        </TabsContent>
-
-        {/* Variance Analysis Tab */}
-        <TabsContent value="variance-analysis" className="space-y-6">
-          {/* Date Range Controls */}
+          {/* Variance Analysis Section */}
           <Card>
             <CardContent className="p-4">
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -1777,63 +1728,6 @@ export default function Analytics() {
               </Card>
             </TabsContent>
           </Tabs>
-        </TabsContent>
-
-        {/* Trends Tab */}
-        <TabsContent value="trends" className="space-y-6">
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            <Card>
-              <CardHeader>
-                <CardTitle>Inventory Trends</CardTitle>
-                <CardDescription>Inventory turnover and performance</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
-                  <div className="flex justify-between items-center">
-                    <span>Inventory Turnover</span>
-                    <span className="font-medium">
-                      {biData?.inventoryTurnover || 0}x
-                    </span>
-                  </div>
-                  <div className="flex justify-between items-center">
-                    <span>Days of Inventory</span>
-                    <span className="font-medium">
-                      {Math.round(365 / parseFloat(biData?.inventoryTurnover || '1'))} days
-                    </span>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader>
-                <CardTitle>Cost Breakdown</CardTitle>
-                <CardDescription>Current period cost analysis</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
-                  <div className="flex justify-between items-center">
-                    <span>Food Cost</span>
-                    <span className="font-medium">
-                      {formatPercentage(biData?.foodCostPercentage || 0)}
-                    </span>
-                  </div>
-                  <div className="flex justify-between items-center">
-                    <span>Waste</span>
-                    <span className="font-medium">
-                      {formatPercentage(biData?.wastePercentage || 0)}
-                    </span>
-                  </div>
-                  <div className="flex justify-between items-center">
-                    <span>Gross Margin</span>
-                    <span className="font-medium text-green-600">
-                      {formatPercentage(biData?.grossMargin || 0)}
-                    </span>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
         </TabsContent>
       </Tabs>
     </div>
