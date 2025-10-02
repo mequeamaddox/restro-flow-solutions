@@ -540,12 +540,48 @@ export class CloverService {
       );
 
       if (!response.ok) {
+        // Try to get the error details from response body
+        const errorText = await response.text();
+        console.error(`Clover shifts API error: ${response.status} ${response.statusText}`);
+        console.error(`Error details: ${errorText}`);
+        console.error(`Request URL: ${baseUrl}/v3/merchants/${integration.merchantId}/shifts?filter=inTime>=${startTime.getTime()}&expand=employee`);
+        
         // 404 might mean no shifts exist or Shifts app not enabled
         if (response.status === 404) {
           console.log('No shifts endpoint available - merchant may not be using Clover Shifts app');
           return [];
         }
-        throw new Error(`Clover API error: ${response.status} ${response.statusText}`);
+        
+        // 400 might mean the filter syntax is wrong or the endpoint doesn't support filters
+        if (response.status === 400) {
+          console.log('Bad request - trying without filter...');
+          // Try again without filter
+          const retryResponse = await fetch(
+            `${baseUrl}/v3/merchants/${integration.merchantId}/shifts?expand=employee`,
+            {
+              headers: {
+                'Authorization': `Bearer ${accessToken}`,
+                'Content-Type': 'application/json',
+              },
+            }
+          );
+          
+          if (!retryResponse.ok) {
+            console.log('Shifts endpoint not available even without filter - merchant not using Clover Shifts app');
+            return [];
+          }
+          
+          const allData = await retryResponse.json();
+          const allShifts = allData.elements || [];
+          console.log(`Fetched ${allShifts.length} total shifts from Clover (unfiltered)`);
+          
+          // Filter client-side
+          const filtered = allShifts.filter((shift: CloverShift) => shift.inTime >= startTime.getTime());
+          console.log(`After filtering: ${filtered.length} shifts from last ${daysBack} days`);
+          return filtered;
+        }
+        
+        return [];
       }
 
       const data = await response.json();
