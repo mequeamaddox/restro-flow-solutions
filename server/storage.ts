@@ -3008,19 +3008,27 @@ export class DatabaseStorage implements IStorage {
       
       // Only update clock times for POS entries (breaks and notes not supported in POS tables)
       if (updateData.clockInTime || updateData.clockOutTime) {
-        const result = await db.execute(sql`
-          UPDATE pos_timeclocks
-          SET 
-            clock_in_at = COALESCE(${updateData.clockInTime || null}, clock_in_at),
-            clock_out_at = COALESCE(${updateData.clockOutTime || null}, clock_out_at),
-            status = CASE 
-              WHEN ${updateData.clockOutTime || null} IS NOT NULL THEN 'closed'
-              ELSE status
-            END,
-            updated_at = ${new Date()}
-          WHERE id = ${posTimeclockId}::uuid
-          RETURNING id, clock_in_at, clock_out_at, break_seconds, status
-        `);
+        // Build update object for POS timeclocks
+        const posUpdateData: any = {
+          updatedAt: new Date()
+        };
+        
+        if (updateData.clockInTime) {
+          posUpdateData.clockInAt = updateData.clockInTime;
+        }
+        if (updateData.clockOutTime) {
+          posUpdateData.clockOutAt = updateData.clockOutTime;
+          posUpdateData.status = 'closed';
+        }
+        
+        const [updated] = await db.update(posTimeclocks)
+          .set(posUpdateData)
+          .where(eq(posTimeclocks.id, posTimeclockId))
+          .returning();
+        
+        if (!updated) throw new Error('POS time entry not found');
+        
+        const result = { rows: [updated] };
         
         if (result.rows.length === 0) throw new Error('POS time entry not found');
         
@@ -3325,9 +3333,9 @@ export class DatabaseStorage implements IStorage {
       const totalWeeklyHours = regularHours + posHours;
       
       // Calculate average hourly rate from employees
-      const employeesWithWage = employees.filter((emp: any) => emp.hourlyWage > 0);
+      const employeesWithWage = employees.filter((emp: any) => emp.hourlyRate && emp.hourlyRate > 0);
       const avgHourlyRate = employeesWithWage.length > 0
-        ? employeesWithWage.reduce((sum: number, emp: any) => sum + (emp.hourlyWage || 0), 0) / employeesWithWage.length
+        ? employeesWithWage.reduce((sum: number, emp: any) => sum + (emp.hourlyRate || 0), 0) / employeesWithWage.length
         : 15.50; // Default if no wage data
       
       const estimatedWeeklyLabor = totalWeeklyHours * avgHourlyRate;
