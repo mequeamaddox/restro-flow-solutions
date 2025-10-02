@@ -191,7 +191,8 @@ export default function HRTimeClock() {
     const rangeDays = parseInt(dateRange);
     daysAgo.setDate(daysAgo.getDate() - rangeDays);
     
-    const dateMatch = entryDate >= daysAgo && entry.status === 'clocked-out';
+    // Include both manual ('clocked-out') and POS ('closed') completed entries
+    const dateMatch = entryDate >= daysAgo && (entry.status === 'clocked-out' || entry.status === 'closed');
     const employeeMatch = selectedEmployee === 'all' || entry.employeeId === selectedEmployee;
     
     return dateMatch && employeeMatch;
@@ -203,19 +204,31 @@ export default function HRTimeClock() {
 
   const getStatusColor = (status: string) => {
     switch (status) {
-      case 'clocked-in': return 'bg-green-900/80 text-green-200 border-green-600';
-      case 'on-break': return 'bg-yellow-900/80 text-yellow-200 border-yellow-600';
-      case 'clocked-out': return 'bg-slate-700/80 text-slate-300 border-slate-500';
-      default: return 'bg-slate-700/80 text-slate-300 border-slate-500';
+      case 'clocked-in':
+      case 'open': 
+        return 'bg-green-900/80 text-green-200 border-green-600';
+      case 'on-break': 
+        return 'bg-yellow-900/80 text-yellow-200 border-yellow-600';
+      case 'clocked-out':
+      case 'closed': 
+        return 'bg-slate-700/80 text-slate-300 border-slate-500';
+      default: 
+        return 'bg-slate-700/80 text-slate-300 border-slate-500';
     }
   };
 
   const getStatusIcon = (status: string) => {
     switch (status) {
-      case 'clocked-in': return <UserCheck className="h-4 w-4" />;
-      case 'on-break': return <Coffee className="h-4 w-4" />;
-      case 'clocked-out': return <Square className="h-4 w-4" />;
-      default: return <Clock className="h-4 w-4" />;
+      case 'clocked-in':
+      case 'open': 
+        return <UserCheck className="h-4 w-4" />;
+      case 'on-break': 
+        return <Coffee className="h-4 w-4" />;
+      case 'clocked-out':
+      case 'closed': 
+        return <Square className="h-4 w-4" />;
+      default: 
+        return <Clock className="h-4 w-4" />;
     }
   };
 
