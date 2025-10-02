@@ -2918,6 +2918,44 @@ export class DatabaseStorage implements IStorage {
 
   async clockOut(entryId: string): Promise<TimeEntry> {
     const clockOutTime = new Date();
+    
+    // Handle POS-synced entries
+    if (entryId.startsWith('pos-')) {
+      const posTimeclockId = entryId.replace('pos-', '');
+      
+      // Update pos_timeclocks table
+      const result = await db.execute(sql`
+        UPDATE pos_timeclocks
+        SET clock_out_at = ${clockOutTime},
+            status = 'closed',
+            updated_at = ${clockOutTime}
+        WHERE id = ${posTimeclockId}::uuid
+        RETURNING id, clock_in_at, clock_out_at, break_seconds, status
+      `);
+      
+      if (result.rows.length === 0) throw new Error('POS time entry not found');
+      
+      const row = result.rows[0] as any;
+      const clockIn = new Date(row.clock_in_at);
+      const totalHours = (clockOutTime.getTime() - clockIn.getTime()) / (1000 * 60 * 60);
+      
+      return {
+        id: entryId,
+        employeeId: '', // Not needed for this response
+        clockInTime: clockIn.toISOString(),
+        clockOutTime: clockOutTime.toISOString(),
+        breakStartTime: null,
+        breakEndTime: null,
+        totalHours: totalHours.toFixed(2),
+        status: 'closed',
+        notes: null,
+        createdAt: clockIn.toISOString(),
+        updatedAt: clockOutTime.toISOString(),
+        source: 'pos'
+      } as any;
+    }
+    
+    // Handle regular time entries
     const [entry] = await db.select().from(timeEntries).where(eq(timeEntries.id, entryId));
     
     if (!entry) throw new Error('Time entry not found');
@@ -2973,6 +3011,56 @@ export class DatabaseStorage implements IStorage {
     totalHours?: string;
     notes?: string;
   }): Promise<TimeEntry> {
+    // Handle POS-synced entries
+    if (entryId.startsWith('pos-')) {
+      const posTimeclockId = entryId.replace('pos-', '');
+      
+      // Only update clock times for POS entries (breaks and notes not supported in POS tables)
+      if (updateData.clockInTime || updateData.clockOutTime) {
+        const result = await db.execute(sql`
+          UPDATE pos_timeclocks
+          SET 
+            clock_in_at = COALESCE(${updateData.clockInTime || null}, clock_in_at),
+            clock_out_at = COALESCE(${updateData.clockOutTime || null}, clock_out_at),
+            status = CASE 
+              WHEN ${updateData.clockOutTime || null} IS NOT NULL THEN 'closed'
+              ELSE status
+            END,
+            updated_at = ${new Date()}
+          WHERE id = ${posTimeclockId}::uuid
+          RETURNING id, clock_in_at, clock_out_at, break_seconds, status
+        `);
+        
+        if (result.rows.length === 0) throw new Error('POS time entry not found');
+        
+        const row = result.rows[0] as any;
+        const clockIn = new Date(row.clock_in_at);
+        const clockOut = row.clock_out_at ? new Date(row.clock_out_at) : null;
+        let totalHours = null;
+        if (clockOut) {
+          totalHours = ((clockOut.getTime() - clockIn.getTime()) / (1000 * 60 * 60)).toFixed(2);
+        }
+        
+        return {
+          id: entryId,
+          employeeId: '',
+          clockInTime: clockIn.toISOString(),
+          clockOutTime: clockOut ? clockOut.toISOString() : null,
+          breakStartTime: null,
+          breakEndTime: null,
+          totalHours,
+          status: row.status === 'open' ? 'clocked-in' : 'clocked-out',
+          notes: null,
+          createdAt: clockIn.toISOString(),
+          updatedAt: new Date().toISOString(),
+          source: 'pos'
+        } as any;
+      }
+      
+      throw new Error('Only clock in/out times can be updated for POS entries');
+    }
+    
+    // Handle regular time entries
     // Recalculate total hours if times are being updated
     if (updateData.clockInTime || updateData.clockOutTime) {
       const [entry] = await db.select().from(timeEntries).where(eq(timeEntries.id, entryId));
@@ -2998,6 +3086,17 @@ export class DatabaseStorage implements IStorage {
   }
 
   async deleteTimeEntry(entryId: string): Promise<void> {
+    // Handle POS-synced entries
+    if (entryId.startsWith('pos-')) {
+      const posTimeclockId = entryId.replace('pos-', '');
+      await db.execute(sql`
+        DELETE FROM pos_timeclocks
+        WHERE id = ${posTimeclockId}::uuid
+      `);
+      return;
+    }
+    
+    // Handle regular time entries
     await db.delete(timeEntries).where(eq(timeEntries.id, entryId));
   }
 
