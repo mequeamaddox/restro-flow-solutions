@@ -724,12 +724,16 @@ export const invitationTokens = pgTable("invitation_tokens", {
 export const shifts = pgTable("shifts", {
   id: uuid("id").primaryKey().default(sql`gen_random_uuid()`),
   employeeId: uuid("employee_id").references(() => employees.id),
+  locationId: uuid("location_id").references(() => locations.id).notNull(),
+  departmentId: uuid("department_id").references(() => departments.id),
+  positionId: uuid("position_id").references(() => positions.id),
   date: date("date").notNull(),
   startTime: varchar("start_time").notNull(), // time format
   endTime: varchar("end_time").notNull(), // time format
   breakDuration: integer("break_duration").default(0), // minutes
   status: varchar("status").default("scheduled"),
   notes: text("notes"),
+  createdBy: varchar("created_by").references(() => users.id),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
@@ -1171,13 +1175,6 @@ export const insertPosSaleItemSchema = createInsertSchema(posSaleItems).omit({ i
 export const insertPosEmployeeSchema = createInsertSchema(posEmployees).omit({ id: true, createdAt: true, updatedAt: true });
 export const insertPosEmployeeMappingSchema = createInsertSchema(posEmployeeMappings).omit({ id: true, createdAt: true, updatedAt: true });
 export const insertPosTimeclockSchema = createInsertSchema(posTimeclocks).omit({ id: true, createdAt: true, updatedAt: true });
-
-export type PosEmployee = typeof posEmployees.$inferSelect;
-export type InsertPosEmployee = z.infer<typeof insertPosEmployeeSchema>;
-export type PosEmployeeMapping = typeof posEmployeeMappings.$inferSelect;
-export type InsertPosEmployeeMapping = z.infer<typeof insertPosEmployeeMappingSchema>;
-export type PosTimeclock = typeof posTimeclocks.$inferSelect;
-export type InsertPosTimeclock = z.infer<typeof insertPosTimeclockSchema>;
 
 // Relations for POS tables
 export const posIntegrationsRelations = relations(posIntegrations, ({ one, many }) => ({
