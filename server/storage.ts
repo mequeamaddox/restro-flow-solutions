@@ -518,6 +518,11 @@ export interface IStorage {
   getPaycheckSettings(): Promise<any>;
   updatePaycheckSettings(settings: any): Promise<any>;
   
+  // Tax settings operations
+  getTaxSettings(locationId: string): Promise<any>;
+  createTaxSettings(settings: any): Promise<any>;
+  updateTaxSettings(id: string, settings: any): Promise<any>;
+  
   // Local authentication methods (fallback when Firebase Admin SDK is unavailable)
   createLocalAuthUser(user: InsertLocalAuthUser): Promise<LocalAuthUser>;
   getLocalAuthUser(email: string): Promise<LocalAuthUser | null>;
@@ -5160,6 +5165,69 @@ export class DatabaseStorage implements IStorage {
       }
     } catch (error) {
       console.error('Error updating paycheck settings:', error);
+      throw error;
+    }
+  }
+
+  // Tax settings methods
+  async getTaxSettings(locationId: string): Promise<any> {
+    try {
+      const { payrollTaxSettings } = await import('./db/schema_comprehensive_payroll.js');
+      
+      const [settings] = await db
+        .select()
+        .from(payrollTaxSettings)
+        .where(
+          and(
+            eq(payrollTaxSettings.locationId, locationId),
+            eq(payrollTaxSettings.isActive, true)
+          )
+        )
+        .limit(1);
+      
+      return settings;
+    } catch (error) {
+      console.error('Error fetching tax settings:', error);
+      throw error;
+    }
+  }
+
+  async createTaxSettings(settings: any): Promise<any> {
+    try {
+      const { payrollTaxSettings } = await import('./db/schema_comprehensive_payroll.js');
+      
+      const [created] = await db
+        .insert(payrollTaxSettings)
+        .values(settings)
+        .returning();
+      
+      console.log('✅ Created tax settings:', created);
+      return created;
+    } catch (error) {
+      console.error('Error creating tax settings:', error);
+      throw error;
+    }
+  }
+
+  async updateTaxSettings(id: string, settings: any): Promise<any> {
+    try {
+      const { payrollTaxSettings } = await import('./db/schema_comprehensive_payroll.js');
+      
+      const updateData = {
+        ...settings,
+        updatedAt: new Date()
+      };
+      
+      const [updated] = await db
+        .update(payrollTaxSettings)
+        .set(updateData)
+        .where(eq(payrollTaxSettings.id, id))
+        .returning();
+      
+      console.log('✅ Updated tax settings:', updated);
+      return updated;
+    } catch (error) {
+      console.error('Error updating tax settings:', error);
       throw error;
     }
   }
