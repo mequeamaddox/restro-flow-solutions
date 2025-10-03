@@ -3975,11 +3975,20 @@ print(json.dumps(rows))
         paystubs.map(async (paystub: any, index: number) => {
           // Use the paystub's check number if it exists, otherwise generate sequential
           const checkNum = paystub.checkNumber || (checkNumberCounter + index + 1).toString();
+          
+          // Format date properly - use payPeriod endDate if paystub payDate is invalid
+          const payDate = paystub.payDate || payPeriod.endDate || new Date().toISOString();
+          
+          // Build employee address from multiple fields
+          const employeeAddress = paystub.employee.address || 
+            [paystub.employee.street, paystub.employee.city, paystub.employee.state, paystub.employee.zip]
+              .filter(Boolean).join(', ') || 'N/A';
+          
           const pdfData = {
             checkNumber: checkNum,
-            payDate: paystub.payDate,
+            payDate: payDate,
             employeeName: `${paystub.employee.firstName} ${paystub.employee.lastName}`,
-            employeeAddress: paystub.employee.address || 'N/A',
+            employeeAddress: employeeAddress,
             netPay: paystub.netPay,
             regularHours: paystub.regularHours,
             overtimeHours: paystub.overtimeHours,
@@ -3995,10 +4004,10 @@ print(json.dumps(rows))
             totalDeductions: paystub.totalDeductions,
             bonuses: paystub.bonuses,
             tips: paystub.tips,
-            companyName: settings.companyName || settings.businessName || 'RestroFlow',
-            companyAddress: settings.companyAddress || 'N/A',
-            companyPhone: settings.companyPhone,
-            companyEin: settings.companyEin,
+            companyName: settings.companyName || settings.businessName || 'Your Business Name',
+            companyAddress: settings.companyAddress || (settings.companyName ? `${settings.companyName} Address` : '123 Main Street, City, State ZIP'),
+            companyPhone: settings.companyPhone || '',
+            companyEin: settings.companyEin || '',
             bankName: settings.bankName || 'First Citizens Bank',
             periodStart: payPeriod.startDate,
             periodEnd: payPeriod.endDate,
