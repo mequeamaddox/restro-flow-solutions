@@ -176,6 +176,17 @@ export default function HRPayroll() {
     },
   });
 
+  // Fetch calculated hours for the selected period to show existing hours
+  const { data: calculatedHours = [] } = useQuery({
+    queryKey: ['/api/payroll-periods', selectedPeriod?.id, 'calculated-hours'],
+    queryFn: async () => {
+      if (!selectedPeriod?.id) return [];
+      const response = await apiRequest('GET', `/api/payroll-periods/${selectedPeriod.id}/calculated-hours`);
+      return response.json();
+    },
+    enabled: !!selectedPeriod?.id,
+  });
+
   // Get paycheck settings
   const { data: settings } = useQuery({
     queryKey: ['/api/payroll/paycheck-settings'],
@@ -1306,69 +1317,84 @@ export default function HRPayroll() {
         setShowAddHoursDialog(open);
         if (!open) setHourAdjustments({});
       }}>
-        <DialogContent className="max-w-4xl max-h-[90vh] overflow-auto">
+        <DialogContent className="max-w-5xl max-h-[90vh] overflow-auto">
           <DialogHeader>
             <DialogTitle>Add/Edit Hours</DialogTitle>
             <DialogDescription>
-              Add manual time entries for employees. After adding hours, click "Recalculate" to update paychecks.
+              Add manual time entries for employees. Existing hours from POS systems and previous entries are shown. After adding hours, click "Recalculate" to update paychecks.
             </DialogDescription>
           </DialogHeader>
           
           <div className="py-4">
             <div className="space-y-3">
-              {employees.filter((emp: any) => emp.status === 'active').map((employee: any) => (
-                <div key={employee.id} className="flex items-center gap-4 p-3 border border-gray-700 bg-gray-900 rounded-lg">
-                  {/* Employee Info */}
-                  <div className="w-48">
-                    <div className="font-medium text-white">{employee.firstName} {employee.lastName}</div>
-                    <div className="text-sm text-gray-400">${employee.hourlyRate || 'N/A'}/hr</div>
+              {employees.filter((emp: any) => emp.status === 'active').map((employee: any) => {
+                const existingHours = calculatedHours.find((h: any) => h.employeeId === employee.id);
+                const totalExisting = existingHours ? (parseFloat(existingHours.regularHours || '0') + parseFloat(existingHours.overtimeHours || '0')) : 0;
+                
+                return (
+                  <div key={employee.id} className="flex items-center gap-4 p-3 border border-gray-700 bg-gray-900 rounded-lg">
+                    {/* Employee Info */}
+                    <div className="w-52">
+                      <div className="font-medium text-white">{employee.firstName} {employee.lastName}</div>
+                      <div className="text-sm text-gray-400">${employee.hourlyRate || 'N/A'}/hr</div>
+                      {totalExisting > 0 && (
+                        <div className="text-xs text-green-400 mt-1">
+                          ✓ {totalExisting.toFixed(2)}h in system
+                        </div>
+                      )}
+                      {totalExisting === 0 && (
+                        <div className="text-xs text-yellow-400 mt-1">
+                          ⚠ No hours yet
+                        </div>
+                      )}
+                    </div>
+                    
+                    {/* Hours Input */}
+                    <div className="w-32">
+                      <Label className="text-xs text-gray-300">Hours to Add</Label>
+                      <Input
+                        type="number"
+                        step="0.25"
+                        min="0"
+                        placeholder="0.00"
+                        value={hourAdjustments[employee.id]?.hours || ''}
+                        className="text-sm bg-gray-800 border-gray-700 text-white"
+                        onChange={(e) => setHourAdjustments({
+                          ...hourAdjustments,
+                          [employee.id]: {
+                            ...hourAdjustments[employee.id],
+                            hours: e.target.value,
+                            date: hourAdjustments[employee.id]?.date || selectedPeriod!.startDate
+                          }
+                        })}
+                        onWheel={(e) => e.currentTarget.blur()}
+                        data-testid={`input-hours-${employee.id}`}
+                      />
+                    </div>
+                    
+                    {/* Date Input */}
+                    <div className="flex-1">
+                      <Label className="text-xs text-gray-300">Date</Label>
+                      <Input
+                        type="date"
+                        value={hourAdjustments[employee.id]?.date || selectedPeriod!.startDate}
+                        min={selectedPeriod!.startDate}
+                        max={selectedPeriod!.endDate}
+                        className="text-sm bg-gray-800 border-gray-700 text-white"
+                        onChange={(e) => setHourAdjustments({
+                          ...hourAdjustments,
+                          [employee.id]: {
+                            ...hourAdjustments[employee.id],
+                            hours: hourAdjustments[employee.id]?.hours || '',
+                            date: e.target.value
+                          }
+                        })}
+                        data-testid={`input-date-${employee.id}`}
+                      />
+                    </div>
                   </div>
-                  
-                  {/* Hours Input */}
-                  <div className="w-32">
-                    <Label className="text-xs text-gray-300">Hours to Add</Label>
-                    <Input
-                      type="number"
-                      step="0.25"
-                      min="0"
-                      placeholder="0.00"
-                      value={hourAdjustments[employee.id]?.hours || ''}
-                      className="text-sm bg-gray-800 border-gray-700 text-white"
-                      onChange={(e) => setHourAdjustments({
-                        ...hourAdjustments,
-                        [employee.id]: {
-                          ...hourAdjustments[employee.id],
-                          hours: e.target.value,
-                          date: hourAdjustments[employee.id]?.date || selectedPeriod!.startDate
-                        }
-                      })}
-                      onWheel={(e) => e.currentTarget.blur()}
-                      data-testid={`input-hours-${employee.id}`}
-                    />
-                  </div>
-                  
-                  {/* Date Input */}
-                  <div className="flex-1">
-                    <Label className="text-xs text-gray-300">Date</Label>
-                    <Input
-                      type="date"
-                      value={hourAdjustments[employee.id]?.date || selectedPeriod!.startDate}
-                      min={selectedPeriod!.startDate}
-                      max={selectedPeriod!.endDate}
-                      className="text-sm bg-gray-800 border-gray-700 text-white"
-                      onChange={(e) => setHourAdjustments({
-                        ...hourAdjustments,
-                        [employee.id]: {
-                          ...hourAdjustments[employee.id],
-                          hours: hourAdjustments[employee.id]?.hours || '',
-                          date: e.target.value
-                        }
-                      })}
-                      data-testid={`input-date-${employee.id}`}
-                    />
-                  </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           </div>
 
