@@ -1,6 +1,6 @@
 import { useState, useMemo } from "react";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { useQuery, useMutation } from "@tanstack/react-query";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
@@ -8,7 +8,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
-import { Calendar, Clock, Plus, Users, Edit, Trash2, AlertTriangle, DollarSign, TrendingUp, Filter } from "lucide-react";
+import { Calendar, Clock, Plus, Users, Edit, Trash2, AlertTriangle, DollarSign, ChevronLeft, ChevronRight, Filter } from "lucide-react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -54,27 +54,15 @@ interface Shift {
   employee?: Employee;
 }
 
-interface Department {
-  id: string;
-  name: string;
-}
-
-interface Position {
-  id: string;
-  title: string;
-  departmentId: string;
-}
-
 export default function HRScheduling() {
   const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [editingShift, setEditingShift] = useState<Shift | null>(null);
   const [departmentFilter, setDepartmentFilter] = useState<string>("all");
-  const [positionFilter, setPositionFilter] = useState<string>("all");
   const { toast } = useToast();
   const { currentLocation } = useLocation();
 
-  const { data: employees = [], isLoading: employeesLoading } = useQuery<Employee[]>({
+  const { data: employees = [] } = useQuery<Employee[]>({
     queryKey: ['/api/hr/employees', currentLocation?.id],
     queryFn: async () => {
       const response = await fetch(`/api/hr/employees?locationId=${currentLocation?.id}`, {
@@ -86,37 +74,27 @@ export default function HRScheduling() {
     enabled: !!currentLocation,
   });
 
-  const { data: shifts = [], isLoading: shiftsLoading } = useQuery<Shift[]>({
+  const { data: shifts = [] } = useQuery<Shift[]>({
     queryKey: ['/api/hr/shifts', currentLocation?.id],
     queryFn: async () => {
       const response = await fetch(`/api/hr/shifts?locationId=${currentLocation?.id}`, {
         credentials: 'include',
       });
       if (!response.ok) throw new Error('Failed to fetch shifts');
-      return response.json();
+      const data = await response.json();
+      console.log('Loaded shifts:', data);
+      return data;
     },
     enabled: !!currentLocation,
   });
 
-  const { data: departments = [] } = useQuery<Department[]>({
+  const { data: departments = [] } = useQuery<any[]>({
     queryKey: ['/api/hr/departments', currentLocation?.id],
     queryFn: async () => {
       const response = await fetch(`/api/hr/departments?locationId=${currentLocation?.id}`, {
         credentials: 'include',
       });
       if (!response.ok) throw new Error('Failed to fetch departments');
-      return response.json();
-    },
-    enabled: !!currentLocation,
-  });
-
-  const { data: positions = [] } = useQuery<Position[]>({
-    queryKey: ['/api/hr/positions', currentLocation?.id],
-    queryFn: async () => {
-      const response = await fetch(`/api/hr/positions?locationId=${currentLocation?.id}`, {
-        credentials: 'include',
-      });
-      if (!response.ok) throw new Error('Failed to fetch positions');
       return response.json();
     },
     enabled: !!currentLocation,
@@ -144,7 +122,10 @@ export default function HRScheduling() {
         departmentId: data.departmentId || null,
         positionId: data.positionId || null,
       };
-      return await apiRequest('POST', `/api/hr/shifts?locationId=${currentLocation?.id}`, payload);
+      console.log('Creating shift with payload:', payload);
+      const result = await apiRequest('POST', `/api/hr/shifts?locationId=${currentLocation?.id}`, payload);
+      console.log('Shift created:', result);
+      return result;
     },
     onSuccess: () => {
       toast({ title: "Success", description: "Shift created successfully" });
@@ -152,7 +133,8 @@ export default function HRScheduling() {
       setIsCreateDialogOpen(false);
       form.reset();
     },
-    onError: () => {
+    onError: (error) => {
+      console.error('Failed to create shift:', error);
       toast({ title: "Error", description: "Failed to create shift", variant: "destructive" });
     },
   });
@@ -192,7 +174,6 @@ export default function HRScheduling() {
   });
 
   const onSubmit = (data: ShiftFormData) => {
-    // Check for conflicts (excluding the current shift if editing)
     const conflicts = detectConflicts(data, editingShift?.id);
     if (conflicts.length > 0) {
       toast({
@@ -227,17 +208,9 @@ export default function HRScheduling() {
   const getShiftsForDate = (date: string) => {
     let dateShifts = shifts.filter(shift => shift.date === date);
     
-    // Apply department filter
     if (departmentFilter !== "all") {
       dateShifts = dateShifts.filter(shift => 
         shift.departmentId === departmentFilter || shift.employee?.department?.id === departmentFilter
-      );
-    }
-    
-    // Apply position filter
-    if (positionFilter !== "all") {
-      dateShifts = dateShifts.filter(shift => 
-        shift.positionId === positionFilter || shift.employee?.position?.id === positionFilter
       );
     }
     
@@ -260,9 +233,7 @@ export default function HRScheduling() {
 
   const detectConflicts = (newShift: ShiftFormData, excludeShiftId?: string): Shift[] => {
     return shifts.filter(existingShift => {
-      // Skip the shift being edited
       if (excludeShiftId && existingShift.id === excludeShiftId) return false;
-      
       if (existingShift.employeeId !== newShift.employeeId) return false;
       if (existingShift.date !== newShift.date) return false;
       
@@ -276,9 +247,8 @@ export default function HRScheduling() {
   };
 
   const weekDates = getWeekDates(selectedDate);
-  const dayNames = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
+  const dayNames = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 
-  // Calculate weekly statistics
   const weeklyStats = useMemo(() => {
     const weekShifts = shifts.filter(shift => weekDates.includes(shift.date));
     const totalHours = weekShifts.reduce((sum, shift) => 
@@ -302,410 +272,186 @@ export default function HRScheduling() {
     setSelectedDate(current.toISOString().split('T')[0]);
   };
 
-  if (employeesLoading || shiftsLoading) {
-    return (
-      <div className="flex items-center justify-center min-h-[400px]">
-        <div className="animate-spin w-8 h-8 border-4 border-primary border-t-transparent rounded-full" />
-      </div>
-    );
-  }
-
   if (!currentLocation) {
     return (
       <div className="p-6">
         <Alert>
           <AlertTriangle className="h-4 w-4" />
-          <AlertDescription>
-            Please select a location to view schedules.
-          </AlertDescription>
+          <AlertDescription>Please select a location to view schedules.</AlertDescription>
         </Alert>
       </div>
     );
   }
 
   return (
-    <div className="space-y-6" data-testid="page-scheduling">
+    <div className="space-y-6 p-6">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold" data-testid="text-page-title">Employee Scheduling</h1>
-          <p className="text-gray-600">Manage schedules for {currentLocation.name}</p>
+          <h1 className="text-3xl font-bold bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent">
+            Weekly Schedule
+          </h1>
+          <p className="text-gray-400 mt-1">{currentLocation.name}</p>
         </div>
-        <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
-          <DialogTrigger asChild>
-            <Button data-testid="button-add-shift">
-              <Plus className="h-4 w-4 mr-2" />
-              Add Shift
-            </Button>
-          </DialogTrigger>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>Create New Shift</DialogTitle>
-              <DialogDescription>
-                Schedule a new shift for an employee
-              </DialogDescription>
-            </DialogHeader>
-            <Form {...form}>
-              <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-                <FormField
-                  control={form.control}
-                  name="employeeId"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Employee</FormLabel>
-                      <Select onValueChange={field.onChange} value={field.value}>
-                        <FormControl>
-                          <SelectTrigger data-testid="select-employee">
-                            <SelectValue placeholder="Select employee" />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          {employees.map((employee) => (
-                            <SelectItem key={employee.id} value={employee.id}>
-                              {employee.firstName} {employee.lastName} - {employee.position?.title || 'No position'}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={form.control}
-                  name="date"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Date</FormLabel>
-                      <FormControl>
-                        <Input type="date" {...field} data-testid="input-shift-date" />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <div className="grid grid-cols-2 gap-4">
-                  <FormField
-                    control={form.control}
-                    name="startTime"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Start Time</FormLabel>
-                        <FormControl>
-                          <Input type="time" {...field} data-testid="input-start-time" />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  <FormField
-                    control={form.control}
-                    name="endTime"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>End Time</FormLabel>
-                        <FormControl>
-                          <Input type="time" {...field} data-testid="input-end-time" />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                </div>
-                <FormField
-                  control={form.control}
-                  name="breakDuration"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Break Duration (minutes)</FormLabel>
-                      <FormControl>
-                        <Input 
-                          type="number" 
-                          min="0" 
-                          max="480" 
-                          {...field}
-                          onChange={(e) => field.onChange(parseInt(e.target.value) || 0)}
-                          data-testid="input-break-duration"
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={form.control}
-                  name="notes"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Notes (Optional)</FormLabel>
-                      <FormControl>
-                        <Input placeholder="Special instructions or notes" {...field} data-testid="input-shift-notes" />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <div className="flex justify-end gap-2">
-                  <Button type="button" variant="outline" onClick={() => setIsCreateDialogOpen(false)} data-testid="button-cancel">
-                    Cancel
-                  </Button>
-                  <Button type="submit" disabled={createShiftMutation.isPending} data-testid="button-submit-shift">
-                    {editingShift ? 'Update Shift' : 'Create Shift'}
-                  </Button>
-                </div>
-              </form>
-            </Form>
-          </DialogContent>
-        </Dialog>
+        <Button 
+          onClick={() => {
+            form.reset({
+              employeeId: "",
+              date: selectedDate,
+              startTime: "09:00",
+              endTime: "17:00",
+              breakDuration: 30,
+              notes: "",
+            });
+            setIsCreateDialogOpen(true);
+          }}
+          className="bg-gradient-to-r from-blue-500 to-purple-500 hover:from-blue-600 hover:to-purple-600"
+        >
+          <Plus className="h-4 w-4 mr-2" />
+          Add Shift
+        </Button>
       </div>
 
-      {/* Weekly Statistics */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <Card>
+      {/* Stats Cards */}
+      <div className="grid grid-cols-4 gap-4">
+        <Card className="bg-gradient-to-br from-blue-500/10 to-blue-600/10 border-blue-500/20">
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-gray-600">Total Shifts</CardTitle>
+            <CardTitle className="text-sm text-gray-400">Total Shifts</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold" data-testid="stat-total-shifts">{weeklyStats.totalShifts}</div>
-            <p className="text-xs text-gray-500 mt-1">This week</p>
+            <div className="text-3xl font-bold text-blue-400">{weeklyStats.totalShifts}</div>
           </CardContent>
         </Card>
-        <Card>
+        <Card className="bg-gradient-to-br from-purple-500/10 to-purple-600/10 border-purple-500/20">
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-gray-600 flex items-center gap-2">
-              <Clock className="h-4 w-4" />
-              Total Hours
-            </CardTitle>
+            <CardTitle className="text-sm text-gray-400">Total Hours</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold" data-testid="stat-total-hours">{weeklyStats.totalHours}h</div>
-            <p className="text-xs text-gray-500 mt-1">Scheduled hours</p>
+            <div className="text-3xl font-bold text-purple-400">{weeklyStats.totalHours}h</div>
           </CardContent>
         </Card>
-        <Card>
+        <Card className="bg-gradient-to-br from-green-500/10 to-green-600/10 border-green-500/20">
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-gray-600 flex items-center gap-2">
-              <DollarSign className="h-4 w-4" />
-              Labor Cost
-            </CardTitle>
+            <CardTitle className="text-sm text-gray-400">Labor Cost</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold" data-testid="stat-labor-cost">${weeklyStats.totalCost}</div>
-            <p className="text-xs text-gray-500 mt-1">Projected cost</p>
+            <div className="text-3xl font-bold text-green-400">${weeklyStats.totalCost}</div>
           </CardContent>
         </Card>
-        <Card>
+        <Card className="bg-gradient-to-br from-pink-500/10 to-pink-600/10 border-pink-500/20">
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-gray-600 flex items-center gap-2">
-              <Users className="h-4 w-4" />
-              Employees
-            </CardTitle>
+            <CardTitle className="text-sm text-gray-400">Staff Scheduled</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold" data-testid="stat-employees">{weeklyStats.uniqueEmployees}</div>
-            <p className="text-xs text-gray-500 mt-1">Scheduled this week</p>
+            <div className="text-3xl font-bold text-pink-400">{weeklyStats.uniqueEmployees}</div>
           </CardContent>
         </Card>
       </div>
 
-      {/* Filters */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Filter className="h-5 w-5" />
-            Filters
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label>Department</Label>
-              <Select value={departmentFilter} onValueChange={setDepartmentFilter}>
-                <SelectTrigger data-testid="select-department-filter">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Departments</SelectItem>
-                  {departments.map(dept => (
-                    <SelectItem key={dept.id} value={dept.id}>{dept.name}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-2">
-              <Label>Position</Label>
-              <Select value={positionFilter} onValueChange={setPositionFilter}>
-                <SelectTrigger data-testid="select-position-filter">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Positions</SelectItem>
-                  {positions.map(pos => (
-                    <SelectItem key={pos.id} value={pos.id}>{pos.title}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Week Navigation */}
-      <Card>
+      {/* Calendar */}
+      <Card className="bg-gray-900/50 border-gray-800">
         <CardHeader>
           <div className="flex items-center justify-between">
-            <CardTitle className="flex items-center gap-2">
-              <Calendar className="h-5 w-5" />
-              Weekly Schedule
-            </CardTitle>
-            <div className="flex items-center gap-2">
-              <Button variant="outline" size="sm" onClick={() => navigateWeek('prev')} data-testid="button-prev-week">
-                ← Previous Week
+            <div className="flex items-center gap-4">
+              <Button variant="ghost" size="icon" onClick={() => navigateWeek('prev')}>
+                <ChevronLeft className="h-5 w-5" />
               </Button>
-              <Button variant="outline" size="sm" onClick={() => setSelectedDate(new Date().toISOString().split('T')[0])} data-testid="button-today">
-                Today
-              </Button>
-              <Button variant="outline" size="sm" onClick={() => navigateWeek('next')} data-testid="button-next-week">
-                Next Week →
+              <div className="text-lg font-semibold">
+                {new Date(weekDates[0]).toLocaleDateString('en-US', { month: 'long', day: 'numeric' })} - {new Date(weekDates[6]).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}
+              </div>
+              <Button variant="ghost" size="icon" onClick={() => navigateWeek('next')}>
+                <ChevronRight className="h-5 w-5" />
               </Button>
             </div>
+            {departments.length > 0 && (
+              <div className="flex items-center gap-2">
+                <Filter className="h-4 w-4 text-gray-400" />
+                <Select value={departmentFilter} onValueChange={setDepartmentFilter}>
+                  <SelectTrigger className="w-[180px]">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Departments</SelectItem>
+                    {departments.map(dept => (
+                      <SelectItem key={dept.id} value={dept.id}>{dept.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
           </div>
-          <CardDescription>
-            Week of {new Date(weekDates[0]).toLocaleDateString()} - {new Date(weekDates[6]).toLocaleDateString()}
-          </CardDescription>
         </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-7 gap-3">
+        <CardContent className="p-0">
+          <div className="grid grid-cols-7 border-t border-gray-800">
             {weekDates.map((date, index) => {
               const dayShifts = getShiftsForDate(date);
-              const totalHours = dayShifts.reduce((sum, shift) => 
+              const isToday = date === new Date().toISOString().split('T')[0];
+              const dayTotal = dayShifts.reduce((sum, shift) => 
                 sum + getShiftHours(shift.startTime, shift.endTime, shift.breakDuration), 0
               );
-              const totalCost = dayShifts.reduce((sum, shift) => sum + calculateLaborCost(shift), 0);
-              const isToday = date === new Date().toISOString().split('T')[0];
-              const isWeekend = index >= 5;
 
               return (
                 <div 
                   key={date} 
-                  className={`relative rounded-xl p-4 min-h-[280px] transition-all backdrop-blur-sm ${
-                    isToday 
-                      ? 'bg-gradient-to-br from-blue-500/20 via-purple-500/20 to-pink-500/20 border-2 border-blue-500 shadow-lg shadow-blue-500/20' 
-                      : isWeekend 
-                      ? 'bg-gray-800/50 border border-gray-700'
-                      : 'bg-gray-800/30 border border-gray-700 hover:bg-gray-800/40 hover:shadow-md'
-                  }`}
-                  data-testid={`day-column-${index}`}
+                  className={`border-r border-gray-800 last:border-r-0 ${isToday ? 'bg-blue-500/5' : ''}`}
                 >
-                  {isToday && (
-                    <div className="absolute top-2 right-2">
-                      <Badge className="bg-gradient-to-r from-blue-500 to-purple-500 text-white text-[10px] px-2 py-0.5 shadow-lg">Today</Badge>
+                  <div className={`p-4 border-b border-gray-800 text-center ${isToday ? 'bg-blue-500/10' : ''}`}>
+                    <div className="text-xs text-gray-500 font-medium">{dayNames[index]}</div>
+                    <div className={`text-lg font-bold mt-1 ${isToday ? 'text-blue-400' : 'text-gray-200'}`}>
+                      {new Date(date).getDate()}
                     </div>
-                  )}
-                  <div className={`font-bold text-sm mb-1 ${isToday ? 'text-blue-400' : 'text-gray-200'}`}>
-                    {dayNames[index]}
+                    {dayTotal > 0 && (
+                      <div className="text-xs text-gray-500 mt-1">{dayTotal.toFixed(0)}h</div>
+                    )}
                   </div>
-                  <div className="text-xs text-gray-400 mb-4 font-medium">
-                    {new Date(date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
-                  </div>
-                  
-                  <div className="space-y-2">
-                    {dayShifts.map((shift, idx) => {
+                  <div className="p-2 space-y-2 min-h-[400px]">
+                    {dayShifts.map((shift) => {
                       const employee = employees.find(emp => emp.id === shift.employeeId);
                       const hours = getShiftHours(shift.startTime, shift.endTime, shift.breakDuration);
                       const cost = calculateLaborCost(shift);
-                      const colors = [
-                        'from-blue-500 to-blue-600',
-                        'from-purple-500 to-purple-600',
-                        'from-pink-500 to-pink-600',
-                        'from-indigo-500 to-indigo-600',
-                        'from-cyan-500 to-cyan-600'
-                      ];
-                      const colorClass = colors[idx % colors.length];
                       
                       return (
                         <div 
                           key={shift.id} 
-                          className={`relative group bg-gradient-to-br ${colorClass} rounded-lg p-3 text-white shadow-md hover:shadow-lg transition-all`}
-                          data-testid={`shift-${shift.id}`}
+                          className="group relative bg-gradient-to-br from-blue-500 to-purple-500 rounded-lg p-2 cursor-pointer hover:shadow-lg transition-all"
+                          onClick={() => {
+                            setEditingShift(shift);
+                            form.reset({
+                              employeeId: shift.employeeId,
+                              date: shift.date,
+                              startTime: shift.startTime,
+                              endTime: shift.endTime,
+                              breakDuration: shift.breakDuration,
+                              departmentId: shift.departmentId || "",
+                              positionId: shift.positionId || "",
+                              notes: shift.notes || "",
+                            });
+                            setIsCreateDialogOpen(true);
+                          }}
                         >
-                          <div className="font-semibold text-sm mb-1">
+                          <div className="text-white text-xs font-semibold truncate">
                             {employee?.firstName} {employee?.lastName}
                           </div>
-                          <div className="text-xs opacity-90 flex items-center gap-1 mb-1">
-                            <Clock className="h-3 w-3" />
+                          <div className="text-white/80 text-xs mt-1">
                             {shift.startTime} - {shift.endTime}
                           </div>
-                          <div className="flex items-center justify-between text-xs opacity-90">
-                            <span className="font-medium">{hours.toFixed(1)} hrs</span>
-                            {cost > 0 && <span className="font-semibold">${cost.toFixed(0)}</span>}
+                          <div className="flex items-center justify-between mt-1">
+                            <span className="text-white/70 text-xs">{hours.toFixed(1)}h</span>
+                            {cost > 0 && <span className="text-white text-xs font-bold">${cost.toFixed(0)}</span>}
                           </div>
-                          {shift.notes && (
-                            <div className="text-xs opacity-80 mt-2 italic border-t border-white/20 pt-2">{shift.notes}</div>
-                          )}
-                          <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity flex gap-1">
-                            <Button
-                              size="sm"
-                              variant="ghost"
-                              className="h-6 w-6 p-0 bg-white/20 hover:bg-white/30 rounded"
-                              onClick={() => {
-                                setEditingShift(shift);
-                                form.reset({
-                                  employeeId: shift.employeeId,
-                                  date: shift.date,
-                                  startTime: shift.startTime,
-                                  endTime: shift.endTime,
-                                  breakDuration: shift.breakDuration,
-                                  departmentId: shift.departmentId || "",
-                                  positionId: shift.positionId || "",
-                                  notes: shift.notes || "",
-                                });
-                                setIsCreateDialogOpen(true);
-                              }}
-                              data-testid={`button-edit-shift-${shift.id}`}
-                            >
-                              <Edit className="h-3 w-3 text-white" />
-                            </Button>
-                            <Button
-                              size="sm"
-                              variant="ghost"
-                              className="h-6 w-6 p-0 bg-red-500/80 hover:bg-red-500 rounded"
-                              onClick={() => deleteShiftMutation.mutate(shift.id)}
-                              data-testid={`button-delete-shift-${shift.id}`}
-                            >
-                              <Trash2 className="h-3 w-3 text-white" />
-                            </Button>
-                          </div>
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              deleteShiftMutation.mutate(shift.id);
+                            }}
+                            className="absolute top-1 right-1 opacity-0 group-hover:opacity-100 transition-opacity bg-red-500 hover:bg-red-600 rounded p-1"
+                          >
+                            <Trash2 className="h-3 w-3 text-white" />
+                          </button>
                         </div>
                       );
                     })}
                   </div>
-
-                  {dayShifts.length > 0 && (
-                    <div className="mt-auto pt-3 border-t border-gray-700 space-y-1.5">
-                      <div className="flex items-center justify-between text-xs">
-                        <span className="text-gray-400 flex items-center gap-1">
-                          <Users className="h-3 w-3" />
-                          {dayShifts.length} shifts
-                        </span>
-                        <span className="font-semibold text-gray-200">{totalHours.toFixed(1)}h</span>
-                      </div>
-                      {totalCost > 0 && (
-                        <div className="flex items-center justify-between text-xs">
-                          <span className="text-gray-400 flex items-center gap-1">
-                            <DollarSign className="h-3 w-3" />
-                            Labor
-                          </span>
-                          <span className="font-bold text-green-400">${totalCost.toFixed(2)}</span>
-                        </div>
-                      )}
-                    </div>
-                  )}
-                  {dayShifts.length === 0 && (
-                    <div className="absolute inset-0 flex items-center justify-center opacity-10">
-                      <Calendar className="h-16 w-16 text-gray-500" />
-                    </div>
-                  )}
                 </div>
               );
             })}
@@ -713,14 +459,17 @@ export default function HRScheduling() {
         </CardContent>
       </Card>
 
-      {/* Edit Dialog */}
-      <Dialog open={!!editingShift} onOpenChange={(open) => !open && setEditingShift(null)}>
+      {/* Shift Dialog */}
+      <Dialog open={isCreateDialogOpen || !!editingShift} onOpenChange={(open) => {
+        if (!open) {
+          setIsCreateDialogOpen(false);
+          setEditingShift(null);
+        }
+      }}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Edit Shift</DialogTitle>
-            <DialogDescription>
-              Update shift details
-            </DialogDescription>
+            <DialogTitle>{editingShift ? 'Edit Shift' : 'Create New Shift'}</DialogTitle>
+            <DialogDescription>Schedule a shift for an employee</DialogDescription>
           </DialogHeader>
           <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
@@ -739,7 +488,7 @@ export default function HRScheduling() {
                       <SelectContent>
                         {employees.map((employee) => (
                           <SelectItem key={employee.id} value={employee.id}>
-                            {employee.firstName} {employee.lastName} - {employee.position?.title || 'No position'}
+                            {employee.firstName} {employee.lastName}
                           </SelectItem>
                         ))}
                       </SelectContent>
@@ -815,18 +564,25 @@ export default function HRScheduling() {
                   <FormItem>
                     <FormLabel>Notes (Optional)</FormLabel>
                     <FormControl>
-                      <Input placeholder="Special instructions or notes" {...field} />
+                      <Input placeholder="Special instructions" {...field} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
                 )}
               />
               <div className="flex justify-end gap-2">
-                <Button type="button" variant="outline" onClick={() => setEditingShift(null)}>
+                <Button 
+                  type="button" 
+                  variant="outline" 
+                  onClick={() => {
+                    setIsCreateDialogOpen(false);
+                    setEditingShift(null);
+                  }}
+                >
                   Cancel
                 </Button>
-                <Button type="submit" disabled={updateShiftMutation.isPending}>
-                  Update Shift
+                <Button type="submit" disabled={createShiftMutation.isPending || updateShiftMutation.isPending}>
+                  {editingShift ? 'Update' : 'Create'} Shift
                 </Button>
               </div>
             </form>
