@@ -242,15 +242,42 @@ export default function HRPayroll() {
       });
       return response.json();
     },
-    onSuccess: () => {
+    onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ['/api/payroll-periods'] });
+      
+      // Download all PDFs automatically
+      if (data.pdfs && data.pdfs.length > 0) {
+        console.log(`📥 Downloading ${data.pdfs.length} paycheck PDFs...`);
+        
+        data.pdfs.forEach((pdf: any) => {
+          const blob = new Blob(
+            [Uint8Array.from(atob(pdf.pdfBase64), c => c.charCodeAt(0))],
+            { type: 'application/pdf' }
+          );
+          const url = window.URL.createObjectURL(blob);
+          const link = document.createElement('a');
+          link.href = url;
+          link.download = `paycheck-${pdf.employeeName.replace(/\s+/g, '-')}-${pdf.checkNumber}.pdf`;
+          document.body.appendChild(link);
+          link.click();
+          document.body.removeChild(link);
+          window.URL.revokeObjectURL(url);
+        });
+        
+        toast({ 
+          title: "Payroll Approved & PDFs Generated", 
+          description: `Downloaded ${data.pdfs.length} paycheck PDFs successfully.` 
+        });
+      } else {
+        toast({ 
+          title: "Payroll Approved", 
+          description: "Payroll has been approved and is ready for payment processing." 
+        });
+      }
+      
       setCurrentStep('setup');
       setSelectedPeriod(null);
       setShowApprovalDialog(false);
-      toast({ 
-        title: "Payroll Approved", 
-        description: "Payroll has been approved and is ready for payment processing." 
-      });
     },
     onError: (error: any) => {
       toast({ 

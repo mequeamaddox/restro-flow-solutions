@@ -3943,8 +3943,63 @@ print(json.dumps(rows))
 
   app.post('/api/hr/payroll/pay-periods/:id/approve', async (req, res) => {
     try {
-      const payPeriod = await storage.approvePayroll(req.params.id, req.user!.id);
-      res.json(payPeriod);
+      const payPeriodId = req.params.id;
+      
+      // Approve payroll first
+      const payPeriod = await storage.approvePayroll(payPeriodId, req.user!.id);
+      
+      // Automatically generate PDFs for all paychecks in bulk
+      console.log('📄 Generating PDF paychecks for all employees...');
+      const { generatePaycheckPDF } = await import('./pdf-generators/paycheck-simple.js');
+      
+      const paystubs = await storage.getPaystubsByPeriod(payPeriodId);
+      const settings = await storage.getPaycheckSettings();
+      
+      const pdfs = await Promise.all(
+        paystubs.map(async (paystub: any) => {
+          const pdfData = {
+            checkNumber: paystub.checkNumber || `CHK-${paystub.id.substring(0, 8)}`,
+            payDate: paystub.payDate,
+            employeeName: `${paystub.employee.firstName} ${paystub.employee.lastName}`,
+            employeeAddress: paystub.employee.address || 'N/A',
+            netPay: paystub.netPay,
+            regularHours: paystub.regularHours,
+            overtimeHours: paystub.overtimeHours,
+            regularRate: paystub.regularRate,
+            overtimeRate: paystub.overtimeRate,
+            regularPay: paystub.regularPay,
+            overtimePay: paystub.overtimePay,
+            grossPay: paystub.grossPay,
+            federalTax: paystub.federalTax,
+            stateTax: paystub.stateTax,
+            socialSecurity: paystub.socialSecurity,
+            medicare: paystub.medicare,
+            totalDeductions: paystub.totalDeductions,
+            bonuses: paystub.bonuses,
+            tips: paystub.tips,
+            companyName: settings.companyName || 'RestroFlow',
+            companyAddress: settings.companyAddress || 'N/A',
+            periodStart: payPeriod.startDate,
+            periodEnd: payPeriod.endDate,
+          };
+
+          const pdfBuffer = await generatePaycheckPDF(pdfData);
+          return {
+            paystubId: paystub.id,
+            employeeId: paystub.employeeId,
+            employeeName: pdfData.employeeName,
+            checkNumber: pdfData.checkNumber,
+            pdfBase64: pdfBuffer.toString('base64'),
+          };
+        })
+      );
+      
+      console.log(`✅ Generated ${pdfs.length} PDF paychecks`);
+      
+      res.json({ 
+        payPeriod,
+        pdfs 
+      });
     } catch (error) {
       console.error('Error approving payroll:', error);
       res.status(500).json({ message: 'Failed to approve payroll' });
