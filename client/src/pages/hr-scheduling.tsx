@@ -307,10 +307,10 @@ export default function HRScheduling() {
       <Document>
         <Page size="A4" orientation="landscape" style={styles.page}>
           <View style={styles.header}>
-            <Text style={styles.title}>Weekly Schedule</Text>
+            <Text style={styles.title}>{includeStats ? 'Weekly Schedule' : 'Staff Schedule'}</Text>
             <Text style={styles.subtitle}>{currentLocation?.name}</Text>
             <Text style={styles.dateRange}>{weekStart} - {weekEnd}</Text>
-            <Text style={styles.copyType}>{includeStats ? 'Manager Copy' : 'Staff Copy'}</Text>
+            {includeStats && <Text style={styles.copyType}>Manager Copy</Text>}
           </View>
 
           {includeStats && (
@@ -340,6 +340,9 @@ export default function HRScheduling() {
               const dayTotal = dayShifts.reduce((sum, shift) => 
                 sum + getShiftHours(shift.startTime, shift.endTime, shift.breakDuration), 0
               );
+              const dayCost = includeStats ? dayShifts.reduce((sum, shift) => 
+                sum + calculateLaborCost(shift), 0
+              ) : 0;
 
               return (
                 <View key={date} style={[styles.dayColumn, index === 6 ? { borderRight: 0 } : {}]}>
@@ -347,7 +350,12 @@ export default function HRScheduling() {
                     <Text style={styles.dayName}>{dayNames[index]}</Text>
                     <Text style={styles.dayDate}>{new Date(date).getDate()}</Text>
                     {includeStats && dayTotal > 0 && (
-                      <Text style={styles.dayTotal}>{dayTotal.toFixed(0)}h</Text>
+                      <>
+                        <Text style={styles.dayTotal}>{dayTotal.toFixed(0)}h</Text>
+                        {dayCost > 0 && (
+                          <Text style={styles.dayTotal}>${dayCost.toFixed(0)}</Text>
+                        )}
+                      </>
                     )}
                   </View>
                   <View style={styles.shiftContainer}>
