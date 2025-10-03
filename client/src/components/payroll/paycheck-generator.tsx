@@ -62,7 +62,7 @@ export function PaycheckGenerator({ settings, employee, paycheck }: PaycheckGene
   };
 
   const renderPaycheckLayout = () => {
-    const commonStyles = "p-6 border border-border bg-card text-black print:shadow-none";
+    const commonStyles = "p-6 border border-border bg-white text-black print:shadow-none";
     
     switch (settings?.paycheckLayout) {
       case 'no_printing':
