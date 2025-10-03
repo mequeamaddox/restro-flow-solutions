@@ -3944,13 +3944,26 @@ print(json.dumps(rows))
   app.post('/api/hr/payroll/pay-periods/:id/approve', isAuthenticated, async (req, res) => {
     try {
       const payPeriodId = req.params.id;
-      
-      // Approve payroll first
       const payPeriod = await storage.approvePayroll(payPeriodId, req.user!.id);
+      res.json({ payPeriod });
+    } catch (error) {
+      console.error('Error approving payroll:', error);
+      res.status(500).json({ message: 'Failed to approve payroll' });
+    }
+  });
+
+  // Generate PDFs for approved payroll (on demand)
+  app.post('/api/hr/payroll/pay-periods/:id/generate-pdfs', isAuthenticated, async (req, res) => {
+    try {
+      const payPeriodId = req.params.id;
       
-      // Automatically generate PDFs for all paychecks in bulk
       console.log('📄 Generating PDF paychecks for all employees...');
       const { generatePaycheckPDF } = await import('./pdf-generators/paycheck-simple.js');
+      
+      const payPeriod = await storage.getPayrollPeriod(payPeriodId);
+      if (!payPeriod) {
+        return res.status(404).json({ message: 'Pay period not found' });
+      }
       
       const paystubs = await storage.getPaystubsByPeriod(payPeriodId);
       const settings = await storage.getPaycheckSettings();
@@ -3995,14 +4008,10 @@ print(json.dumps(rows))
       );
       
       console.log(`✅ Generated ${pdfs.length} PDF paychecks`);
-      
-      res.json({ 
-        payPeriod,
-        pdfs 
-      });
+      res.json({ pdfs });
     } catch (error) {
-      console.error('Error approving payroll:', error);
-      res.status(500).json({ message: 'Failed to approve payroll' });
+      console.error('Error generating PDFs:', error);
+      res.status(500).json({ message: 'Failed to generate PDFs' });
     }
   });
 

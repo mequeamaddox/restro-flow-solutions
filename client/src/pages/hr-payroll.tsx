@@ -256,10 +256,35 @@ export default function HRPayroll() {
       });
       return response.json();
     },
-    onSuccess: (data) => {
+    onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/payroll-periods'] });
       
-      // Download all PDFs automatically
+      toast({ 
+        title: "Payroll Approved", 
+        description: "Payroll has been approved successfully. PDFs are ready to download." 
+      });
+      
+      setCurrentStep('setup');
+      setSelectedPeriod(null);
+      setShowApprovalDialog(false);
+    },
+    onError: (error: any) => {
+      toast({ 
+        title: "Approval Failed", 
+        description: error.message || "Failed to approve payroll", 
+        variant: "destructive" 
+      });
+    },
+  });
+
+  // Download all PDFs for approved payroll
+  const handleDownloadAllPDFs = async () => {
+    if (!selectedPeriod) return;
+    
+    try {
+      const response = await apiRequest('POST', `/api/hr/payroll/pay-periods/${selectedPeriod.id}/generate-pdfs`);
+      const data = await response.json();
+      
       if (data.pdfs && data.pdfs.length > 0) {
         console.log(`📥 Downloading ${data.pdfs.length} paycheck PDFs...`);
         
@@ -279,28 +304,18 @@ export default function HRPayroll() {
         });
         
         toast({ 
-          title: "Payroll Approved & PDFs Generated", 
-          description: `Downloaded ${data.pdfs.length} paycheck PDFs successfully.` 
-        });
-      } else {
-        toast({ 
-          title: "Payroll Approved", 
-          description: "Payroll has been approved and is ready for payment processing." 
+          title: "PDFs Downloaded", 
+          description: `Successfully downloaded ${data.pdfs.length} paycheck PDFs.` 
         });
       }
-      
-      setCurrentStep('setup');
-      setSelectedPeriod(null);
-      setShowApprovalDialog(false);
-    },
-    onError: (error: any) => {
+    } catch (error: any) {
       toast({ 
-        title: "Approval Failed", 
-        description: error.message || "Failed to approve payroll", 
+        title: "Download Failed", 
+        description: error.message || "Failed to download PDFs", 
         variant: "destructive" 
       });
-    },
-  });
+    }
+  };
 
   // Manual payroll entry
   const createManualPayrollMutation = useMutation({
@@ -679,6 +694,31 @@ export default function HRPayroll() {
                     <FileText className="w-4 h-4" />
                     Approve Payroll
                   </Button>
+                </div>
+              )}
+
+              {selectedPeriod?.status === 'approved' && (
+                <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <div className="flex items-center gap-2 text-blue-800">
+                        <CheckCircle className="w-5 h-5" />
+                        <span className="font-semibold">Payroll Approved</span>
+                      </div>
+                      <p className="text-sm text-blue-700 mt-1">
+                        {paystubs.length} paychecks ready • ${periodTotals.netPay.toFixed(2)} total net pay
+                      </p>
+                    </div>
+                    <Button 
+                      onClick={handleDownloadAllPDFs}
+                      size="lg"
+                      className="gap-2"
+                      data-testid="button-download-pdfs"
+                    >
+                      <Printer className="w-4 h-4" />
+                      Download All PDFs
+                    </Button>
+                  </div>
                 </div>
               )}
             </div>
