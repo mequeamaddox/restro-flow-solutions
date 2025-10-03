@@ -13,7 +13,7 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useToast } from '@/hooks/use-toast';
 import { useLocation } from '@/contexts/LocationContext';
-import { Calendar, Plus, DollarSign, Users, Clock, Calculator, Eye, CheckCircle, AlertCircle, FileText, Printer } from 'lucide-react';
+import { Calendar, Plus, DollarSign, Users, Clock, Calculator, Eye, CheckCircle, AlertCircle, FileText, Printer, Trash2 } from 'lucide-react';
 import { format, startOfWeek, endOfWeek, addDays } from 'date-fns';
 import { ActualPaycheck } from '@/components/payroll/actual-paycheck';
 
@@ -310,6 +310,32 @@ export default function HRPayroll() {
     },
   });
 
+  // Delete payroll period
+  const deletePeriodMutation = useMutation({
+    mutationFn: async (periodId: string) => {
+      const response = await apiRequest('DELETE', `/api/payroll-periods/${periodId}`);
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/payroll-periods'] });
+      if (selectedPeriod) {
+        setSelectedPeriod(null);
+        setCurrentStep('setup');
+      }
+      toast({ 
+        title: "Period Deleted", 
+        description: "Payroll period deleted successfully." 
+      });
+    },
+    onError: (error: any) => {
+      toast({ 
+        title: "Delete Failed", 
+        description: error.message || "Failed to delete payroll period", 
+        variant: "destructive" 
+      });
+    },
+  });
+
   const handleCreatePeriod = () => {
     createPeriodMutation.mutate({
       ...newPeriodForm,
@@ -549,11 +575,13 @@ export default function HRPayroll() {
                   {periods.map((period) => (
                     <div
                       key={period.id}
-                      className="p-4 border rounded-lg cursor-pointer hover:border-blue-300 transition-colors"
-                      onClick={() => handleSelectPeriod(period)}
+                      className="p-4 border rounded-lg hover:border-blue-300 transition-colors"
                     >
                       <div className="flex justify-between items-center">
-                        <div>
+                        <div 
+                          className="flex-1 cursor-pointer"
+                          onClick={() => handleSelectPeriod(period)}
+                        >
                           <h3 className="font-medium">{period.name}</h3>
                           <p className="text-sm text-muted-foreground">
                             Pay Date: {format(new Date(period.payDate), 'MMM d, yyyy')} • {period.frequency}
@@ -572,6 +600,21 @@ export default function HRPayroll() {
                               <div className="text-muted-foreground">${parseFloat(period.totalGrossPay || '0').toFixed(2)} Gross</div>
                             </div>
                           )}
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              if (confirm(`Delete ${period.name}? This action cannot be undone.`)) {
+                                deletePeriodMutation.mutate(period.id);
+                              }
+                            }}
+                            disabled={deletePeriodMutation.isPending}
+                            className="text-destructive hover:text-destructive hover:bg-destructive/10"
+                            data-testid={`button-delete-period-${period.id}`}
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </Button>
                         </div>
                       </div>
                     </div>
