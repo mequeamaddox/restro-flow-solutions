@@ -3941,7 +3941,7 @@ print(json.dumps(rows))
     }
   });
 
-  app.post('/api/hr/payroll/pay-periods/:id/approve', async (req, res) => {
+  app.post('/api/hr/payroll/pay-periods/:id/approve', isAuthenticated, async (req, res) => {
     try {
       const payPeriodId = req.params.id;
       
