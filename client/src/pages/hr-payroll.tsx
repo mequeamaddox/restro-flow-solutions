@@ -1079,74 +1079,46 @@ export default function HRPayroll() {
           </DialogHeader>
           
           <div className="py-4">
-            {/* Table Header */}
-            <div className="grid grid-cols-[200px_120px_100px_100px_100px_100px_100px] gap-2 px-4 py-2 bg-muted font-medium text-sm border-b">
-              <div>Employee Name</div>
-              <div>Hourly Rate</div>
-              <div>Regular</div>
-              <div>Overtime</div>
-              <div>Tips</div>
-              <div>Bonuses</div>
-              <div className="text-right">Total</div>
-            </div>
-
-            {/* Table Rows */}
-            <div className="space-y-1">
+            <div className="space-y-3">
               {employees.filter((emp: any) => emp.status === 'active').map((employee: any) => (
-                <div 
-                  key={employee.id} 
-                  className="grid grid-cols-[200px_120px_100px_100px_100px_100px_100px] gap-2 px-4 py-3 border-b hover:bg-muted/50 items-center"
-                >
-                  {/* Employee Name */}
-                  <div>
-                    <div className="font-medium">{employee.lastName}, {employee.firstName}</div>
-                    <div className="text-xs text-muted-foreground">{employee.positionName || 'Employee'}</div>
+                <div key={employee.id} className="flex items-center gap-4 p-3 border rounded-lg">
+                  {/* Employee Info */}
+                  <div className="w-40">
+                    <div className="font-medium">{employee.firstName} {employee.lastName}</div>
+                    <div className="text-sm text-muted-foreground">${employee.hourlyRate || 'N/A'}/hr</div>
+                    {bulkPayrollInputs[employee.id] && (
+                      <div className="text-sm font-medium text-green-600">
+                        ${calculateEmployeeGrossPay(employee, bulkPayrollInputs[employee.id] || {}).toFixed(2)}
+                      </div>
+                    )}
                   </div>
                   
-                  {/* Hourly Rate */}
-                  <div className="text-sm">
-                    ${employee.hourlyRate || '0.00'}
-                  </div>
-                  
-                  {/* Regular Hours */}
-                  <div>
+                  {/* Hours */}
+                  <div className="w-20">
+                    <Label className="text-xs">Hours</Label>
                     <Input
                       type="number"
                       step="0.25"
                       min="0"
-                      placeholder="Regular"
+                      placeholder="Hours"
                       value={bulkPayrollInputs[employee.id]?.hours || ''}
-                      className="h-9 text-sm"
+                      className="text-sm"
                       id={`hours-${employee.id}`}
                       onChange={(e) => handleBulkInputChange(employee.id, 'hours', e.target.value)}
                       onWheel={(e) => e.currentTarget.blur()}
                     />
                   </div>
                   
-                  {/* Overtime Hours */}
-                  <div>
-                    <Input
-                      type="number"
-                      step="0.25"
-                      min="0"
-                      placeholder="Overtime"
-                      value={bulkPayrollInputs[employee.id]?.overtime || ''}
-                      className="h-9 text-sm"
-                      id={`overtime-${employee.id}`}
-                      onChange={(e) => handleBulkInputChange(employee.id, 'overtime', e.target.value)}
-                      onWheel={(e) => e.currentTarget.blur()}
-                    />
-                  </div>
-                  
                   {/* Tips */}
-                  <div>
+                  <div className="w-20">
+                    <Label className="text-xs">Tips ($)</Label>
                     <Input
                       type="number"
                       step="0.01"
                       min="0"
-                      placeholder="$ Tips"
+                      placeholder=""
                       value={bulkPayrollInputs[employee.id]?.tips || ''}
-                      className="h-9 text-sm"
+                      className="text-sm"
                       id={`tips-${employee.id}`}
                       onChange={(e) => handleBulkInputChange(employee.id, 'tips', e.target.value)}
                       onWheel={(e) => e.currentTarget.blur()}
@@ -1154,27 +1126,63 @@ export default function HRPayroll() {
                   </div>
                   
                   {/* Bonuses */}
-                  <div>
+                  <div className="w-20">
+                    <Label className="text-xs">Bonus ($)</Label>
                     <Input
                       type="number"
                       step="0.01"
                       min="0"
-                      placeholder="$ Bonus"
+                      placeholder=""
                       value={bulkPayrollInputs[employee.id]?.bonus || ''}
-                      className="h-9 text-sm"
+                      className="text-sm"
                       id={`bonus-${employee.id}`}
                       onChange={(e) => handleBulkInputChange(employee.id, 'bonus', e.target.value)}
                       onWheel={(e) => e.currentTarget.blur()}
                     />
                   </div>
                   
-                  {/* Total */}
-                  <div className="text-right font-medium">
-                    {bulkPayrollInputs[employee.id] && (
-                      <span className="text-sm">
-                        ${calculateEmployeeGrossPay(employee, bulkPayrollInputs[employee.id] || {}).toFixed(2)}
-                      </span>
-                    )}
+                  {/* Overtime */}
+                  <div className="w-20">
+                    <Label className="text-xs">OT Hours</Label>
+                    <Input
+                      type="number"
+                      step="0.25"
+                      min="0"
+                      placeholder=""
+                      value={bulkPayrollInputs[employee.id]?.overtime || ''}
+                      className="text-sm"
+                      id={`overtime-${employee.id}`}
+                      onChange={(e) => handleBulkInputChange(employee.id, 'overtime', e.target.value)}
+                      onWheel={(e) => e.currentTarget.blur()}
+                    />
+                  </div>
+                  
+                  {/* Deductions */}
+                  <div className="w-20">
+                    <Label className="text-xs">Deduct ($)</Label>
+                    <Input
+                      type="number"
+                      step="0.01"
+                      min="0"
+                      placeholder=""
+                      value={bulkPayrollInputs[employee.id]?.deduction || ''}
+                      className="text-sm"
+                      id={`deduction-${employee.id}`}
+                      onChange={(e) => handleBulkInputChange(employee.id, 'deduction', e.target.value)}
+                      onWheel={(e) => e.currentTarget.blur()}
+                    />
+                  </div>
+                  
+                  {/* Notes */}
+                  <div className="flex-1">
+                    <Label className="text-xs">Notes</Label>
+                    <Input
+                      placeholder="Optional note..."
+                      value={bulkPayrollInputs[employee.id]?.notes || ''}
+                      className="text-sm"
+                      id={`notes-${employee.id}`}
+                      onChange={(e) => handleBulkInputChange(employee.id, 'notes', e.target.value)}
+                    />
                   </div>
                 </div>
               ))}
@@ -1190,9 +1198,9 @@ export default function HRPayroll() {
             </Button>
             <Button 
               onClick={handleBulkManualPayroll}
-              disabled={addTimeEntryMutation.isPending}
+              disabled={createManualPayrollMutation.isPending}
             >
-              {addTimeEntryMutation.isPending ? 'Submitting...' : 'Submit Hours'}
+              Process All Entries
             </Button>
           </DialogFooter>
         </DialogContent>
