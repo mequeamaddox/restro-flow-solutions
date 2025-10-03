@@ -80,6 +80,7 @@ export default function HRPayroll() {
   const [showPaystubDialog, setShowPaystubDialog] = useState(false);
   const [showApprovalDialog, setShowApprovalDialog] = useState(false);
   const [showManualPayrollDialog, setShowManualPayrollDialog] = useState(false);
+  const [showAddHoursDialog, setShowAddHoursDialog] = useState(false);
   const [editingPaystub, setEditingPaystub] = useState<Paystub | null>(null);
   
   // Form State
@@ -110,6 +111,9 @@ export default function HRPayroll() {
     deduction: string;
     notes: string;
   }>>({});
+
+  // Hour Adjustments (for adding time entries during review)
+  const [hourAdjustments, setHourAdjustments] = useState<Record<string, { hours: string; date: string }>>({});
   
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -310,6 +314,29 @@ export default function HRPayroll() {
     },
   });
 
+  // Add manual time entries (for hour adjustments)
+  const addTimeEntryMutation = useMutation({
+    mutationFn: async (data: any) => {
+      const response = await apiRequest('POST', '/api/hr/time-entries/manual', { 
+        body: data 
+      });
+      return response.json();
+    },
+    onSuccess: () => {
+      toast({ 
+        title: "Time Entry Added", 
+        description: "Manual time entry has been recorded. Recalculate payroll to apply changes." 
+      });
+    },
+    onError: (error: any) => {
+      toast({ 
+        title: "Failed to Add Entry", 
+        description: error.message || "Failed to add time entry", 
+        variant: "destructive" 
+      });
+    },
+  });
+
   // Delete payroll period
   const deletePeriodMutation = useMutation({
     mutationFn: async (periodId: string) => {
@@ -385,6 +412,43 @@ export default function HRPayroll() {
 
     setShowManualPayrollDialog(false);
     setBulkPayrollInputs({}); // Clear all inputs after processing
+  };
+
+  // Handle bulk time entry additions
+  const handleAddHours = async () => {
+    let addedCount = 0;
+    const promises: Promise<any>[] = [];
+
+    for (const employeeId in hourAdjustments) {
+      const adjustment = hourAdjustments[employeeId];
+      if (adjustment.hours && parseFloat(adjustment.hours) > 0) {
+        const hours = parseFloat(adjustment.hours);
+        const clockInTime = new Date(adjustment.date || selectedPeriod!.startDate);
+        const clockOutTime = new Date(clockInTime.getTime() + hours * 60 * 60 * 1000);
+
+        const promise = addTimeEntryMutation.mutateAsync({
+          employeeId,
+          clockInTime: clockInTime.toISOString(),
+          clockOutTime: clockOutTime.toISOString(),
+          notes: 'Manual adjustment for payroll',
+          locationId: currentLocation?.id
+        });
+        promises.push(promise);
+        addedCount++;
+      }
+    }
+
+    try {
+      await Promise.all(promises);
+      setShowAddHoursDialog(false);
+      setHourAdjustments({});
+      toast({
+        title: "Hours Added Successfully",
+        description: `Added ${addedCount} time entries. Click "Calculate Payroll" to update paychecks.`
+      });
+    } catch (error) {
+      // Individual errors already handled by mutation
+    }
   };
 
   const handleEditPaystub = (paystub: Paystub) => {
@@ -518,7 +582,7 @@ export default function HRPayroll() {
               )}
               
               {currentStep === 'review' && paystubs.length > 0 && (
-                <div className="flex gap-4">
+                <div className="flex gap-4 items-start">
                   <div className="bg-green-50 border border-green-200 rounded-lg p-4">
                     <div className="flex items-center gap-2 text-green-800">
                       <CheckCircle className="w-5 h-5" />
@@ -529,18 +593,31 @@ export default function HRPayroll() {
                     </p>
                   </div>
                   <Button 
-                    onClick={() => setShowManualPayrollDialog(true)}
+                    onClick={() => setShowAddHoursDialog(true)}
                     variant="outline"
                     size="lg"
                     className="gap-2"
+                    data-testid="button-add-hours"
                   >
-                    <Plus className="w-4 h-4" />
+                    <Clock className="w-4 h-4" />
                     Add/Edit Hours
+                  </Button>
+                  <Button 
+                    onClick={() => calculatePayrollMutation.mutate(selectedPeriod.id)}
+                    disabled={calculatePayrollMutation.isPending}
+                    variant="outline"
+                    size="lg"
+                    className="gap-2"
+                    data-testid="button-recalculate"
+                  >
+                    <Calculator className="w-4 h-4" />
+                    {calculatePayrollMutation.isPending ? 'Recalculating...' : 'Recalculate'}
                   </Button>
                   <Button 
                     onClick={() => setShowApprovalDialog(true)}
                     size="lg"
                     className="gap-2"
+                    data-testid="button-approve"
                   >
                     <FileText className="w-4 h-4" />
                     Approve Payroll
@@ -1167,6 +1244,96 @@ export default function HRPayroll() {
               disabled={updatePaycheckMutation.isPending}
             >
               Update
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Add/Edit Hours Dialog (for time entry adjustments) */}
+      <Dialog open={showAddHoursDialog} onOpenChange={(open) => {
+        setShowAddHoursDialog(open);
+        if (!open) setHourAdjustments({});
+      }}>
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-auto">
+          <DialogHeader>
+            <DialogTitle>Add/Edit Hours</DialogTitle>
+            <DialogDescription>
+              Add manual time entries for employees. After adding hours, click "Recalculate" to update paychecks.
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="py-4">
+            <div className="space-y-3">
+              {employees.filter((emp: any) => emp.status === 'active').map((employee: any) => (
+                <div key={employee.id} className="flex items-center gap-4 p-3 border border-gray-700 bg-gray-900 rounded-lg">
+                  {/* Employee Info */}
+                  <div className="w-48">
+                    <div className="font-medium text-white">{employee.firstName} {employee.lastName}</div>
+                    <div className="text-sm text-gray-400">${employee.hourlyRate || 'N/A'}/hr</div>
+                  </div>
+                  
+                  {/* Hours Input */}
+                  <div className="w-32">
+                    <Label className="text-xs text-gray-300">Hours to Add</Label>
+                    <Input
+                      type="number"
+                      step="0.25"
+                      min="0"
+                      placeholder="0.00"
+                      value={hourAdjustments[employee.id]?.hours || ''}
+                      className="text-sm bg-gray-800 border-gray-700 text-white"
+                      onChange={(e) => setHourAdjustments({
+                        ...hourAdjustments,
+                        [employee.id]: {
+                          ...hourAdjustments[employee.id],
+                          hours: e.target.value,
+                          date: hourAdjustments[employee.id]?.date || selectedPeriod!.startDate
+                        }
+                      })}
+                      onWheel={(e) => e.currentTarget.blur()}
+                      data-testid={`input-hours-${employee.id}`}
+                    />
+                  </div>
+                  
+                  {/* Date Input */}
+                  <div className="flex-1">
+                    <Label className="text-xs text-gray-300">Date</Label>
+                    <Input
+                      type="date"
+                      value={hourAdjustments[employee.id]?.date || selectedPeriod!.startDate}
+                      min={selectedPeriod!.startDate}
+                      max={selectedPeriod!.endDate}
+                      className="text-sm bg-gray-800 border-gray-700 text-white"
+                      onChange={(e) => setHourAdjustments({
+                        ...hourAdjustments,
+                        [employee.id]: {
+                          ...hourAdjustments[employee.id],
+                          hours: hourAdjustments[employee.id]?.hours || '',
+                          date: e.target.value
+                        }
+                      })}
+                      data-testid={`input-date-${employee.id}`}
+                    />
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button 
+              variant="outline" 
+              onClick={() => setShowAddHoursDialog(false)}
+              data-testid="button-cancel-hours"
+            >
+              Cancel
+            </Button>
+            <Button 
+              onClick={handleAddHours}
+              disabled={addTimeEntryMutation.isPending}
+              data-testid="button-submit-hours"
+            >
+              {addTimeEntryMutation.isPending ? 'Adding...' : 'Add Hours'}
             </Button>
           </DialogFooter>
         </DialogContent>

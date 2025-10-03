@@ -3553,14 +3553,14 @@ export class DatabaseStorage implements IStorage {
         )
       );
 
-    // Get POS timeclock entries for the pay period
+    // Get POS timeclock entries for the pay period (calculate hours from clock_in_at and clock_out_at)
     const posTimeclockEntries = await db
       .select({
         id: posTimeclocks.id,
         employeeId: posEmployeeMappings.employeeId,
         clockInAt: posTimeclocks.clockInAt,
         clockOutAt: posTimeclocks.clockOutAt,
-        totalHours: posTimeclocks.totalHours
+        breakSeconds: posTimeclocks.breakSeconds
       })
       .from(posTimeclocks)
       .leftJoin(posEmployees, eq(posTimeclocks.posEmployeeId, posEmployees.id))
@@ -3568,6 +3568,7 @@ export class DatabaseStorage implements IStorage {
       .where(
         and(
           isNotNull(posTimeclocks.clockInAt),
+          isNotNull(posTimeclocks.clockOutAt),
           isNotNull(posEmployeeMappings.employeeId),
           gte(posTimeclocks.clockInAt, sql`${payPeriod.startDate}::timestamp`),
           lte(posTimeclocks.clockInAt, sql`${payPeriod.endDate}::timestamp + interval '1 day'`)
@@ -3604,10 +3605,18 @@ export class DatabaseStorage implements IStorage {
         }
       }
 
-      // Add POS timeclock hours
+      // Add POS timeclock hours (calculate from clock_in_at and clock_out_at)
       for (const entry of empPosEntries) {
-        if (entry.clockOutAt && entry.totalHours) {
-          const hours = Number(entry.totalHours);
+        if (entry.clockInAt && entry.clockOutAt) {
+          // Calculate total hours from timestamps
+          const clockInTime = new Date(entry.clockInAt).getTime();
+          const clockOutTime = new Date(entry.clockOutAt).getTime();
+          const breakSeconds = entry.breakSeconds || 0;
+          
+          // Calculate work milliseconds (minus break time)
+          const workMilliseconds = clockOutTime - clockInTime - (breakSeconds * 1000);
+          const hours = workMilliseconds / (1000 * 60 * 60); // Convert to hours
+          
           if (regularHours + hours <= 40) {
             regularHours += hours;
           } else if (regularHours < 40) {
