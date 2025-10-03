@@ -20,7 +20,7 @@ export interface PaycheckData {
   totalDeductions: string;
   bonuses?: string;
   tips?: string;
-  companyName: string;
+  businessName: string;
   companyAddress: string;
   companyPhone?: string;
   companyEin?: string;
@@ -140,7 +140,7 @@ async function generateStubOnlyPDF(data: PaycheckData): Promise<Buffer> {
   
   // Header
   doc.fontSize(14).font('Helvetica-Bold').text(
-    data.displayBusinessName ? data.companyName : 'Pay Stub', 
+    data.displayBusinessName ? data.businessName : 'Pay Stub', 
     306, y, { align: 'center' }
   );
   if (data.displayTaxFilingName && data.taxFilingName) {
@@ -250,7 +250,7 @@ async function generateCheckOnTopPDF(data: PaycheckData): Promise<Buffer> {
   let y = 36;
   
   // Top row: Business name (left), Bank name (center), Check number (right)
-  doc.fontSize(10).font('Helvetica-Bold').text(data.companyName, 50, y, { width: 200 });
+  doc.fontSize(10).font('Helvetica-Bold').text(data.businessName, 50, y, { width: 200 });
   doc.fontSize(10).font('Helvetica-Bold').text(data.bankName || 'First Citizens Bank', 250, y, { width: 150, align: 'center' });
   doc.fontSize(14).font('Helvetica-Bold').text(data.checkNumber, 450, y, { align: 'right' });
   
@@ -302,7 +302,7 @@ async function generateCheckOnTopPDF(data: PaycheckData): Promise<Buffer> {
   
   // PAY STUB SECTION (Bottom)
   y += 20;
-  doc.fontSize(12).font('Helvetica-Bold').text(data.companyName, 306, y, { align: 'center' });
+  doc.fontSize(12).font('Helvetica-Bold').text(data.businessName, 306, y, { align: 'center' });
   y += 15;
   doc.fontSize(9).font('Helvetica').text('Employee Pay Stub', 306, y, { align: 'center' });
   
@@ -317,7 +317,7 @@ async function generateCheckOnTopPDF(data: PaycheckData): Promise<Buffer> {
   
   // Business info (right)
   const businessY = y - 14;
-  doc.fontSize(10).font('Helvetica-Bold').text(data.companyName, rightCol, businessY);
+  doc.fontSize(10).font('Helvetica-Bold').text(data.businessName, rightCol, businessY);
   doc.fontSize(8).font('Helvetica').text(data.companyAddress, rightCol, businessY + 14, { width: 230 });
   if (data.companyPhone) {
     doc.text(data.companyPhone, rightCol, businessY + 26);
@@ -436,7 +436,7 @@ async function generateCheckOnBottomPDF(data: PaycheckData): Promise<Buffer> {
   let y = 36;
   
   // PAY STUB SECTION (Top - abbreviated version)
-  doc.fontSize(12).font('Helvetica-Bold').text(data.companyName, 306, y, { align: 'center' });
+  doc.fontSize(12).font('Helvetica-Bold').text(data.businessName, 306, y, { align: 'center' });
   y += 15;
   doc.fontSize(9).font('Helvetica').text('Employee Pay Stub', 306, y, { align: 'center' });
   
@@ -457,7 +457,7 @@ async function generateCheckOnBottomPDF(data: PaycheckData): Promise<Buffer> {
   y += 30;
   
   // Top row: Business name (left), Bank name (center), Check number (right)
-  doc.fontSize(10).font('Helvetica-Bold').text(data.companyName, 50, y, { width: 200 });
+  doc.fontSize(10).font('Helvetica-Bold').text(data.businessName, 50, y, { width: 200 });
   doc.fontSize(10).font('Helvetica-Bold').text(data.bankName || 'First Citizens Bank', 250, y, { width: 150, align: 'center' });
   doc.fontSize(14).font('Helvetica-Bold').text(data.checkNumber, 450, y, { align: 'right' });
   
