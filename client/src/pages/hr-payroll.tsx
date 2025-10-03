@@ -529,6 +529,15 @@ export default function HRPayroll() {
                     </p>
                   </div>
                   <Button 
+                    onClick={() => setShowManualPayrollDialog(true)}
+                    variant="outline"
+                    size="lg"
+                    className="gap-2"
+                  >
+                    <Plus className="w-4 h-4" />
+                    Add/Edit Hours
+                  </Button>
+                  <Button 
                     onClick={() => setShowApprovalDialog(true)}
                     size="lg"
                     className="gap-2"

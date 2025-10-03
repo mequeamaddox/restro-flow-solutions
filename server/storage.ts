@@ -3541,7 +3541,7 @@ export class DatabaseStorage implements IStorage {
     const employees = await this.getEmployees();
     const activeEmployees = employees.filter(emp => emp.status === 'active');
 
-    // Get time entries for the pay period (exclude NULL clock_in_time entries)
+    // Get manual time entries for the pay period (exclude NULL clock_in_time entries)
     const employeeTimeEntries = await db
       .select()
       .from(timeEntries)
@@ -3553,17 +3553,60 @@ export class DatabaseStorage implements IStorage {
         )
       );
 
+    // Get POS timeclock entries for the pay period
+    const posTimeclockEntries = await db
+      .select({
+        id: posTimeclocks.id,
+        employeeId: posEmployeeMappings.employeeId,
+        clockInAt: posTimeclocks.clockInAt,
+        clockOutAt: posTimeclocks.clockOutAt,
+        totalHours: posTimeclocks.totalHours
+      })
+      .from(posTimeclocks)
+      .leftJoin(posEmployees, eq(posTimeclocks.posEmployeeId, posEmployees.id))
+      .leftJoin(posEmployeeMappings, eq(posEmployees.id, posEmployeeMappings.posEmployeeId))
+      .where(
+        and(
+          isNotNull(posTimeclocks.clockInAt),
+          isNotNull(posEmployeeMappings.employeeId),
+          gte(posTimeclocks.clockInAt, sql`${payPeriod.startDate}::timestamp`),
+          lte(posTimeclocks.clockInAt, sql`${payPeriod.endDate}::timestamp + interval '1 day'`)
+        )
+      );
+
+    console.log(`📊 Payroll calculation: ${employeeTimeEntries.length} manual entries, ${posTimeclockEntries.length} POS entries`);
+
     const paystubsToCreate: InsertPaystub[] = [];
 
     for (const employee of activeEmployees) {
-      // Calculate hours worked for this employee
+      // Calculate hours worked for this employee from manual entries
       const empTimeEntries = employeeTimeEntries.filter(entry => entry.employeeId === employee.id);
+      
+      // Calculate hours from POS timeclocks
+      const empPosEntries = posTimeclockEntries.filter(entry => entry.employeeId === employee.id);
       
       let regularHours = 0;
       let overtimeHours = 0;
       
+      // Add manual time entry hours
       for (const entry of empTimeEntries) {
         if (entry.clockOutTime && entry.totalHours) {
+          const hours = Number(entry.totalHours);
+          if (regularHours + hours <= 40) {
+            regularHours += hours;
+          } else if (regularHours < 40) {
+            const regularToAdd = 40 - regularHours;
+            regularHours = 40;
+            overtimeHours += hours - regularToAdd;
+          } else {
+            overtimeHours += hours;
+          }
+        }
+      }
+
+      // Add POS timeclock hours
+      for (const entry of empPosEntries) {
+        if (entry.clockOutAt && entry.totalHours) {
           const hours = Number(entry.totalHours);
           if (regularHours + hours <= 40) {
             regularHours += hours;
