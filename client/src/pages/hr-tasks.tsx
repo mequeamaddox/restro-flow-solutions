@@ -102,11 +102,11 @@ export default function HRTasks() {
 
   const getStatusColor = (status: string) => {
     switch (status) {
-      case 'pending': return 'bg-gray-100 text-gray-800';
+      case 'pending': return 'bg-accent text-foreground';
       case 'in-progress': return 'bg-blue-100 text-blue-800';
       case 'completed': return 'bg-green-100 text-green-800';
       case 'overdue': return 'bg-red-100 text-red-800';
-      default: return 'bg-gray-100 text-gray-800';
+      default: return 'bg-accent text-foreground';
     }
   };
 
@@ -115,7 +115,7 @@ export default function HRTasks() {
       case 'high': return 'bg-red-100 text-red-800';
       case 'medium': return 'bg-yellow-100 text-yellow-800';
       case 'low': return 'bg-green-100 text-green-800';
-      default: return 'bg-gray-100 text-gray-800';
+      default: return 'bg-accent text-foreground';
     }
   };
 
@@ -160,7 +160,7 @@ export default function HRTasks() {
               <CheckSquare className="h-8 w-8" />
               Task Management
             </h1>
-            <p className="text-gray-600">Assign and track tasks across your team</p>
+            <p className="text-muted-foreground">Assign and track tasks across your team</p>
           </div>
           
           <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
@@ -259,11 +259,11 @@ export default function HRTasks() {
             <CardContent className="p-4">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm text-gray-600">Pending</p>
+                  <p className="text-sm text-muted-foreground">Pending</p>
                   <p className="text-2xl font-bold">{getTasksByStatus('pending')}</p>
                 </div>
-                <div className="bg-gray-100 p-2 rounded-full">
-                  <Clock className="h-4 w-4 text-gray-600" />
+                <div className="bg-accent p-2 rounded-full">
+                  <Clock className="h-4 w-4 text-muted-foreground" />
                 </div>
               </div>
             </CardContent>
@@ -273,7 +273,7 @@ export default function HRTasks() {
             <CardContent className="p-4">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm text-gray-600">In Progress</p>
+                  <p className="text-sm text-muted-foreground">In Progress</p>
                   <p className="text-2xl font-bold">{getTasksByStatus('in-progress')}</p>
                 </div>
                 <div className="bg-blue-100 p-2 rounded-full">
@@ -287,7 +287,7 @@ export default function HRTasks() {
             <CardContent className="p-4">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm text-gray-600">Completed</p>
+                  <p className="text-sm text-muted-foreground">Completed</p>
                   <p className="text-2xl font-bold">{getTasksByStatus('completed')}</p>
                 </div>
                 <div className="bg-green-100 p-2 rounded-full">
@@ -301,7 +301,7 @@ export default function HRTasks() {
             <CardContent className="p-4">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm text-gray-600">Overdue</p>
+                  <p className="text-sm text-muted-foreground">Overdue</p>
                   <p className="text-2xl font-bold">{getTasksByStatus('overdue')}</p>
                 </div>
                 <div className="bg-red-100 p-2 rounded-full">
@@ -381,10 +381,10 @@ export default function HRTasks() {
                       </AvatarFallback>
                     </Avatar>
                     <div className="flex flex-col">
-                      <span className="text-sm text-gray-600">
+                      <span className="text-sm text-muted-foreground">
                         {task.assignedEmployee.firstName} {task.assignedEmployee.lastName}
                       </span>
-                      <span className="text-xs font-mono text-gray-500">
+                      <span className="text-xs font-mono text-muted-foreground">
                         {task.assignedEmployee.employeeNumber}
                       </span>
                     </div>
@@ -393,8 +393,8 @@ export default function HRTasks() {
 
                 {task.dueDate && (
                   <div className="flex items-center gap-2 text-sm">
-                    <Calendar className="h-4 w-4 text-gray-500" />
-                    <span className={isOverdue(task.dueDate) && task.status !== 'completed' ? 'text-red-600' : 'text-gray-600'}>
+                    <Calendar className="h-4 w-4 text-muted-foreground" />
+                    <span className={isOverdue(task.dueDate) && task.status !== 'completed' ? 'text-red-600' : 'text-muted-foreground'}>
                       Due: {new Date(task.dueDate).toLocaleDateString()} at {new Date(task.dueDate).toLocaleTimeString()}
                     </span>
                   </div>
@@ -443,8 +443,8 @@ export default function HRTasks() {
       {filteredTasks.length === 0 && (
         <div className="text-center py-12">
           <CheckSquare className="h-12 w-12 mx-auto text-gray-400 mb-4" />
-          <h3 className="text-lg font-medium text-gray-900 mb-2">No tasks found</h3>
-          <p className="text-gray-600 mb-4">
+          <h3 className="text-lg font-medium text-foreground mb-2">No tasks found</h3>
+          <p className="text-muted-foreground mb-4">
             {statusFilter !== "all" || priorityFilter !== "all"
               ? "Try adjusting your filters"
               : "Create your first task to get started"

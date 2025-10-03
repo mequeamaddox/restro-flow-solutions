@@ -171,7 +171,7 @@ export default function EmployeeMessages() {
       case 'announcement': return <Megaphone className="h-4 w-4 text-blue-600" />;
       case 'team': return <Users className="h-4 w-4 text-green-600" />;
       case 'direct': return <User className="h-4 w-4 text-purple-600" />;
-      default: return <MessageCircle className="h-4 w-4 text-gray-600" />;
+      default: return <MessageCircle className="h-4 w-4 text-muted-foreground" />;
     }
   };
 
@@ -180,8 +180,8 @@ export default function EmployeeMessages() {
       case 'urgent': return 'bg-red-100 text-red-800 border-red-200';
       case 'high': return 'bg-orange-100 text-orange-800 border-orange-200';
       case 'normal': return 'bg-blue-100 text-blue-800 border-blue-200';
-      case 'low': return 'bg-gray-100 text-gray-800 border-gray-200';
-      default: return 'bg-gray-100 text-gray-800 border-gray-200';
+      case 'low': return 'bg-accent text-foreground border-border';
+      default: return 'bg-accent text-foreground border-border';
     }
   };
 
@@ -221,7 +221,7 @@ export default function EmployeeMessages() {
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
           <h1 className="text-3xl font-bold mb-2" data-testid="page-title">Messages</h1>
-          <p className="text-gray-600">Communicate with your team and managers</p>
+          <p className="text-muted-foreground">Communicate with your team and managers</p>
         </div>
         <Button onClick={() => setShowCompose(true)} data-testid="button-compose-message">
           <Plus className="w-4 h-4 mr-2" />
@@ -236,7 +236,7 @@ export default function EmployeeMessages() {
             <div className="flex items-center">
               <MessageCircle className="h-8 w-8 text-blue-600" />
               <div className="ml-4">
-                <p className="text-sm font-medium text-gray-600">Total Messages</p>
+                <p className="text-sm font-medium text-muted-foreground">Total Messages</p>
                 <p className="text-2xl font-bold text-blue-700">{stats.total}</p>
               </div>
             </div>
@@ -248,7 +248,7 @@ export default function EmployeeMessages() {
             <div className="flex items-center">
               <Mail className="h-8 w-8 text-orange-600" />
               <div className="ml-4">
-                <p className="text-sm font-medium text-gray-600">Unread</p>
+                <p className="text-sm font-medium text-muted-foreground">Unread</p>
                 <p className="text-2xl font-bold text-orange-700">{stats.unread}</p>
               </div>
             </div>
@@ -260,7 +260,7 @@ export default function EmployeeMessages() {
             <div className="flex items-center">
               <Send className="h-8 w-8 text-green-600" />
               <div className="ml-4">
-                <p className="text-sm font-medium text-gray-600">Sent</p>
+                <p className="text-sm font-medium text-muted-foreground">Sent</p>
                 <p className="text-2xl font-bold text-green-700">{stats.sent}</p>
               </div>
             </div>
@@ -272,7 +272,7 @@ export default function EmployeeMessages() {
             <div className="flex items-center">
               <Megaphone className="h-8 w-8 text-purple-600" />
               <div className="ml-4">
-                <p className="text-sm font-medium text-gray-600">Announcements</p>
+                <p className="text-sm font-medium text-muted-foreground">Announcements</p>
                 <p className="text-2xl font-bold text-purple-700">{stats.announcements}</p>
               </div>
             </div>
@@ -331,8 +331,8 @@ export default function EmployeeMessages() {
           {filteredMessages.length === 0 ? (
             <div className="text-center py-12">
               <MessageCircle className="h-16 w-16 mx-auto mb-4 text-gray-400" />
-              <h3 className="text-lg font-medium text-gray-900 mb-2">No messages found</h3>
-              <p className="text-gray-600 mb-4">
+              <h3 className="text-lg font-medium text-foreground mb-2">No messages found</h3>
+              <p className="text-muted-foreground mb-4">
                 {searchTerm ? 'No messages match your search criteria.' : 
                  filter === 'unread' ? 'All caught up! No unread messages.' :
                  'No messages in this category.'}
@@ -351,7 +351,7 @@ export default function EmployeeMessages() {
                   key={message.id}
                   onClick={() => handleViewMessage(message)}
                   className={`p-4 border rounded-lg cursor-pointer transition-all hover:shadow-md ${
-                    !message.isRead ? 'bg-blue-50 border-blue-200' : 'hover:bg-gray-50'
+                    !message.isRead ? 'bg-blue-50 border-blue-200' : 'hover:bg-accent'
                   } ${selectedMessage?.id === message.id ? 'ring-2 ring-blue-500' : ''}`}
                   data-testid={`message-item-${message.id}`}
                 >
@@ -370,7 +370,7 @@ export default function EmployeeMessages() {
                           )}
                         </p>
                         {message.sender?.position?.title && (
-                          <span className="text-xs text-gray-500">• {message.sender.position.title}</span>
+                          <span className="text-xs text-muted-foreground">• {message.sender.position.title}</span>
                         )}
                         {message.priority !== 'normal' && (
                           <Badge className={getPriorityColor(message.priority)} variant="outline">
@@ -382,16 +382,16 @@ export default function EmployeeMessages() {
                         )}
                       </div>
                       
-                      <p className={`text-sm truncate mb-1 ${!message.isRead ? 'font-medium' : 'text-gray-700'}`}>
+                      <p className={`text-sm truncate mb-1 ${!message.isRead ? 'font-medium' : 'text-foreground'}`}>
                         {message.subject}
                       </p>
                       
-                      <p className="text-sm text-gray-600 truncate mb-2">
+                      <p className="text-sm text-muted-foreground truncate mb-2">
                         {message.content}
                       </p>
                       
                       <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-2 text-xs text-gray-500">
+                        <div className="flex items-center gap-2 text-xs text-muted-foreground">
                           <Calendar className="h-3 w-3" />
                           <span>{formatMessageTime(message.createdAt)}</span>
                           {message.isRead && message.readAt && (
@@ -425,10 +425,10 @@ export default function EmployeeMessages() {
           </DialogHeader>
           
           {replyingTo && (
-            <div className="p-4 bg-gray-50 border border-gray-200 rounded-lg mb-4">
+            <div className="p-4 bg-muted border border-border rounded-lg mb-4">
               <p className="text-sm font-medium">Replying to:</p>
-              <p className="text-sm text-gray-700">"{replyingTo.subject}"</p>
-              <p className="text-xs text-gray-500">
+              <p className="text-sm text-foreground">"{replyingTo.subject}"</p>
+              <p className="text-xs text-muted-foreground">
                 From: {replyingTo.sender.firstName} {replyingTo.sender.lastName}
               </p>
             </div>
@@ -550,7 +550,7 @@ export default function EmployeeMessages() {
                       {getMessageTypeIcon(selectedMessage.type)}
                       {selectedMessage.subject}
                     </DialogTitle>
-                    <div className="flex items-center gap-2 text-sm text-gray-600">
+                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
                       <span>
                         {selectedMessage.senderId === userId ? 'You' : 
                          `${selectedMessage.sender.firstName} ${selectedMessage.sender.lastName}`}
@@ -577,8 +577,8 @@ export default function EmployeeMessages() {
               </DialogHeader>
 
               <div className="space-y-4">
-                <div className="p-4 bg-gray-50 rounded-lg">
-                  <p className="text-gray-800 whitespace-pre-wrap leading-relaxed">
+                <div className="p-4 bg-muted rounded-lg">
+                  <p className="text-foreground whitespace-pre-wrap leading-relaxed">
                     {selectedMessage.content}
                   </p>
                 </div>

@@ -160,7 +160,7 @@ export default function QuickAddWidget() {
       <Card className="w-full max-w-md">
         <CardContent className="p-6 text-center">
           <AlertCircle className="h-8 w-8 text-amber-500 mx-auto mb-2" />
-          <p className="text-sm text-gray-600">Select a location to use quick-add</p>
+          <p className="text-sm text-muted-foreground">Select a location to use quick-add</p>
         </CardContent>
       </Card>
     );

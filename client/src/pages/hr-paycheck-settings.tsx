@@ -126,9 +126,9 @@ export default function HRPaycheckSettings() {
       <div className="mb-8">
         <div className="flex items-center gap-3 mb-2">
           <Settings className="h-8 w-8 text-blue-600" />
-          <h1 className="text-3xl font-bold text-gray-900">Paycheck & Pay Stub Settings</h1>
+          <h1 className="text-3xl font-bold text-foreground">Paycheck & Pay Stub Settings</h1>
         </div>
-        <p className="text-gray-600">
+        <p className="text-muted-foreground">
           Configure your paycheck layout options and pay stub printing preferences.
         </p>
       </div>
@@ -166,7 +166,7 @@ export default function HRPaycheckSettings() {
                     hover:shadow-md hover:border-blue-300
                     ${selectedLayout === option.id 
                       ? 'border-blue-500 bg-blue-50 shadow-md' 
-                      : 'border-gray-200 bg-white'
+                      : 'border-border bg-white'
                     }
                     ${option.disabled ? 'opacity-50 cursor-not-allowed' : ''}
                   `}
@@ -196,7 +196,7 @@ export default function HRPaycheckSettings() {
                   </div>
 
                   <h3 className="font-semibold text-center mb-2">{option.title}</h3>
-                  <p className="text-sm text-gray-600 text-center">{option.description}</p>
+                  <p className="text-sm text-muted-foreground text-center">{option.description}</p>
                   
                   {selectedLayout === option.id && (
                     <div className="absolute top-2 right-2">
@@ -237,7 +237,7 @@ export default function HRPaycheckSettings() {
             <div className="flex items-center gap-2">
               <FileText className="h-5 w-5 text-blue-600" />
               <span className="font-medium">Generate Sample Check</span>
-              <span className="text-sm text-gray-500">- Uses live settings</span>
+              <span className="text-sm text-muted-foreground">- Uses live settings</span>
             </div>
             <Button 
               variant="outline" 

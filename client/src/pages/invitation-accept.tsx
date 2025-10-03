@@ -156,7 +156,7 @@ export default function InvitationAccept() {
       owner: 'bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200',
       manager: 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200',
       team_lead: 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200',
-      employee: 'bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-200',
+      employee: 'bg-accent text-foreground dark:bg-gray-900 dark:text-gray-200',
     };
 
     return (
@@ -177,7 +177,7 @@ export default function InvitationAccept() {
             <div className="text-center space-y-4">
               <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
               <h3 className="text-lg font-semibold">Validating Invitation</h3>
-              <p className="text-gray-600">Please wait while we verify your invitation...</p>
+              <p className="text-muted-foreground">Please wait while we verify your invitation...</p>
             </div>
           </CardContent>
         </Card>
@@ -194,7 +194,7 @@ export default function InvitationAccept() {
             <div className="text-center space-y-4">
               <AlertCircle className="h-12 w-12 text-red-500 mx-auto" />
               <h3 className="text-lg font-semibold">Invalid Invitation</h3>
-              <p className="text-gray-600">
+              <p className="text-muted-foreground">
                 This invitation link is invalid, expired, or has already been used.
               </p>
               <Button 
@@ -220,7 +220,7 @@ export default function InvitationAccept() {
             <div className="text-center space-y-4">
               <Clock className="h-12 w-12 text-orange-500 mx-auto" />
               <h3 className="text-lg font-semibold">Invitation Expired</h3>
-              <p className="text-gray-600">
+              <p className="text-muted-foreground">
                 This invitation has expired. Please contact your manager to send a new invitation.
               </p>
               <Button 
@@ -246,10 +246,10 @@ export default function InvitationAccept() {
             <div className="text-center space-y-4">
               <CheckCircle className="h-12 w-12 text-green-500 mx-auto" />
               <h3 className="text-lg font-semibold">Account Created Successfully!</h3>
-              <p className="text-gray-600">
+              <p className="text-muted-foreground">
                 Welcome to the team! Your account has been created and you can now log in to access your dashboard.
               </p>
-              <div className="animate-pulse text-sm text-gray-500">
+              <div className="animate-pulse text-sm text-muted-foreground">
                 Redirecting to login page...
               </div>
             </div>
@@ -284,15 +284,15 @@ export default function InvitationAccept() {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
                 <div className="flex items-center gap-2">
-                  <Mail className="h-4 w-4 text-gray-500" />
+                  <Mail className="h-4 w-4 text-muted-foreground" />
                   <span className="text-sm font-medium">Email:</span>
                 </div>
-                <p className="text-sm text-gray-700 dark:text-gray-300">{invitation.email}</p>
+                <p className="text-sm text-foreground dark:text-gray-300">{invitation.email}</p>
               </div>
 
               <div className="space-y-2">
                 <div className="flex items-center gap-2">
-                  <Briefcase className="h-4 w-4 text-gray-500" />
+                  <Briefcase className="h-4 w-4 text-muted-foreground" />
                   <span className="text-sm font-medium">Role:</span>
                 </div>
                 {getRoleBadge(invitation.role)}
@@ -301,10 +301,10 @@ export default function InvitationAccept() {
               {invitation.location && (
                 <div className="space-y-2">
                   <div className="flex items-center gap-2">
-                    <MapPin className="h-4 w-4 text-gray-500" />
+                    <MapPin className="h-4 w-4 text-muted-foreground" />
                     <span className="text-sm font-medium">Location:</span>
                   </div>
-                  <p className="text-sm text-gray-700 dark:text-gray-300">
+                  <p className="text-sm text-foreground dark:text-gray-300">
                     {invitation.location.name}
                   </p>
                 </div>
@@ -313,10 +313,10 @@ export default function InvitationAccept() {
               {invitation.department && (
                 <div className="space-y-2">
                   <div className="flex items-center gap-2">
-                    <Users className="h-4 w-4 text-gray-500" />
+                    <Users className="h-4 w-4 text-muted-foreground" />
                     <span className="text-sm font-medium">Department:</span>
                   </div>
-                  <p className="text-sm text-gray-700 dark:text-gray-300">
+                  <p className="text-sm text-foreground dark:text-gray-300">
                     {invitation.department.name}
                   </p>
                 </div>
@@ -325,10 +325,10 @@ export default function InvitationAccept() {
               {invitation.position && (
                 <div className="space-y-2">
                   <div className="flex items-center gap-2">
-                    <Shield className="h-4 w-4 text-gray-500" />
+                    <Shield className="h-4 w-4 text-muted-foreground" />
                     <span className="text-sm font-medium">Position:</span>
                   </div>
-                  <p className="text-sm text-gray-700 dark:text-gray-300">
+                  <p className="text-sm text-foreground dark:text-gray-300">
                     {invitation.position.title}
                   </p>
                 </div>
@@ -341,7 +341,7 @@ export default function InvitationAccept() {
           {/* Account Creation Form */}
           <div className="space-y-4">
             <h3 className="text-lg font-semibold">Create Your Account</h3>
-            <p className="text-gray-600">
+            <p className="text-muted-foreground">
               Create a secure password to access your RestroFlow account.
             </p>
 
@@ -442,7 +442,7 @@ export default function InvitationAccept() {
             </Form>
           </div>
 
-          <div className="text-center text-sm text-gray-500">
+          <div className="text-center text-sm text-muted-foreground">
             <p>
               By creating an account, you agree to our terms of service and privacy policy.
             </p>

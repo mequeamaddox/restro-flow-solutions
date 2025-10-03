@@ -173,9 +173,9 @@ export default function Settings() {
       case "bar":
         return "bg-purple-100 text-purple-800";
       case "warehouse":
-        return "bg-gray-100 text-gray-800";
+        return "bg-accent text-foreground";
       default:
-        return "bg-gray-100 text-gray-800";
+        return "bg-accent text-foreground";
     }
   };
 
@@ -186,8 +186,8 @@ export default function Settings() {
       {/* Page Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-semibold text-gray-900 dark:text-white">Settings</h1>
-          <p className="text-gray-600 dark:text-gray-400">Manage your account, locations, and integrations</p>
+          <h1 className="text-2xl font-semibold text-foreground dark:text-white">Settings</h1>
+          <p className="text-muted-foreground dark:text-gray-400">Manage your account, locations, and integrations</p>
         </div>
       </div>
 
@@ -249,18 +249,18 @@ export default function Settings() {
                         <p className="font-medium dark:text-white">
                           {(user as any).firstName} {(user as any).lastName}
                         </p>
-                        <p className="text-sm text-gray-600 dark:text-gray-400">{(user as any).email}</p>
+                        <p className="text-sm text-muted-foreground dark:text-gray-400">{(user as any).email}</p>
                       </div>
                     </div>
                     <Separator />
-                    <div className="text-sm text-gray-600 dark:text-gray-400">
+                    <div className="text-sm text-muted-foreground dark:text-gray-400">
                       <p>User ID: {(user as any).id}</p>
                       <p>Joined: {new Date((user as any).createdAt).toLocaleDateString()}</p>
                     </div>
                   </div>
                 ) : (
                   <div className="text-center py-4">
-                    <p className="text-gray-500 dark:text-gray-400">Please log in to view profile</p>
+                    <p className="text-muted-foreground dark:text-gray-400">Please log in to view profile</p>
                   </div>
                 )}
               </CardContent>
@@ -485,7 +485,7 @@ export default function Settings() {
               {locationsLoading ? (
                 <div className="text-center py-8">
                   <div className="animate-spin rounded-full h-8 w-8 border-2 border-primary-500 border-t-transparent mx-auto"></div>
-                  <p className="text-sm text-gray-600 dark:text-gray-400 mt-2">Loading locations...</p>
+                  <p className="text-sm text-muted-foreground dark:text-gray-400 mt-2">Loading locations...</p>
                 </div>
               ) : (locations as Location[])?.length > 0 ? (
                 <div className="space-y-3">
@@ -556,7 +556,7 @@ export default function Settings() {
               ) : (
                 <div className="text-center py-8">
                   <MapPin className="h-12 w-12 text-gray-400 mx-auto mb-3" />
-                  <p className="text-gray-500 dark:text-gray-400">No locations yet. Add your first location to get started.</p>
+                  <p className="text-muted-foreground dark:text-gray-400">No locations yet. Add your first location to get started.</p>
                 </div>
               )}
             </CardContent>

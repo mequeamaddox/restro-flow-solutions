@@ -151,7 +151,7 @@ export default function BarcodeScanner({ isOpen, onClose, onScan }: BarcodeScann
                 )}
               </div>
 
-              <div className="text-center text-sm text-gray-600">
+              <div className="text-center text-sm text-muted-foreground">
                 Position the barcode within the frame to scan
               </div>
 

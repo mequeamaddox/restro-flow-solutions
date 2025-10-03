@@ -288,7 +288,7 @@ export default function EmployeeSettings() {
             <div className="flex items-center justify-between">
               <div className="space-y-0.5">
                 <Label className="text-base">Break Reminders</Label>
-                <p className="text-sm text-gray-600 dark:text-gray-400">
+                <p className="text-sm text-muted-foreground dark:text-gray-400">
                   Get notified when it's time for your break
                 </p>
               </div>
@@ -305,7 +305,7 @@ export default function EmployeeSettings() {
             <div className="flex items-center justify-between">
               <div className="space-y-0.5">
                 <Label className="text-base">Schedule Alerts</Label>
-                <p className="text-sm text-gray-600 dark:text-gray-400">
+                <p className="text-sm text-muted-foreground dark:text-gray-400">
                   Alerts for shift changes and updates
                 </p>
               </div>

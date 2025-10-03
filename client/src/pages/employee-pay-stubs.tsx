@@ -135,7 +135,7 @@ export default function EmployeePayStubs() {
       case 'calculated':
         return <Badge className="bg-blue-100 text-blue-800 border-blue-200">Ready</Badge>;
       case 'draft':
-        return <Badge className="bg-gray-100 text-gray-800 border-gray-200">Processing</Badge>;
+        return <Badge className="bg-accent text-foreground border-border">Processing</Badge>;
       default:
         return <Badge variant="secondary">{status}</Badge>;
     }

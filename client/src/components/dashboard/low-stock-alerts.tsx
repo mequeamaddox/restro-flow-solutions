@@ -21,7 +21,7 @@ export default function LowStockAlerts({ items, isLoading }: LowStockAlertsProps
         <CardContent>
           <div className="space-y-4">
             {[...Array(3)].map((_, i) => (
-              <div key={i} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+              <div key={i} className="flex items-center justify-between p-3 bg-muted rounded-lg">
                 <div className="flex items-center">
                   <Skeleton className="w-10 h-10 rounded-lg" />
                   <div className="ml-3 space-y-1">
@@ -76,8 +76,8 @@ export default function LowStockAlerts({ items, isLoading }: LowStockAlertsProps
         {lowStockItems.length === 0 ? (
           <div className="text-center py-8">
             <Package className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-            <h3 className="text-sm font-medium text-gray-900 mb-2">All items are well stocked</h3>
-            <p className="text-xs text-gray-500">No items are currently below their reorder levels.</p>
+            <h3 className="text-sm font-medium text-foreground mb-2">All items are well stocked</h3>
+            <p className="text-xs text-muted-foreground">No items are currently below their reorder levels.</p>
           </div>
         ) : (
           <div className="space-y-4">
@@ -91,8 +91,8 @@ export default function LowStockAlerts({ items, isLoading }: LowStockAlertsProps
                       {getCategoryIcon(item.category?.name)}
                     </div>
                     <div className="ml-3">
-                      <p className="text-sm font-medium text-gray-900">{item.name}</p>
-                      <p className="text-xs text-gray-500">
+                      <p className="text-sm font-medium text-foreground">{item.name}</p>
+                      <p className="text-xs text-muted-foreground">
                         {item.quantity} {item.unit} remaining
                       </p>
                     </div>

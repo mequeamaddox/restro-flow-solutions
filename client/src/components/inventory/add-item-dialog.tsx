@@ -616,7 +616,7 @@ export default function AddItemDialog({ isOpen, onClose, onSuccess, categories, 
               )}
             />
             
-            <div className="flex justify-between items-center pt-6 border-t border-gray-200">
+            <div className="flex justify-between items-center pt-6 border-t border-border">
               {editingItem && onDelete && (
                 <Button 
                   type="button" 

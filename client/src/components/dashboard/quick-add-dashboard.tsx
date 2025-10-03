@@ -33,7 +33,7 @@ export default function QuickAddDashboard() {
         <CardContent className="space-y-4">
           <div className="text-center">
             <Package className="h-12 w-12 text-gray-300 mx-auto mb-3" />
-            <p className="text-sm text-gray-600 mb-4">
+            <p className="text-sm text-muted-foreground mb-4">
               Scan barcodes to quickly add items to your inventory
             </p>
           </div>
@@ -55,7 +55,7 @@ export default function QuickAddDashboard() {
             </Link>
           </div>
 
-          <div className="text-xs text-gray-500 text-center">
+          <div className="text-xs text-muted-foreground text-center">
             Adding to: {currentLocation.name}
           </div>
         </CardContent>

@@ -552,12 +552,12 @@ export default function HRScheduling() {
                   className={`border-r border-gray-800 last:border-r-0 ${isToday ? 'bg-blue-500/5' : ''}`}
                 >
                   <div className={`p-4 border-b border-gray-800 text-center ${isToday ? 'bg-blue-500/10' : ''}`}>
-                    <div className="text-xs text-gray-500 font-medium">{dayNames[index]}</div>
+                    <div className="text-xs text-muted-foreground font-medium">{dayNames[index]}</div>
                     <div className={`text-lg font-bold mt-1 ${isToday ? 'text-blue-400' : 'text-gray-200'}`}>
                       {new Date(date).getDate()}
                     </div>
                     {dayTotal > 0 && (
-                      <div className="text-xs text-gray-500 mt-1">{dayTotal.toFixed(0)}h</div>
+                      <div className="text-xs text-muted-foreground mt-1">{dayTotal.toFixed(0)}h</div>
                     )}
                   </div>
                   <div className="p-2 space-y-2 min-h-[400px]">

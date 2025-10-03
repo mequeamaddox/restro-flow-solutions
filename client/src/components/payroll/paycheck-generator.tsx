@@ -62,14 +62,14 @@ export function PaycheckGenerator({ settings, employee, paycheck }: PaycheckGene
   };
 
   const renderPaycheckLayout = () => {
-    const commonStyles = "p-6 border border-gray-300 bg-white text-black print:shadow-none";
+    const commonStyles = "p-6 border border-border bg-card text-black print:shadow-none";
     
     switch (settings?.paycheckLayout) {
       case 'no_printing':
         return (
           <div className={`${commonStyles} text-center`}>
             <div className="text-2xl font-bold mb-4">Digital Pay Stub Only</div>
-            <p className="text-gray-600">This paycheck is configured for digital-only distribution</p>
+            <p className="text-muted-foreground">This paycheck is configured for digital-only distribution</p>
           </div>
         );
 
@@ -82,7 +82,7 @@ export function PaycheckGenerator({ settings, employee, paycheck }: PaycheckGene
                 <div>
                   <div className="text-lg font-bold">{settings?.businessName || 'Business Name'}</div>
                   {settings?.displayTaxFilingName && (
-                    <div className="text-sm text-gray-600">{settings?.taxFilingName}</div>
+                    <div className="text-sm text-muted-foreground">{settings?.taxFilingName}</div>
                   )}
                 </div>
                 <div className="text-right">
@@ -123,7 +123,7 @@ export function PaycheckGenerator({ settings, employee, paycheck }: PaycheckGene
                 <div>
                   <div className="text-lg font-bold">{settings?.businessName || 'Business Name'}</div>
                   {settings?.displayTaxFilingName && (
-                    <div className="text-sm text-gray-600">{settings?.taxFilingName}</div>
+                    <div className="text-sm text-muted-foreground">{settings?.taxFilingName}</div>
                   )}
                 </div>
                 <div className="text-right">
@@ -189,7 +189,7 @@ export function PaycheckGenerator({ settings, employee, paycheck }: PaycheckGene
       </CardHeader>
       <CardContent>
         <div className="space-y-4">
-          <div className="text-sm text-gray-600 mb-4">
+          <div className="text-sm text-muted-foreground mb-4">
             Layout: <span className="font-semibold capitalize">{settings?.paycheckLayout?.replace('_', ' ')}</span>
           </div>
           {renderPaycheckLayout()}
@@ -208,7 +208,7 @@ function PayStubDetails({ settings, employee, paycheck }: any) {
           {settings?.displayBusinessName ? settings?.businessName : 'Pay Stub'}
         </div>
         {settings?.displayTaxFilingName && (
-          <div className="text-sm text-gray-600">{settings?.taxFilingName}</div>
+          <div className="text-sm text-muted-foreground">{settings?.taxFilingName}</div>
         )}
       </div>
 

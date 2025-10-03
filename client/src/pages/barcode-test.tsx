@@ -58,7 +58,7 @@ export default function BarcodeTest() {
           </CardHeader>
           <CardContent className="space-y-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+              <label className="block text-sm font-medium text-foreground mb-2">
                 Product Barcode
               </label>
               <BarcodeInput

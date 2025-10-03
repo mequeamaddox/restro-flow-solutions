@@ -172,7 +172,7 @@ export default function EmployeePage() {
           <CardContent className="p-6 text-center">
             <FileText className="w-12 h-12 mx-auto mb-4 text-gray-400" />
             <h3 className="text-lg font-semibold mb-2">Employee Not Found</h3>
-            <p className="text-gray-600 mb-4">
+            <p className="text-muted-foreground mb-4">
               We couldn't find the employee profile you're looking for.
             </p>
             <Link href="/employees">
@@ -198,8 +198,8 @@ export default function EmployeePage() {
     switch (status.toLowerCase()) {
       case 'active': return 'bg-green-100 text-green-800';
       case 'pending': return 'bg-yellow-100 text-yellow-800';
-      case 'inactive': return 'bg-gray-100 text-gray-800';
-      default: return 'bg-gray-100 text-gray-800';
+      case 'inactive': return 'bg-accent text-foreground';
+      default: return 'bg-accent text-foreground';
     }
   };
 
@@ -216,14 +216,14 @@ export default function EmployeePage() {
           </Link>
           <div>
             <div className="flex items-center gap-3 mb-1">
-              <h1 className="text-2xl font-bold text-gray-900">
+              <h1 className="text-2xl font-bold text-foreground">
                 {employee.firstName} {employee.lastName}
               </h1>
               <Badge variant="secondary" className="text-xs font-mono">
                 {employee.employeeNumber}
               </Badge>
             </div>
-            <p className="text-gray-600">{employee.position?.title || employee.position} • {employee.department?.name || employee.department}</p>
+            <p className="text-muted-foreground">{employee.position?.title || employee.position} • {employee.department?.name || employee.department}</p>
           </div>
         </div>
         <Badge className={getStatusColor(employee.status)}>
@@ -242,32 +242,32 @@ export default function EmployeePage() {
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="flex items-center space-x-2">
-              <Mail className="w-4 h-4 text-gray-500" />
-              <span className="text-sm text-gray-600">Email:</span>
+              <Mail className="w-4 h-4 text-muted-foreground" />
+              <span className="text-sm text-muted-foreground">Email:</span>
               <span className="text-sm">{employee.email}</span>
             </div>
             <div className="flex items-center space-x-2">
-              <Calendar className="w-4 h-4 text-gray-500" />
-              <span className="text-sm text-gray-600">Hire Date:</span>
+              <Calendar className="w-4 h-4 text-muted-foreground" />
+              <span className="text-sm text-muted-foreground">Hire Date:</span>
               <span className="text-sm">{formatDate(employee.hireDate)}</span>
             </div>
             {employee.phone && (
               <div className="flex items-center space-x-2">
-                <Phone className="w-4 h-4 text-gray-500" />
-                <span className="text-sm text-gray-600">Phone:</span>
+                <Phone className="w-4 h-4 text-muted-foreground" />
+                <span className="text-sm text-muted-foreground">Phone:</span>
                 <span className="text-sm">{employee.phone}</span>
               </div>
             )}
             {employee.dateOfBirth && (
               <div className="flex items-center space-x-2">
-                <Calendar className="w-4 h-4 text-gray-500" />
-                <span className="text-sm text-gray-600">Date of Birth:</span>
+                <Calendar className="w-4 h-4 text-muted-foreground" />
+                <span className="text-sm text-muted-foreground">Date of Birth:</span>
                 <span className="text-sm">{formatDate(employee.dateOfBirth)}</span>
               </div>
             )}
             <div className="pt-2 border-t">
               <div className="flex items-center justify-between">
-                <span className="text-sm text-gray-600">Time with Company:</span>
+                <span className="text-sm text-muted-foreground">Time with Company:</span>
                 <span className="text-sm font-medium">
                   {employee.hireDate ? 
                     Math.floor((new Date().getTime() - new Date(employee.hireDate).getTime()) / (1000 * 60 * 60 * 24 * 30)) + ' months' : 
@@ -289,31 +289,31 @@ export default function EmployeePage() {
           </CardHeader>
           <CardContent className="space-y-4">
             <div>
-              <span className="text-sm text-gray-600">Position:</span>
+              <span className="text-sm text-muted-foreground">Position:</span>
               <p className="text-sm font-medium">{employee.position?.title || employee.position}</p>
             </div>
             <div>
-              <span className="text-sm text-gray-600">Department:</span>
+              <span className="text-sm text-muted-foreground">Department:</span>
               <p className="text-sm font-medium">{employee.department?.name || employee.department}</p>
             </div>
             {employee.hourlyRate && (
               <div>
-                <span className="text-sm text-gray-600">Hourly Rate:</span>
+                <span className="text-sm text-muted-foreground">Hourly Rate:</span>
                 <p className="text-sm font-medium">${parseFloat(employee.hourlyRate).toFixed(2)}/hour</p>
               </div>
             )}
             {employee.salary && (
               <div>
-                <span className="text-sm text-gray-600">Annual Salary:</span>
+                <span className="text-sm text-muted-foreground">Annual Salary:</span>
                 <p className="text-sm font-medium">${parseFloat(employee.salary).toLocaleString()}</p>
               </div>
             )}
             <div>
-              <span className="text-sm text-gray-600">Pay Frequency:</span>
+              <span className="text-sm text-muted-foreground">Pay Frequency:</span>
               <p className="text-sm font-medium capitalize">{employee.payFrequency || 'biweekly'}</p>
             </div>
             <div>
-              <span className="text-sm text-gray-600">Employee ID:</span>
+              <span className="text-sm text-muted-foreground">Employee ID:</span>
               <p className="text-sm font-mono font-medium">{employee.employeeNumber}</p>
             </div>
           </CardContent>
@@ -355,19 +355,19 @@ export default function EmployeePage() {
             <CardContent className="space-y-2">
               {onboardingData.emergencyContactName && (
                 <div>
-                  <span className="text-sm text-gray-600">Name:</span>
+                  <span className="text-sm text-muted-foreground">Name:</span>
                   <p className="text-sm font-medium">{onboardingData.emergencyContactName}</p>
                 </div>
               )}
               {onboardingData.emergencyContactPhone && (
                 <div>
-                  <span className="text-sm text-gray-600">Phone:</span>
+                  <span className="text-sm text-muted-foreground">Phone:</span>
                   <p className="text-sm">{onboardingData.emergencyContactPhone}</p>
                 </div>
               )}
               {onboardingData.emergencyContactRelationship && (
                 <div>
-                  <span className="text-sm text-gray-600">Relationship:</span>
+                  <span className="text-sm text-muted-foreground">Relationship:</span>
                   <p className="text-sm">{onboardingData.emergencyContactRelationship}</p>
                 </div>
               )}
@@ -409,19 +409,19 @@ export default function EmployeePage() {
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                 {onboardingData.bankName && (
                   <div>
-                    <span className="text-sm text-gray-600">Bank Name:</span>
+                    <span className="text-sm text-muted-foreground">Bank Name:</span>
                     <p className="text-sm font-medium">{onboardingData.bankName}</p>
                   </div>
                 )}
                 {onboardingData.accountType && (
                   <div>
-                    <span className="text-sm text-gray-600">Account Type:</span>
+                    <span className="text-sm text-muted-foreground">Account Type:</span>
                     <p className="text-sm">{onboardingData.accountType}</p>
                   </div>
                 )}
                 {onboardingData.accountNumber && (
                   <div>
-                    <span className="text-sm text-gray-600">Account Number:</span>
+                    <span className="text-sm text-muted-foreground">Account Number:</span>
                     <p className="text-sm font-mono">
                       {showSensitiveData ? onboardingData.accountNumber : onboardingData.accountNumber}
                     </p>
@@ -429,7 +429,7 @@ export default function EmployeePage() {
                 )}
                 {onboardingData.routingNumber && (
                   <div>
-                    <span className="text-sm text-gray-600">Routing Number:</span>
+                    <span className="text-sm text-muted-foreground">Routing Number:</span>
                     <p className="text-sm font-mono">
                       {showSensitiveData ? onboardingData.routingNumber : onboardingData.routingNumber}
                     </p>
@@ -442,7 +442,7 @@ export default function EmployeePage() {
                 <>
                   <Separator className="my-4" />
                   <div>
-                    <span className="text-sm text-gray-600">Social Security Number:</span>
+                    <span className="text-sm text-muted-foreground">Social Security Number:</span>
                     <p className="text-sm font-mono">
                       {onboardingData.socialSecurityNumber}
                     </p>
@@ -475,8 +475,8 @@ export default function EmployeePage() {
             <CardContent>
               <div className="flex items-center space-x-4">
                 <div className="flex items-center space-x-2">
-                  <Calendar className="w-4 h-4 text-gray-500" />
-                  <span className="text-sm text-gray-600">Completed:</span>
+                  <Calendar className="w-4 h-4 text-muted-foreground" />
+                  <span className="text-sm text-muted-foreground">Completed:</span>
                   <span className="text-sm">{formatDate(onboardingData.completedAt)}</span>
                 </div>
                 <Badge className="bg-green-100 text-green-800">
@@ -498,7 +498,7 @@ export default function EmployeePage() {
           <CardContent>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
               <div className="space-y-4">
-                <h4 className="font-medium text-gray-900">Employment Timeline</h4>
+                <h4 className="font-medium text-foreground">Employment Timeline</h4>
                 <div className="space-y-3">
                   <div className="flex items-center justify-between p-3 bg-green-50 rounded-lg">
                     <div>
@@ -507,17 +507,17 @@ export default function EmployeePage() {
                     </div>
                     <Badge className="bg-green-100 text-green-800">Active</Badge>
                   </div>
-                  <div className="text-xs text-gray-500">
+                  <div className="text-xs text-muted-foreground">
                     Started: {formatDate(employee.hireDate)}
                   </div>
                 </div>
               </div>
               
               <div className="space-y-4">
-                <h4 className="font-medium text-gray-900">Quick Stats</h4>
+                <h4 className="font-medium text-foreground">Quick Stats</h4>
                 <div className="space-y-2">
                   <div className="flex justify-between">
-                    <span className="text-sm text-gray-600">Days with Company:</span>
+                    <span className="text-sm text-muted-foreground">Days with Company:</span>
                     <span className="text-sm font-medium">
                       {employee.hireDate ? 
                         Math.floor((new Date().getTime() - new Date(employee.hireDate).getTime()) / (1000 * 60 * 60 * 24)) + ' days' : 
@@ -526,13 +526,13 @@ export default function EmployeePage() {
                     </span>
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-sm text-gray-600">Status:</span>
+                    <span className="text-sm text-muted-foreground">Status:</span>
                     <Badge className={getStatusColor(employee.status)}>
                       {employee.status}
                     </Badge>
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-sm text-gray-600">Employee Type:</span>
+                    <span className="text-sm text-muted-foreground">Employee Type:</span>
                     <span className="text-sm font-medium">
                       {employee.hourlyRate ? 'Hourly' : employee.salary ? 'Salaried' : 'Not Set'}
                     </span>
@@ -541,12 +541,12 @@ export default function EmployeePage() {
               </div>
 
               <div className="space-y-4">
-                <h4 className="font-medium text-gray-900">Notes & Comments</h4>
-                <div className="p-3 bg-gray-50 rounded-lg min-h-[100px]">
+                <h4 className="font-medium text-foreground">Notes & Comments</h4>
+                <div className="p-3 bg-muted rounded-lg min-h-[100px]">
                   {employee.notes ? (
-                    <p className="text-sm text-gray-700">{employee.notes}</p>
+                    <p className="text-sm text-foreground">{employee.notes}</p>
                   ) : (
-                    <p className="text-sm text-gray-500 italic">No notes available</p>
+                    <p className="text-sm text-muted-foreground italic">No notes available</p>
                   )}
                 </div>
               </div>
@@ -609,30 +609,30 @@ export default function EmployeePage() {
                 {profileData.documents && profileData.documents.length > 0 ? (
                   <>
                     {/* Document Summary */}
-                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4 p-4 bg-gray-50 rounded-lg">
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4 p-4 bg-muted rounded-lg">
                       <div className="text-center">
                         <div className="text-2xl font-bold text-green-600">
                           {profileData.documents.filter(doc => doc.status === 'completed' || doc.status === 'signed').length}
                         </div>
-                        <div className="text-xs text-gray-600">Completed</div>
+                        <div className="text-xs text-muted-foreground">Completed</div>
                       </div>
                       <div className="text-center">
                         <div className="text-2xl font-bold text-yellow-600">
                           {profileData.documents.filter(doc => doc.status === 'sent' || doc.status === 'viewed').length}
                         </div>
-                        <div className="text-xs text-gray-600">Pending</div>
+                        <div className="text-xs text-muted-foreground">Pending</div>
                       </div>
                       <div className="text-center">
                         <div className="text-2xl font-bold text-red-600">
                           {profileData.documents.filter(doc => doc.status === 'overdue').length}
                         </div>
-                        <div className="text-xs text-gray-600">Overdue</div>
+                        <div className="text-xs text-muted-foreground">Overdue</div>
                       </div>
                       <div className="text-center">
                         <div className="text-2xl font-bold text-blue-600">
                           {profileData.documents.filter(doc => doc.requiresSignature && doc.status === 'signed').length}
                         </div>
-                        <div className="text-xs text-gray-600">Signed</div>
+                        <div className="text-xs text-muted-foreground">Signed</div>
                       </div>
                     </div>
 
@@ -652,7 +652,7 @@ export default function EmployeePage() {
                             </div>
                             <div>
                               <h4 className="font-medium">{doc.templateName}</h4>
-                              <p className="text-sm text-gray-600">
+                              <p className="text-sm text-muted-foreground">
                                 {doc.description || getDocumentTypeDescription(doc.templateType)}
                               </p>
                               <div className="flex items-center space-x-4 mt-1">
@@ -660,7 +660,7 @@ export default function EmployeePage() {
                                   {getDocumentStatusLabel(doc.status)}
                                 </Badge>
                                 {doc.requiresSignature && (
-                                  <div className="flex items-center text-sm text-gray-500">
+                                  <div className="flex items-center text-sm text-muted-foreground">
                                     <Signature className="w-3 h-3 mr-1" />
                                     Signature Required
                                   </div>
@@ -687,7 +687,7 @@ export default function EmployeePage() {
                                 View Signature
                               </Button>
                             )}
-                            <div className="text-xs text-gray-500 text-right">
+                            <div className="text-xs text-muted-foreground text-right">
                               {doc.sentAt && (
                                 <div>Sent: {formatDate(doc.sentAt)}</div>
                               )}
@@ -706,8 +706,8 @@ export default function EmployeePage() {
                 ) : (
                   <div className="text-center py-8">
                     <FileText className="w-12 h-12 mx-auto mb-4 text-gray-400" />
-                    <h3 className="text-lg font-medium text-gray-900 mb-2">No Documents Assigned</h3>
-                    <p className="text-gray-600 mb-4">
+                    <h3 className="text-lg font-medium text-foreground mb-2">No Documents Assigned</h3>
+                    <p className="text-muted-foreground mb-4">
                       This employee hasn't been assigned any documents yet. Use the "Assign Document" button to send required paperwork like W-4s, I-9s, or company policies.
                     </p>
                   </div>

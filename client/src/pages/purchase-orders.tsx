@@ -380,12 +380,12 @@ export default function PurchaseOrders() {
 
   const getStatusColor = (status: string) => {
     switch (status) {
-      case 'draft': return 'bg-gray-100 text-gray-800';
+      case 'draft': return 'bg-accent text-foreground';
       case 'sent': return 'bg-blue-100 text-blue-800';
       case 'confirmed': return 'bg-yellow-100 text-yellow-800';
       case 'delivered': return 'bg-green-100 text-green-800';
       case 'cancelled': return 'bg-red-100 text-red-800';
-      default: return 'bg-gray-100 text-gray-800';
+      default: return 'bg-accent text-foreground';
     }
   };
 
@@ -398,8 +398,8 @@ export default function PurchaseOrders() {
       {/* Page Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-semibold text-gray-900">Purchase Orders</h1>
-          <p className="text-gray-600">Manage supplier orders and deliveries</p>
+          <h1 className="text-2xl font-semibold text-foreground">Purchase Orders</h1>
+          <p className="text-muted-foreground">Manage supplier orders and deliveries</p>
         </div>
         <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
           <DialogTrigger asChild>
@@ -509,7 +509,7 @@ export default function PurchaseOrders() {
                           Inventory Item
                         </label>
                         <Select value={selectedInventoryItem} onValueChange={setSelectedInventoryItem}>
-                          <SelectTrigger className="h-10 bg-white text-gray-900">
+                          <SelectTrigger className="h-10 bg-card text-foreground">
                             <SelectValue placeholder="Select item..." />
                           </SelectTrigger>
                           <SelectContent>
@@ -517,7 +517,7 @@ export default function PurchaseOrders() {
                               <SelectItem key={item.id} value={item.id}>
                                 <div className="flex flex-col">
                                   <span className="font-medium">{item.name}</span>
-                                  <span className="text-xs text-gray-500">
+                                  <span className="text-xs text-muted-foreground">
                                     Current: {item.currentStock} {item.unit}
                                   </span>
                                 </div>
@@ -526,7 +526,7 @@ export default function PurchaseOrders() {
                           </SelectContent>
                         </Select>
                         {getSelectedItemInfo() && (
-                          <div className="text-xs text-gray-600 mt-1 space-y-1">
+                          <div className="text-xs text-muted-foreground mt-1 space-y-1">
                             <p>Last cost: ${getSelectedItemInfo()?.unitCost?.toFixed(2) || '0.00'}</p>
                             {parseFloat(itemUnitCost) > 0 && getSelectedItemInfo()?.unitCost && (
                               <div className="flex items-center space-x-2">
@@ -542,7 +542,7 @@ export default function PurchaseOrders() {
                                     (-{(((getSelectedItemInfo()?.unitCost - parseFloat(itemUnitCost)) / getSelectedItemInfo()?.unitCost) * 100).toFixed(1)}%)
                                   </span>
                                 ) : (
-                                  <span className="text-gray-500">No change</span>
+                                  <span className="text-muted-foreground">No change</span>
                                 )}
                               </div>
                             )}
@@ -562,11 +562,11 @@ export default function PurchaseOrders() {
                           placeholder="0"
                           value={itemQuantity}
                           onChange={(e) => setItemQuantity(e.target.value)}
-                          className="h-10 text-center bg-white text-gray-900"
+                          className="h-10 text-center bg-card text-foreground"
                           data-testid="input-quantity"
                         />
                         {getSelectedItemInfo()?.unit && (
-                          <p className="text-xs text-gray-500 mt-1 text-center">
+                          <p className="text-xs text-muted-foreground mt-1 text-center">
                             {getSelectedItemInfo()?.unit}
                           </p>
                         )}
@@ -586,7 +586,7 @@ export default function PurchaseOrders() {
                             placeholder="0.00"
                             value={itemUnitCost}
                             onChange={(e) => setItemUnitCost(e.target.value)}
-                            className="h-10 pl-8 text-center bg-white text-gray-900"
+                            className="h-10 pl-8 text-center bg-card text-foreground"
                             data-testid="input-unit-cost"
                           />
                         </div>
@@ -620,8 +620,8 @@ export default function PurchaseOrders() {
 
                     {/* Quick Fill Suggestions */}
                     {getSelectedItemInfo() && (
-                      <div className="flex items-center space-x-2 mt-3 pt-3 border-t border-gray-200">
-                        <span className="text-xs text-gray-600">Quick fill:</span>
+                      <div className="flex items-center space-x-2 mt-3 pt-3 border-t border-border">
+                        <span className="text-xs text-muted-foreground">Quick fill:</span>
                         <Button
                           type="button"
                           variant="outline"
@@ -664,11 +664,11 @@ export default function PurchaseOrders() {
                           {lineItems.map((item, index) => {
                             const percentOfTotal = getTotalAmount() > 0 ? (item.totalCost / getTotalAmount()) * 100 : 0;
                             return (
-                              <TableRow key={index} className="hover:bg-gray-50">
+                              <TableRow key={index} className="hover:bg-accent">
                                 <TableCell>
                                   <div className="flex flex-col">
                                     <span className="font-medium">{item.inventoryItemName}</span>
-                                    <span className="text-xs text-gray-500">
+                                    <span className="text-xs text-muted-foreground">
                                       Line #{index + 1}
                                     </span>
                                   </div>
@@ -676,19 +676,19 @@ export default function PurchaseOrders() {
                                 <TableCell className="text-center">
                                   <div className="flex flex-col">
                                     <span className="font-medium">{item.quantity}</span>
-                                    <span className="text-xs text-gray-500">{item.unit}</span>
+                                    <span className="text-xs text-muted-foreground">{item.unit}</span>
                                   </div>
                                 </TableCell>
                                 <TableCell className="text-center">
                                   <div className="flex flex-col">
                                     <span className="font-medium">${item.unitCost.toFixed(2)}</span>
-                                    <span className="text-xs text-gray-500">per {item.unit}</span>
+                                    <span className="text-xs text-muted-foreground">per {item.unit}</span>
                                   </div>
                                 </TableCell>
                                 <TableCell className="text-center">
                                   <div className="flex flex-col">
                                     <span className="font-bold text-green-700">${item.totalCost.toFixed(2)}</span>
-                                    <span className="text-xs text-gray-500">
+                                    <span className="text-xs text-muted-foreground">
                                       {item.quantity} {item.unit} × ${item.unitCost.toFixed(2)}
                                     </span>
                                   </div>
@@ -723,37 +723,37 @@ export default function PurchaseOrders() {
                       </Table>
                       
                       {/* Order Summary Footer */}
-                      <div className="bg-gray-50 border-t px-6 py-4">
+                      <div className="bg-muted border-t px-6 py-4">
                         <div className="grid grid-cols-3 gap-6">
                           <div className="text-center">
                             <div className="text-2xl font-bold text-blue-600">{lineItems.length}</div>
-                            <div className="text-sm text-gray-600">Total Items</div>
+                            <div className="text-sm text-muted-foreground">Total Items</div>
                           </div>
                           <div className="text-center">
                             <div className="text-2xl font-bold text-purple-600">
                               {lineItems.reduce((sum, item) => sum + item.quantity, 0)}
                             </div>
-                            <div className="text-sm text-gray-600">Total Quantity</div>
+                            <div className="text-sm text-muted-foreground">Total Quantity</div>
                           </div>
                           <div className="text-center">
                             <div className="text-2xl font-bold text-green-600">
                               ${getTotalAmount().toFixed(2)}
                             </div>
-                            <div className="text-sm text-gray-600">Order Total</div>
+                            <div className="text-sm text-muted-foreground">Order Total</div>
                           </div>
                         </div>
                         
                         {/* Cost Breakdown & Insights */}
-                        <div className="mt-4 pt-4 border-t border-gray-200">
+                        <div className="mt-4 pt-4 border-t border-border">
                           <div className="grid grid-cols-2 gap-4 text-sm mb-4">
                             <div className="flex justify-between">
-                              <span className="text-gray-600">Average cost per item:</span>
+                              <span className="text-muted-foreground">Average cost per item:</span>
                               <span className="font-medium">
                                 ${lineItems.length > 0 ? (getTotalAmount() / lineItems.length).toFixed(2) : '0.00'}
                               </span>
                             </div>
                             <div className="flex justify-between">
-                              <span className="text-gray-600">Average cost per unit:</span>
+                              <span className="text-muted-foreground">Average cost per unit:</span>
                               <span className="font-medium">
                                 ${lineItems.reduce((sum, item) => sum + item.quantity, 0) > 0 
                                   ? (getTotalAmount() / lineItems.reduce((sum, item) => sum + item.quantity, 0)).toFixed(2) 
@@ -808,7 +808,7 @@ export default function PurchaseOrders() {
                   )}
                   
                   {lineItems.length === 0 && (
-                    <div className="text-center py-6 text-gray-500">
+                    <div className="text-center py-6 text-muted-foreground">
                       <Package className="h-12 w-12 mx-auto mb-2 opacity-50" />
                       <p>No items added yet. Add items above to create your purchase order.</p>
                     </div>
@@ -942,12 +942,12 @@ export default function PurchaseOrders() {
                 />
               </div>
               {/* Total Amount is calculated automatically, not editable */}
-              <div className="bg-gray-50 p-4 rounded-lg">
-                <label className="text-sm font-medium text-gray-700">Total Amount</label>
+              <div className="bg-muted p-4 rounded-lg">
+                <label className="text-sm font-medium text-foreground">Total Amount</label>
                 <p className="text-2xl font-semibold text-green-600 mt-1">
                   ${selectedOrder?.totalAmount ? parseFloat(selectedOrder.totalAmount).toFixed(2) : '0.00'}
                 </p>
-                <p className="text-xs text-gray-500 mt-1">Calculated from line items</p>
+                <p className="text-xs text-muted-foreground mt-1">Calculated from line items</p>
               </div>
               <FormField
                 control={form.control}
@@ -1035,10 +1035,10 @@ export default function PurchaseOrders() {
           <CardContent>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
               {lowStockItems.slice(0, 6).map((item: any) => (
-                <div key={item.id} className="flex items-center justify-between p-3 bg-white rounded-lg border">
+                <div key={item.id} className="flex items-center justify-between p-3 bg-card rounded-lg border">
                   <div>
                     <p className="font-medium text-sm">{item.name}</p>
-                    <p className="text-xs text-gray-600">
+                    <p className="text-xs text-muted-foreground">
                       Current: {item.currentStock} | Reorder at: {item.reorderLevel}
                     </p>
                   </div>
@@ -1164,14 +1164,14 @@ export default function PurchaseOrders() {
                 {order.vendor && (
                   <div className="flex items-center space-x-2">
                     <Building2 className="h-4 w-4 text-gray-400" />
-                    <p className="text-sm text-gray-600">{order.vendor.name}</p>
+                    <p className="text-sm text-muted-foreground">{order.vendor.name}</p>
                   </div>
                 )}
               </CardHeader>
               <CardContent>
                 <div className="space-y-3">
                   <div className="flex items-center justify-between">
-                    <span className="text-sm text-gray-500">Order Date</span>
+                    <span className="text-sm text-muted-foreground">Order Date</span>
                     <div className="flex items-center space-x-1">
                       <Calendar className="h-4 w-4 text-gray-400" />
                       <span className="text-sm">
@@ -1180,7 +1180,7 @@ export default function PurchaseOrders() {
                     </div>
                   </div>
                   <div className="flex items-center justify-between">
-                    <span className="text-sm text-gray-500">Total Amount</span>
+                    <span className="text-sm text-muted-foreground">Total Amount</span>
                     <div className="flex items-center space-x-1">
                       <DollarSign className="h-4 w-4 text-green-600" />
                       <span className="font-medium">
@@ -1190,7 +1190,7 @@ export default function PurchaseOrders() {
                   </div>
                   {order.expectedDeliveryDate && (
                     <div className="flex items-center justify-between">
-                      <span className="text-sm text-gray-500">Expected Delivery</span>
+                      <span className="text-sm text-muted-foreground">Expected Delivery</span>
                       <span className="text-sm">
                         {format(new Date(order.expectedDeliveryDate), 'MMM d, yyyy')}
                       </span>
@@ -1225,8 +1225,8 @@ export default function PurchaseOrders() {
         <Card>
           <CardContent className="py-12 text-center">
             <FileText className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-            <h3 className="text-lg font-medium text-gray-900 mb-2">No purchase orders found</h3>
-            <p className="text-gray-600 mb-4">
+            <h3 className="text-lg font-medium text-foreground mb-2">No purchase orders found</h3>
+            <p className="text-muted-foreground mb-4">
               {searchTerm || statusFilter ? "No orders match your search criteria." : "Start by creating your first purchase order."}
             </p>
             <Button className="bg-primary-600 hover:bg-primary-700">
@@ -1249,7 +1249,7 @@ export default function PurchaseOrders() {
               <div className="flex items-center justify-between pb-4 border-b">
                 <div>
                   <h3 className="text-lg font-semibold">{selectedOrder.orderNumber}</h3>
-                  <p className="text-sm text-gray-600">
+                  <p className="text-sm text-muted-foreground">
                     Created {selectedOrder.createdAt ? format(new Date(selectedOrder.createdAt), 'PPP') : 'N/A'}
                   </p>
                 </div>
@@ -1262,17 +1262,17 @@ export default function PurchaseOrders() {
               <div className="grid grid-cols-2 gap-6">
                 <div className="space-y-4">
                   <div>
-                    <label className="text-sm font-medium text-gray-500">Vendor</label>
+                    <label className="text-sm font-medium text-muted-foreground">Vendor</label>
                     <p className="mt-1 text-sm">{selectedOrder.vendor?.name || 'N/A'}</p>
                   </div>
                   <div>
-                    <label className="text-sm font-medium text-gray-500">Order Date</label>
+                    <label className="text-sm font-medium text-muted-foreground">Order Date</label>
                     <p className="mt-1 text-sm">
                       {selectedOrder.orderDate ? format(new Date(selectedOrder.orderDate), 'PPP') : 'N/A'}
                     </p>
                   </div>
                   <div>
-                    <label className="text-sm font-medium text-gray-500">Expected Delivery</label>
+                    <label className="text-sm font-medium text-muted-foreground">Expected Delivery</label>
                     <p className="mt-1 text-sm">
                       {selectedOrder.expectedDeliveryDate 
                         ? format(new Date(selectedOrder.expectedDeliveryDate), 'PPP') 
@@ -1282,13 +1282,13 @@ export default function PurchaseOrders() {
                 </div>
                 <div className="space-y-4">
                   <div>
-                    <label className="text-sm font-medium text-gray-500">Total Amount</label>
+                    <label className="text-sm font-medium text-muted-foreground">Total Amount</label>
                     <p className="mt-1 text-lg font-semibold text-green-600">
                       ${parseFloat(selectedOrder.totalAmount || '0').toFixed(2)}
                     </p>
                   </div>
                   <div>
-                    <label className="text-sm font-medium text-gray-500">Created By</label>
+                    <label className="text-sm font-medium text-muted-foreground">Created By</label>
                     <p className="mt-1 text-sm">{selectedOrder.createdBy || 'System'}</p>
                   </div>
                 </div>
@@ -1297,8 +1297,8 @@ export default function PurchaseOrders() {
               {/* Notes */}
               {selectedOrder.notes && (
                 <div>
-                  <label className="text-sm font-medium text-gray-500">Notes</label>
-                  <p className="mt-1 text-sm bg-gray-50 p-3 rounded-md">{selectedOrder.notes}</p>
+                  <label className="text-sm font-medium text-muted-foreground">Notes</label>
+                  <p className="mt-1 text-sm bg-muted p-3 rounded-md">{selectedOrder.notes}</p>
                 </div>
               )}
 

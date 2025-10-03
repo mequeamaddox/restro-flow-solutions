@@ -444,14 +444,14 @@ export default function HRPayroll() {
                     <div className={`flex items-center justify-center w-10 h-10 rounded-full border-2 ${
                       status === 'completed' ? 'bg-green-500 border-green-500 text-white' :
                       status === 'current' ? 'bg-blue-500 border-blue-500 text-white' :
-                      'bg-gray-100 border-gray-300 text-gray-500'
+                      'bg-accent border-border text-muted-foreground'
                     }`}>
                       {status === 'completed' ? <CheckCircle className="w-5 h-5" /> : index + 1}
                     </div>
                     <div className="ml-3 min-w-0">
                       <p className={`text-sm font-medium ${
                         status === 'current' ? 'text-blue-600' : 
-                        status === 'completed' ? 'text-green-600' : 'text-gray-500'
+                        status === 'completed' ? 'text-green-600' : 'text-muted-foreground'
                       }`}>
                         {stepLabels[step]}
                       </p>
@@ -664,12 +664,12 @@ export default function HRPayroll() {
                       </span>
                     </div>
                     <div className="flex justify-between items-center mt-2 pt-2 border-t border-red-300">
-                      <span className="font-bold text-gray-800">TOTAL PAYROLL COST:</span>
-                      <span className="text-2xl font-bold text-gray-900">
+                      <span className="font-bold text-foreground">TOTAL PAYROLL COST:</span>
+                      <span className="text-2xl font-bold text-foreground">
                         ${(periodTotals.grossPay + (periodTotals.grossPay * (0.062 + 0.0145 + 0.027 + 0.005))).toFixed(2)}
                       </span>
                     </div>
-                    <p className="text-xs text-gray-600 mt-1">
+                    <p className="text-xs text-muted-foreground mt-1">
                       Gross Pay + Your Employer Taxes = True cost of employment
                     </p>
                   </div>
@@ -904,7 +904,7 @@ export default function HRPayroll() {
                   {/* Employee Info */}
                   <div className="w-40">
                     <div className="font-medium">{employee.firstName} {employee.lastName}</div>
-                    <div className="text-sm text-gray-600">${employee.hourlyRate || 'N/A'}/hr</div>
+                    <div className="text-sm text-muted-foreground">${employee.hourlyRate || 'N/A'}/hr</div>
                     {bulkPayrollInputs[employee.id] && (
                       <div className="text-sm font-medium text-green-600">
                         ${calculateEmployeeGrossPay(employee, bulkPayrollInputs[employee.id] || {}).toFixed(2)}

@@ -92,8 +92,8 @@ export default function Vendors() {
       {/* Page Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-semibold text-gray-900">Vendor Management</h1>
-          <p className="text-gray-600">Manage your supplier relationships</p>
+          <h1 className="text-2xl font-semibold text-foreground">Vendor Management</h1>
+          <p className="text-muted-foreground">Manage your supplier relationships</p>
         </div>
         <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
           <DialogTrigger asChild>
@@ -250,7 +250,7 @@ export default function Vendors() {
                   </div>
                 </div>
                 {vendor.contactPerson && (
-                  <p className="text-sm text-gray-600">Contact: {vendor.contactPerson}</p>
+                  <p className="text-sm text-muted-foreground">Contact: {vendor.contactPerson}</p>
                 )}
               </CardHeader>
               <CardContent>
@@ -287,8 +287,8 @@ export default function Vendors() {
         <Card>
           <CardContent className="py-12 text-center">
             <Building2 className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-            <h3 className="text-lg font-medium text-gray-900 mb-2">No vendors found</h3>
-            <p className="text-gray-600 mb-4">
+            <h3 className="text-lg font-medium text-foreground mb-2">No vendors found</h3>
+            <p className="text-muted-foreground mb-4">
               {searchTerm ? "No vendors match your search criteria." : "Start by adding your first vendor."}
             </p>
             <Button 

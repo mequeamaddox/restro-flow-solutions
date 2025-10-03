@@ -75,8 +75,8 @@ export default function EmployeeSchedule() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900 dark:text-white">My Schedule</h1>
-          <p className="text-gray-600 dark:text-gray-300">
+          <h1 className="text-3xl font-bold text-foreground dark:text-white">My Schedule</h1>
+          <p className="text-muted-foreground dark:text-gray-300">
             View your upcoming shifts and work schedule
           </p>
         </div>
@@ -101,7 +101,7 @@ export default function EmployeeSchedule() {
           </Button>
         </div>
         <div className="text-right">
-          <div className="text-sm text-gray-600">Total Hours This Week</div>
+          <div className="text-sm text-muted-foreground">Total Hours This Week</div>
           <div className="text-2xl font-bold text-blue-600">
             {getTotalHoursForWeek().toFixed(1)}h
           </div>
@@ -121,7 +121,7 @@ export default function EmployeeSchedule() {
             >
               <CardHeader className="pb-3">
                 <div className="text-center">
-                  <div className="text-sm font-medium text-gray-600 dark:text-gray-300">
+                  <div className="text-sm font-medium text-muted-foreground dark:text-gray-300">
                     {getDayLabel(day)}
                   </div>
                   <div className={`text-lg font-bold ${isCurrentDay ? 'text-blue-600' : ''}`}>
@@ -142,19 +142,19 @@ export default function EmployeeSchedule() {
                           {format(parseISO(shift.startTime), 'h:mm a')} - {format(parseISO(shift.endTime), 'h:mm a')}
                         </div>
                         {shift.position && (
-                          <div className="flex items-center text-xs text-gray-600 dark:text-gray-400 mb-1">
+                          <div className="flex items-center text-xs text-muted-foreground dark:text-gray-400 mb-1">
                             <User className="h-3 w-3 mr-1" />
                             {shift.position.title}
                           </div>
                         )}
                         {shift.location && (
-                          <div className="flex items-center text-xs text-gray-600 dark:text-gray-400">
+                          <div className="flex items-center text-xs text-muted-foreground dark:text-gray-400">
                             <MapPin className="h-3 w-3 mr-1" />
                             {shift.location.name}
                           </div>
                         )}
                         {shift.notes && (
-                          <div className="text-xs text-gray-500 mt-1 italic">
+                          <div className="text-xs text-muted-foreground mt-1 italic">
                             {shift.notes}
                           </div>
                         )}
@@ -196,17 +196,17 @@ export default function EmployeeSchedule() {
                 .map((shift) => (
                   <div
                     key={shift.id}
-                    className="flex items-center justify-between p-4 rounded-lg border bg-gray-50 dark:bg-gray-800"
+                    className="flex items-center justify-between p-4 rounded-lg border bg-muted dark:bg-gray-800"
                   >
                     <div className="flex items-center space-x-4">
                       <div className="text-center">
-                        <div className="text-sm font-medium text-gray-600 dark:text-gray-400">
+                        <div className="text-sm font-medium text-muted-foreground dark:text-gray-400">
                           {format(parseISO(shift.date), "EEE")}
                         </div>
                         <div className="text-lg font-bold">
                           {format(parseISO(shift.date), "d")}
                         </div>
-                        <div className="text-xs text-gray-500">
+                        <div className="text-xs text-muted-foreground">
                           {format(parseISO(shift.date), "MMM")}
                         </div>
                       </div>
@@ -215,12 +215,12 @@ export default function EmployeeSchedule() {
                           {format(parseISO(shift.startTime), 'h:mm a')} - {format(parseISO(shift.endTime), 'h:mm a')}
                         </div>
                         {shift.position && (
-                          <div className="text-sm text-gray-600 dark:text-gray-400">
+                          <div className="text-sm text-muted-foreground dark:text-gray-400">
                             {shift.position.title}
                           </div>
                         )}
                         {shift.location && (
-                          <div className="text-sm text-gray-600 dark:text-gray-400">
+                          <div className="text-sm text-muted-foreground dark:text-gray-400">
                             📍 {shift.location.name}
                           </div>
                         )}
@@ -252,7 +252,7 @@ export default function EmployeeSchedule() {
               {myShifts.filter(shift => parseISO(shift.date) >= new Date()).length === 0 && (
                 <div className="text-center py-8">
                   <Calendar className="h-12 w-12 mx-auto text-gray-400 mb-4" />
-                  <p className="text-gray-600 dark:text-gray-300">
+                  <p className="text-muted-foreground dark:text-gray-300">
                     No upcoming shifts scheduled
                   </p>
                 </div>

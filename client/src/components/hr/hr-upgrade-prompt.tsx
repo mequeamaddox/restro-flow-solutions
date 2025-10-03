@@ -18,10 +18,10 @@ export function HRUpgradePrompt({ locationName }: HRUpgradePromptProps) {
               HR Add-on Required
             </Badge>
           </div>
-          <CardTitle className="text-2xl font-bold text-gray-900">
+          <CardTitle className="text-2xl font-bold text-foreground">
             Unlock Full HR Management for {locationName}
           </CardTitle>
-          <CardDescription className="text-lg text-gray-600">
+          <CardDescription className="text-lg text-muted-foreground">
             Get comprehensive employee management tools designed for restaurant operations
           </CardDescription>
         </CardHeader>
@@ -35,8 +35,8 @@ export function HRUpgradePrompt({ locationName }: HRUpgradePromptProps) {
                   <Users className="w-5 h-5 text-orange-600" />
                 </div>
                 <div>
-                  <h3 className="font-semibold text-gray-900">Employee Directory</h3>
-                  <p className="text-sm text-gray-600">Complete employee profiles, contact info, and role management</p>
+                  <h3 className="font-semibold text-foreground">Employee Directory</h3>
+                  <p className="text-sm text-muted-foreground">Complete employee profiles, contact info, and role management</p>
                 </div>
               </div>
               
@@ -45,8 +45,8 @@ export function HRUpgradePrompt({ locationName }: HRUpgradePromptProps) {
                   <Clock className="w-5 h-5 text-blue-600" />
                 </div>
                 <div>
-                  <h3 className="font-semibold text-gray-900">Time Clock & Scheduling</h3>
-                  <p className="text-sm text-gray-600">Digital time tracking, shift scheduling, and attendance monitoring</p>
+                  <h3 className="font-semibold text-foreground">Time Clock & Scheduling</h3>
+                  <p className="text-sm text-muted-foreground">Digital time tracking, shift scheduling, and attendance monitoring</p>
                 </div>
               </div>
             </div>
@@ -57,8 +57,8 @@ export function HRUpgradePrompt({ locationName }: HRUpgradePromptProps) {
                   <MessageSquare className="w-5 h-5 text-green-600" />
                 </div>
                 <div>
-                  <h3 className="font-semibold text-gray-900">Team Communication</h3>
-                  <p className="text-sm text-gray-600">Internal messaging, announcements, and task assignments</p>
+                  <h3 className="font-semibold text-foreground">Team Communication</h3>
+                  <p className="text-sm text-muted-foreground">Internal messaging, announcements, and task assignments</p>
                 </div>
               </div>
               
@@ -67,37 +67,37 @@ export function HRUpgradePrompt({ locationName }: HRUpgradePromptProps) {
                   <DollarSign className="w-5 h-5 text-purple-600" />
                 </div>
                 <div>
-                  <h3 className="font-semibold text-gray-900">Payroll Management</h3>
-                  <p className="text-sm text-gray-600">Automated payroll processing with tax compliance</p>
+                  <h3 className="font-semibold text-foreground">Payroll Management</h3>
+                  <p className="text-sm text-muted-foreground">Automated payroll processing with tax compliance</p>
                 </div>
               </div>
             </div>
           </div>
 
           {/* Pricing */}
-          <div className="bg-white rounded-xl border border-orange-200 p-6 text-center">
+          <div className="bg-card rounded-xl border border-orange-200 p-6 text-center">
             <div className="flex items-center justify-center gap-2 mb-2">
               <Star className="w-5 h-5 text-orange-500" />
-              <span className="font-semibold text-gray-900">HR Add-on</span>
+              <span className="font-semibold text-foreground">HR Add-on</span>
             </div>
-            <div className="text-3xl font-bold text-gray-900 mb-1">
-              $79<span className="text-lg font-normal text-gray-600">/month</span>
+            <div className="text-3xl font-bold text-foreground mb-1">
+              $79<span className="text-lg font-normal text-muted-foreground">/month</span>
             </div>
-            <p className="text-sm text-gray-600 mb-4">Per location • Cancel anytime</p>
+            <p className="text-sm text-muted-foreground mb-4">Per location • Cancel anytime</p>
             
             <div className="space-y-3">
               <Button size="lg" className="w-full bg-orange-600 hover:bg-orange-700">
                 Upgrade to HR Add-on
                 <ArrowRight className="w-4 h-4 ml-2" />
               </Button>
-              <p className="text-xs text-gray-500">
+              <p className="text-xs text-muted-foreground">
                 Includes all HR features for this location
               </p>
             </div>
           </div>
 
           {/* Current Plan Note */}
-          <div className="text-center text-sm text-gray-600 bg-gray-50 rounded-lg p-4">
+          <div className="text-center text-sm text-muted-foreground bg-muted rounded-lg p-4">
             <p>
               Your current <strong>Core Platform</strong> subscription covers inventory management, 
               POS integration, and basic analytics. Add HR functionality to unlock employee management features.

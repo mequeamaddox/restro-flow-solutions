@@ -130,7 +130,7 @@ export default function HRPositions() {
     <div className="max-w-7xl mx-auto p-6">
       <div className="mb-8">
         <h1 className="text-3xl font-bold mb-2">Job Positions</h1>
-        <p className="text-gray-600">Define roles, responsibilities, and compensation</p>
+        <p className="text-muted-foreground">Define roles, responsibilities, and compensation</p>
       </div>
 
       {/* Search and Actions */}
@@ -230,7 +230,7 @@ export default function HRPositions() {
           <CardContent className="text-center py-12">
             <Briefcase className="h-12 w-12 mx-auto text-gray-400 mb-4" />
             <h3 className="text-lg font-semibold mb-2">No positions found</h3>
-            <p className="text-gray-600 mb-4">
+            <p className="text-muted-foreground mb-4">
               {searchTerm ? 'No positions match your search.' : 'Get started by creating your first job position.'}
             </p>
             {canManage && !searchTerm && (
@@ -287,7 +287,7 @@ export default function HRPositions() {
                       </span>
                     </div>
                   )}
-                  <div className="flex items-center gap-2 text-sm text-gray-600">
+                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
                     <Users className="h-4 w-4" />
                     <span data-testid={`text-employee-count-${position.id}`}>
                       {employees.filter((emp: any) => emp.positionId === position.id).length} employees

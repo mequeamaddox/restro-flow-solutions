@@ -110,7 +110,7 @@ export default function EmployeeTimeOff() {
       case 'approved': return 'bg-green-100 text-green-800 border-green-200';
       case 'rejected': return 'bg-red-100 text-red-800 border-red-200';
       case 'pending': return 'bg-yellow-100 text-yellow-800 border-yellow-200';
-      default: return 'bg-gray-100 text-gray-800 border-gray-200';
+      default: return 'bg-accent text-foreground border-border';
     }
   };
 
@@ -137,7 +137,7 @@ export default function EmployeeTimeOff() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold mb-2">Request Time Off</h1>
-          <p className="text-gray-600">Submit and track your time-off requests</p>
+          <p className="text-muted-foreground">Submit and track your time-off requests</p>
         </div>
         <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
           <DialogTrigger asChild>
@@ -264,7 +264,7 @@ export default function EmployeeTimeOff() {
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-gray-600">Total Requests</p>
+                <p className="text-sm text-muted-foreground">Total Requests</p>
                 <p className="text-2xl font-bold">{timeOffRequests.length}</p>
               </div>
               <Calendar className="h-8 w-8 text-blue-600" />
@@ -275,7 +275,7 @@ export default function EmployeeTimeOff() {
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-gray-600">Pending</p>
+                <p className="text-sm text-muted-foreground">Pending</p>
                 <p className="text-2xl font-bold text-yellow-600">
                   {timeOffRequests.filter(r => r.status === 'pending').length}
                 </p>
@@ -288,7 +288,7 @@ export default function EmployeeTimeOff() {
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-gray-600">Approved</p>
+                <p className="text-sm text-muted-foreground">Approved</p>
                 <p className="text-2xl font-bold text-green-600">
                   {timeOffRequests.filter(r => r.status === 'approved').length}
                 </p>
@@ -301,7 +301,7 @@ export default function EmployeeTimeOff() {
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-gray-600">Rejected</p>
+                <p className="text-sm text-muted-foreground">Rejected</p>
                 <p className="text-2xl font-bold text-red-600">
                   {timeOffRequests.filter(r => r.status === 'rejected').length}
                 </p>
@@ -325,7 +325,7 @@ export default function EmployeeTimeOff() {
         </CardHeader>
         <CardContent>
           {timeOffRequests.length === 0 ? (
-            <div className="text-center py-8 text-gray-500">
+            <div className="text-center py-8 text-muted-foreground">
               <Calendar className="h-12 w-12 mx-auto mb-2 opacity-50" />
               <p>No time-off requests found</p>
               <p className="text-sm">Click "Request Time Off" to submit your first request.</p>
@@ -348,7 +348,7 @@ export default function EmployeeTimeOff() {
                             {request.requestType}
                           </Badge>
                         </div>
-                        <div className="grid grid-cols-2 md:grid-cols-3 gap-4 text-sm text-gray-600">
+                        <div className="grid grid-cols-2 md:grid-cols-3 gap-4 text-sm text-muted-foreground">
                           <div>
                             <span className="font-medium">Dates:</span>
                             <p>{new Date(request.startDate).toLocaleDateString()} - {new Date(request.endDate).toLocaleDateString()}</p>
@@ -364,18 +364,18 @@ export default function EmployeeTimeOff() {
                         </div>
                         <div className="mt-3">
                           <span className="font-medium text-sm">Reason:</span>
-                          <p className="text-sm text-gray-600 mt-1">{request.reason}</p>
+                          <p className="text-sm text-muted-foreground mt-1">{request.reason}</p>
                         </div>
                         {request.notes && (
                           <div className="mt-2">
                             <span className="font-medium text-sm">Manager Notes:</span>
-                            <p className="text-sm text-gray-600 mt-1">{request.notes}</p>
+                            <p className="text-sm text-muted-foreground mt-1">{request.notes}</p>
                           </div>
                         )}
                         {request.status === 'approved' && request.approvalDate && (
                           <div className="mt-2">
                             <span className="font-medium text-sm">Approved On:</span>
-                            <p className="text-sm text-gray-600 mt-1">{new Date(request.approvalDate).toLocaleDateString()}</p>
+                            <p className="text-sm text-muted-foreground mt-1">{new Date(request.approvalDate).toLocaleDateString()}</p>
                           </div>
                         )}
                       </div>

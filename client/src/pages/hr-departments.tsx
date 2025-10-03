@@ -123,7 +123,7 @@ export default function HRDepartments() {
     <div className="max-w-7xl mx-auto p-6">
       <div className="mb-8">
         <h1 className="text-3xl font-bold mb-2">Departments</h1>
-        <p className="text-gray-600">Organize your team by departments and locations</p>
+        <p className="text-muted-foreground">Organize your team by departments and locations</p>
       </div>
 
       {/* Search and Actions */}
@@ -211,7 +211,7 @@ export default function HRDepartments() {
           <CardContent className="text-center py-12">
             <Building className="h-12 w-12 mx-auto text-gray-400 mb-4" />
             <h3 className="text-lg font-semibold mb-2">No departments found</h3>
-            <p className="text-gray-600 mb-4">
+            <p className="text-muted-foreground mb-4">
               {searchTerm ? 'No departments match your search.' : 'Get started by creating your first department.'}
             </p>
             {canManage && !searchTerm && (
@@ -259,7 +259,7 @@ export default function HRDepartments() {
                 )}
               </CardHeader>
               <CardContent>
-                <div className="flex items-center gap-2 text-sm text-gray-600">
+                <div className="flex items-center gap-2 text-sm text-muted-foreground">
                   <Users className="h-4 w-4" />
                   <span data-testid={`text-employee-count-${department.id}`}>
                     {employees.filter((emp: any) => emp.departmentId === department.id).length} employees

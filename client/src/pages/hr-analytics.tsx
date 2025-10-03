@@ -74,8 +74,8 @@ export default function HRAnalytics() {
   return (
     <div className="max-w-7xl mx-auto p-6" data-testid="hr-analytics">
       <div className="mb-8">
-        <h1 className="text-3xl font-bold mb-2 text-gray-900 dark:text-white">HR Analytics & Performance</h1>
-        <p className="text-gray-600 dark:text-gray-400">Real-time insights into your team's performance and labor metrics</p>
+        <h1 className="text-3xl font-bold mb-2 text-foreground dark:text-white">HR Analytics & Performance</h1>
+        <p className="text-muted-foreground dark:text-gray-400">Real-time insights into your team's performance and labor metrics</p>
         <div className="bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-950 dark:to-indigo-950 border border-blue-200 dark:border-blue-800 rounded-lg p-4 mt-4">
           <div className="flex items-center gap-2">
             <div className="bg-blue-500 dark:bg-blue-600 text-white px-2 py-1 rounded text-xs font-semibold">LIVE</div>
@@ -180,7 +180,7 @@ export default function HRAnalytics() {
           </CardHeader>
           <CardContent>
             <div className="text-3xl font-bold text-blue-600">${monthlyLaborCost.toFixed(0)}</div>
-            <p className="text-sm text-gray-600 mt-1">
+            <p className="text-sm text-muted-foreground mt-1">
               Based on current trends
             </p>
             <div className="flex items-center gap-2 mt-4">
@@ -263,7 +263,7 @@ export default function HRAnalytics() {
               <div>
                 <div className="flex justify-between items-center mb-2">
                   <span className="text-sm font-medium">Employee Utilization</span>
-                  <span className="text-sm text-gray-600">
+                  <span className="text-sm text-muted-foreground">
                     {totalEmployees > 0 ? ((currentlyWorking / totalEmployees) * 100).toFixed(0) : 0}%
                   </span>
                 </div>
@@ -278,7 +278,7 @@ export default function HRAnalytics() {
               <div>
                 <div className="flex justify-between items-center mb-2">
                   <span className="text-sm font-medium">Average Hours/Employee</span>
-                  <span className="text-sm text-gray-600">
+                  <span className="text-sm text-muted-foreground">
                     {employees.length > 0 ? (weeklyHours / employees.length).toFixed(1) : '0'} hrs/week
                   </span>
                 </div>

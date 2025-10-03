@@ -181,7 +181,7 @@ export default function HRMessaging() {
       case 'recipe': return 'bg-orange-100 text-orange-800';
       case 'policy': return 'bg-red-100 text-red-800';
       case 'manual': return 'bg-purple-100 text-purple-800';
-      default: return 'bg-gray-100 text-gray-800';
+      default: return 'bg-accent text-foreground';
     }
   };
 
@@ -191,7 +191,7 @@ export default function HRMessaging() {
       case 'direct': return 'bg-green-100 text-green-800';
       case 'department': return 'bg-purple-100 text-purple-800';
       case 'urgent': return 'bg-red-100 text-red-800';
-      default: return 'bg-gray-100 text-gray-800';
+      default: return 'bg-accent text-foreground';
     }
   };
 
@@ -253,7 +253,7 @@ export default function HRMessaging() {
     <div className="max-w-7xl mx-auto p-6">
       <div className="mb-8">
         <h1 className="text-3xl font-bold mb-2">Team Communication & Resources</h1>
-        <p className="text-gray-600">Send messages to your team and manage shared documents, forms, and resources</p>
+        <p className="text-muted-foreground">Send messages to your team and manage shared documents, forms, and resources</p>
       </div>
 
       <Tabs defaultValue="messages" className="w-full">
@@ -276,7 +276,7 @@ export default function HRMessaging() {
                   <MessageSquare className="h-6 w-6" />
                   Team Messages
                 </h2>
-                <p className="text-gray-600">Send announcements and messages to your team</p>
+                <p className="text-muted-foreground">Send announcements and messages to your team</p>
               </div>
               
               <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
@@ -402,7 +402,7 @@ export default function HRMessaging() {
             <CardContent className="p-4">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm text-gray-600">Announcements</p>
+                  <p className="text-sm text-muted-foreground">Announcements</p>
                   <p className="text-2xl font-bold">{getMessagesByType('announcement')}</p>
                 </div>
                 <div className="bg-blue-100 p-2 rounded-full">
@@ -416,7 +416,7 @@ export default function HRMessaging() {
             <CardContent className="p-4">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm text-gray-600">Direct Messages</p>
+                  <p className="text-sm text-muted-foreground">Direct Messages</p>
                   <p className="text-2xl font-bold">{getMessagesByType('direct')}</p>
                 </div>
                 <div className="bg-green-100 p-2 rounded-full">
@@ -430,7 +430,7 @@ export default function HRMessaging() {
             <CardContent className="p-4">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm text-gray-600">Department Messages</p>
+                  <p className="text-sm text-muted-foreground">Department Messages</p>
                   <p className="text-2xl font-bold">{getMessagesByType('department')}</p>
                 </div>
                 <div className="bg-purple-100 p-2 rounded-full">
@@ -444,7 +444,7 @@ export default function HRMessaging() {
             <CardContent className="p-4">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm text-gray-600">Urgent Messages</p>
+                  <p className="text-sm text-muted-foreground">Urgent Messages</p>
                   <p className="text-2xl font-bold">{getMessagesByType('urgent')}</p>
                 </div>
                 <div className="bg-red-100 p-2 rounded-full">
@@ -489,12 +489,12 @@ export default function HRMessaging() {
                         {getMessageTypeIcon(message.messageType)}
                         <span className="ml-1 capitalize">{message.messageType}</span>
                       </Badge>
-                      <span className="text-sm text-gray-500">
+                      <span className="text-sm text-muted-foreground">
                         • {getRecipientDisplay(message)}
                       </span>
                     </div>
                     <CardTitle className="text-xl">{message.title}</CardTitle>
-                    <div className="flex items-center gap-4 mt-2 text-sm text-gray-500">
+                    <div className="flex items-center gap-4 mt-2 text-sm text-muted-foreground">
                       <div className="flex items-center gap-1">
                         <Clock className="h-4 w-4" />
                         {new Date(message.createdAt).toLocaleDateString()} at {new Date(message.createdAt).toLocaleTimeString()}
@@ -509,13 +509,13 @@ export default function HRMessaging() {
               </CardHeader>
               
               <CardContent>
-                <div className="bg-gray-50 rounded-lg p-4 mb-4">
-                  <p className="text-gray-700 whitespace-pre-wrap">{message.content}</p>
+                <div className="bg-muted rounded-lg p-4 mb-4">
+                  <p className="text-foreground whitespace-pre-wrap">{message.content}</p>
                 </div>
                 
                 {/* Read Status Progress */}
                 <div className="space-y-2">
-                  <div className="flex justify-between text-sm text-gray-600">
+                  <div className="flex justify-between text-sm text-muted-foreground">
                     <span>Read Status</span>
                     <span>{readCount}/{totalRecipients} employees</span>
                   </div>
@@ -530,12 +530,12 @@ export default function HRMessaging() {
                 {/* Recent Readers */}
                 {message.readBy && message.readBy.length > 0 && (
                   <div className="mt-4 pt-3 border-t">
-                    <p className="text-sm text-gray-600 mb-2">Recent readers:</p>
+                    <p className="text-sm text-muted-foreground mb-2">Recent readers:</p>
                     <div className="flex flex-wrap gap-2">
                       {message.readBy.slice(0, 5).map((reader: any, index: number) => {
                         const employee = employees.find((emp: any) => emp.id === reader.userId);
                         return (
-                          <div key={index} className="flex items-center gap-1 text-xs bg-gray-100 rounded-full px-2 py-1">
+                          <div key={index} className="flex items-center gap-1 text-xs bg-accent rounded-full px-2 py-1">
                             {employee && (
                               <>
                                 <Avatar className="h-4 w-4">
@@ -551,7 +551,7 @@ export default function HRMessaging() {
                         );
                       })}
                       {message.readBy.length > 5 && (
-                        <span className="text-xs text-gray-500 px-2 py-1">
+                        <span className="text-xs text-muted-foreground px-2 py-1">
                           +{message.readBy.length - 5} more
                         </span>
                       )}
@@ -567,8 +567,8 @@ export default function HRMessaging() {
       {filteredMessages.length === 0 && (
         <div className="text-center py-12">
           <MessageSquare className="h-12 w-12 mx-auto text-gray-400 mb-4" />
-          <h3 className="text-lg font-medium text-gray-900 mb-2">No messages found</h3>
-          <p className="text-gray-600 mb-4">
+          <h3 className="text-lg font-medium text-foreground mb-2">No messages found</h3>
+          <p className="text-muted-foreground mb-4">
             {messageTypeFilter !== "all"
               ? "Try changing your message type filter"
               : "Send your first message to get started"
@@ -592,7 +592,7 @@ export default function HRMessaging() {
                   <Folder className="h-6 w-6" />
                   Team Resources
                 </h2>
-                <p className="text-gray-600">Manage documents, forms, recipes, and other shared files</p>
+                <p className="text-muted-foreground">Manage documents, forms, recipes, and other shared files</p>
               </div>
               
               <ObjectUploader
@@ -659,15 +659,15 @@ export default function HRMessaging() {
                   <CardContent>
                     <div className="space-y-3">
                       <div>
-                        <h3 className="font-medium text-gray-900" data-testid={`text-resource-name-${resource.id}`}>
+                        <h3 className="font-medium text-foreground" data-testid={`text-resource-name-${resource.id}`}>
                           {resource.name}
                         </h3>
                         {resource.description && (
-                          <p className="text-sm text-gray-600 mt-1">{resource.description}</p>
+                          <p className="text-sm text-muted-foreground mt-1">{resource.description}</p>
                         )}
                       </div>
                       
-                      <div className="flex items-center justify-between text-sm text-gray-500">
+                      <div className="flex items-center justify-between text-sm text-muted-foreground">
                         <span>{formatFileSize(resource.fileSize)}</span>
                         <Button
                           variant="outline"
@@ -680,7 +680,7 @@ export default function HRMessaging() {
                         </Button>
                       </div>
                       
-                      <div className="flex items-center gap-2 text-xs text-gray-500 pt-2 border-t">
+                      <div className="flex items-center gap-2 text-xs text-muted-foreground pt-2 border-t">
                         <Avatar className="h-5 w-5">
                           <AvatarImage src={employee?.profilePhoto} />
                           <AvatarFallback className="text-xs">
@@ -704,8 +704,8 @@ export default function HRMessaging() {
           {filteredResources.length === 0 && (
             <div className="text-center py-12">
               <Folder className="h-12 w-12 mx-auto text-gray-400 mb-4" />
-              <h3 className="text-lg font-medium text-gray-900 mb-2">No resources found</h3>
-              <p className="text-gray-600 mb-4">
+              <h3 className="text-lg font-medium text-foreground mb-2">No resources found</h3>
+              <p className="text-muted-foreground mb-4">
                 {resourceCategoryFilter !== "all"
                   ? "Try changing your category filter"
                   : "Upload your first team resource to get started"

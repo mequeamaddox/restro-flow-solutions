@@ -89,12 +89,12 @@ function SignaturePad({ onSignatureChange, value }: { onSignatureChange: (signat
 
   return (
     <div className="space-y-2">
-      <div className="border border-gray-300 rounded-lg p-4 bg-gray-50">
+      <div className="border border-border rounded-lg p-4 bg-gray-50">
         <canvas
           ref={canvasRef}
           width={400}
           height={150}
-          className="border bg-white rounded cursor-crosshair w-full"
+          className="border bg-card rounded cursor-crosshair w-full"
           onMouseDown={startDrawing}
           onMouseMove={draw}
           onMouseUp={stopDrawing}
@@ -103,7 +103,7 @@ function SignaturePad({ onSignatureChange, value }: { onSignatureChange: (signat
         />
       </div>
       <div className="flex justify-between">
-        <p className="text-sm text-gray-600">Sign your name in the box above</p>
+        <p className="text-sm text-muted-foreground">Sign your name in the box above</p>
         <Button 
           type="button" 
           variant="outline" 
@@ -475,8 +475,8 @@ export function DigitalDocumentForm({ assignmentId, templateId, templateName, us
         <CardContent className="p-6">
           <div className="text-center py-8">
             <CheckCircle className="h-16 w-16 mx-auto mb-4 text-green-500" />
-            <h3 className="text-lg font-medium text-gray-900 mb-2">No Form Required</h3>
-            <p className="text-gray-600">This document doesn't require any form completion.</p>
+            <h3 className="text-lg font-medium text-foreground mb-2">No Form Required</h3>
+            <p className="text-muted-foreground">This document doesn't require any form completion.</p>
           </div>
         </CardContent>
       </Card>

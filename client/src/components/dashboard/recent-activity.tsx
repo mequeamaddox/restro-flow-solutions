@@ -32,7 +32,7 @@ export default function RecentActivity() {
       case 'purchase_order': return { icon: ShoppingCart, color: 'text-orange-600', bg: 'bg-orange-100' };
       case 'invoice': return { icon: FileText, color: 'text-purple-600', bg: 'bg-purple-100' };
       case 'waste': return { icon: Trash2, color: 'text-red-600', bg: 'bg-red-100' };
-      default: return { icon: Edit, color: 'text-gray-600', bg: 'bg-gray-100' };
+      default: return { icon: Edit, color: 'text-muted-foreground', bg: 'bg-gray-100' };
     }
   };
 
@@ -49,7 +49,7 @@ export default function RecentActivity() {
                 <div className="w-8 h-8 bg-gray-200 rounded-full animate-pulse" />
                 <div className="flex-1">
                   <div className="h-4 bg-gray-200 rounded animate-pulse mb-2" />
-                  <div className="h-3 bg-gray-100 rounded animate-pulse w-1/3" />
+                  <div className="h-3 bg-accent rounded animate-pulse w-1/3" />
                 </div>
               </div>
             ))}
@@ -78,11 +78,11 @@ export default function RecentActivity() {
                   <Icon className={`${color} text-xs h-4 w-4`} />
                 </div>
                 <div className="flex-1 min-w-0">
-                  <p className="text-sm text-gray-900 dark:text-gray-100">
+                  <p className="text-sm text-foreground dark:text-gray-100">
                     {activity.description}
                   </p>
                   <div className="flex items-center space-x-2 mt-1">
-                    <p className="text-xs text-gray-500 dark:text-gray-400">
+                    <p className="text-xs text-muted-foreground dark:text-gray-400">
                       {formatDistanceToNow(new Date(activity.createdAt), { addSuffix: true })}
                       {activity.user && ` • ${activity.user}`}
                     </p>
@@ -96,8 +96,8 @@ export default function RecentActivity() {
         {activities.length === 0 && (
           <div className="text-center py-8">
             <Clock className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-            <h3 className="text-sm font-medium text-gray-900 dark:text-gray-100 mb-2">No recent activity</h3>
-            <p className="text-xs text-gray-500 dark:text-gray-400">Activity will appear here as you use the system.</p>
+            <h3 className="text-sm font-medium text-foreground dark:text-gray-100 mb-2">No recent activity</h3>
+            <p className="text-xs text-muted-foreground dark:text-gray-400">Activity will appear here as you use the system.</p>
           </div>
         )}
       </CardContent>

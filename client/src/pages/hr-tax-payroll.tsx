@@ -93,8 +93,8 @@ export default function HRTaxPayroll() {
         <div className="flex items-start gap-3">
           <Shield className="h-8 w-8 text-red-600 dark:text-red-400 mt-1" />
           <div className="flex-1">
-            <h1 className="text-3xl font-bold mb-2 text-gray-900 dark:text-white">Tax & Payroll Reports</h1>
-            <p className="text-gray-600 dark:text-gray-400">Owner-only access to payroll tax calculations and compliance reporting</p>
+            <h1 className="text-3xl font-bold mb-2 text-foreground dark:text-white">Tax & Payroll Reports</h1>
+            <p className="text-muted-foreground dark:text-gray-400">Owner-only access to payroll tax calculations and compliance reporting</p>
           </div>
         </div>
         <div className="bg-gradient-to-r from-red-50 to-orange-50 dark:from-red-950 dark:to-orange-950 border border-red-200 dark:border-red-800 rounded-lg p-4 mt-4">
@@ -112,8 +112,8 @@ export default function HRTaxPayroll() {
       <div className="space-y-6">
         <div className="flex items-center justify-between">
           <div>
-            <h2 className="text-2xl font-bold text-gray-900 dark:text-white">Payroll Tax Reports</h2>
-            <p className="text-gray-600 dark:text-gray-400">Historical employer tax costs and compliance reporting</p>
+            <h2 className="text-2xl font-bold text-foreground dark:text-white">Payroll Tax Reports</h2>
+            <p className="text-muted-foreground dark:text-gray-400">Historical employer tax costs and compliance reporting</p>
           </div>
           <div className="flex gap-3">
             <Select value={selectedPeriod} onValueChange={setSelectedPeriod}>
@@ -220,14 +220,14 @@ export default function HRTaxPayroll() {
                     <span className="text-orange-800 dark:text-orange-200 font-medium">${payrollTaxData.workersComp.toFixed(2)}</span>
                   </div>
                 </div>
-                <div className="pt-3 border-t border-gray-200 dark:border-gray-700">
+                <div className="pt-3 border-t border-border dark:border-gray-700">
                   <div className="flex justify-between items-center">
-                    <span className="font-semibold text-gray-800 dark:text-gray-200">Total Employer Taxes</span>
+                    <span className="font-semibold text-foreground dark:text-gray-200">Total Employer Taxes</span>
                     <span className="text-xl font-bold text-red-900 dark:text-red-300">${payrollTaxData.totalEmployerTaxes.toFixed(2)}</span>
                   </div>
                   <div className="flex justify-between items-center mt-2 pt-2 border-t dark:border-gray-700">
-                    <span className="font-bold text-gray-900 dark:text-white">TOTAL PAYROLL COST</span>
-                    <span className="text-xl font-bold text-gray-900 dark:text-white">
+                    <span className="font-bold text-foreground dark:text-white">TOTAL PAYROLL COST</span>
+                    <span className="text-xl font-bold text-foreground dark:text-white">
                       ${(payrollTaxData.monthlyGrossPay + payrollTaxData.totalEmployerTaxes).toFixed(2)}
                     </span>
                   </div>
@@ -253,7 +253,7 @@ export default function HRTaxPayroll() {
                       {((payrollTaxData.totalEmployerTaxes / payrollTaxData.monthlyGrossPay) * 100).toFixed(2)}%
                     </span>
                   </div>
-                  <div className="text-xs text-gray-600 dark:text-gray-400">
+                  <div className="text-xs text-muted-foreground dark:text-gray-400">
                     Total employer taxes as percentage of gross payroll
                   </div>
                 </div>
@@ -280,7 +280,7 @@ export default function HRTaxPayroll() {
                 </div>
 
                 <div className="pt-3 border-t dark:border-gray-700">
-                  <div className="text-xs text-gray-600 dark:text-gray-400">
+                  <div className="text-xs text-muted-foreground dark:text-gray-400">
                     <strong>Note:</strong> All rates based on current tax settings. Update tax rates in HR → Tax Settings to adjust calculations.
                   </div>
                 </div>

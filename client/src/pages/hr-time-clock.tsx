@@ -349,7 +349,7 @@ export default function HRTimeClock() {
           <Clock className="h-8 w-8" />
           Time Clock
         </h1>
-        <p className="text-gray-600">Track employee hours and manage time entries</p>
+        <p className="text-muted-foreground">Track employee hours and manage time entries</p>
       </div>
 
       {/* Current Time Display */}
@@ -451,7 +451,7 @@ export default function HRTimeClock() {
                     className={`flex items-center justify-between p-3 border rounded-lg cursor-pointer transition-colors ${
                       selectedEmployeeId === employee.id 
                         ? 'border-blue-500 bg-blue-50' 
-                        : 'hover:bg-gray-50'
+                        : 'hover:bg-accent'
                     }`}
                     onClick={() => setSelectedEmployeeId(employee.id)}
                   >
@@ -464,7 +464,7 @@ export default function HRTimeClock() {
                       </Avatar>
                       <div>
                         <p className="font-medium text-sm">{employee.firstName} {employee.lastName}</p>
-                        <p className="text-xs text-gray-500">{employee.position?.title}</p>
+                        <p className="text-xs text-muted-foreground">{employee.position?.title}</p>
                       </div>
                     </div>
                   </div>
@@ -540,7 +540,7 @@ export default function HRTimeClock() {
               {/* Filter Controls */}
               <div className="flex flex-wrap gap-4 mb-6 p-4 bg-slate-700/50 rounded-lg border border-slate-600">
                 <div className="flex items-center gap-2">
-                  <Calendar className="h-4 w-4 text-gray-600" />
+                  <Calendar className="h-4 w-4 text-muted-foreground" />
                   <Label htmlFor="dateRange">Date Range:</Label>
                   <Select value={dateRange} onValueChange={setDateRange}>
                     <SelectTrigger className="w-[140px]">
@@ -559,7 +559,7 @@ export default function HRTimeClock() {
                 </div>
                 
                 <div className="flex items-center gap-2">
-                  <Filter className="h-4 w-4 text-gray-600" />
+                  <Filter className="h-4 w-4 text-muted-foreground" />
                   <Label htmlFor="employeeFilter">Employee:</Label>
                   <Select value={selectedEmployee} onValueChange={setSelectedEmployee}>
                     <SelectTrigger className="w-[160px]">
@@ -576,7 +576,7 @@ export default function HRTimeClock() {
                   </Select>
                 </div>
                 
-                <div className="ml-auto flex items-center gap-2 text-sm text-gray-600">
+                <div className="ml-auto flex items-center gap-2 text-sm text-muted-foreground">
                   <span className="font-medium">{filteredEntries.length}</span>
                   <span>entries found</span>
                 </div>
@@ -611,33 +611,33 @@ export default function HRTimeClock() {
                             </Badge>
                           )}
                         </div>
-                        <p className="text-xs text-gray-500">{employee.position?.title}</p>
+                        <p className="text-xs text-muted-foreground">{employee.position?.title}</p>
                       </div>
                     </div>
                     <div className="space-y-1 text-sm">
                       <div className="flex justify-between">
-                        <span className="text-gray-500">Date:</span>
+                        <span className="text-muted-foreground">Date:</span>
                         <span className="text-xs">{new Date(entry.clockInTime).toLocaleDateString()}</span>
                       </div>
                       <div className="flex justify-between">
-                        <span className="text-gray-500">Clock In:</span>
+                        <span className="text-muted-foreground">Clock In:</span>
                         <span>{new Date(entry.clockInTime).toLocaleTimeString()}</span>
                       </div>
                       {entry.clockOutTime && (
                         <div className="flex justify-between">
-                          <span className="text-gray-500">Clock Out:</span>
+                          <span className="text-muted-foreground">Clock Out:</span>
                           <span>{new Date(entry.clockOutTime).toLocaleTimeString()}</span>
                         </div>
                       )}
                       {entry.totalHours && (
                         <div className="flex justify-between font-medium">
-                          <span className="text-gray-500">Total Hours:</span>
+                          <span className="text-muted-foreground">Total Hours:</span>
                           <span>{entry.totalHours}h</span>
                         </div>
                       )}
                       {entry.notes && (
                         <div className="flex justify-between">
-                          <span className="text-gray-500">Notes:</span>
+                          <span className="text-muted-foreground">Notes:</span>
                           <span className="text-xs">{entry.notes}</span>
                         </div>
                       )}
@@ -669,7 +669,7 @@ export default function HRTimeClock() {
               })}
                 </div>
               ) : (
-                <div className="text-center py-8 text-gray-500">
+                <div className="text-center py-8 text-muted-foreground">
                   <Timer className="h-12 w-12 mx-auto mb-2 opacity-50" />
                   <p>No completed time entries found for the selected criteria</p>
                   <p className="text-sm">Try expanding the date range or selecting a different employee</p>
@@ -716,7 +716,7 @@ export default function HRTimeClock() {
                   
                   {/* Employee Filter for Calendar */}
                   <div className="flex items-center gap-2">
-                    <Filter className="h-4 w-4 text-gray-600" />
+                    <Filter className="h-4 w-4 text-muted-foreground" />
                     <Select value={selectedEmployee} onValueChange={setSelectedEmployee}>
                       <SelectTrigger className="w-[160px]">
                         <SelectValue />
@@ -792,7 +792,7 @@ export default function HRTimeClock() {
                                   );
                                 })}
                                 {dayEntries.length > 2 && (
-                                  <div className="text-xs text-gray-600 font-medium">
+                                  <div className="text-xs text-muted-foreground font-medium">
                                     +{dayEntries.length - 2} more
                                   </div>
                                 )}
@@ -838,11 +838,11 @@ export default function HRTimeClock() {
                                 </Avatar>
                                 <div>
                                   <p className="font-medium text-sm">{employee.firstName} {employee.lastName}</p>
-                                  <p className="text-xs text-gray-500">
+                                  <p className="text-xs text-muted-foreground">
                                     {new Date(entry.clockInTime).toLocaleTimeString()} - {entry.clockOutTime ? new Date(entry.clockOutTime).toLocaleTimeString() : 'Active'}
                                   </p>
                                   {entry.totalHours && (
-                                    <p className="text-xs text-gray-600">{entry.totalHours}h total</p>
+                                    <p className="text-xs text-muted-foreground">{entry.totalHours}h total</p>
                                   )}
                                 </div>
                               </div>

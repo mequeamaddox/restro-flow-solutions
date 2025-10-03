@@ -256,7 +256,7 @@ export function withPermission<T extends object>(
     
     if (!hasAccess) {
       return fallback || (
-        <div className="p-4 text-center text-gray-500">
+        <div className="p-4 text-center text-muted-foreground">
           <p>You don't have permission to access this feature.</p>
           <p className="text-sm mt-2">Contact your manager for access.</p>
         </div>

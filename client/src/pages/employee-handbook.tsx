@@ -10,7 +10,7 @@ export default function EmployeeHandbook() {
           <BookOpen className="h-8 w-8 text-blue-600" />
           <h1 className="text-3xl font-bold">RestroFlow Employee Handbook</h1>
         </div>
-        <p className="text-gray-600">Your comprehensive guide to working at RestroFlow restaurants</p>
+        <p className="text-muted-foreground">Your comprehensive guide to working at RestroFlow restaurants</p>
       </div>
 
       <div className="grid gap-6">
@@ -45,7 +45,7 @@ export default function EmployeeHandbook() {
           <CardContent className="space-y-4">
             <div>
               <h4 className="font-semibold mb-2">Work Schedule</h4>
-              <p className="text-gray-600">
+              <p className="text-muted-foreground">
                 Your work schedule is posted weekly. Check your schedule regularly and notify management 
                 of any conflicts at least 48 hours in advance.
               </p>
@@ -55,7 +55,7 @@ export default function EmployeeHandbook() {
             
             <div>
               <h4 className="font-semibold mb-2">Dress Code & Appearance</h4>
-              <p className="text-gray-600">
+              <p className="text-muted-foreground">
                 Professional appearance is required at all times. Uniform shirts will be provided. 
                 Closed-toe shoes, clean appearance, and minimal jewelry required.
               </p>
@@ -65,7 +65,7 @@ export default function EmployeeHandbook() {
 
             <div>
               <h4 className="font-semibold mb-2">Attendance Policy</h4>
-              <p className="text-gray-600">
+              <p className="text-muted-foreground">
                 Punctuality is essential. Notify your manager immediately if you will be late or absent. 
                 Excessive tardiness or unexcused absences may result in disciplinary action.
               </p>
@@ -84,7 +84,7 @@ export default function EmployeeHandbook() {
           <CardContent className="space-y-4">
             <div>
               <h4 className="font-semibold mb-2">Food Safety</h4>
-              <ul className="space-y-2 text-gray-600">
+              <ul className="space-y-2 text-muted-foreground">
                 <li>• Wash hands frequently and properly (20+ seconds with soap)</li>
                 <li>• Use gloves when handling ready-to-eat foods</li>
                 <li>• Maintain proper food temperatures at all times</li>
@@ -97,7 +97,7 @@ export default function EmployeeHandbook() {
 
             <div>
               <h4 className="font-semibold mb-2">Workplace Safety</h4>
-              <ul className="space-y-2 text-gray-600">
+              <ul className="space-y-2 text-muted-foreground">
                 <li>• Keep walkways clear and clean up spills immediately</li>
                 <li>• Use proper lifting techniques for heavy items</li>
                 <li>• Report all accidents and injuries to management</li>
@@ -119,7 +119,7 @@ export default function EmployeeHandbook() {
           <CardContent className="space-y-4">
             <div>
               <h4 className="font-semibold mb-2">Service Excellence</h4>
-              <ul className="space-y-2 text-gray-600">
+              <ul className="space-y-2 text-muted-foreground">
                 <li>• Greet every guest with a genuine smile and warm welcome</li>
                 <li>• Be knowledgeable about menu items, ingredients, and preparation methods</li>
                 <li>• Anticipate guest needs and provide proactive service</li>
@@ -141,7 +141,7 @@ export default function EmployeeHandbook() {
           <CardContent className="space-y-4">
             <div>
               <h4 className="font-semibold mb-2">POS Systems</h4>
-              <p className="text-gray-600">
+              <p className="text-muted-foreground">
                 We use SpotOn POS at our bar location and Clover at our main restaurant. 
                 Proper training will be provided on your assigned system.
               </p>
@@ -151,7 +151,7 @@ export default function EmployeeHandbook() {
 
             <div>
               <h4 className="font-semibold mb-2">Time Clock</h4>
-              <p className="text-gray-600">
+              <p className="text-muted-foreground">
                 Clock in and out using the employee portal. Breaks must be taken as scheduled, 
                 and all time adjustments require manager approval.
               </p>
@@ -161,7 +161,7 @@ export default function EmployeeHandbook() {
 
             <div>
               <h4 className="font-semibold mb-2">Employee Portal</h4>
-              <p className="text-gray-600">
+              <p className="text-muted-foreground">
                 Use the employee portal to view your schedule, complete required documents, 
                 access build sheets, and communicate with your team.
               </p>
@@ -180,7 +180,7 @@ export default function EmployeeHandbook() {
           <CardContent className="space-y-4">
             <div>
               <h4 className="font-semibold mb-2">Zero Tolerance Policies</h4>
-              <ul className="space-y-2 text-gray-600">
+              <ul className="space-y-2 text-muted-foreground">
                 <li>• No alcohol or drug use on premises</li>
                 <li>• No harassment or discrimination of any kind</li>
                 <li>• No theft of company or customer property</li>
@@ -192,7 +192,7 @@ export default function EmployeeHandbook() {
 
             <div>
               <h4 className="font-semibold mb-2">Progressive Discipline</h4>
-              <p className="text-gray-600">
+              <p className="text-muted-foreground">
                 We believe in coaching and development. Most issues will be addressed through 
                 verbal coaching, written warnings, and final warnings before termination.
               </p>
@@ -202,7 +202,7 @@ export default function EmployeeHandbook() {
 
             <div>
               <h4 className="font-semibold mb-2">Equal Opportunity</h4>
-              <p className="text-gray-600">
+              <p className="text-muted-foreground">
                 RestroFlow provides equal employment opportunities regardless of race, color, 
                 religion, gender, sexual orientation, age, national origin, disability, or veteran status.
               </p>
@@ -216,11 +216,11 @@ export default function EmployeeHandbook() {
             <CardTitle>Questions or Concerns?</CardTitle>
           </CardHeader>
           <CardContent>
-            <p className="text-gray-600">
+            <p className="text-muted-foreground">
               If you have questions about any policies in this handbook, please speak with your 
               direct supervisor or HR. We're here to help you succeed!
             </p>
-            <p className="text-sm text-gray-500 mt-4">
+            <p className="text-sm text-muted-foreground mt-4">
               This handbook is subject to change. You will be notified of any policy updates.
             </p>
           </CardContent>

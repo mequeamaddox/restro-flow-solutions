@@ -127,7 +127,7 @@ Employee: ${user?.email || 'Unknown'}
       <div className="flex items-center justify-center p-12">
         <div className="text-center">
           <ChefHat className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-          <p className="text-gray-500">Loading build sheets...</p>
+          <p className="text-muted-foreground">Loading build sheets...</p>
         </div>
       </div>
     );
@@ -141,7 +141,7 @@ Employee: ${user?.email || 'Unknown'}
             <ChefHat className="h-6 w-6" />
             Recipe Build Sheets
           </h1>
-          <p className="text-gray-600">Access recipe instructions and prep sheets for kitchen use</p>
+          <p className="text-muted-foreground">Access recipe instructions and prep sheets for kitchen use</p>
         </div>
         <div className="flex gap-2">
           <Badge variant="secondary" className="bg-blue-100 text-blue-800">
@@ -168,7 +168,7 @@ Employee: ${user?.email || 'Unknown'}
         <select 
           value={selectedCategory}
           onChange={(e) => setSelectedCategory(e.target.value)}
-          className="border border-gray-300 rounded-md px-3 py-2 bg-white min-w-[150px]"
+          className="border border-border rounded-md px-3 py-2 bg-card min-w-[150px]"
           data-testid="select-category-filter"
         >
           <option value="all">All Categories</option>
@@ -222,13 +222,13 @@ Employee: ${user?.email || 'Unknown'}
                 <div className="flex items-center justify-between">
                   {getStatusBadge(assignment.status)}
                   {assignment.dueDate && (
-                    <span className="text-xs text-gray-500">
+                    <span className="text-xs text-muted-foreground">
                       Due: {new Date(assignment.dueDate).toLocaleDateString()}
                     </span>
                   )}
                 </div>
                 {recipe.description && (
-                  <p className="text-sm text-gray-600 line-clamp-2">{recipe.description}</p>
+                  <p className="text-sm text-muted-foreground line-clamp-2">{recipe.description}</p>
                 )}
                 {assignment.notes && (
                   <p className="text-xs text-blue-600 bg-blue-50 p-2 rounded mt-2">
@@ -237,7 +237,7 @@ Employee: ${user?.email || 'Unknown'}
                 )}
               </CardHeader>
               <CardContent className="pt-0 space-y-3">
-                <div className="flex items-center gap-4 text-sm text-gray-600">
+                <div className="flex items-center gap-4 text-sm text-muted-foreground">
                   {recipe.prepTime && (
                     <div className="flex items-center gap-1">
                       <Clock className="h-3 w-3" />
@@ -258,7 +258,7 @@ Employee: ${user?.email || 'Unknown'}
                   )}
                 </div>
 
-                <div className="text-sm text-gray-600">
+                <div className="text-sm text-muted-foreground">
                   <span className="font-medium">{recipe.ingredients.length}</span> ingredients required
                 </div>
 
@@ -326,7 +326,7 @@ Employee: ${user?.email || 'Unknown'}
         <Card className="p-12 text-center">
           <ChefHat className="h-12 w-12 text-gray-400 mx-auto mb-4" />
           <h3 className="text-lg font-semibold mb-2">No assigned recipes found</h3>
-          <p className="text-gray-600">
+          <p className="text-muted-foreground">
             {searchTerm || selectedCategory !== "all" 
               ? "Try adjusting your search terms or category filter"
               : "You don't have any recipe assignments yet. Check with your manager for training assignments."
@@ -348,15 +348,15 @@ Employee: ${user?.email || 'Unknown'}
           {selectedRecipe && (
             <div className="space-y-6 p-4">
               {/* Recipe Header */}
-              <div className="bg-gray-50 p-4 rounded-lg">
+              <div className="bg-muted p-4 rounded-lg">
                 <h2 className="text-xl font-semibold mb-2">{selectedRecipe.name}</h2>
-                <div className="flex gap-4 text-sm text-gray-600">
+                <div className="flex gap-4 text-sm text-muted-foreground">
                   <span>Category: {selectedRecipe.category}</span>
                   {selectedRecipe.prepTime && <span>Prep: {selectedRecipe.prepTime} min</span>}
                   {selectedRecipe.servingSize && <span>Serves: {selectedRecipe.servingSize}</span>}
                 </div>
                 {selectedRecipe.description && (
-                  <p className="mt-2 text-gray-700">{selectedRecipe.description}</p>
+                  <p className="mt-2 text-foreground">{selectedRecipe.description}</p>
                 )}
               </div>
 
@@ -365,11 +365,11 @@ Employee: ${user?.email || 'Unknown'}
                 <h3 className="text-lg font-semibold mb-3">Ingredients</h3>
                 <div className="space-y-2">
                   {selectedRecipe.ingredients.map((ingredient, index) => (
-                    <div key={ingredient.id} className="flex items-center justify-between p-3 bg-white border rounded">
+                    <div key={ingredient.id} className="flex items-center justify-between p-3 bg-card border rounded">
                       <div className="flex-1">
                         <span className="font-medium">{ingredient.name}</span>
                         {ingredient.notes && (
-                          <span className="text-gray-500 ml-2">({ingredient.notes})</span>
+                          <span className="text-muted-foreground ml-2">({ingredient.notes})</span>
                         )}
                       </div>
                       <Badge variant="outline">
@@ -384,7 +384,7 @@ Employee: ${user?.email || 'Unknown'}
               {selectedRecipe.instructions && (
                 <div>
                   <h3 className="text-lg font-semibold mb-3">Preparation Instructions</h3>
-                  <div className="bg-gray-50 p-4 rounded-lg">
+                  <div className="bg-muted p-4 rounded-lg">
                     <p className="whitespace-pre-line">{selectedRecipe.instructions}</p>
                   </div>
                 </div>

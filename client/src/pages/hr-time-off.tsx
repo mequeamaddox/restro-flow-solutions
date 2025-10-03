@@ -134,7 +134,7 @@ export default function HRTimeOff() {
       case 'rejected':
         return 'bg-red-100 text-red-800';
       default:
-        return 'bg-gray-100 text-gray-800';
+        return 'bg-accent text-foreground';
     }
   };
 
@@ -169,7 +169,7 @@ export default function HRTimeOff() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold">Time-Off Management</h1>
-          <p className="text-gray-600">Manage employee time-off requests and approvals</p>
+          <p className="text-muted-foreground">Manage employee time-off requests and approvals</p>
         </div>
         <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
           <DialogTrigger asChild>
@@ -318,7 +318,7 @@ export default function HRTimeOff() {
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-gray-600">Total Requests</p>
+                <p className="text-sm text-muted-foreground">Total Requests</p>
                 <p className="text-2xl font-bold">{timeOffRequests.length}</p>
               </div>
               <Calendar className="h-8 w-8 text-blue-600" />
@@ -329,7 +329,7 @@ export default function HRTimeOff() {
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-gray-600">Pending</p>
+                <p className="text-sm text-muted-foreground">Pending</p>
                 <p className="text-2xl font-bold text-yellow-600">
                   {timeOffRequests.filter(r => r.status === 'pending').length}
                 </p>
@@ -342,7 +342,7 @@ export default function HRTimeOff() {
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-gray-600">Approved</p>
+                <p className="text-sm text-muted-foreground">Approved</p>
                 <p className="text-2xl font-bold text-green-600">
                   {timeOffRequests.filter(r => r.status === 'approved').length}
                 </p>
@@ -355,7 +355,7 @@ export default function HRTimeOff() {
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-gray-600">Rejected</p>
+                <p className="text-sm text-muted-foreground">Rejected</p>
                 <p className="text-2xl font-bold text-red-600">
                   {timeOffRequests.filter(r => r.status === 'rejected').length}
                 </p>
@@ -386,7 +386,7 @@ export default function HRTimeOff() {
         </CardHeader>
         <CardContent>
           {filteredRequests.length === 0 ? (
-            <div className="text-center py-8 text-gray-500">
+            <div className="text-center py-8 text-muted-foreground">
               <Calendar className="h-12 w-12 mx-auto mb-2 opacity-50" />
               <p>No time-off requests found</p>
             </div>
@@ -412,7 +412,7 @@ export default function HRTimeOff() {
                             {request.requestType}
                           </Badge>
                         </div>
-                        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm text-gray-600">
+                        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm text-muted-foreground">
                           <div>
                             <span className="font-medium">Dates:</span>
                             <p>{new Date(request.startDate).toLocaleDateString()} - {new Date(request.endDate).toLocaleDateString()}</p>
@@ -432,12 +432,12 @@ export default function HRTimeOff() {
                         </div>
                         <div className="mt-3">
                           <span className="font-medium text-sm">Reason:</span>
-                          <p className="text-sm text-gray-600 mt-1">{request.reason}</p>
+                          <p className="text-sm text-muted-foreground mt-1">{request.reason}</p>
                         </div>
                         {request.notes && (
                           <div className="mt-2">
                             <span className="font-medium text-sm">Manager Notes:</span>
-                            <p className="text-sm text-gray-600 mt-1">{request.notes}</p>
+                            <p className="text-sm text-muted-foreground mt-1">{request.notes}</p>
                           </div>
                         )}
                       </div>

@@ -128,12 +128,12 @@ export default function PublicOnboardingPage() {
 
   if (isValidating) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+      <div className="min-h-screen bg-muted flex items-center justify-center">
         <Card className="w-full max-w-md">
           <CardContent className="p-6 text-center">
             <Clock className="w-12 h-12 mx-auto mb-4 text-blue-600" />
             <h2 className="text-xl font-semibold mb-2">Validating Invitation</h2>
-            <p className="text-gray-600">Please wait while we verify your invitation link...</p>
+            <p className="text-muted-foreground">Please wait while we verify your invitation link...</p>
           </CardContent>
         </Card>
       </div>
@@ -142,13 +142,13 @@ export default function PublicOnboardingPage() {
 
   if (error) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+      <div className="min-h-screen bg-muted flex items-center justify-center">
         <Card className="w-full max-w-md">
           <CardContent className="p-6 text-center">
             <AlertTriangle className="w-12 h-12 mx-auto mb-4 text-red-600" />
             <h2 className="text-xl font-semibold mb-2">Invalid Invitation</h2>
-            <p className="text-gray-600 mb-4">{error}</p>
-            <p className="text-sm text-gray-500">
+            <p className="text-muted-foreground mb-4">{error}</p>
+            <p className="text-sm text-muted-foreground">
               Please contact your manager for a new invitation link.
             </p>
           </CardContent>
@@ -159,15 +159,15 @@ export default function PublicOnboardingPage() {
 
   if (currentStep === 5) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+      <div className="min-h-screen bg-muted flex items-center justify-center">
         <Card className="w-full max-w-md">
           <CardContent className="p-6 text-center">
             <CheckCircle className="w-16 h-16 mx-auto mb-4 text-green-600" />
             <h2 className="text-2xl font-semibold mb-2">Welcome to the Team!</h2>
-            <p className="text-gray-600 mb-4">
+            <p className="text-muted-foreground mb-4">
               Your onboarding has been completed successfully. You can now close this window.
             </p>
-            <p className="text-sm text-gray-500">
+            <p className="text-sm text-muted-foreground">
               You'll receive further instructions from your manager about your first day.
             </p>
           </CardContent>
@@ -184,16 +184,16 @@ export default function PublicOnboardingPage() {
   ];
 
   return (
-    <div className="min-h-screen bg-gray-50 py-8">
+    <div className="min-h-screen bg-muted py-8">
       <div className="max-w-4xl mx-auto px-4">
         {/* Header */}
         <div className="text-center mb-8">
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">Employee Onboarding</h1>
-          <p className="text-gray-600">
+          <h1 className="text-3xl font-bold text-foreground mb-2">Employee Onboarding</h1>
+          <p className="text-muted-foreground">
             Welcome {employee?.firstName} {employee?.lastName}! Please complete your onboarding information.
           </p>
           {employee?.position && (
-            <p className="text-sm text-gray-500 mt-1">
+            <p className="text-sm text-muted-foreground mt-1">
               Position: {employee.position} • Department: {employee.department}
             </p>
           )}
@@ -212,7 +212,7 @@ export default function PublicOnboardingPage() {
                   <div className={`flex items-center justify-center w-12 h-12 rounded-full border-2 ${
                     isCompleted ? 'bg-green-600 border-green-600 text-white' :
                     isActive ? 'bg-blue-600 border-blue-600 text-white' :
-                    'bg-white border-gray-300 text-gray-400'
+                    'bg-card border-border text-gray-400'
                   }`}>
                     {isCompleted ? (
                       <CheckCircle className="w-6 h-6" />
@@ -221,7 +221,7 @@ export default function PublicOnboardingPage() {
                     )}
                   </div>
                   <div className="ml-3">
-                    <p className={`text-sm font-medium ${isActive ? 'text-blue-600' : 'text-gray-500'}`}>
+                    <p className={`text-sm font-medium ${isActive ? 'text-blue-600' : 'text-muted-foreground'}`}>
                       Step {step.number}
                     </p>
                     <p className={`text-sm ${isActive ? 'text-blue-600' : 'text-gray-400'}`}>
@@ -435,8 +435,8 @@ export default function PublicOnboardingPage() {
                 <CardTitle className="mb-4">Review Your Information</CardTitle>
                 <div className="space-y-6">
                   <div>
-                    <h3 className="font-medium text-gray-900 mb-2">Personal Information</h3>
-                    <div className="bg-gray-50 p-4 rounded-lg space-y-2">
+                    <h3 className="font-medium text-foreground mb-2">Personal Information</h3>
+                    <div className="bg-muted p-4 rounded-lg space-y-2">
                       <p><span className="font-medium">Phone:</span> {personalInfo.phone}</p>
                       <p><span className="font-medium">Date of Birth:</span> {personalInfo.dateOfBirth}</p>
                       <p><span className="font-medium">Address:</span> {personalInfo.address}, {personalInfo.city}, {personalInfo.state} {personalInfo.zipCode}</p>
@@ -444,8 +444,8 @@ export default function PublicOnboardingPage() {
                   </div>
 
                   <div>
-                    <h3 className="font-medium text-gray-900 mb-2">Emergency Contact</h3>
-                    <div className="bg-gray-50 p-4 rounded-lg space-y-2">
+                    <h3 className="font-medium text-foreground mb-2">Emergency Contact</h3>
+                    <div className="bg-muted p-4 rounded-lg space-y-2">
                       <p><span className="font-medium">Name:</span> {emergencyContact.name}</p>
                       <p><span className="font-medium">Phone:</span> {emergencyContact.phone}</p>
                       <p><span className="font-medium">Relationship:</span> {emergencyContact.relationship}</p>
@@ -453,8 +453,8 @@ export default function PublicOnboardingPage() {
                   </div>
 
                   <div>
-                    <h3 className="font-medium text-gray-900 mb-2">Banking Information</h3>
-                    <div className="bg-gray-50 p-4 rounded-lg space-y-2">
+                    <h3 className="font-medium text-foreground mb-2">Banking Information</h3>
+                    <div className="bg-muted p-4 rounded-lg space-y-2">
                       <p><span className="font-medium">Bank:</span> {bankingInfo.bankName}</p>
                       <p><span className="font-medium">Routing Number:</span> {bankingInfo.routingNumber}</p>
                       <p><span className="font-medium">Account Number:</span> ****{bankingInfo.accountNumber.slice(-4)}</p>

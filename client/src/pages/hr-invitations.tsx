@@ -190,7 +190,7 @@ export default function HRInvitations() {
       owner: 'bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200',
       manager: 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200',
       team_lead: 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200',
-      employee: 'bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-200',
+      employee: 'bg-accent text-foreground dark:bg-gray-900 dark:text-gray-200',
     };
 
     return (
@@ -223,7 +223,7 @@ export default function HRInvitations() {
             <div className="text-center">
               <AlertCircle className="h-12 w-12 text-red-500 mx-auto mb-4" />
               <h3 className="text-lg font-semibold mb-2">Failed to Load Invitations</h3>
-              <p className="text-gray-600 mb-4">There was an error loading the invitation data.</p>
+              <p className="text-muted-foreground mb-4">There was an error loading the invitation data.</p>
               <Button onClick={() => refetch()}>
                 <RefreshCw className="h-4 w-4 mr-2" />
                 Try Again
@@ -244,7 +244,7 @@ export default function HRInvitations() {
             <Mail className="h-8 w-8" />
             Employee Invitations
           </h1>
-          <p className="text-gray-600">Manage employee invitations and onboarding</p>
+          <p className="text-muted-foreground">Manage employee invitations and onboarding</p>
         </div>
         
         <Button 
@@ -358,7 +358,7 @@ export default function HRInvitations() {
             <div className="text-center py-8">
               <Mail className="h-12 w-12 text-gray-400 mx-auto mb-4" />
               <h3 className="text-lg font-semibold mb-2">No Invitations Found</h3>
-              <p className="text-gray-600 mb-4">
+              <p className="text-muted-foreground mb-4">
                 {searchTerm || statusFilter !== 'all' 
                   ? 'No invitations match your current filters.'
                   : 'You haven\'t sent any employee invitations yet.'
@@ -394,7 +394,7 @@ export default function HRInvitations() {
                           <div className="font-medium">
                             {invitation.firstName} {invitation.lastName}
                           </div>
-                          <div className="text-sm text-gray-500">
+                          <div className="text-sm text-muted-foreground">
                             {invitation.email}
                           </div>
                         </div>

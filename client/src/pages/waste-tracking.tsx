@@ -135,7 +135,7 @@ export default function WasteTracking() {
       case 'plate_waste': return 'bg-pink-100 text-pink-800';
       case 'kitchen_waste': return 'bg-indigo-100 text-indigo-800';
       case 'trim_waste': return 'bg-green-100 text-green-800';
-      default: return 'bg-gray-100 text-gray-800';
+      default: return 'bg-accent text-foreground';
     }
   };
 
@@ -150,8 +150,8 @@ export default function WasteTracking() {
       {/* Page Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-semibold text-gray-900">Waste Tracking</h1>
-          <p className="text-gray-600">Monitor and reduce food waste costs</p>
+          <h1 className="text-2xl font-semibold text-foreground">Waste Tracking</h1>
+          <p className="text-muted-foreground">Monitor and reduce food waste costs</p>
         </div>
         <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
           <DialogTrigger asChild>
@@ -385,18 +385,18 @@ export default function WasteTracking() {
           ) : filteredEntries && filteredEntries.length > 0 ? (
             <div className="space-y-4">
               {filteredEntries.map((entry) => (
-                <div key={entry.id} className="flex items-center justify-between p-4 border rounded-lg hover:bg-gray-50">
+                <div key={entry.id} className="flex items-center justify-between p-4 border rounded-lg hover:bg-accent">
                   <div className="flex items-center space-x-4">
                     <div className="w-12 h-12 bg-red-100 rounded-lg flex items-center justify-center">
                       <Trash2 className="h-6 w-6 text-red-600" />
                     </div>
                     <div>
                       <div className="font-medium">{entry.inventoryItem.name}</div>
-                      <div className="text-sm text-gray-600">
+                      <div className="text-sm text-muted-foreground">
                         {entry.quantity} {entry.unit} wasted • ${parseFloat(entry.cost).toFixed(2)}
                       </div>
                       {entry.notes && (
-                        <div className="text-xs text-gray-500 mt-1">{entry.notes}</div>
+                        <div className="text-xs text-muted-foreground mt-1">{entry.notes}</div>
                       )}
                     </div>
                   </div>
@@ -404,7 +404,7 @@ export default function WasteTracking() {
                     <Badge className={getReasonColor(entry.reason)}>
                       {getReasonLabel(entry.reason)}
                     </Badge>
-                    <div className="text-xs text-gray-500 mt-1 flex items-center">
+                    <div className="text-xs text-muted-foreground mt-1 flex items-center">
                       <Calendar className="h-3 w-3 mr-1" />
                       {format(new Date(entry.createdAt!), 'MMM d, yyyy')}
                     </div>
@@ -415,8 +415,8 @@ export default function WasteTracking() {
           ) : (
             <div className="text-center py-12">
               <Trash2 className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-              <h3 className="text-lg font-medium text-gray-900 mb-2">No waste entries found</h3>
-              <p className="text-gray-600 mb-4">
+              <h3 className="text-lg font-medium text-foreground mb-2">No waste entries found</h3>
+              <p className="text-muted-foreground mb-4">
                 {searchTerm || reasonFilter ? "No entries match your search criteria." : "Start logging waste to track food costs."}
               </p>
               <Button 

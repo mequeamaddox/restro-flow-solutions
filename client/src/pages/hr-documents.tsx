@@ -187,7 +187,7 @@ export default function HRDocumentsPage() {
       case 'uploaded': return 'bg-blue-100 text-blue-800';
       case 'required': return 'bg-red-100 text-red-800';
       case 'rejected': return 'bg-orange-100 text-orange-800';
-      default: return 'bg-gray-100 text-gray-800';
+      default: return 'bg-accent text-foreground';
     }
   };
 
@@ -196,8 +196,8 @@ export default function HRDocumentsPage() {
       case 'completed': return 'bg-green-100 text-green-800';
       case 'in-progress': return 'bg-blue-100 text-blue-800';
       case 'overdue': return 'bg-red-100 text-red-800';
-      case 'not-started': return 'bg-gray-100 text-gray-800';
-      default: return 'bg-gray-100 text-gray-800';
+      case 'not-started': return 'bg-accent text-foreground';
+      default: return 'bg-accent text-foreground';
     }
   };
 
@@ -216,7 +216,7 @@ export default function HRDocumentsPage() {
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
           <h1 className="text-3xl font-bold" data-testid="page-title">Employee Documents & Onboarding</h1>
-          <p className="text-gray-600 mt-2">Manage employee documents and onboarding processes</p>
+          <p className="text-muted-foreground mt-2">Manage employee documents and onboarding processes</p>
         </div>
         <div className="flex gap-2">
           <Button 
@@ -358,7 +358,7 @@ export default function HRDocumentsPage() {
                           {/* Training Templates */}
                           {onboardingTemplates.filter(t => t.category === 'training').length > 0 && (
                             <>
-                              <div className="px-2 py-1.5 text-sm font-semibold text-gray-500">Training & Skills</div>
+                              <div className="px-2 py-1.5 text-sm font-semibold text-muted-foreground">Training & Skills</div>
                               {onboardingTemplates
                                 .filter(t => t.category === 'training')
                                 .map(template => (
@@ -372,7 +372,7 @@ export default function HRDocumentsPage() {
                           {/* Document Templates */}
                           {onboardingTemplates.filter(t => t.category === 'documents').length > 0 && (
                             <>
-                              <div className="px-2 py-1.5 text-sm font-semibold text-gray-500">HR Documents & Paperwork</div>
+                              <div className="px-2 py-1.5 text-sm font-semibold text-muted-foreground">HR Documents & Paperwork</div>
                               {onboardingTemplates
                                 .filter(t => t.category === 'documents')
                                 .map(template => (
@@ -386,7 +386,7 @@ export default function HRDocumentsPage() {
                           {/* General Templates */}
                           {onboardingTemplates.filter(t => !t.category || t.category === 'general').length > 0 && (
                             <>
-                              <div className="px-2 py-1.5 text-sm font-semibold text-gray-500">General Onboarding</div>
+                              <div className="px-2 py-1.5 text-sm font-semibold text-muted-foreground">General Onboarding</div>
                               {onboardingTemplates
                                 .filter(t => !t.category || t.category === 'general')
                                 .map(template => (
@@ -468,7 +468,7 @@ export default function HRDocumentsPage() {
               <div className="flex items-center">
                 <Users className="h-8 w-8 text-blue-600" />
                 <div className="ml-4">
-                  <p className="text-sm font-medium text-gray-600">Active Onboarding</p>
+                  <p className="text-sm font-medium text-muted-foreground">Active Onboarding</p>
                   <p className="text-2xl font-bold">{onboardingAnalytics.totalActiveOnboarding}</p>
                 </div>
               </div>
@@ -480,7 +480,7 @@ export default function HRDocumentsPage() {
               <div className="flex items-center">
                 <CheckCircle className="h-8 w-8 text-green-600" />
                 <div className="ml-4">
-                  <p className="text-sm font-medium text-gray-600">Completed This Month</p>
+                  <p className="text-sm font-medium text-muted-foreground">Completed This Month</p>
                   <p className="text-2xl font-bold">{onboardingAnalytics.completedThisMonth}</p>
                 </div>
               </div>
@@ -492,7 +492,7 @@ export default function HRDocumentsPage() {
               <div className="flex items-center">
                 <AlertTriangle className="h-8 w-8 text-red-600" />
                 <div className="ml-4">
-                  <p className="text-sm font-medium text-gray-600">Overdue</p>
+                  <p className="text-sm font-medium text-muted-foreground">Overdue</p>
                   <p className="text-2xl font-bold">{onboardingAnalytics.overdueOnboarding}</p>
                 </div>
               </div>
@@ -504,7 +504,7 @@ export default function HRDocumentsPage() {
               <div className="flex items-center">
                 <Calendar className="h-8 w-8 text-purple-600" />
                 <div className="ml-4">
-                  <p className="text-sm font-medium text-gray-600">Avg Completion</p>
+                  <p className="text-sm font-medium text-muted-foreground">Avg Completion</p>
                   <p className="text-2xl font-bold">{onboardingAnalytics.averageCompletionDays} days</p>
                 </div>
               </div>
@@ -570,8 +570,8 @@ export default function HRDocumentsPage() {
                 {filteredDocuments.length === 0 ? (
                   <div className="text-center py-8">
                     <FileText className="mx-auto h-12 w-12 text-gray-400" />
-                    <h3 className="mt-2 text-sm font-medium text-gray-900">No documents found</h3>
-                    <p className="mt-1 text-sm text-gray-500">
+                    <h3 className="mt-2 text-sm font-medium text-foreground">No documents found</h3>
+                    <p className="mt-1 text-sm text-muted-foreground">
                       {selectedEmployee ? 'This employee has no documents.' : 'Select an employee to view their documents.'}
                     </p>
                   </div>
@@ -589,10 +589,10 @@ export default function HRDocumentsPage() {
                               <Badge variant="outline">Required</Badge>
                             )}
                           </div>
-                          <p className="text-sm text-gray-600 mt-1">
+                          <p className="text-sm text-muted-foreground mt-1">
                             Type: {doc.documentType.replace('-', ' ').replace(/\b\w/g, l => l.toUpperCase())}
                           </p>
-                          <p className="text-sm text-gray-500">
+                          <p className="text-sm text-muted-foreground">
                             Uploaded: {doc.createdAt ? format(new Date(doc.createdAt), 'MMM d, yyyy') : 'N/A'}
                           </p>
                         </div>
@@ -634,8 +634,8 @@ export default function HRDocumentsPage() {
                 {filteredOnboarding.length === 0 ? (
                   <div className="text-center py-8">
                     <Award className="mx-auto h-12 w-12 text-gray-400" />
-                    <h3 className="mt-2 text-sm font-medium text-gray-900">No onboarding processes found</h3>
-                    <p className="mt-1 text-sm text-gray-500">
+                    <h3 className="mt-2 text-sm font-medium text-foreground">No onboarding processes found</h3>
+                    <p className="mt-1 text-sm text-muted-foreground">
                       This employee has no active onboarding processes.
                     </p>
                   </div>
@@ -664,23 +664,23 @@ export default function HRDocumentsPage() {
                         
                         <div className="grid grid-cols-2 gap-4 text-sm">
                           <div>
-                            <span className="text-gray-600">Started:</span>
+                            <span className="text-muted-foreground">Started:</span>
                             <span className="ml-1">
                               {onb.startDate ? format(new Date(onb.startDate), 'MMM d, yyyy') : 'Not started'}
                             </span>
                           </div>
                           <div>
-                            <span className="text-gray-600">Target:</span>
+                            <span className="text-muted-foreground">Target:</span>
                             <span className="ml-1">
                               {onb.targetCompletionDate ? format(new Date(onb.targetCompletionDate), 'MMM d, yyyy') : 'Not set'}
                             </span>
                           </div>
                           <div>
-                            <span className="text-gray-600">Steps:</span>
+                            <span className="text-muted-foreground">Steps:</span>
                             <span className="ml-1">{onb.completedSteps}/{onb.totalSteps}</span>
                           </div>
                           <div>
-                            <span className="text-gray-600">Status:</span>
+                            <span className="text-muted-foreground">Status:</span>
                             <span className="ml-1 capitalize">{onb.status?.replace('-', ' ')}</span>
                           </div>
                         </div>

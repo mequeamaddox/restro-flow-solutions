@@ -159,8 +159,8 @@ export default function HRTaxSettings() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900">Tax Settings</h1>
-          <p className="text-gray-600 mt-1">
+          <h1 className="text-3xl font-bold text-foreground">Tax Settings</h1>
+          <p className="text-muted-foreground mt-1">
             Configure tax rates and payroll settings for {currentLocation?.name || 'your location'}
           </p>
         </div>
@@ -242,7 +242,7 @@ export default function HRTaxSettings() {
                 onChange={(e) => handleInputChange('federalTaxRate', (parseFloat(e.target.value) / 100).toString())}
                 placeholder="8.0"
               />
-              <p className="text-xs text-gray-500 mt-1">
+              <p className="text-xs text-muted-foreground mt-1">
                 Current: {(parseFloat(formData.federalTaxRate) * 100).toFixed(1)}% (simplified rate for restaurant workers)
               </p>
             </div>
@@ -281,7 +281,7 @@ export default function HRTaxSettings() {
                 onChange={(e) => handleInputChange('stateTaxRate', (parseFloat(e.target.value) / 100).toString())}
                 placeholder="2.0"
               />
-              <p className="text-xs text-gray-500 mt-1">
+              <p className="text-xs text-muted-foreground mt-1">
                 Current: {(parseFloat(formData.stateTaxRate) * 100).toFixed(1)}%
               </p>
             </div>
@@ -315,7 +315,7 @@ export default function HRTaxSettings() {
                 onChange={(e) => handleInputChange('stateDisabilityRate', (parseFloat(e.target.value) / 100).toString())}
                 placeholder="0.0"
               />
-              <p className="text-xs text-gray-500 mt-1">
+              <p className="text-xs text-muted-foreground mt-1">
                 SC does not have state disability insurance
               </p>
             </div>
@@ -337,7 +337,7 @@ export default function HRTaxSettings() {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               {/* Employee Portion */}
               <div className="space-y-4">
-                <h4 className="font-medium text-gray-900 border-b pb-2">Employee Deductions</h4>
+                <h4 className="font-medium text-foreground border-b pb-2">Employee Deductions</h4>
                 
                 <div>
                   <Label htmlFor="socialSecurityRate">Social Security Rate (%)</Label>
@@ -349,7 +349,7 @@ export default function HRTaxSettings() {
                     onChange={(e) => handleInputChange('socialSecurityRate', (parseFloat(e.target.value) / 100).toString())}
                     placeholder="6.2"
                   />
-                  <p className="text-xs text-gray-500 mt-1">
+                  <p className="text-xs text-muted-foreground mt-1">
                     Employee portion: {(parseFloat(formData.socialSecurityRate) * 100).toFixed(2)}%
                   </p>
                 </div>
@@ -364,7 +364,7 @@ export default function HRTaxSettings() {
                     onChange={(e) => handleInputChange('medicareRate', (parseFloat(e.target.value) / 100).toString())}
                     placeholder="1.45"
                   />
-                  <p className="text-xs text-gray-500 mt-1">
+                  <p className="text-xs text-muted-foreground mt-1">
                     Employee portion: {(parseFloat(formData.medicareRate) * 100).toFixed(2)}%
                   </p>
                 </div>

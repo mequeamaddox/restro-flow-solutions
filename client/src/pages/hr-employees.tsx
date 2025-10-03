@@ -215,7 +215,7 @@ export default function HREmployees() {
       case 'active': return 'bg-green-100 text-green-800';
       case 'inactive': return 'bg-yellow-100 text-yellow-800';
       case 'terminated': return 'bg-red-100 text-red-800';
-      default: return 'bg-gray-100 text-gray-800';
+      default: return 'bg-accent text-foreground';
     }
   };
 
@@ -248,7 +248,7 @@ export default function HREmployees() {
               <Users className="h-8 w-8" />
               Employee Directory
             </h1>
-            <p className="text-gray-600">Manage your restaurant team</p>
+            <p className="text-muted-foreground">Manage your restaurant team</p>
           </div>
           
           <Dialog open={isDialogOpen} onOpenChange={(open) => {
@@ -482,7 +482,7 @@ export default function HREmployees() {
                         {employee.employeeNumber}
                       </Badge>
                     </div>
-                    <p className="text-sm text-gray-600">{employee.position?.title || 'No position assigned'}</p>
+                    <p className="text-sm text-muted-foreground">{employee.position?.title || 'No position assigned'}</p>
                   </div>
                 </div>
                 <Badge className={getStatusColor(employee.status)}>
@@ -493,17 +493,17 @@ export default function HREmployees() {
             
             <CardContent className="space-y-3">
               <div className="space-y-2">
-                <div className="flex items-center gap-2 text-sm text-gray-600">
+                <div className="flex items-center gap-2 text-sm text-muted-foreground">
                   <Mail className="h-4 w-4" />
                   {employee.email}
                 </div>
                 {employee.phone && (
-                  <div className="flex items-center gap-2 text-sm text-gray-600">
+                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
                     <Phone className="h-4 w-4" />
                     {employee.phone}
                   </div>
                 )}
-                <div className="flex items-center gap-2 text-sm text-gray-600">
+                <div className="flex items-center gap-2 text-sm text-muted-foreground">
                   <MapPin className="h-4 w-4" />
                   {employee.department?.name || 'No department'}
                 </div>
@@ -511,13 +511,13 @@ export default function HREmployees() {
               
               <div className="flex justify-between items-center pt-2 border-t">
                 <div className="text-sm">
-                  <span className="text-gray-500">Hire Date:</span>
+                  <span className="text-muted-foreground">Hire Date:</span>
                   <br />
                   <span className="font-medium">{new Date(employee.hireDate).toLocaleDateString()}</span>
                 </div>
                 {employee.hourlyRate && (
                   <div className="text-right text-sm">
-                    <span className="text-gray-500">Rate:</span>
+                    <span className="text-muted-foreground">Rate:</span>
                     <br />
                     <span className="font-medium">${employee.hourlyRate}/hr</span>
                   </div>
@@ -615,8 +615,8 @@ export default function HREmployees() {
       {filteredEmployees.length === 0 && (
         <div className="text-center py-12">
           <Users className="h-12 w-12 mx-auto text-gray-400 mb-4" />
-          <h3 className="text-lg font-medium text-gray-900 mb-2">No employees found</h3>
-          <p className="text-gray-600 mb-4">
+          <h3 className="text-lg font-medium text-foreground mb-2">No employees found</h3>
+          <p className="text-muted-foreground mb-4">
             {searchTerm || statusFilter !== "all" 
               ? "Try adjusting your search or filters"
               : "Get started by adding your first employee"

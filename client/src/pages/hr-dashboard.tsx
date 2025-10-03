@@ -96,7 +96,7 @@ export default function HRDashboard() {
     <div className="max-w-7xl mx-auto p-6">
       <div className="mb-8">
         <h1 className="text-3xl font-bold mb-2">Employee Management</h1>
-        <p className="text-gray-600">Comprehensive HR system for managing your restaurant team</p>
+        <p className="text-muted-foreground">Comprehensive HR system for managing your restaurant team</p>
       </div>
 
       {/* Key Metrics */}
@@ -191,7 +191,7 @@ export default function HRDashboard() {
           </CardHeader>
           <CardContent>
             <div className="text-3xl font-bold">{weeklyHours.toFixed(1)}</div>
-            <p className="text-sm text-gray-600 mt-1">Total scheduled hours this week</p>
+            <p className="text-sm text-muted-foreground mt-1">Total scheduled hours this week</p>
           </CardContent>
         </Card>
 
@@ -216,7 +216,7 @@ export default function HRDashboard() {
           </CardHeader>
           <CardContent>
             <div className="text-3xl font-bold">{((1 - (pendingTasks / Math.max(tasks.length, 1))) * 100).toFixed(0)}%</div>
-            <p className="text-sm text-gray-600 mt-1">Task completion rate</p>
+            <p className="text-sm text-muted-foreground mt-1">Task completion rate</p>
             <div className="flex items-center gap-2 mt-2">
               <Badge variant="outline" className="text-purple-600">
                 {tasks.length} total tasks

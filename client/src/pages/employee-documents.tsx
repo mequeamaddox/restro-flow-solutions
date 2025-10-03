@@ -155,9 +155,9 @@ export default function EmployeeDocuments() {
       case 'signed': return 'bg-purple-100 text-purple-800 border-purple-200';
       case 'completed': return 'bg-blue-100 text-blue-800 border-blue-200';
       case 'in_progress': return 'bg-yellow-100 text-yellow-800 border-yellow-200';
-      case 'assigned': return 'bg-gray-100 text-gray-800 border-gray-200';
+      case 'assigned': return 'bg-accent text-foreground border-border';
       case 'rejected': return 'bg-red-100 text-red-800 border-red-200';
-      default: return 'bg-gray-100 text-gray-800 border-gray-200';
+      default: return 'bg-accent text-foreground border-border';
     }
   };
 
@@ -168,9 +168,9 @@ export default function EmployeeDocuments() {
       case 'signed': return <PenTool className="h-4 w-4 text-purple-600" />;
       case 'completed': return <Clock className="h-4 w-4 text-blue-600" />;
       case 'in_progress': return <Target className="h-4 w-4 text-yellow-600" />;
-      case 'assigned': return <FileText className="h-4 w-4 text-gray-600" />;
+      case 'assigned': return <FileText className="h-4 w-4 text-muted-foreground" />;
       case 'rejected': return <AlertTriangle className="h-4 w-4 text-red-600" />;
-      default: return <FileText className="h-4 w-4 text-gray-600" />;
+      default: return <FileText className="h-4 w-4 text-muted-foreground" />;
     }
   };
 
@@ -215,7 +215,7 @@ export default function EmployeeDocuments() {
       {/* Header */}
       <div>
         <h1 className="text-3xl font-bold mb-2" data-testid="page-title">My Documents</h1>
-        <p className="text-gray-600">View and complete your assigned documents</p>
+        <p className="text-muted-foreground">View and complete your assigned documents</p>
       </div>
 
       {/* Stats */}
@@ -225,7 +225,7 @@ export default function EmployeeDocuments() {
             <div className="flex items-center">
               <FileText className="h-8 w-8 text-blue-600" />
               <div className="ml-4">
-                <p className="text-sm font-medium text-gray-600">Total Documents</p>
+                <p className="text-sm font-medium text-muted-foreground">Total Documents</p>
                 <p className="text-2xl font-bold text-blue-700">{stats.total}</p>
               </div>
             </div>
@@ -237,7 +237,7 @@ export default function EmployeeDocuments() {
             <div className="flex items-center">
               <Clock className="h-8 w-8 text-orange-600" />
               <div className="ml-4">
-                <p className="text-sm font-medium text-gray-600">Pending</p>
+                <p className="text-sm font-medium text-muted-foreground">Pending</p>
                 <p className="text-2xl font-bold text-orange-700">{stats.pending}</p>
               </div>
             </div>
@@ -249,7 +249,7 @@ export default function EmployeeDocuments() {
             <div className="flex items-center">
               <CheckCircle className="h-8 w-8 text-green-600" />
               <div className="ml-4">
-                <p className="text-sm font-medium text-gray-600">Completed</p>
+                <p className="text-sm font-medium text-muted-foreground">Completed</p>
                 <p className="text-2xl font-bold text-green-700">{stats.completed}</p>
               </div>
             </div>
@@ -261,7 +261,7 @@ export default function EmployeeDocuments() {
             <div className="flex items-center">
               <AlertTriangle className="h-8 w-8 text-red-600" />
               <div className="ml-4">
-                <p className="text-sm font-medium text-gray-600">Overdue</p>
+                <p className="text-sm font-medium text-muted-foreground">Overdue</p>
                 <p className="text-2xl font-bold text-red-700">{stats.overdue}</p>
               </div>
             </div>
@@ -285,7 +285,7 @@ export default function EmployeeDocuments() {
                 <span className="text-2xl font-bold text-green-600">{completionRate}%</span>
               </div>
               <Progress value={completionRate} className="h-3" />
-              <p className="text-sm text-gray-600">
+              <p className="text-sm text-muted-foreground">
                 {stats.completed} of {stats.total} documents completed
               </p>
             </div>
@@ -310,7 +310,7 @@ export default function EmployeeDocuments() {
               {documents.filter(doc => ['completed', 'signed'].includes(doc.status)).length > 0 ? (
                 <>
                   <select
-                    className="px-3 py-2 border rounded-md bg-white text-sm"
+                    className="px-3 py-2 border rounded-md bg-card text-sm"
                     value={selectedDocumentForUpload?.id || ''}
                     onChange={(e) => {
                       const doc = documents.find(d => d.id === e.target.value);
@@ -381,8 +381,8 @@ export default function EmployeeDocuments() {
               {filteredDocuments.length === 0 ? (
                 <div className="text-center py-12">
                   <FileText className="h-16 w-16 mx-auto mb-4 text-gray-400" />
-                  <h3 className="text-lg font-medium text-gray-900 mb-2">No documents found</h3>
-                  <p className="text-gray-600">
+                  <h3 className="text-lg font-medium text-foreground mb-2">No documents found</h3>
+                  <p className="text-muted-foreground">
                     {filter === 'all' ? 'No documents have been assigned to you yet.' : 
                      filter === 'overdue' ? 'No overdue documents.' :
                      `No ${filter} documents.`}
@@ -407,9 +407,9 @@ export default function EmployeeDocuments() {
                                 <Badge variant="destructive">OVERDUE</Badge>
                               )}
                             </div>
-                            <p className="text-gray-600 mb-2">{doc.template?.description || 'No description available'}</p>
+                            <p className="text-muted-foreground mb-2">{doc.template?.description || 'No description available'}</p>
                             
-                            <div className="flex flex-wrap gap-4 text-sm text-gray-500">
+                            <div className="flex flex-wrap gap-4 text-sm text-muted-foreground">
                               <div className="flex items-center gap-1">
                                 <Calendar className="h-4 w-4" />
                                 <span>Assigned: {doc.assignedAt ? format(new Date(doc.assignedAt), 'MMM d, yyyy') : 'Unknown'}</span>
@@ -449,8 +449,8 @@ export default function EmployeeDocuments() {
                             )}
 
                             {doc.template?.requirements && (
-                              <div className="mt-3 p-3 bg-gray-50 border border-gray-200 rounded">
-                                <p className="text-sm text-gray-700">
+                              <div className="mt-3 p-3 bg-muted border border-border rounded">
+                                <p className="text-sm text-foreground">
                                   <strong>Requirements:</strong> {doc.template.requirements}
                                 </p>
                               </div>
@@ -529,10 +529,10 @@ export default function EmployeeDocuments() {
                 <p className="text-sm text-blue-700">Complete your digital signature to finalize this document.</p>
               </div>
               
-              <div className="border-2 border-dashed border-gray-300 rounded-lg p-4">
+              <div className="border-2 border-dashed border-border rounded-lg p-4">
                 <div className="text-center space-y-2">
                   <FileText className="h-8 w-8 text-gray-400 mx-auto" />
-                  <p className="text-sm text-gray-600">
+                  <p className="text-sm text-muted-foreground">
                     Click below to add your digital signature
                   </p>
                   <Button 
@@ -601,16 +601,16 @@ export default function EmployeeDocuments() {
 
               <div className="grid grid-cols-2 gap-4 text-sm">
                 <div>
-                  <p className="font-medium text-gray-600">Document Type</p>
+                  <p className="font-medium text-muted-foreground">Document Type</p>
                   <p className="capitalize">{selectedDocument.template?.type?.replace('_', ' ') || 'Unknown'}</p>
                 </div>
                 <div>
-                  <p className="font-medium text-gray-600">Assigned Date</p>
+                  <p className="font-medium text-muted-foreground">Assigned Date</p>
                   <p>{selectedDocument.assignedAt ? format(new Date(selectedDocument.assignedAt), 'MMM d, yyyy h:mm a') : 'Unknown'}</p>
                 </div>
                 {selectedDocument.deadline && (
                   <div>
-                    <p className="font-medium text-gray-600">Deadline</p>
+                    <p className="font-medium text-muted-foreground">Deadline</p>
                     <p className={new Date(selectedDocument.deadline) < new Date() && !['completed', 'approved'].includes(selectedDocument.status) ? 'text-red-600 font-medium' : ''}>
                       {selectedDocument.deadline ? format(new Date(selectedDocument.deadline), 'MMM d, yyyy h:mm a') : 'No deadline'}
                     </p>
@@ -618,27 +618,27 @@ export default function EmployeeDocuments() {
                 )}
                 {selectedDocument.completedAt && (
                   <div>
-                    <p className="font-medium text-gray-600">Completed Date</p>
+                    <p className="font-medium text-muted-foreground">Completed Date</p>
                     <p className="text-green-600">{format(new Date(selectedDocument.completedAt), 'MMM d, yyyy h:mm a')}</p>
                   </div>
                 )}
               </div>
 
               <div>
-                <p className="font-medium text-gray-600 mb-2">Description</p>
-                <p className="text-gray-700">{selectedDocument.template?.description || 'No description available'}</p>
+                <p className="font-medium text-muted-foreground mb-2">Description</p>
+                <p className="text-foreground">{selectedDocument.template?.description || 'No description available'}</p>
               </div>
 
               {selectedDocument.template?.requirements && (
                 <div>
-                  <p className="font-medium text-gray-600 mb-2">Requirements</p>
-                  <p className="text-gray-700">{selectedDocument.template.requirements}</p>
+                  <p className="font-medium text-muted-foreground mb-2">Requirements</p>
+                  <p className="text-foreground">{selectedDocument.template.requirements}</p>
                 </div>
               )}
 
               {selectedDocument.notes && (
                 <div>
-                  <p className="font-medium text-gray-600 mb-2">Instructions</p>
+                  <p className="font-medium text-muted-foreground mb-2">Instructions</p>
                   <div className="p-3 bg-blue-50 border border-blue-200 rounded">
                     <p className="text-blue-800">{selectedDocument.notes}</p>
                   </div>
@@ -647,7 +647,7 @@ export default function EmployeeDocuments() {
 
               {selectedDocument.feedback && (
                 <div>
-                  <p className="font-medium text-gray-600 mb-2">Feedback</p>
+                  <p className="font-medium text-muted-foreground mb-2">Feedback</p>
                   <div className={`p-3 border rounded ${
                     selectedDocument.status === 'rejected' ? 'bg-red-50 border-red-200' : 'bg-green-50 border-green-200'
                   }`}>

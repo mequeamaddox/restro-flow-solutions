@@ -313,7 +313,7 @@ export function InvoiceReviewDialog({ isOpen, onClose, invoiceData }: InvoiceRev
                 {editableData.lineItems.map((item: LineItem, index: number) => (
                   <div key={index} className="border rounded-lg p-4 space-y-3">
                     <div className="flex items-center justify-between">
-                      <span className="text-sm font-medium text-gray-600">Item #{index + 1}</span>
+                      <span className="text-sm font-medium text-muted-foreground">Item #{index + 1}</span>
                       <Button
                         onClick={() => removeLineItem(index)}
                         size="sm"
@@ -375,14 +375,14 @@ export function InvoiceReviewDialog({ isOpen, onClose, invoiceData }: InvoiceRev
                     </div>
                     
                     <div className="flex justify-between items-center pt-2 border-t">
-                      <span className="text-sm text-gray-600">Line Total:</span>
+                      <span className="text-sm text-muted-foreground">Line Total:</span>
                       <span className="font-semibold">${item.totalPrice.toFixed(2)}</span>
                     </div>
                   </div>
                 ))}
                 
                 {editableData.lineItems.length === 0 && (
-                  <div className="text-center text-gray-500 py-8">
+                  <div className="text-center text-muted-foreground py-8">
                     No line items found. Click "Add Item" to add products manually.
                   </div>
                 )}
@@ -448,7 +448,7 @@ export function InvoiceReviewDialog({ isOpen, onClose, invoiceData }: InvoiceRev
                 ))}
                 
                 {editableData.fees.length === 0 && (
-                  <div className="text-center text-gray-500 py-8">
+                  <div className="text-center text-muted-foreground py-8">
                     No fees detected. Click "Add Fee" to add delivery charges, shipping costs, etc.
                   </div>
                 )}

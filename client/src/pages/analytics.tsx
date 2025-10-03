@@ -1571,11 +1571,11 @@ export default function Analytics() {
                   {isVarianceLoading ? (
                     <div className="space-y-3">
                       {[...Array(5)].map((_, i) => (
-                        <div key={i} className="h-16 bg-gray-100 rounded animate-pulse" />
+                        <div key={i} className="h-16 bg-accent rounded animate-pulse" />
                       ))}
                     </div>
                   ) : varianceReport.length === 0 ? (
-                    <div className="text-center py-8 text-gray-500">
+                    <div className="text-center py-8 text-muted-foreground">
                       No variance data available for the selected period
                     </div>
                   ) : (
@@ -1587,7 +1587,7 @@ export default function Analytics() {
                               {getCategoryIcon(item.category)}
                               <div>
                                 <h3 className="font-medium">{item.itemName}</h3>
-                                <div className="flex gap-4 text-sm text-gray-600">
+                                <div className="flex gap-4 text-sm text-muted-foreground">
                                   <span>Theoretical: {item.theoreticalUsage.toFixed(2)}</span>
                                   <span>Actual: {item.actualUsage.toFixed(2)}</span>
                                 </div>
@@ -1609,7 +1609,7 @@ export default function Analytics() {
                           </div>
                           
                           <div className="mt-3">
-                            <div className="flex justify-between text-xs text-gray-500 mb-1">
+                            <div className="flex justify-between text-xs text-muted-foreground mb-1">
                               <span>Usage Progress</span>
                               <span>{((item.actualUsage / item.theoreticalUsage) * 100).toFixed(0)}%</span>
                             </div>
@@ -1637,7 +1637,7 @@ export default function Analytics() {
                 </CardHeader>
                 <CardContent>
                   {productionVariance.length === 0 ? (
-                    <div className="text-center py-8 text-gray-500">
+                    <div className="text-center py-8 text-muted-foreground">
                       No production data available for the selected period
                     </div>
                   ) : (
@@ -1647,7 +1647,7 @@ export default function Analytics() {
                           <div className="flex items-center justify-between">
                             <div>
                               <h3 className="font-medium">{recipe.recipeName}</h3>
-                              <p className="text-sm text-gray-600">
+                              <p className="text-sm text-muted-foreground">
                                 Produced: {recipe.quantityProduced} servings
                               </p>
                             </div>
