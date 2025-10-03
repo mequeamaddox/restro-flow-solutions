@@ -170,11 +170,13 @@ export default function HRPayroll() {
 
   // Fetch employees for manual entry
   const { data: employees = [] } = useQuery({
-    queryKey: ['/api/hr/employees'],
+    queryKey: ['/api/hr/employees', currentLocation?.id],
     queryFn: async () => {
-      const response = await apiRequest('GET', '/api/hr/employees');
+      if (!currentLocation?.id) return [];
+      const response = await apiRequest('GET', `/api/hr/employees?locationId=${currentLocation.id}`);
       return response.json();
     },
+    enabled: !!currentLocation?.id,
   });
 
   // Fetch calculated hours for the selected period to show existing hours
