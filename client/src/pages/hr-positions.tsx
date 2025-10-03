@@ -62,7 +62,7 @@ export default function HRPositions() {
 
   const createPositionMutation = useMutation({
     mutationFn: async (positionData: any) => {
-      return await apiRequest('POST', '/api/hr/positions', positionData);
+      return await apiRequest('POST', `/api/hr/positions?locationId=${currentLocation?.id}`, positionData);
     },
     onSuccess: () => {
       toast({ title: "Success", description: "Position created successfully" });
@@ -76,7 +76,7 @@ export default function HRPositions() {
 
   const updatePositionMutation = useMutation({
     mutationFn: async ({ id, data }: { id: string; data: any }) => {
-      return await apiRequest('PUT', `/api/hr/positions/${id}`, data);
+      return await apiRequest('PUT', `/api/hr/positions/${id}?locationId=${currentLocation?.id}`, data);
     },
     onSuccess: () => {
       toast({ title: "Success", description: "Position updated successfully" });
@@ -90,7 +90,7 @@ export default function HRPositions() {
 
   const deletePositionMutation = useMutation({
     mutationFn: async (id: string) => {
-      return await apiRequest('DELETE', `/api/hr/positions/${id}`);
+      return await apiRequest('DELETE', `/api/hr/positions/${id}?locationId=${currentLocation?.id}`);
     },
     onSuccess: () => {
       toast({ title: "Success", description: "Position deleted successfully" });
