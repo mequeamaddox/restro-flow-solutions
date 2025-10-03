@@ -3227,7 +3227,8 @@ print(json.dumps(rows))
   // HR Departments
   app.get('/api/hr/departments', isAuthenticated, requireHRAccess, async (req, res) => {
     try {
-      const departments = await storage.getDepartments();
+      const locationId = req.query.locationId as string;
+      const departments = await storage.getDepartments(locationId);
       res.json(departments);
     } catch (error) {
       console.error('Error fetching departments:', error);

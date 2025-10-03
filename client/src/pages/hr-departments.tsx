@@ -32,11 +32,25 @@ export default function HRDepartments() {
 
   const { data: departments = [], isLoading } = useQuery<Department[]>({
     queryKey: ['/api/hr/departments', currentLocation?.id],
+    queryFn: async () => {
+      const response = await fetch(`/api/hr/departments?locationId=${currentLocation?.id}`, {
+        credentials: 'include',
+      });
+      if (!response.ok) throw new Error('Failed to fetch departments');
+      return response.json();
+    },
     enabled: !!currentLocation,
   });
 
   const { data: employees = [] } = useQuery<any[]>({
     queryKey: ['/api/hr/employees', currentLocation?.id],
+    queryFn: async () => {
+      const response = await fetch(`/api/hr/employees?locationId=${currentLocation?.id}`, {
+        credentials: 'include',
+      });
+      if (!response.ok) throw new Error('Failed to fetch employees');
+      return response.json();
+    },
     enabled: !!currentLocation,
   });
 
@@ -46,7 +60,7 @@ export default function HRDepartments() {
     },
     onSuccess: () => {
       toast({ title: "Success", description: "Department created successfully" });
-      queryClient.invalidateQueries({ queryKey: ['/api/hr/departments'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/hr/departments', currentLocation?.id] });
       setIsCreateDialogOpen(false);
     },
     onError: () => {
@@ -60,7 +74,7 @@ export default function HRDepartments() {
     },
     onSuccess: () => {
       toast({ title: "Success", description: "Department updated successfully" });
-      queryClient.invalidateQueries({ queryKey: ['/api/hr/departments'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/hr/departments', currentLocation?.id] });
       setEditingDepartment(null);
     },
     onError: () => {
@@ -74,7 +88,7 @@ export default function HRDepartments() {
     },
     onSuccess: () => {
       toast({ title: "Success", description: "Department deleted successfully" });
-      queryClient.invalidateQueries({ queryKey: ['/api/hr/departments'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/hr/departments', currentLocation?.id] });
     },
     onError: () => {
       toast({ title: "Error", description: "Failed to delete department", variant: "destructive" });

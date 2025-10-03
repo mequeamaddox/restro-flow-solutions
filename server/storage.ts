@@ -363,7 +363,7 @@ export interface IStorage {
   updatePosSaleItem(id: string, saleItem: Partial<InsertPosSaleItem>): Promise<PosSaleItem>;
 
   // HR Department operations
-  getDepartments(): Promise<Department[]>;
+  getDepartments(locationId?: string): Promise<Department[]>;
   getDepartment(id: string): Promise<Department | undefined>;
   createDepartment(department: InsertDepartment): Promise<Department>;
   updateDepartment(id: string, department: Partial<InsertDepartment>): Promise<Department>;
@@ -2525,7 +2525,10 @@ export class DatabaseStorage implements IStorage {
     }
   }
   // HR Department operations
-  async getDepartments(): Promise<Department[]> {
+  async getDepartments(locationId?: string): Promise<Department[]> {
+    if (locationId) {
+      return await db.select().from(departments).where(eq(departments.locationId, locationId)).orderBy(departments.name);
+    }
     return await db.select().from(departments).orderBy(departments.name);
   }
 
