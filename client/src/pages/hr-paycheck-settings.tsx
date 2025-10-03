@@ -12,7 +12,7 @@ import { Settings, FileText, Printer, CheckCircle, CircleX } from "lucide-react"
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import { usePermissions, Permission } from "@/contexts/PermissionContext";
-import { PaycheckGenerator } from "@/components/payroll/paycheck-generator";
+import { ActualPaycheck } from "@/components/payroll/actual-paycheck";
 
 interface PaycheckSettings {
   id?: string;
@@ -80,6 +80,11 @@ export default function HRPaycheckSettings() {
 
   const { data: locations = [] } = useQuery<any[]>({
     queryKey: ['/api/locations'],
+  });
+
+  // Fetch a recent paystub for preview
+  const { data: recentPaystub } = useQuery<any>({
+    queryKey: ['/api/payroll/recent-paystub'],
   });
 
   const updateSettingsMutation = useMutation({
@@ -443,34 +448,17 @@ export default function HRPaycheckSettings() {
           </CardDescription>
         </CardHeader>
         <CardContent data-testid="live-preview">
-          <PaycheckGenerator 
-            settings={{
-              ...settings,
-              paycheckLayout: selectedLayout
-            }}
-            employee={{
-              firstName: "John",
-              lastName: "Smith", 
-              employeeId: "EMP001",
-              ssn: "123456789"
-            }}
-            paycheck={{
-              payPeriodStart: "01/01/2025",
-              payPeriodEnd: "01/15/2025",
-              payDate: "01/18/2025",
-              regularHours: "80.00",
-              regularPay: "1600.00",
-              overtimeHours: "5.00", 
-              overtimePay: "187.50",
-              grossPay: "1787.50",
-              federalTax: "268.13",
-              stateTax: "89.38",
-              socialSecurity: "110.83",
-              medicare: "25.92",
-              totalDeductions: "494.26",
-              netPay: "1293.24"
-            }}
-          />
+          {recentPaystub ? (
+            <ActualPaycheck 
+              paycheck={recentPaystub}
+              settings={settings}
+            />
+          ) : (
+            <div className="text-center py-8 text-muted-foreground">
+              <p>No paycheck data available for preview.</p>
+              <p className="text-sm mt-2">Generate payroll to see a preview here.</p>
+            </div>
+          )}
         </CardContent>
       </Card>
 

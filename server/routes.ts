@@ -4199,6 +4199,41 @@ print(json.dumps(rows))
     }
   });
 
+  // Get a recent paystub for preview
+  app.get('/api/payroll/recent-paystub', isAuthenticated, async (req, res) => {
+    try {
+      // Get the most recent approved pay period
+      const periods = await storage.getPayrollPeriods();
+      const approvedPeriods = periods.filter((p: any) => p.status === 'approved').sort((a: any, b: any) => 
+        new Date(b.endDate).getTime() - new Date(a.endDate).getTime()
+      );
+      
+      if (approvedPeriods.length === 0) {
+        return res.json(null);
+      }
+      
+      const recentPeriod = approvedPeriods[0];
+      const paystubs = await storage.getPaystubsByPeriod(recentPeriod.id);
+      
+      if (paystubs.length === 0) {
+        return res.json(null);
+      }
+      
+      // Return the first paystub with pay period info
+      const paystub = paystubs[0];
+      res.json({
+        ...paystub,
+        payPeriod: {
+          startDate: recentPeriod.startDate,
+          endDate: recentPeriod.endDate
+        }
+      });
+    } catch (error) {
+      console.error('Error fetching recent paystub:', error);
+      res.status(500).json({ message: 'Failed to fetch recent paystub' });
+    }
+  });
+
   app.get('/api/hr/payroll/deductions', isAuthenticated, async (req, res) => {
     try {
       const deductions = await storage.getPayrollDeductions();
