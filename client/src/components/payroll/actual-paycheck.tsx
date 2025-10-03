@@ -124,7 +124,7 @@ export function ActualPaycheck({ paycheck, settings }: ActualPaycheckProps) {
           {settings?.companyAddress}<br/>
         </div>
         <div className="text-center">
-          <div className="text-sm font-bold">{settings?.bankName || 'First Citizens Bank'}</div>
+          <div className="text-sm font-bold">{settings?.bankName}</div>
         </div>
         <div className="text-right">
           <div className="text-xl font-bold">{paycheck.checkNumber}</div>

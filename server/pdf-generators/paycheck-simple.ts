@@ -251,7 +251,7 @@ async function generateCheckOnTopPDF(data: PaycheckData): Promise<Buffer> {
   
   // Top row: Business name (left), Bank name (center), Check number (right)
   doc.fontSize(10).font('Helvetica-Bold').text(data.companyName, 50, y, { width: 200 });
-  doc.fontSize(10).font('Helvetica-Bold').text(data.bankName || 'First Citizens Bank', 250, y, { width: 150, align: 'center' });
+  doc.fontSize(10).font('Helvetica-Bold').text(data.bankName || '', 250, y, { width: 150, align: 'center' });
   doc.fontSize(14).font('Helvetica-Bold').text(data.checkNumber, 450, y, { align: 'right' });
   
   y += 12;
@@ -458,7 +458,7 @@ async function generateCheckOnBottomPDF(data: PaycheckData): Promise<Buffer> {
   
   // Top row: Business name (left), Bank name (center), Check number (right)
   doc.fontSize(10).font('Helvetica-Bold').text(data.companyName, 50, y, { width: 200 });
-  doc.fontSize(10).font('Helvetica-Bold').text(data.bankName || 'First Citizens Bank', 250, y, { width: 150, align: 'center' });
+  doc.fontSize(10).font('Helvetica-Bold').text(data.bankName || '', 250, y, { width: 150, align: 'center' });
   doc.fontSize(14).font('Helvetica-Bold').text(data.checkNumber, 450, y, { align: 'right' });
   
   y += 12;
