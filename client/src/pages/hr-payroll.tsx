@@ -414,31 +414,47 @@ export default function HRPayroll() {
     createManualPayrollMutation.mutate(manualPayrollForm);
   };
 
-  const handleBulkManualPayroll = () => {
-    const employeeEntries = employees.filter((emp: any) => emp.status === 'active').map((employee: any) => {
+  const handleBulkManualPayroll = async () => {
+    const promises: Promise<any>[] = [];
+    let addedCount = 0;
+
+    for (const employee of employees.filter((emp: any) => emp.status === 'active')) {
       const inputs = bulkPayrollInputs[employee.id] || {};
       
-      return {
-        employeeId: employee.id,
-        regularHours: inputs.hours || '',
-        overtimeHours: inputs.overtime || '',
-        regularRate: employee.hourlyRate || '',
-        bonuses: inputs.bonus || '',
-        tips: inputs.tips || '',
-        customDeductions: inputs.deduction || '',
-        notes: inputs.notes || ''
-      };
-    });
+      // Create time entries for hours
+      if (inputs.hours && parseFloat(inputs.hours) > 0) {
+        const hours = parseFloat(inputs.hours);
+        const clockInTime = new Date(selectedPeriod!.startDate);
+        const clockOutTime = new Date(clockInTime.getTime() + hours * 60 * 60 * 1000);
 
-    // Process each employee's payroll entry
-    employeeEntries.forEach(entry => {
-      if (entry.regularHours || entry.tips || entry.bonuses || entry.overtimeHours || entry.customDeductions || entry.notes) {
-        createManualPayrollMutation.mutate(entry);
+        const promise = addTimeEntryMutation.mutateAsync({
+          employeeId: employee.id,
+          clockInTime: clockInTime.toISOString(),
+          clockOutTime: clockOutTime.toISOString(),
+          notes: `Payroll hours for ${selectedPeriod!.name}`,
+          locationId: currentLocation?.id
+        });
+        promises.push(promise);
+        addedCount++;
       }
-    });
+    }
 
-    setShowManualPayrollDialog(false);
-    setBulkPayrollInputs({}); // Clear all inputs after processing
+    try {
+      await Promise.all(promises);
+      setShowManualPayrollDialog(false);
+      setBulkPayrollInputs({});
+      toast({
+        title: "Hours Entered Successfully",
+        description: `Added ${addedCount} time entries. Click "Calculate Payroll" to process paychecks.`
+      });
+    } catch (error) {
+      // Individual errors already handled by mutation
+      toast({
+        title: "Some Entries Failed",
+        description: "Check the errors and try again.",
+        variant: "destructive"
+      });
+    }
   };
 
   // Handle bulk time entry additions
@@ -603,7 +619,7 @@ export default function HRPayroll() {
                     className="gap-2"
                   >
                     <Plus className="w-4 h-4" />
-                    Manual Entry
+                    Enter Hours for All Employees
                   </Button>
                 </>
               )}
@@ -1047,9 +1063,9 @@ export default function HRPayroll() {
       }}>
         <DialogContent className="max-w-6xl max-h-[90vh] overflow-auto">
           <DialogHeader>
-            <DialogTitle>Manual Payroll Entry</DialogTitle>
+            <DialogTitle>Enter Employee Hours</DialogTitle>
             <DialogDescription>
-              Enter hours, tips, and bonuses for all employees. Only enter values for fields that need adjustments.
+              Enter hours worked for all employees in this pay period. After submitting, click "Calculate Payroll" to generate paychecks.
             </DialogDescription>
           </DialogHeader>
           
