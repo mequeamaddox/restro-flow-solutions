@@ -1333,91 +1333,97 @@ export default function HRPayroll() {
           </DialogHeader>
           
           <div className="py-4">
-            <div className="rounded-md border">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead className="w-[200px]">Employee</TableHead>
-                    <TableHead className="w-[120px]">Hourly Rate</TableHead>
-                    <TableHead className="w-[120px]">Existing Hours</TableHead>
-                    <TableHead className="w-[120px]">Hours to Add</TableHead>
-                    <TableHead className="w-[150px]">Date</TableHead>
-                    <TableHead className="w-[100px]">Status</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {employees.filter((emp: any) => emp.status === 'active').map((employee: any) => {
-                    const existingHours = calculatedHours.find((h: any) => h.employeeId === employee.id);
-                    const totalExisting = existingHours ? (parseFloat(existingHours.regularHours || '0') + parseFloat(existingHours.overtimeHours || '0')) : 0;
-                    
-                    return (
-                      <TableRow key={employee.id}>
-                        <TableCell className="font-medium">
-                          {employee.firstName} {employee.lastName}
-                        </TableCell>
-                        <TableCell>${employee.hourlyRate || 'N/A'}/hr</TableCell>
-                        <TableCell>
-                          {totalExisting > 0 ? (
-                            <span className="text-green-600">{totalExisting.toFixed(2)}h</span>
-                          ) : (
-                            <span className="text-muted-foreground">0h</span>
-                          )}
-                        </TableCell>
-                        <TableCell>
-                          <Input
-                            type="number"
-                            step="0.25"
-                            min="0"
-                            placeholder="0.00"
-                            value={hourAdjustments[employee.id]?.hours || ''}
-                            className="w-24"
-                            onChange={(e) => setHourAdjustments({
-                              ...hourAdjustments,
-                              [employee.id]: {
-                                ...hourAdjustments[employee.id],
-                                hours: e.target.value,
-                                date: hourAdjustments[employee.id]?.date || selectedPeriod!.startDate
-                              }
-                            })}
-                            onWheel={(e) => e.currentTarget.blur()}
-                            data-testid={`input-hours-${employee.id}`}
-                          />
-                        </TableCell>
-                        <TableCell>
-                          <Input
-                            type="date"
-                            value={hourAdjustments[employee.id]?.date || selectedPeriod!.startDate}
-                            min={selectedPeriod!.startDate}
-                            max={selectedPeriod!.endDate}
-                            className="w-36"
-                            onChange={(e) => setHourAdjustments({
-                              ...hourAdjustments,
-                              [employee.id]: {
-                                ...hourAdjustments[employee.id],
-                                hours: hourAdjustments[employee.id]?.hours || '',
-                                date: e.target.value
-                              }
-                            })}
-                            data-testid={`input-date-${employee.id}`}
-                          />
-                        </TableCell>
-                        <TableCell>
-                          {totalExisting > 0 ? (
-                            <Badge variant="outline" className="bg-green-950 text-green-400 border-green-800">
-                              Has Hours
-                            </Badge>
-                          ) : (
-                            <Badge variant="outline" className="bg-yellow-950 text-yellow-400 border-yellow-800">
-                              Needs Hours
-                            </Badge>
-                          )}
-                        </TableCell>
-                      </TableRow>
-                    );
-                  })}
-                </TableBody>
-              </Table>
-            </div>
+            {selectedPeriod ? (
+              <div className="rounded-md border">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead className="w-[200px]">Employee</TableHead>
+                      <TableHead className="w-[120px]">Hourly Rate</TableHead>
+                      <TableHead className="w-[120px]">Existing Hours</TableHead>
+                      <TableHead className="w-[120px]">Hours to Add</TableHead>
+                      <TableHead className="w-[150px]">Date</TableHead>
+                      <TableHead className="w-[100px]">Status</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {employees.filter((emp: any) => emp.status === 'active').map((employee: any) => {
+                      const existingHours = calculatedHours.find((h: any) => h.employeeId === employee.id);
+                      const totalExisting = existingHours ? (parseFloat(existingHours.regularHours || '0') + parseFloat(existingHours.overtimeHours || '0')) : 0;
+                      
+                      return (
+                        <TableRow key={employee.id}>
+                          <TableCell className="font-medium">
+                            {employee.firstName} {employee.lastName}
+                          </TableCell>
+                          <TableCell>${employee.hourlyRate || 'N/A'}/hr</TableCell>
+                          <TableCell>
+                            {totalExisting > 0 ? (
+                              <span className="text-green-600">{totalExisting.toFixed(2)}h</span>
+                            ) : (
+                              <span className="text-muted-foreground">0h</span>
+                            )}
+                          </TableCell>
+                          <TableCell>
+                            <Input
+                              type="number"
+                              step="0.25"
+                              min="0"
+                              placeholder="0.00"
+                              value={hourAdjustments[employee.id]?.hours || ''}
+                              className="w-24"
+                              onChange={(e) => setHourAdjustments({
+                                ...hourAdjustments,
+                                [employee.id]: {
+                                  ...hourAdjustments[employee.id],
+                                  hours: e.target.value,
+                                  date: hourAdjustments[employee.id]?.date || selectedPeriod.startDate
+                                }
+                              })}
+                              onWheel={(e) => e.currentTarget.blur()}
+                              data-testid={`input-hours-${employee.id}`}
+                            />
+                          </TableCell>
+                          <TableCell>
+                            <Input
+                              type="date"
+                              value={hourAdjustments[employee.id]?.date || selectedPeriod.startDate}
+                              min={selectedPeriod.startDate}
+                              max={selectedPeriod.endDate}
+                              className="w-36"
+                              onChange={(e) => setHourAdjustments({
+                                ...hourAdjustments,
+                                [employee.id]: {
+                                  ...hourAdjustments[employee.id],
+                                  hours: hourAdjustments[employee.id]?.hours || '',
+                                  date: e.target.value
+                                }
+                              })}
+                              data-testid={`input-date-${employee.id}`}
+                            />
+                          </TableCell>
+                          <TableCell>
+                            {totalExisting > 0 ? (
+                              <Badge variant="outline" className="bg-green-950 text-green-400 border-green-800">
+                                Has Hours
+                              </Badge>
+                            ) : (
+                              <Badge variant="outline" className="bg-yellow-950 text-yellow-400 border-yellow-800">
+                                Needs Hours
+                              </Badge>
+                            )}
+                          </TableCell>
+                        </TableRow>
+                      );
+                    })}
+                  </TableBody>
+                </Table>
+              </div>
+            ) : (
+              <Alert>
+                <AlertDescription>Please select a pay period first.</AlertDescription>
+              </Alert>
+            )}
           </div>
 
           <DialogFooter>

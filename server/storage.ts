@@ -4991,7 +4991,7 @@ export class DatabaseStorage implements IStorage {
         status: timeEntries.status,
         employeeFirstName: employees.firstName,
         employeeLastName: employees.lastName,
-        employeeHourlyWage: employees.hourlyWage
+        employeeHourlyRate: employees.hourlyRate
       })
       .from(timeEntries)
       .leftJoin(employees, eq(timeEntries.employeeId, employees.id))
@@ -5049,7 +5049,7 @@ export class DatabaseStorage implements IStorage {
               id: entry.employeeId,
               firstName: entry.employeeFirstName || '',
               lastName: entry.employeeLastName || '',
-              hourlyWage: entry.employeeHourlyWage || ''
+              hourlyRate: entry.employeeHourlyRate || ''
             } as Employee
           });
         }
