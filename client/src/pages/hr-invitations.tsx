@@ -39,6 +39,7 @@ import {
 } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
 import { apiRequest } from '@/lib/queryClient';
+import { useLocation } from '@/contexts/LocationContext';
 import {
   UserPlus,
   Mail,
@@ -62,6 +63,7 @@ export default function HRInvitations() {
   const [isInviteDialogOpen, setIsInviteDialogOpen] = useState(false);
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const { currentLocation } = useLocation();
 
   // Fetch invitations
   const { 
@@ -80,7 +82,15 @@ export default function HRInvitations() {
 
   // Fetch departments for display
   const { data: departments = [] } = useQuery<Department[]>({
-    queryKey: ['/api/hr/departments'],
+    queryKey: ['/api/hr/departments', currentLocation?.id],
+    queryFn: async () => {
+      const response = await fetch(`/api/hr/departments?locationId=${currentLocation?.id}`, {
+        credentials: 'include',
+      });
+      if (!response.ok) throw new Error('Failed to fetch departments');
+      return response.json();
+    },
+    enabled: !!currentLocation,
   });
 
   // Cancel invitation mutation

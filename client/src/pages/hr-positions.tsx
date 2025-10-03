@@ -11,6 +11,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import { usePermissions, Permission } from "@/contexts/PermissionContext";
+import { useLocation } from "@/contexts/LocationContext";
 
 interface Position {
   id: string;
@@ -29,13 +30,22 @@ export default function HRPositions() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const { hasPermission } = usePermissions();
+  const { currentLocation } = useLocation();
 
   const { data: positions = [], isLoading } = useQuery<Position[]>({
     queryKey: ['/api/hr/positions'],
   });
 
   const { data: departments = [] } = useQuery<any[]>({
-    queryKey: ['/api/hr/departments'],
+    queryKey: ['/api/hr/departments', currentLocation?.id],
+    queryFn: async () => {
+      const response = await fetch(`/api/hr/departments?locationId=${currentLocation?.id}`, {
+        credentials: 'include',
+      });
+      if (!response.ok) throw new Error('Failed to fetch departments');
+      return response.json();
+    },
+    enabled: !!currentLocation,
   });
 
   const { data: employees = [] } = useQuery<any[]>({

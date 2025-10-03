@@ -14,6 +14,7 @@ import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ObjectUploader } from "@/components/ObjectUploader";
+import { useLocation } from "@/contexts/LocationContext";
 
 interface Message {
   id: string;
@@ -50,6 +51,7 @@ export default function HRMessaging() {
   const [isResourceDialogOpen, setIsResourceDialogOpen] = useState(false);
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const { currentLocation } = useLocation();
 
   const { data: messages = [], isLoading } = useQuery({
     queryKey: ['/api/hr/messages'],
@@ -60,7 +62,15 @@ export default function HRMessaging() {
   });
 
   const { data: departments = [] } = useQuery({
-    queryKey: ['/api/hr/departments'],
+    queryKey: ['/api/hr/departments', currentLocation?.id],
+    queryFn: async () => {
+      const response = await fetch(`/api/hr/departments?locationId=${currentLocation?.id}`, {
+        credentials: 'include',
+      });
+      if (!response.ok) throw new Error('Failed to fetch departments');
+      return response.json();
+    },
+    enabled: !!currentLocation,
   });
 
   const { data: teamResources = [] } = useQuery({

@@ -53,7 +53,15 @@ export default function HREmployees() {
   });
 
   const { data: departments = [] } = useQuery<Array<{ id: string; name: string }>>({
-    queryKey: ['/api/hr/departments'],
+    queryKey: ['/api/hr/departments', currentLocation?.id],
+    queryFn: async () => {
+      const response = await fetch(`/api/hr/departments?locationId=${currentLocation?.id}`, {
+        credentials: 'include',
+      });
+      if (!response.ok) throw new Error('Failed to fetch departments');
+      return response.json();
+    },
+    enabled: !!currentLocation,
   });
 
   const { data: positions = [] } = useQuery<Array<{ id: string; title: string }>>({
