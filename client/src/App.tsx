@@ -26,6 +26,7 @@ import InvoiceProcessing from "@/pages/invoice-processing";
 import HRDashboard from "@/pages/hr-dashboard";
 import HREmployees from "@/pages/hr-employees";
 import HRAnalytics from "@/pages/hr-analytics";
+import HRTaxPayroll from "@/pages/hr-tax-payroll";
 import HRTimeClock from "@/pages/hr-time-clock";
 import HRTasks from "@/pages/hr-tasks";
 import HRMessaging from "@/pages/hr-messaging";
@@ -140,6 +141,7 @@ function Router() {
                 <Route path="/employees" component={HREmployees} />
                 <Route path="/employees/:id" component={EmployeeProfile} />
                 <Route path="/hr/analytics" component={HRAnalytics} />
+                <Route path="/hr/tax-payroll" component={HRTaxPayroll} />
                 <Route path="/hr/time-clock" component={HRTimeClock} />
                 <Route path="/hr/tasks" component={HRTasks} />
                 <Route path="/hr/messaging" component={HRMessaging} />
