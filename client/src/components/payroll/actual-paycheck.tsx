@@ -103,7 +103,7 @@ export function ActualPaycheck({ paycheck, settings }: ActualPaycheckProps) {
   const amountInWords = convertNumberToWords(dollarAmount);
 
   return (
-    <div className="bg-card text-black font-mono print:p-0" style={{ width: '8.5in', margin: '0 auto' }}>
+    <div className="bg-white text-black font-mono print:p-0" style={{ width: '8.5in', margin: '0 auto' }}>
       {/* Professional Check Format */}
       <div className="border-b-2 border-dashed border-gray-400 pb-4 mb-4" style={{ height: '3.5in', padding: '0.5in' }}>
         
