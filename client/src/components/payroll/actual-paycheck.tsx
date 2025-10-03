@@ -31,14 +31,14 @@ interface ActualPaycheckProps {
     };
   };
   settings?: {
-    businessName?: string;
+    companyName?: string;
     taxFilingName?: string;
     lastCheckNumber?: string;
     displayBusinessName?: boolean;
     displayTaxFilingName?: boolean;
     displayLast4Ssn?: boolean;
     printSignature?: boolean;
-    paycheckLayout?: string; // KEY: Use layout from settings
+    paycheckLayout?: string;
     bankName?: string;
     companyAddress?: string;
     companyPhone?: string;
@@ -120,9 +120,8 @@ export function ActualPaycheck({ paycheck, settings }: ActualPaycheckProps) {
     <div className="border-b-2 border-dashed border-gray-400 pb-4 mb-4" style={{ minHeight: '3.5in', padding: '0.5in' }}>
       <div className="flex justify-between items-start mb-4">
         <div className="text-sm font-bold leading-tight">
-          {settings?.businessName || 'RestroFlow Restaurant'}<br/>
-          {settings?.companyAddress || '123 Main Street'}<br/>
-          {settings?.companyAddress ? '' : 'Charleston, SC 29401'}
+          {settings?.companyName}<br/>
+          {settings?.companyAddress}<br/>
         </div>
         <div className="text-center">
           <div className="text-sm font-bold">{settings?.bankName || 'First Citizens Bank'}</div>
@@ -179,7 +178,7 @@ export function ActualPaycheck({ paycheck, settings }: ActualPaycheckProps) {
   const PayStubPortion = () => (
     <div className="p-4 bg-gray-50" style={{ minHeight: '4.5in' }}>
       <div className="text-center mb-4">
-        <h2 className="text-lg font-bold">{settings?.businessName || 'RestroFlow Restaurant'}</h2>
+        <h2 className="text-lg font-bold">{settings?.companyName}</h2>
         <p className="text-sm">Employee Pay Stub</p>
       </div>
 
@@ -199,14 +198,11 @@ export function ActualPaycheck({ paycheck, settings }: ActualPaycheckProps) {
         </div>
 
         <div>
-          <div className="font-bold mb-2">{settings?.businessName || 'RestroFlow Restaurant'}</div>
+          <div className="font-bold mb-2">{settings?.companyName}</div>
           <div className="text-sm space-y-1">
-            <div>{settings?.companyAddress || '123 Main Street'}</div>
-            {!settings?.companyAddress && <div>Charleston, SC 29401</div>}
+            <div>{settings?.companyAddress}</div>
             {settings?.companyPhone && <div>{settings.companyPhone}</div>}
-            {!settings?.companyPhone && <div>(843) 555-0123</div>}
             {settings?.companyEin && <div>SC EIN: {settings.companyEin}</div>}
-            {!settings?.companyEin && <div>SC EIN: 12-3456789</div>}
           </div>
         </div>
       </div>

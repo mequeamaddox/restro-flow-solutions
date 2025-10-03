@@ -4004,7 +4004,7 @@ print(json.dumps(rows))
             totalDeductions: paystub.totalDeductions,
             bonuses: paystub.bonuses,
             tips: paystub.tips,
-            businessName: settings.businessName || 'RestroFlow Restaurant',
+            companyName: settings.companyName || 'RestroFlow Restaurant',
             companyAddress: settings.companyAddress || '123 Main Street',
             companyPhone: settings.companyPhone || '',
             companyEin: settings.companyEin || '',
