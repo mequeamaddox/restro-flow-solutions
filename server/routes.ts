@@ -5305,7 +5305,7 @@ print(json.dumps(rows))
   });
 
   // Create payroll period
-  app.post("/api/payroll-periods", async (req, res) => {
+  app.post("/api/payroll-periods", isAuthenticated, requirePermission(Permission.MANAGE_EMPLOYEES), async (req, res) => {
     try {
       const userId = req.user!.id;
       
