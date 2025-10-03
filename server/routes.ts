@@ -4011,6 +4011,15 @@ print(json.dumps(rows))
             bankName: settings.bankName || 'First Citizens Bank',
             periodStart: payPeriod.startDate,
             periodEnd: payPeriod.endDate,
+            // Pass layout and display settings so PDF matches preview
+            paycheckLayout: settings.paycheckLayout || 'check_stub_only',
+            displayBusinessName: settings.displayBusinessName || false,
+            displayTaxFilingName: settings.displayTaxFilingName || false,
+            taxFilingName: settings.taxFilingName || '',
+            printSignature: settings.printSignature || false,
+            displayLast4Ssn: settings.displayLast4Ssn || false,
+            employeeSsn: paystub.employee.ssn || '',
+            employeeNumber: paystub.employee.employeeNumber || '',
           };
 
           const pdfBuffer = await generatePaycheckPDF(pdfData);
