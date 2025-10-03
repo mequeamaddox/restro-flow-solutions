@@ -121,7 +121,7 @@ export default function HRAnalytics() {
           <CardContent>
             <div className="text-2xl font-bold text-blue-800 dark:text-blue-200">{activeEmployees}</div>
             <p className="text-xs text-blue-600 dark:text-blue-400">
-              {totalEmployees} total employees
+              Active employees
             </p>
           </CardContent>
         </Card>
