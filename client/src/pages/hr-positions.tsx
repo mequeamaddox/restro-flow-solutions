@@ -33,7 +33,15 @@ export default function HRPositions() {
   const { currentLocation } = useLocation();
 
   const { data: positions = [], isLoading } = useQuery<Position[]>({
-    queryKey: ['/api/hr/positions'],
+    queryKey: ['/api/hr/positions', currentLocation?.id],
+    queryFn: async () => {
+      const response = await fetch(`/api/hr/positions?locationId=${currentLocation?.id}`, {
+        credentials: 'include',
+      });
+      if (!response.ok) throw new Error('Failed to fetch positions');
+      return response.json();
+    },
+    enabled: !!currentLocation,
   });
 
   const { data: departments = [] } = useQuery<any[]>({
