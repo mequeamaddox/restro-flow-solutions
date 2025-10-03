@@ -82,7 +82,7 @@ export default function HRTaxSettings() {
 
   // Fetch current tax settings for the selected location
   const { data: taxSettings, isLoading } = useQuery<TaxSettings>({
-    queryKey: ['/api/tax-settings', currentLocation?.id],
+    queryKey: [`/api/tax-settings?locationId=${currentLocation?.id}`],
     enabled: !!currentLocation?.id,
   });
 

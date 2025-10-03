@@ -5588,11 +5588,17 @@ print(json.dumps(rows))
     }
   });
 
-  // Tax Settings Management (placeholder - methods not yet implemented)
-  app.get('/api/tax-settings/:locationId', isAuthenticated, async (req, res) => {
+  // Tax Settings Management
+  app.get('/api/tax-settings', isAuthenticated, async (req, res) => {
     try {
-      // Placeholder implementation - tax settings methods not yet available in storage
-      res.json({ message: "Tax settings feature coming soon" });
+      const locationId = req.query.locationId as string;
+      
+      if (!locationId) {
+        return res.status(400).json({ message: "Location ID is required" });
+      }
+      
+      const settings = await storage.getTaxSettings(locationId);
+      res.json(settings || null);
     } catch (error) {
       console.error("Error fetching tax settings:", error);
       res.status(500).json({ message: "Failed to fetch tax settings" });
@@ -5601,8 +5607,8 @@ print(json.dumps(rows))
 
   app.post('/api/tax-settings', isAuthenticated, async (req, res) => {
     try {
-      // Placeholder implementation - tax settings methods not yet available in storage
-      res.status(201).json({ message: "Tax settings creation coming soon" });
+      const settings = await storage.createTaxSettings(req.body);
+      res.status(201).json(settings);
     } catch (error) {
       console.error("Error creating tax settings:", error);
       res.status(500).json({ message: "Failed to create tax settings" });
@@ -5611,8 +5617,8 @@ print(json.dumps(rows))
 
   app.put('/api/tax-settings/:id', isAuthenticated, async (req, res) => {
     try {
-      // Placeholder implementation - tax settings methods not yet available in storage
-      res.json({ message: "Tax settings update coming soon" });
+      const settings = await storage.updateTaxSettings(req.params.id, req.body);
+      res.json(settings);
     } catch (error) {
       console.error("Error updating tax settings:", error);
       res.status(500).json({ message: "Failed to update tax settings" });
