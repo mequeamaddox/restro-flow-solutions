@@ -421,15 +421,33 @@ export const paycheckSettings = pgTable("paycheck_settings", {
   id: uuid("id").primaryKey().default(sql`gen_random_uuid()`),
   locationId: uuid("location_id").references(() => locations.id).notNull(),
   paycheckLayout: paycheckLayoutEnum("paycheck_layout").notNull().default("check_stub_only"),
+  
+  // Display options
   displayLast4Ssn: boolean("display_last4_ssn").default(true),
   displayTaxFilingName: boolean("display_tax_filing_name").default(true),
   displayBusinessName: boolean("display_business_name").default(true),
   printSignature: boolean("print_signature").default(false),
   showLastCheckNumber: boolean("show_last_check_number").default(true),
+  
+  // Company information
+  companyName: varchar("company_name", { length: 255 }).default("Pawleys Fish Camp"),
+  companyAddress: text("company_address").default("10744 Ocean Hwy, Pawleys Island, SC 29585"),
+  companyPhone: varchar("company_phone", { length: 20 }),
+  companyEin: varchar("company_ein", { length: 20 }),
+  
+  // Business names (for tax purposes)
   businessName: varchar("business_name", { length: 255 }).default("Pawleys Fish Camp"),
   taxFilingName: varchar("tax_filing_name", { length: 255 }).default("AAM COLLECTIVE LLC"),
+  
+  // Bank information
+  bankName: varchar("bank_name", { length: 255 }).default("First Citizens Bank"),
+  routingNumber: varchar("routing_number", { length: 20 }),
+  accountNumber: varchar("account_number", { length: 20 }),
+  
+  // Check details
   lastCheckNumber: integer("last_check_number").default(1000),
   signatureImagePath: varchar("signature_image_path", { length: 500 }),
+  
   isActive: boolean("is_active").default(true),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),

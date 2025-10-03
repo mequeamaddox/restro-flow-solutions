@@ -3990,8 +3990,11 @@ print(json.dumps(rows))
             totalDeductions: paystub.totalDeductions,
             bonuses: paystub.bonuses,
             tips: paystub.tips,
-            companyName: settings.companyName || 'RestroFlow',
+            companyName: settings.companyName || settings.businessName || 'RestroFlow',
             companyAddress: settings.companyAddress || 'N/A',
+            companyPhone: settings.companyPhone,
+            companyEin: settings.companyEin,
+            bankName: settings.bankName || 'First Citizens Bank',
             periodStart: payPeriod.startDate,
             periodEnd: payPeriod.endDate,
           };

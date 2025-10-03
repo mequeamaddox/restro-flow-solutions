@@ -20,6 +20,9 @@ export interface PaycheckData {
   tips?: string;
   companyName: string;
   companyAddress: string;
+  companyPhone?: string;
+  companyEin?: string;
+  bankName?: string;
   periodStart: string;
   periodEnd: string;
 }
@@ -85,7 +88,7 @@ export async function generatePaycheckPDF(data: PaycheckData): Promise<Buffer> {
   
   // Company name on left, Bank name on right, Check number far right
   doc.fontSize(11).font('Helvetica-Bold').text(data.companyName, 50, y);
-  doc.fontSize(10).font('Helvetica').text('First Citizens Bank', 350, y, { align: 'right', width: 150 });
+  doc.fontSize(10).font('Helvetica').text(data.bankName || 'First Citizens Bank', 350, y, { align: 'right', width: 150 });
   doc.fontSize(11).font('Helvetica-Bold').text(data.checkNumber, 510, y, { align: 'right' });
   
   y += 15;
@@ -138,6 +141,16 @@ export async function generatePaycheckPDF(data: PaycheckData): Promise<Buffer> {
     doc.text(line.trim(), 300, companyLineY);
     companyLineY += 12;
   });
+  
+  // Add phone number and EIN if available
+  if (data.companyPhone) {
+    doc.text(data.companyPhone, 300, companyLineY);
+    companyLineY += 12;
+  }
+  if (data.companyEin) {
+    doc.text(`SC EIN: ${data.companyEin}`, 300, companyLineY);
+    companyLineY += 12;
+  }
   
   // Pay period info (right side)
   doc.fontSize(9).font('Helvetica-Bold').text('Pay Period', 420, companyY + 12);
