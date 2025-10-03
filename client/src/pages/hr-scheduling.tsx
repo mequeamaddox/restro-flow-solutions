@@ -8,7 +8,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
-import { Calendar, Clock, Plus, Users, Edit, Trash2, AlertTriangle, DollarSign, ChevronLeft, ChevronRight, Filter } from "lucide-react";
+import { Calendar, Clock, Plus, Users, Edit, Trash2, AlertTriangle, DollarSign, ChevronLeft, ChevronRight, Filter, Printer } from "lucide-react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -272,6 +272,10 @@ export default function HRScheduling() {
     setSelectedDate(current.toISOString().split('T')[0]);
   };
 
+  const handlePrint = () => {
+    window.print();
+  };
+
   if (!currentLocation) {
     return (
       <div className="p-6">
@@ -284,7 +288,26 @@ export default function HRScheduling() {
   }
 
   return (
-    <div className="space-y-6 p-6">
+    <div className="space-y-6 p-6 print:p-4 print:bg-white">
+      <style>{`
+        @media print {
+          body { 
+            background: white !important; 
+            color: black !important;
+          }
+          .print\\:hidden { display: none !important; }
+          .print\\:block { display: block !important; }
+          .print\\:text-black { color: black !important; }
+          .print\\:border-gray-300 { border-color: #d1d5db !important; }
+          .print\\:bg-white { background: white !important; }
+          .print\\:bg-gray-50 { background: #f9fafb !important; }
+          .print\\:shadow-none { box-shadow: none !important; }
+        }
+        @page {
+          size: landscape;
+          margin: 0.5in;
+        }
+      `}</style>
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
@@ -293,78 +316,88 @@ export default function HRScheduling() {
           </h1>
           <p className="text-gray-400 mt-1">{currentLocation.name}</p>
         </div>
-        <Button 
-          onClick={() => {
-            form.reset({
-              employeeId: "",
-              date: selectedDate,
-              startTime: "09:00",
-              endTime: "17:00",
-              breakDuration: 30,
-              notes: "",
-            });
-            setIsCreateDialogOpen(true);
-          }}
-          className="bg-gradient-to-r from-blue-500 to-purple-500 hover:from-blue-600 hover:to-purple-600"
-        >
-          <Plus className="h-4 w-4 mr-2" />
-          Add Shift
-        </Button>
+        <div className="flex gap-2">
+          <Button 
+            onClick={handlePrint}
+            variant="outline"
+            className="print:hidden"
+          >
+            <Printer className="h-4 w-4 mr-2" />
+            Print Schedule
+          </Button>
+          <Button 
+            onClick={() => {
+              form.reset({
+                employeeId: "",
+                date: selectedDate,
+                startTime: "09:00",
+                endTime: "17:00",
+                breakDuration: 30,
+                notes: "",
+              });
+              setIsCreateDialogOpen(true);
+            }}
+            className="bg-gradient-to-r from-blue-500 to-purple-500 hover:from-blue-600 hover:to-purple-600 print:hidden"
+          >
+            <Plus className="h-4 w-4 mr-2" />
+            Add Shift
+          </Button>
+        </div>
       </div>
 
       {/* Stats Cards */}
-      <div className="grid grid-cols-4 gap-4">
-        <Card className="bg-gradient-to-br from-blue-500/10 to-blue-600/10 border-blue-500/20">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm text-gray-400">Total Shifts</CardTitle>
+      <div className="grid grid-cols-4 gap-4 print:gap-2">
+        <Card className="bg-gradient-to-br from-blue-500/10 to-blue-600/10 border-blue-500/20 print:bg-white print:border-gray-300 print:shadow-none">
+          <CardHeader className="pb-2 print:pb-1">
+            <CardTitle className="text-sm text-gray-400 print:text-black print:text-xs">Total Shifts</CardTitle>
           </CardHeader>
-          <CardContent>
-            <div className="text-3xl font-bold text-blue-400">{weeklyStats.totalShifts}</div>
+          <CardContent className="print:pb-2">
+            <div className="text-3xl font-bold text-blue-400 print:text-black print:text-xl">{weeklyStats.totalShifts}</div>
           </CardContent>
         </Card>
-        <Card className="bg-gradient-to-br from-purple-500/10 to-purple-600/10 border-purple-500/20">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm text-gray-400">Total Hours</CardTitle>
+        <Card className="bg-gradient-to-br from-purple-500/10 to-purple-600/10 border-purple-500/20 print:bg-white print:border-gray-300 print:shadow-none">
+          <CardHeader className="pb-2 print:pb-1">
+            <CardTitle className="text-sm text-gray-400 print:text-black print:text-xs">Total Hours</CardTitle>
           </CardHeader>
-          <CardContent>
-            <div className="text-3xl font-bold text-purple-400">{weeklyStats.totalHours}h</div>
+          <CardContent className="print:pb-2">
+            <div className="text-3xl font-bold text-purple-400 print:text-black print:text-xl">{weeklyStats.totalHours}h</div>
           </CardContent>
         </Card>
-        <Card className="bg-gradient-to-br from-green-500/10 to-green-600/10 border-green-500/20">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm text-gray-400">Labor Cost</CardTitle>
+        <Card className="bg-gradient-to-br from-green-500/10 to-green-600/10 border-green-500/20 print:bg-white print:border-gray-300 print:shadow-none">
+          <CardHeader className="pb-2 print:pb-1">
+            <CardTitle className="text-sm text-gray-400 print:text-black print:text-xs">Labor Cost</CardTitle>
           </CardHeader>
-          <CardContent>
-            <div className="text-3xl font-bold text-green-400">${weeklyStats.totalCost}</div>
+          <CardContent className="print:pb-2">
+            <div className="text-3xl font-bold text-green-400 print:text-black print:text-xl">${weeklyStats.totalCost}</div>
           </CardContent>
         </Card>
-        <Card className="bg-gradient-to-br from-pink-500/10 to-pink-600/10 border-pink-500/20">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm text-gray-400">Staff Scheduled</CardTitle>
+        <Card className="bg-gradient-to-br from-pink-500/10 to-pink-600/10 border-pink-500/20 print:bg-white print:border-gray-300 print:shadow-none">
+          <CardHeader className="pb-2 print:pb-1">
+            <CardTitle className="text-sm text-gray-400 print:text-black print:text-xs">Staff Scheduled</CardTitle>
           </CardHeader>
-          <CardContent>
-            <div className="text-3xl font-bold text-pink-400">{weeklyStats.uniqueEmployees}</div>
+          <CardContent className="print:pb-2">
+            <div className="text-3xl font-bold text-pink-400 print:text-black print:text-xl">{weeklyStats.uniqueEmployees}</div>
           </CardContent>
         </Card>
       </div>
 
       {/* Calendar */}
-      <Card className="bg-gray-900/50 border-gray-800">
-        <CardHeader>
+      <Card className="bg-gray-900/50 border-gray-800 print:bg-white print:border-gray-300 print:shadow-none">
+        <CardHeader className="print:pb-2">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-4">
-              <Button variant="ghost" size="icon" onClick={() => navigateWeek('prev')}>
+              <Button variant="ghost" size="icon" onClick={() => navigateWeek('prev')} className="print:hidden">
                 <ChevronLeft className="h-5 w-5" />
               </Button>
-              <div className="text-lg font-semibold">
+              <div className="text-lg font-semibold print:text-black">
                 {new Date(weekDates[0]).toLocaleDateString('en-US', { month: 'long', day: 'numeric' })} - {new Date(weekDates[6]).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}
               </div>
-              <Button variant="ghost" size="icon" onClick={() => navigateWeek('next')}>
+              <Button variant="ghost" size="icon" onClick={() => navigateWeek('next')} className="print:hidden">
                 <ChevronRight className="h-5 w-5" />
               </Button>
             </div>
             {departments.length > 0 && (
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 print:hidden">
                 <Filter className="h-4 w-4 text-gray-400" />
                 <Select value={departmentFilter} onValueChange={setDepartmentFilter}>
                   <SelectTrigger className="w-[180px]">
@@ -381,8 +414,8 @@ export default function HRScheduling() {
             )}
           </div>
         </CardHeader>
-        <CardContent className="p-0">
-          <div className="grid grid-cols-7 border-t border-gray-800">
+        <CardContent className="p-0 print:p-0">
+          <div className="grid grid-cols-7 border-t border-gray-800 print:border-gray-300">
             {weekDates.map((date, index) => {
               const dayShifts = getShiftsForDate(date);
               const isToday = date === new Date().toISOString().split('T')[0];
@@ -393,18 +426,18 @@ export default function HRScheduling() {
               return (
                 <div 
                   key={date} 
-                  className={`border-r border-gray-800 last:border-r-0 ${isToday ? 'bg-blue-500/5' : ''}`}
+                  className={`border-r border-gray-800 print:border-gray-300 last:border-r-0 ${isToday ? 'bg-blue-500/5 print:bg-gray-50' : 'print:bg-white'}`}
                 >
-                  <div className={`p-4 border-b border-gray-800 text-center ${isToday ? 'bg-blue-500/10' : ''}`}>
-                    <div className="text-xs text-gray-500 font-medium">{dayNames[index]}</div>
-                    <div className={`text-lg font-bold mt-1 ${isToday ? 'text-blue-400' : 'text-gray-200'}`}>
+                  <div className={`p-4 print:p-2 border-b border-gray-800 print:border-gray-300 text-center ${isToday ? 'bg-blue-500/10 print:bg-gray-100' : ''}`}>
+                    <div className="text-xs text-gray-500 print:text-black font-medium">{dayNames[index]}</div>
+                    <div className={`text-lg print:text-base font-bold mt-1 ${isToday ? 'text-blue-400 print:text-black' : 'text-gray-200 print:text-black'}`}>
                       {new Date(date).getDate()}
                     </div>
                     {dayTotal > 0 && (
-                      <div className="text-xs text-gray-500 mt-1">{dayTotal.toFixed(0)}h</div>
+                      <div className="text-xs text-gray-500 print:text-black mt-1">{dayTotal.toFixed(0)}h</div>
                     )}
                   </div>
-                  <div className="p-2 space-y-2 min-h-[400px]">
+                  <div className="p-2 print:p-1 space-y-2 print:space-y-1 min-h-[400px] print:min-h-0">
                     {dayShifts.map((shift) => {
                       const employee = employees.find(emp => emp.id === shift.employeeId);
                       const hours = getShiftHours(shift.startTime, shift.endTime, shift.breakDuration);
@@ -413,7 +446,7 @@ export default function HRScheduling() {
                       return (
                         <div 
                           key={shift.id} 
-                          className="group relative bg-gradient-to-br from-blue-500 to-purple-500 rounded-lg p-2 cursor-pointer hover:shadow-lg transition-all"
+                          className="group relative bg-gradient-to-br from-blue-500 to-purple-500 print:bg-gray-100 print:border print:border-gray-300 rounded-lg print:rounded p-2 print:p-1 cursor-pointer hover:shadow-lg transition-all print:cursor-default"
                           onClick={() => {
                             setEditingShift(shift);
                             form.reset({
@@ -429,22 +462,22 @@ export default function HRScheduling() {
                             setIsCreateDialogOpen(true);
                           }}
                         >
-                          <div className="text-white text-xs font-semibold truncate">
+                          <div className="text-white print:text-black text-xs font-semibold truncate">
                             {employee?.firstName} {employee?.lastName}
                           </div>
-                          <div className="text-white/80 text-xs mt-1">
-                            {shift.startTime} - {shift.endTime}
+                          <div className="text-white/80 print:text-gray-700 text-xs mt-1">
+                            {shift.startTime.slice(0, 5)} - {shift.endTime.slice(0, 5)}
                           </div>
                           <div className="flex items-center justify-between mt-1">
-                            <span className="text-white/70 text-xs">{hours.toFixed(1)}h</span>
-                            {cost > 0 && <span className="text-white text-xs font-bold">${cost.toFixed(0)}</span>}
+                            <span className="text-white/70 print:text-gray-600 text-xs">{hours.toFixed(1)}h</span>
+                            {cost > 0 && <span className="text-white print:text-black text-xs font-bold">${cost.toFixed(0)}</span>}
                           </div>
                           <button
                             onClick={(e) => {
                               e.stopPropagation();
                               deleteShiftMutation.mutate(shift.id);
                             }}
-                            className="absolute top-1 right-1 opacity-0 group-hover:opacity-100 transition-opacity bg-red-500 hover:bg-red-600 rounded p-1"
+                            className="absolute top-1 right-1 opacity-0 group-hover:opacity-100 transition-opacity bg-red-500 hover:bg-red-600 rounded p-1 print:hidden"
                           >
                             <Trash2 className="h-3 w-3 text-white" />
                           </button>
