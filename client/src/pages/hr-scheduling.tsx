@@ -273,7 +273,7 @@ export default function HRScheduling() {
     setSelectedDate(current.toISOString().split('T')[0]);
   };
 
-  const generatePDF = async () => {
+  const generatePDF = async (includeStats: boolean) => {
     const styles = StyleSheet.create({
       page: { padding: 30, backgroundColor: '#ffffff' },
       header: { marginBottom: 20, textAlign: 'center' },
@@ -297,6 +297,7 @@ export default function HRScheduling() {
       shiftDetails: { flexDirection: 'row', justifyContent: 'space-between', fontSize: 8 },
       shiftHours: { color: '#6b7280' },
       shiftCost: { fontWeight: 'bold' },
+      copyType: { fontSize: 10, color: '#999', marginTop: 5 },
     });
 
     const weekStart = new Date(weekDates[0]).toLocaleDateString('en-US', { month: 'long', day: 'numeric' });
@@ -309,26 +310,29 @@ export default function HRScheduling() {
             <Text style={styles.title}>Weekly Schedule</Text>
             <Text style={styles.subtitle}>{currentLocation?.name}</Text>
             <Text style={styles.dateRange}>{weekStart} - {weekEnd}</Text>
+            <Text style={styles.copyType}>{includeStats ? 'Manager Copy' : 'Staff Copy'}</Text>
           </View>
 
-          <View style={styles.statsContainer}>
-            <View style={styles.statBox}>
-              <Text style={styles.statLabel}>Total Shifts</Text>
-              <Text style={styles.statValue}>{weeklyStats.totalShifts}</Text>
+          {includeStats && (
+            <View style={styles.statsContainer}>
+              <View style={styles.statBox}>
+                <Text style={styles.statLabel}>Total Shifts</Text>
+                <Text style={styles.statValue}>{weeklyStats.totalShifts}</Text>
+              </View>
+              <View style={styles.statBox}>
+                <Text style={styles.statLabel}>Total Hours</Text>
+                <Text style={styles.statValue}>{weeklyStats.totalHours}h</Text>
+              </View>
+              <View style={styles.statBox}>
+                <Text style={styles.statLabel}>Labor Cost</Text>
+                <Text style={styles.statValue}>${weeklyStats.totalCost}</Text>
+              </View>
+              <View style={styles.statBox}>
+                <Text style={styles.statLabel}>Staff Scheduled</Text>
+                <Text style={styles.statValue}>{weeklyStats.uniqueEmployees}</Text>
+              </View>
             </View>
-            <View style={styles.statBox}>
-              <Text style={styles.statLabel}>Total Hours</Text>
-              <Text style={styles.statValue}>{weeklyStats.totalHours}h</Text>
-            </View>
-            <View style={styles.statBox}>
-              <Text style={styles.statLabel}>Labor Cost</Text>
-              <Text style={styles.statValue}>${weeklyStats.totalCost}</Text>
-            </View>
-            <View style={styles.statBox}>
-              <Text style={styles.statLabel}>Staff Scheduled</Text>
-              <Text style={styles.statValue}>{weeklyStats.uniqueEmployees}</Text>
-            </View>
-          </View>
+          )}
 
           <View style={styles.calendar}>
             {weekDates.map((date, index) => {
@@ -342,7 +346,7 @@ export default function HRScheduling() {
                   <View style={styles.dayHeader}>
                     <Text style={styles.dayName}>{dayNames[index]}</Text>
                     <Text style={styles.dayDate}>{new Date(date).getDate()}</Text>
-                    {dayTotal > 0 && (
+                    {includeStats && dayTotal > 0 && (
                       <Text style={styles.dayTotal}>{dayTotal.toFixed(0)}h</Text>
                     )}
                   </View>
@@ -360,10 +364,16 @@ export default function HRScheduling() {
                           <Text style={styles.shiftTime}>
                             {shift.startTime.slice(0, 5)} - {shift.endTime.slice(0, 5)}
                           </Text>
-                          <View style={styles.shiftDetails}>
-                            <Text style={styles.shiftHours}>{hours.toFixed(1)}h</Text>
-                            {cost > 0 && <Text style={styles.shiftCost}>${cost.toFixed(0)}</Text>}
-                          </View>
+                          {includeStats ? (
+                            <View style={styles.shiftDetails}>
+                              <Text style={styles.shiftHours}>{hours.toFixed(1)}h</Text>
+                              {cost > 0 && <Text style={styles.shiftCost}>${cost.toFixed(0)}</Text>}
+                            </View>
+                          ) : (
+                            <View style={styles.shiftDetails}>
+                              <Text style={styles.shiftHours}>{hours.toFixed(1)}h</Text>
+                            </View>
+                          )}
                         </View>
                       );
                     })}
@@ -377,14 +387,15 @@ export default function HRScheduling() {
     );
 
     try {
+      const copyType = includeStats ? 'manager' : 'staff';
       const blob = await pdf(<SchedulePDF />).toBlob();
       const url = URL.createObjectURL(blob);
       const link = document.createElement('a');
       link.href = url;
-      link.download = `schedule-${weekStart.replace(/\s/g, '-')}-${weekEnd.replace(/\s/g, '-')}.pdf`;
+      link.download = `schedule-${copyType}-${weekStart.replace(/\s/g, '-')}-${weekEnd.replace(/\s/g, '-')}.pdf`;
       link.click();
       URL.revokeObjectURL(url);
-      toast({ title: "Success", description: "Schedule PDF downloaded" });
+      toast({ title: "Success", description: `${copyType === 'manager' ? 'Manager' : 'Staff'} schedule PDF downloaded` });
     } catch (error) {
       console.error('PDF generation error:', error);
       toast({ title: "Error", description: "Failed to generate PDF", variant: "destructive" });
@@ -414,11 +425,20 @@ export default function HRScheduling() {
         </div>
         <div className="flex gap-2">
           <Button 
-            onClick={generatePDF}
+            onClick={() => generatePDF(true)}
             variant="outline"
+            data-testid="button-download-manager-pdf"
           >
             <Download className="h-4 w-4 mr-2" />
-            Download PDF
+            Manager Copy
+          </Button>
+          <Button 
+            onClick={() => generatePDF(false)}
+            variant="outline"
+            data-testid="button-download-staff-pdf"
+          >
+            <Download className="h-4 w-4 mr-2" />
+            Staff Copy
           </Button>
           <Button 
             onClick={() => {
