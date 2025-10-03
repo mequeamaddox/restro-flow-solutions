@@ -126,41 +126,41 @@ export default function HRAnalytics() {
           </CardContent>
         </Card>
 
-        <Card className="bg-gradient-to-br from-green-50 to-emerald-50 border-green-200">
+        <Card className="bg-gradient-to-br from-green-50 to-emerald-50 dark:from-green-950 dark:to-emerald-950 border-green-200 dark:border-green-800">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium text-green-700">Currently Working</CardTitle>
-            <UserCheck className="h-4 w-4 text-green-600" />
+            <CardTitle className="text-sm font-medium text-green-700 dark:text-green-300">Currently Working</CardTitle>
+            <UserCheck className="h-4 w-4 text-green-600 dark:text-green-400" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-green-800">{currentlyWorking}</div>
+            <div className="text-2xl font-bold text-green-800 dark:text-green-200">{currentlyWorking}</div>
             <div className="flex items-center gap-2">
               <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
-              <p className="text-xs text-green-600">Live status</p>
+              <p className="text-xs text-green-600 dark:text-green-400">Live status</p>
             </div>
           </CardContent>
         </Card>
 
-        <Card className="bg-gradient-to-br from-purple-50 to-violet-50 border-purple-200">
+        <Card className="bg-gradient-to-br from-purple-50 to-violet-50 dark:from-purple-950 dark:to-violet-950 border-purple-200 dark:border-purple-800">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium text-purple-700">Weekly Hours</CardTitle>
-            <Timer className="h-4 w-4 text-purple-600" />
+            <CardTitle className="text-sm font-medium text-purple-700 dark:text-purple-300">Weekly Hours</CardTitle>
+            <Timer className="h-4 w-4 text-purple-600 dark:text-purple-400" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-purple-800">{weeklyHours.toFixed(1)}h</div>
-            <p className="text-xs text-purple-600">
+            <div className="text-2xl font-bold text-purple-800 dark:text-purple-200">{weeklyHours.toFixed(1)}h</div>
+            <p className="text-xs text-purple-600 dark:text-purple-400">
               {employees.length > 0 ? (weeklyHours / employees.length).toFixed(1) : '0'} hrs/employee avg
             </p>
           </CardContent>
         </Card>
 
-        <Card className="bg-gradient-to-br from-orange-50 to-red-50 border-orange-200">
+        <Card className="bg-gradient-to-br from-orange-50 to-red-50 dark:from-orange-950 dark:to-red-950 border-orange-200 dark:border-orange-800">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium text-orange-700">Task Completion</CardTitle>
-            <Target className="h-4 w-4 text-orange-600" />
+            <CardTitle className="text-sm font-medium text-orange-700 dark:text-orange-300">Task Completion</CardTitle>
+            <Target className="h-4 w-4 text-orange-600 dark:text-orange-400" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-orange-800">{taskCompletionRate.toFixed(0)}%</div>
-            <p className="text-xs text-orange-600">
+            <div className="text-2xl font-bold text-orange-800 dark:text-orange-200">{taskCompletionRate.toFixed(0)}%</div>
+            <p className="text-xs text-orange-600 dark:text-orange-400">
               {pendingTasks} pending tasks
             </p>
           </CardContent>
@@ -179,9 +179,6 @@ export default function HRAnalytics() {
           </CardHeader>
           <CardContent>
             <div className="text-3xl font-bold text-green-600">${weeklyLaborCost.toFixed(0)}</div>
-            <p className="text-sm text-gray-600 mt-1">
-              ${avgHourlyRate.toFixed(2)}/hr average rate
-            </p>
             <div className="mt-4">
               <div className="flex justify-between text-sm">
                 <span>Hours worked</span>
