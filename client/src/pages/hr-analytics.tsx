@@ -98,14 +98,14 @@ export default function HRAnalytics() {
   return (
     <div className="max-w-7xl mx-auto p-6" data-testid="hr-analytics">
       <div className="mb-8">
-        <h1 className="text-3xl font-bold mb-2">HR Analytics & Performance</h1>
-        <p className="text-gray-600">Real-time insights into your team's performance and labor metrics</p>
-        <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-lg p-4 mt-4">
+        <h1 className="text-3xl font-bold mb-2 text-gray-900 dark:text-white">HR Analytics & Performance</h1>
+        <p className="text-gray-600 dark:text-gray-400">Real-time insights into your team's performance and labor metrics</p>
+        <div className="bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-950 dark:to-indigo-950 border border-blue-200 dark:border-blue-800 rounded-lg p-4 mt-4">
           <div className="flex items-center gap-2">
-            <div className="bg-blue-500 text-white px-2 py-1 rounded text-xs font-semibold">LIVE</div>
-            <span className="text-blue-700 font-medium">Real-time Employee Analytics</span>
+            <div className="bg-blue-500 dark:bg-blue-600 text-white px-2 py-1 rounded text-xs font-semibold">LIVE</div>
+            <span className="text-blue-700 dark:text-blue-300 font-medium">Real-time Employee Analytics</span>
           </div>
-          <p className="text-blue-600 text-sm mt-1">
+          <p className="text-blue-600 dark:text-blue-400 text-sm mt-1">
             Live tracking of labor costs, productivity, and team performance
           </p>
         </div>
@@ -113,15 +113,15 @@ export default function HRAnalytics() {
 
       {/* Key Performance Indicators */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-        <Card className="bg-gradient-to-br from-blue-50 to-cyan-50 border-blue-200">
+        <Card className="bg-gradient-to-br from-blue-50 to-cyan-50 dark:from-blue-950 dark:to-cyan-950 border-blue-200 dark:border-blue-800">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium text-blue-700">Total Team Size</CardTitle>
-            <Users className="h-4 w-4 text-blue-600" />
+            <CardTitle className="text-sm font-medium text-blue-700 dark:text-blue-300">Active Team Size</CardTitle>
+            <Users className="h-4 w-4 text-blue-600 dark:text-blue-400" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-blue-800">{totalEmployees}</div>
-            <p className="text-xs text-blue-600">
-              {activeEmployees} active employees
+            <div className="text-2xl font-bold text-blue-800 dark:text-blue-200">{activeEmployees}</div>
+            <p className="text-xs text-blue-600 dark:text-blue-400">
+              {totalEmployees} total employees
             </p>
           </CardContent>
         </Card>
@@ -226,27 +226,16 @@ export default function HRAnalytics() {
             <CardDescription>Team efficiency indicators</CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="space-y-4">
-              <div>
-                <div className="flex justify-between text-sm mb-1">
-                  <span>Task Completion Rate</span>
-                  <span>{taskCompletionRate.toFixed(0)}%</span>
-                </div>
-                <div className="w-full bg-gray-200 rounded-full h-2">
-                  <div 
-                    className="bg-purple-500 h-2 rounded-full" 
-                    style={{ width: `${taskCompletionRate}%` }}
-                  ></div>
-                </div>
+            <div>
+              <div className="flex justify-between text-sm mb-1">
+                <span>Task Completion Rate</span>
+                <span>{taskCompletionRate.toFixed(0)}%</span>
               </div>
-              <div>
-                <div className="flex justify-between text-sm mb-1">
-                  <span>On-time Performance</span>
-                  <span>92%</span>
-                </div>
-                <div className="w-full bg-gray-200 rounded-full h-2">
-                  <div className="bg-green-500 h-2 rounded-full w-[92%]"></div>
-                </div>
+              <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
+                <div 
+                  className="bg-purple-500 dark:bg-purple-600 h-2 rounded-full" 
+                  style={{ width: `${taskCompletionRate}%` }}
+                ></div>
               </div>
             </div>
           </CardContent>
