@@ -3378,6 +3378,63 @@ export class DatabaseStorage implements IStorage {
         ? employeesWithWage.reduce((sum: number, emp: any) => sum + (emp.hourlyRate || 0), 0) / employeesWithWage.length
         : 0;
       
+      // Calculate scheduled shift hours for the current week
+      const currentWeekStart = new Date();
+      currentWeekStart.setDate(currentWeekStart.getDate() - currentWeekStart.getDay()); // Sunday
+      currentWeekStart.setHours(0, 0, 0, 0);
+      
+      const currentWeekEnd = new Date(currentWeekStart);
+      currentWeekEnd.setDate(currentWeekEnd.getDate() + 6); // Saturday
+      currentWeekEnd.setHours(23, 59, 59, 999);
+      
+      const weeklyScheduledShifts = allShifts.filter((shift: any) => {
+        if (!shift.date) return false;
+        const shiftDate = new Date(shift.date);
+        return shiftDate >= currentWeekStart && shiftDate <= currentWeekEnd;
+      });
+      
+      const scheduledWeeklyHours = weeklyScheduledShifts.reduce((total, shift: any) => {
+        // Parse time strings (HH:MM format)
+        const [startHour, startMin] = shift.startTime.split(':').map(Number);
+        const [endHour, endMin] = shift.endTime.split(':').map(Number);
+        
+        // Calculate hours
+        const startMinutes = startHour * 60 + startMin;
+        let endMinutes = endHour * 60 + endMin;
+        
+        // Handle overnight shifts
+        if (endMinutes < startMinutes) {
+          endMinutes += 24 * 60;
+        }
+        
+        const totalMinutes = endMinutes - startMinutes - (shift.breakDuration || 0);
+        const hours = totalMinutes / 60;
+        
+        return total + hours;
+      }, 0);
+      
+      // Calculate scheduled labor cost
+      let scheduledWeeklyLabor = 0;
+      for (const shift of weeklyScheduledShifts) {
+        const employee = employees.find((emp: any) => emp.id === shift.employeeId);
+        if (employee && employee.hourlyRate) {
+          const [startHour, startMin] = shift.startTime.split(':').map(Number);
+          const [endHour, endMin] = shift.endTime.split(':').map(Number);
+          
+          const startMinutes = startHour * 60 + startMin;
+          let endMinutes = endHour * 60 + endMin;
+          
+          if (endMinutes < startMinutes) {
+            endMinutes += 24 * 60;
+          }
+          
+          const totalMinutes = endMinutes - startMinutes - (shift.breakDuration || 0);
+          const hours = totalMinutes / 60;
+          
+          scheduledWeeklyLabor += hours * employee.hourlyRate;
+        }
+      }
+      
       // Calculate task completion rate properly
       const completedTasks = allTasks.filter((task: any) => task.status === 'completed').length;
       const taskCompletionRate = allTasks.length > 0 
@@ -3401,16 +3458,20 @@ export class DatabaseStorage implements IStorage {
         pendingTimeOff: 0,
         approvedTimeOff: 0,
         
-        // Weekly analytics (now calculated from actual data)
-        weeklyShifts: allShifts.length,
-        totalWeeklyHours: Math.round(totalWeeklyHours * 100) / 100,
+        // Weekly analytics - SCHEDULED hours from shifts (current week)
+        weeklyShifts: weeklyScheduledShifts.length,
+        totalWeeklyHours: Math.round(scheduledWeeklyHours * 100) / 100,
+        
+        // Actual worked hours from time entries (past 7 days) - for comparison
+        actualWeeklyHours: Math.round(totalWeeklyHours * 100) / 100,
+        actualWeeklyLabor: Math.round(estimatedWeeklyLabor * 100) / 100,
         
         // Performance metrics
         taskCompletionRate: Math.round(taskCompletionRate * 100) / 100,
         
-        // Labor cost (now calculated from actual data)
+        // Labor cost - SCHEDULED labor from shifts
         avgHourlyRate: Math.round(avgHourlyRate * 100) / 100,
-        estimatedWeeklyLabor: Math.round(estimatedWeeklyLabor * 100) / 100,
+        estimatedWeeklyLabor: Math.round(scheduledWeeklyLabor * 100) / 100,
         
         // Recent activity
         recentMessages: allMessages.slice(0, 5),
