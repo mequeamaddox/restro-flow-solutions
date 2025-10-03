@@ -3968,10 +3968,15 @@ print(json.dumps(rows))
       const paystubs = await storage.getPaystubsByPeriod(payPeriodId);
       const settings = await storage.getPaycheckSettings();
       
+      // Generate sequential check numbers if not already set
+      let checkNumberCounter = settings.lastCheckNumber || 1000;
+      
       const pdfs = await Promise.all(
-        paystubs.map(async (paystub: any) => {
+        paystubs.map(async (paystub: any, index: number) => {
+          // Use the paystub's check number if it exists, otherwise generate sequential
+          const checkNum = paystub.checkNumber || (checkNumberCounter + index + 1).toString();
           const pdfData = {
-            checkNumber: paystub.checkNumber || `CHK-${paystub.id.substring(0, 8)}`,
+            checkNumber: checkNum,
             payDate: paystub.payDate,
             employeeName: `${paystub.employee.firstName} ${paystub.employee.lastName}`,
             employeeAddress: paystub.employee.address || 'N/A',
