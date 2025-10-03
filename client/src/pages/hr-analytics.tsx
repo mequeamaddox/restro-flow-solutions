@@ -145,24 +145,24 @@ export default function HRAnalytics() {
 
       {/* Labor Cost Analytics */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-        <Card className="bg-white dark:bg-slate-800 border-gray-200 dark:border-slate-700">
+        <Card>
           <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-gray-900 dark:text-white">
-              <DollarSign className="h-5 w-5 text-green-600 dark:text-green-400" />
+            <CardTitle className="flex items-center gap-2">
+              <DollarSign className="h-5 w-5 text-green-600" />
               Weekly Labor Cost
             </CardTitle>
-            <CardDescription className="text-gray-600 dark:text-gray-400">Current week projected costs</CardDescription>
+            <CardDescription>Current week projected costs</CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-bold text-green-600 dark:text-green-400">${weeklyLaborCost.toFixed(0)}</div>
+            <div className="text-3xl font-bold text-green-600">${weeklyLaborCost.toFixed(0)}</div>
             <div className="mt-4">
-              <div className="flex justify-between text-sm text-gray-700 dark:text-gray-300">
+              <div className="flex justify-between text-sm">
                 <span>Hours worked</span>
                 <span>{weeklyHours.toFixed(1)}h</span>
               </div>
-              <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2 mt-2">
+              <div className="w-full bg-gray-200 rounded-full h-2 mt-2">
                 <div 
-                  className="bg-green-500 dark:bg-green-600 h-2 rounded-full" 
+                  className="bg-green-500 h-2 rounded-full" 
                   style={{ width: `${Math.min((weeklyHours / 160) * 100, 100)}%` }}
                 ></div>
               </div>
@@ -170,37 +170,37 @@ export default function HRAnalytics() {
           </CardContent>
         </Card>
 
-        <Card className="bg-white dark:bg-slate-800 border-gray-200 dark:border-slate-700">
+        <Card>
           <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-gray-900 dark:text-white">
-              <Calendar className="h-5 w-5 text-blue-600 dark:text-blue-400" />
+            <CardTitle className="flex items-center gap-2">
+              <Calendar className="h-5 w-5 text-blue-600" />
               Monthly Projection
             </CardTitle>
-            <CardDescription className="text-gray-600 dark:text-gray-400">Estimated monthly labor costs</CardDescription>
+            <CardDescription>Estimated monthly labor costs</CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-bold text-blue-600 dark:text-blue-400">${monthlyLaborCost.toFixed(0)}</div>
-            <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
+            <div className="text-3xl font-bold text-blue-600">${monthlyLaborCost.toFixed(0)}</div>
+            <p className="text-sm text-gray-600 mt-1">
               Based on current trends
             </p>
             <div className="flex items-center gap-2 mt-4">
-              <TrendingUp className="h-4 w-4 text-blue-500 dark:text-blue-400" />
-              <span className="text-sm text-blue-600 dark:text-blue-400">On track for budget</span>
+              <TrendingUp className="h-4 w-4 text-blue-500" />
+              <span className="text-sm text-blue-600">On track for budget</span>
             </div>
           </CardContent>
         </Card>
 
-        <Card className="bg-white dark:bg-slate-800 border-gray-200 dark:border-slate-700">
+        <Card>
           <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-gray-900 dark:text-white">
-              <Activity className="h-5 w-5 text-purple-600 dark:text-purple-400" />
+            <CardTitle className="flex items-center gap-2">
+              <Activity className="h-5 w-5 text-purple-600" />
               Productivity Metrics
             </CardTitle>
-            <CardDescription className="text-gray-600 dark:text-gray-400">Team efficiency indicators</CardDescription>
+            <CardDescription>Team efficiency indicators</CardDescription>
           </CardHeader>
           <CardContent>
             <div>
-              <div className="flex justify-between text-sm mb-1 text-gray-700 dark:text-gray-300">
+              <div className="flex justify-between text-sm mb-1">
                 <span>Task Completion Rate</span>
                 <span>{taskCompletionRate.toFixed(0)}%</span>
               </div>
@@ -217,35 +217,35 @@ export default function HRAnalytics() {
 
       {/* Today's Activity Summary */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <Card className="bg-white dark:bg-slate-800 border-gray-200 dark:border-slate-700">
+        <Card>
           <CardHeader>
-            <CardTitle className="text-gray-900 dark:text-white">Today's Activity</CardTitle>
-            <CardDescription className="text-gray-600 dark:text-gray-400">Current shift and attendance overview</CardDescription>
+            <CardTitle>Today's Activity</CardTitle>
+            <CardDescription>Current shift and attendance overview</CardDescription>
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
-                  <Calendar className="h-4 w-4 text-blue-500 dark:text-blue-400" />
-                  <span className="text-sm text-gray-700 dark:text-gray-300">Scheduled Shifts</span>
+                  <Calendar className="h-4 w-4 text-blue-500" />
+                  <span className="text-sm">Scheduled Shifts</span>
                 </div>
                 <Badge variant="outline">{todayShifts}</Badge>
               </div>
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
-                  <Clock className="h-4 w-4 text-green-500 dark:text-green-400" />
-                  <span className="text-sm text-gray-700 dark:text-gray-300">Currently Clocked In</span>
+                  <Clock className="h-4 w-4 text-green-500" />
+                  <span className="text-sm">Currently Clocked In</span>
                 </div>
-                <Badge variant="outline" className="text-green-600 dark:text-green-400 border-green-200 dark:border-green-800">
+                <Badge variant="outline" className="text-green-600 border-green-200">
                   {currentlyWorking}
                 </Badge>
               </div>
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
-                  <CheckSquare className="h-4 w-4 text-orange-500 dark:text-orange-400" />
-                  <span className="text-sm text-gray-700 dark:text-gray-300">Pending Tasks</span>
+                  <CheckSquare className="h-4 w-4 text-orange-500" />
+                  <span className="text-sm">Pending Tasks</span>
                 </div>
-                <Badge variant="outline" className="text-orange-600 dark:text-orange-400 border-orange-200 dark:border-orange-800">
+                <Badge variant="outline" className="text-orange-600 border-orange-200">
                   {pendingTasks}
                 </Badge>
               </div>
@@ -253,23 +253,23 @@ export default function HRAnalytics() {
           </CardContent>
         </Card>
 
-        <Card className="bg-white dark:bg-slate-800 border-gray-200 dark:border-slate-700">
+        <Card>
           <CardHeader>
-            <CardTitle className="text-gray-900 dark:text-white">Team Performance</CardTitle>
-            <CardDescription className="text-gray-600 dark:text-gray-400">Key performance indicators</CardDescription>
+            <CardTitle>Team Performance</CardTitle>
+            <CardDescription>Key performance indicators</CardDescription>
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
               <div>
                 <div className="flex justify-between items-center mb-2">
-                  <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Employee Utilization</span>
-                  <span className="text-sm text-gray-600 dark:text-gray-400">
+                  <span className="text-sm font-medium">Employee Utilization</span>
+                  <span className="text-sm text-gray-600">
                     {totalEmployees > 0 ? ((currentlyWorking / totalEmployees) * 100).toFixed(0) : 0}%
                   </span>
                 </div>
-                <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-3">
+                <div className="w-full bg-gray-200 rounded-full h-3">
                   <div 
-                    className="bg-blue-500 dark:bg-blue-600 h-3 rounded-full transition-all duration-500" 
+                    className="bg-blue-500 h-3 rounded-full transition-all duration-500" 
                     style={{ width: `${totalEmployees > 0 ? (currentlyWorking / totalEmployees) * 100 : 0}%` }}
                   ></div>
                 </div>
@@ -277,17 +277,17 @@ export default function HRAnalytics() {
               
               <div>
                 <div className="flex justify-between items-center mb-2">
-                  <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Average Hours/Employee</span>
-                  <span className="text-sm text-gray-600 dark:text-gray-400">
+                  <span className="text-sm font-medium">Average Hours/Employee</span>
+                  <span className="text-sm text-gray-600">
                     {employees.length > 0 ? (weeklyHours / employees.length).toFixed(1) : '0'} hrs/week
                   </span>
                 </div>
               </div>
 
-              <div className="pt-2 border-t border-gray-200 dark:border-gray-700">
+              <div className="pt-2 border-t">
                 <div className="flex items-center gap-2">
-                  <div className="w-3 h-3 bg-green-500 dark:bg-green-600 rounded-full"></div>
-                  <span className="text-sm text-green-600 dark:text-green-400 font-medium">System Status: Optimal</span>
+                  <div className="w-3 h-3 bg-green-500 rounded-full"></div>
+                  <span className="text-sm text-green-600 font-medium">System Status: Optimal</span>
                 </div>
               </div>
             </div>
