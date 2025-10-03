@@ -452,7 +452,14 @@ export default function HRPaycheckSettings() {
           {recentPaystub ? (
             <ActualPaycheck 
               paycheck={recentPaystub}
-              settings={settings}
+              settings={{
+                businessName: settings?.businessName,
+                taxFilingName: settings?.taxFilingName,
+                lastCheckNumber: settings?.lastCheckNumber?.toString(),
+                displayBusinessName: settings?.displayBusinessName,
+                displayTaxFilingName: settings?.displayTaxFilingName,
+                printSignature: settings?.printSignature
+              }}
             />
           ) : (
             <div className="text-center py-8 text-muted-foreground">
