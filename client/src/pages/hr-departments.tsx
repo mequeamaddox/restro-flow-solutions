@@ -10,6 +10,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import { usePermissions, Permission } from "@/contexts/PermissionContext";
+import { useLocation } from "@/contexts/LocationContext";
 
 interface Department {
   id: string;
@@ -27,17 +28,16 @@ export default function HRDepartments() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const { hasPermission } = usePermissions();
+  const { currentLocation } = useLocation();
 
   const { data: departments = [], isLoading } = useQuery<Department[]>({
-    queryKey: ['/api/hr/departments'],
+    queryKey: ['/api/hr/departments', currentLocation?.id],
+    enabled: !!currentLocation,
   });
 
   const { data: employees = [] } = useQuery<any[]>({
-    queryKey: ['/api/hr/employees'],
-  });
-
-  const { data: locations = [] } = useQuery<any[]>({
-    queryKey: ['/api/locations'],
+    queryKey: ['/api/hr/employees', currentLocation?.id],
+    enabled: !!currentLocation,
   });
 
   const createDepartmentMutation = useMutation({
@@ -92,7 +92,7 @@ export default function HRDepartments() {
     const departmentData = {
       name: formData.get('name'),
       description: formData.get('description'),
-      locationId: formData.get('locationId') === 'none' ? null : formData.get('locationId'),
+      locationId: currentLocation?.id || null,
       managerId: formData.get('managerId') === 'none' ? null : formData.get('managerId'),
     };
 
@@ -160,22 +160,6 @@ export default function HRDepartments() {
                       placeholder="Brief description of the department"
                       data-testid="input-department-description"
                     />
-                  </div>
-                  <div className="grid gap-2">
-                    <Label htmlFor="locationId">Location</Label>
-                    <select
-                      id="locationId"
-                      name="locationId"
-                      className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
-                      data-testid="select-department-location"
-                    >
-                      <option value="none">No specific location</option>
-                      {locations.map((location: any) => (
-                        <option key={location.id} value={location.id}>
-                          {location.name}
-                        </option>
-                      ))}
-                    </select>
                   </div>
                   <div className="grid gap-2">
                     <Label htmlFor="managerId">Department Manager</Label>
