@@ -3270,7 +3270,8 @@ print(json.dumps(rows))
   // HR Positions
   app.get('/api/hr/positions', isAuthenticated, requireHRAccess, async (req, res) => {
     try {
-      const positions = await storage.getPositions();
+      const locationId = req.query.locationId as string | undefined;
+      const positions = await storage.getPositions(locationId);
       res.json(positions);
     } catch (error) {
       console.error('Error fetching positions:', error);
