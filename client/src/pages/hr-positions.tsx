@@ -66,7 +66,7 @@ export default function HRPositions() {
     },
     onSuccess: () => {
       toast({ title: "Success", description: "Position created successfully" });
-      queryClient.invalidateQueries({ queryKey: ['/api/hr/positions'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/hr/positions', currentLocation?.id] });
       setIsCreateDialogOpen(false);
     },
     onError: () => {
@@ -80,7 +80,7 @@ export default function HRPositions() {
     },
     onSuccess: () => {
       toast({ title: "Success", description: "Position updated successfully" });
-      queryClient.invalidateQueries({ queryKey: ['/api/hr/positions'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/hr/positions', currentLocation?.id] });
       setEditingPosition(null);
     },
     onError: () => {
@@ -94,7 +94,7 @@ export default function HRPositions() {
     },
     onSuccess: () => {
       toast({ title: "Success", description: "Position deleted successfully" });
-      queryClient.invalidateQueries({ queryKey: ['/api/hr/positions'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/hr/positions', currentLocation?.id] });
     },
     onError: () => {
       toast({ title: "Error", description: "Failed to delete position", variant: "destructive" });

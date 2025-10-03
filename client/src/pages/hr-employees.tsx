@@ -65,7 +65,15 @@ export default function HREmployees() {
   });
 
   const { data: positions = [] } = useQuery<Array<{ id: string; title: string }>>({
-    queryKey: ['/api/hr/positions'],
+    queryKey: ['/api/hr/positions', currentLocation?.id],
+    queryFn: async () => {
+      const response = await fetch(`/api/hr/positions?locationId=${currentLocation?.id}`, {
+        credentials: 'include',
+      });
+      if (!response.ok) throw new Error('Failed to fetch positions');
+      return response.json();
+    },
+    enabled: !!currentLocation,
   });
 
   const createEmployeeMutation = useMutation({
