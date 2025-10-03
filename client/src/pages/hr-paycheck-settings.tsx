@@ -361,7 +361,7 @@ export default function HRPaycheckSettings() {
             />
             <div className="grid gap-1.5 leading-none">
               <Label htmlFor="displayTaxFilingName" className="text-sm font-medium">
-                Display Tax Filing Name on Check Stub: {settings?.taxFilingName || 'AAM COLLECTIVE LLC'}
+                Display Tax Filing Name on Check Stub: {settings?.taxFilingName || 'Your Tax Filing Name'}
               </Label>
               <p className="text-xs text-muted-foreground">
                 Shows your legal business name for tax purposes
@@ -381,7 +381,7 @@ export default function HRPaycheckSettings() {
             />
             <div className="grid gap-1.5 leading-none">
               <Label htmlFor="displayBusinessName" className="text-sm font-medium">
-                Display Business Name on Check Stub: {settings?.businessName || 'Pawleys Fish Camp'}
+                Display Business Name on Check Stub: {settings?.businessName || 'Your Business Name'}
               </Label>
               <p className="text-xs text-muted-foreground">
                 Shows your business operating name

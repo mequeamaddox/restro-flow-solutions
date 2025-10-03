@@ -430,17 +430,17 @@ export const paycheckSettings = pgTable("paycheck_settings", {
   showLastCheckNumber: boolean("show_last_check_number").default(true),
   
   // Company information
-  companyName: varchar("company_name", { length: 255 }).default("Pawleys Fish Camp"),
-  companyAddress: text("company_address").default("10744 Ocean Hwy, Pawleys Island, SC 29585"),
+  companyName: varchar("company_name", { length: 255 }).default("Your Company Name"),
+  companyAddress: text("company_address").default("Your Company Address"),
   companyPhone: varchar("company_phone", { length: 20 }),
   companyEin: varchar("company_ein", { length: 20 }),
   
   // Business names (for tax purposes)
-  businessName: varchar("business_name", { length: 255 }).default("Pawleys Fish Camp"),
-  taxFilingName: varchar("tax_filing_name", { length: 255 }).default("AAM COLLECTIVE LLC"),
+  businessName: varchar("business_name", { length: 255 }).default("Your Business Name"),
+  taxFilingName: varchar("tax_filing_name", { length: 255 }).default("Your Tax Filing Name"),
   
   // Bank information
-  bankName: varchar("bank_name", { length: 255 }).default("First Citizens Bank"),
+  bankName: varchar("bank_name", { length: 255 }).default("Your Bank Name"),
   routingNumber: varchar("routing_number", { length: 20 }),
   accountNumber: varchar("account_number", { length: 20 }),
   
