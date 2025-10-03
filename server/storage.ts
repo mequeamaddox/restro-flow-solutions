@@ -4980,7 +4980,10 @@ export class DatabaseStorage implements IStorage {
         throw new Error('Payroll period not found');
       }
 
-      // Get all time entries for the period
+      // Get all time entries for the period - convert date strings to Date objects
+      const startDate = new Date(payrollPeriod.startDate);
+      const endDate = new Date(payrollPeriod.endDate);
+      
       const allTimeEntries = await db.select({
         employeeId: timeEntries.employeeId,
         clockInTime: timeEntries.clockInTime,
@@ -4997,8 +5000,8 @@ export class DatabaseStorage implements IStorage {
       .leftJoin(employees, eq(timeEntries.employeeId, employees.id))
       .where(
         and(
-          gte(timeEntries.clockInTime, payrollPeriod.startDate),
-          lte(timeEntries.clockInTime, payrollPeriod.endDate),
+          gte(timeEntries.clockInTime, startDate),
+          lte(timeEntries.clockInTime, endDate),
           eq(timeEntries.status, 'clocked-out') // Only count completed shifts
         )
       );

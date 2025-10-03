@@ -900,18 +900,20 @@ export default function HRPayroll() {
                               </div>
                             </div>
                             <div className="flex gap-2">
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={() => {
-                                  setSelectedPaystub(paystub);
-                                  setShowPaystubDialog(true);
-                                }}
-                                className="gap-2"
-                              >
-                                <Eye className="w-4 h-4" />
-                                View
-                              </Button>
+                              {selectedPeriod?.status === 'approved' && (
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => {
+                                    setSelectedPaystub(paystub);
+                                    setShowPaystubDialog(true);
+                                  }}
+                                  className="gap-2"
+                                >
+                                  <Eye className="w-4 h-4" />
+                                  View
+                                </Button>
+                              )}
                               {selectedPeriod?.status === 'calculated' && (
                                 <Button
                                   variant="outline"
