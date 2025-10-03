@@ -288,13 +288,17 @@ export default function HRScheduling() {
   }
 
   return (
-    <div className="space-y-6 p-6 print:p-4 print:bg-white">
+    <div className="space-y-6 p-6 print:p-0 print:bg-white print-only-schedule">
       <style>{`
         @media print {
+          * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
           body { 
             background: white !important; 
             color: black !important;
+            margin: 0 !important;
+            padding: 0 !important;
           }
+          .print-only-schedule > *:not(.schedule-calendar) { display: none !important; }
           .print\\:hidden { display: none !important; }
           .print\\:block { display: block !important; }
           .print\\:text-black { color: black !important; }
@@ -302,6 +306,7 @@ export default function HRScheduling() {
           .print\\:bg-white { background: white !important; }
           .print\\:bg-gray-50 { background: #f9fafb !important; }
           .print\\:shadow-none { box-shadow: none !important; }
+          .schedule-calendar { margin: 0 !important; }
         }
         @page {
           size: landscape;
@@ -309,7 +314,7 @@ export default function HRScheduling() {
         }
       `}</style>
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between print:hidden">
         <div>
           <h1 className="text-3xl font-bold bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent">
             Weekly Schedule
@@ -346,7 +351,7 @@ export default function HRScheduling() {
       </div>
 
       {/* Stats Cards */}
-      <div className="grid grid-cols-4 gap-4 print:gap-2">
+      <div className="grid grid-cols-4 gap-4 print:gap-2 print:hidden">
         <Card className="bg-gradient-to-br from-blue-500/10 to-blue-600/10 border-blue-500/20 print:bg-white print:border-gray-300 print:shadow-none">
           <CardHeader className="pb-2 print:pb-1">
             <CardTitle className="text-sm text-gray-400 print:text-black print:text-xs">Total Shifts</CardTitle>
@@ -382,14 +387,14 @@ export default function HRScheduling() {
       </div>
 
       {/* Calendar */}
-      <Card className="bg-gray-900/50 border-gray-800 print:bg-white print:border-gray-300 print:shadow-none">
-        <CardHeader className="print:pb-2">
+      <Card className="bg-gray-900/50 border-gray-800 print:bg-white print:border-gray-300 print:shadow-none schedule-calendar">
+        <CardHeader className="print:pb-3 print:pt-2">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-4">
               <Button variant="ghost" size="icon" onClick={() => navigateWeek('prev')} className="print:hidden">
                 <ChevronLeft className="h-5 w-5" />
               </Button>
-              <div className="text-lg font-semibold print:text-black">
+              <div className="text-lg font-semibold print:text-black print:text-center print:flex-1">
                 {new Date(weekDates[0]).toLocaleDateString('en-US', { month: 'long', day: 'numeric' })} - {new Date(weekDates[6]).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}
               </div>
               <Button variant="ghost" size="icon" onClick={() => navigateWeek('next')} className="print:hidden">
@@ -412,6 +417,9 @@ export default function HRScheduling() {
                 </Select>
               </div>
             )}
+          </div>
+          <div className="hidden print:block text-center text-sm text-gray-600 mt-1">
+            {currentLocation.name}
           </div>
         </CardHeader>
         <CardContent className="p-0 print:p-0">
