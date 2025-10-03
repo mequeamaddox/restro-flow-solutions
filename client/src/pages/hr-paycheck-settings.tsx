@@ -24,6 +24,12 @@ interface PaycheckSettings {
   showLastCheckNumber: boolean;
   businessName?: string;
   taxFilingName?: string;
+  companyName?: string;
+  companyAddress?: string;
+  companyPhone?: string;
+  companyEin?: string;
+  bankName?: string;
+  lastCheckNumber?: number;
   locationId?: string;
 }
 
@@ -100,7 +106,7 @@ export default function HRPaycheckSettings() {
     updateSettingsMutation.mutate({ paycheckLayout: layoutId as any });
   };
 
-  const handleOptionChange = (option: keyof PaycheckSettings, value: boolean) => {
+  const handleOptionChange = (option: keyof PaycheckSettings, value: boolean | string | number) => {
     updateSettingsMutation.mutate({ [option]: value });
   };
 
