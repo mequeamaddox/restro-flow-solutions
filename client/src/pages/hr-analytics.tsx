@@ -19,6 +19,8 @@ interface HRAnalytics {
   approvedTimeOff: number;
   weeklyShifts: number;
   totalWeeklyHours: number;
+  actualWeeklyHours: number;
+  actualWeeklyLabor: number;
   taskCompletionRate: number;
   avgHourlyRate: number;
   estimatedWeeklyLabor: number;
@@ -69,9 +71,9 @@ export default function HRAnalytics() {
   const todayShifts = analytics?.todayShifts || 0;
   const taskCompletionRate = analytics?.taskCompletionRate || 0;
 
-  // Labor cost calculations
+  // Labor cost calculations - use scheduled labor from backend
   const avgHourlyRate = analytics?.avgHourlyRate || 15.50;
-  const weeklyLaborCost = weeklyHours * avgHourlyRate;
+  const weeklyLaborCost = analytics?.estimatedWeeklyLabor || 0;
   const monthlyLaborCost = weeklyLaborCost * 4.33;
 
   // Calculate real payroll tax data based on actual labor costs
