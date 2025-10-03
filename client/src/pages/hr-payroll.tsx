@@ -11,6 +11,7 @@ import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { useToast } from '@/hooks/use-toast';
 import { useLocation } from '@/contexts/LocationContext';
 import { Calendar, Plus, DollarSign, Users, Clock, Calculator, Eye, CheckCircle, AlertCircle, FileText, Printer, Trash2 } from 'lucide-react';
@@ -1081,7 +1082,7 @@ export default function HRPayroll() {
         setShowManualPayrollDialog(open);
         if (!open) setBulkPayrollInputs({}); // Clear inputs when closing dialog
       }}>
-        <DialogContent className="max-w-6xl max-h-[90vh] overflow-auto">
+        <DialogContent className="max-w-7xl max-h-[90vh] overflow-auto">
           <DialogHeader>
             <DialogTitle>Enter Employee Hours</DialogTitle>
             <DialogDescription>
@@ -1090,113 +1091,117 @@ export default function HRPayroll() {
           </DialogHeader>
           
           <div className="py-4">
-            <div className="space-y-3">
-              {employees.filter((emp: any) => emp.status === 'active').map((employee: any) => (
-                <div key={employee.id} className="flex items-center gap-4 p-3 border rounded-lg">
-                  {/* Employee Info */}
-                  <div className="w-40">
-                    <div className="font-medium">{employee.firstName} {employee.lastName}</div>
-                    <div className="text-sm text-muted-foreground">${employee.hourlyRate || 'N/A'}/hr</div>
-                    {bulkPayrollInputs[employee.id] && (
-                      <div className="text-sm font-medium text-green-600">
-                        ${calculateEmployeeGrossPay(employee, bulkPayrollInputs[employee.id] || {}).toFixed(2)}
-                      </div>
-                    )}
-                  </div>
-                  
-                  {/* Hours */}
-                  <div className="w-20">
-                    <Label className="text-xs">Hours</Label>
-                    <Input
-                      type="number"
-                      step="0.25"
-                      min="0"
-                      placeholder="Hours"
-                      value={bulkPayrollInputs[employee.id]?.hours || ''}
-                      className="text-sm"
-                      id={`hours-${employee.id}`}
-                      onChange={(e) => handleBulkInputChange(employee.id, 'hours', e.target.value)}
-                      onWheel={(e) => e.currentTarget.blur()}
-                    />
-                  </div>
-                  
-                  {/* Tips */}
-                  <div className="w-20">
-                    <Label className="text-xs">Tips ($)</Label>
-                    <Input
-                      type="number"
-                      step="0.01"
-                      min="0"
-                      placeholder=""
-                      value={bulkPayrollInputs[employee.id]?.tips || ''}
-                      className="text-sm"
-                      id={`tips-${employee.id}`}
-                      onChange={(e) => handleBulkInputChange(employee.id, 'tips', e.target.value)}
-                      onWheel={(e) => e.currentTarget.blur()}
-                    />
-                  </div>
-                  
-                  {/* Bonuses */}
-                  <div className="w-20">
-                    <Label className="text-xs">Bonus ($)</Label>
-                    <Input
-                      type="number"
-                      step="0.01"
-                      min="0"
-                      placeholder=""
-                      value={bulkPayrollInputs[employee.id]?.bonus || ''}
-                      className="text-sm"
-                      id={`bonus-${employee.id}`}
-                      onChange={(e) => handleBulkInputChange(employee.id, 'bonus', e.target.value)}
-                      onWheel={(e) => e.currentTarget.blur()}
-                    />
-                  </div>
-                  
-                  {/* Overtime */}
-                  <div className="w-20">
-                    <Label className="text-xs">OT Hours</Label>
-                    <Input
-                      type="number"
-                      step="0.25"
-                      min="0"
-                      placeholder=""
-                      value={bulkPayrollInputs[employee.id]?.overtime || ''}
-                      className="text-sm"
-                      id={`overtime-${employee.id}`}
-                      onChange={(e) => handleBulkInputChange(employee.id, 'overtime', e.target.value)}
-                      onWheel={(e) => e.currentTarget.blur()}
-                    />
-                  </div>
-                  
-                  {/* Deductions */}
-                  <div className="w-20">
-                    <Label className="text-xs">Deduct ($)</Label>
-                    <Input
-                      type="number"
-                      step="0.01"
-                      min="0"
-                      placeholder=""
-                      value={bulkPayrollInputs[employee.id]?.deduction || ''}
-                      className="text-sm"
-                      id={`deduction-${employee.id}`}
-                      onChange={(e) => handleBulkInputChange(employee.id, 'deduction', e.target.value)}
-                      onWheel={(e) => e.currentTarget.blur()}
-                    />
-                  </div>
-                  
-                  {/* Notes */}
-                  <div className="flex-1">
-                    <Label className="text-xs">Notes</Label>
-                    <Input
-                      placeholder="Optional note..."
-                      value={bulkPayrollInputs[employee.id]?.notes || ''}
-                      className="text-sm"
-                      id={`notes-${employee.id}`}
-                      onChange={(e) => handleBulkInputChange(employee.id, 'notes', e.target.value)}
-                    />
-                  </div>
-                </div>
-              ))}
+            <div className="rounded-md border">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead className="w-[180px]">Employee</TableHead>
+                    <TableHead className="w-[100px]">Rate</TableHead>
+                    <TableHead className="w-[90px]">Hours</TableHead>
+                    <TableHead className="w-[90px]">OT Hours</TableHead>
+                    <TableHead className="w-[90px]">Tips ($)</TableHead>
+                    <TableHead className="w-[90px]">Bonus ($)</TableHead>
+                    <TableHead className="w-[90px]">Deduct ($)</TableHead>
+                    <TableHead className="w-[120px]">Gross Pay</TableHead>
+                    <TableHead>Notes</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {employees.filter((emp: any) => emp.status === 'active').map((employee: any) => (
+                    <TableRow key={employee.id}>
+                      <TableCell className="font-medium">
+                        {employee.firstName} {employee.lastName}
+                      </TableCell>
+                      <TableCell className="text-muted-foreground">
+                        ${employee.hourlyRate || 'N/A'}/hr
+                      </TableCell>
+                      <TableCell>
+                        <Input
+                          type="number"
+                          step="0.25"
+                          min="0"
+                          placeholder="0"
+                          value={bulkPayrollInputs[employee.id]?.hours || ''}
+                          className="w-20"
+                          id={`hours-${employee.id}`}
+                          onChange={(e) => handleBulkInputChange(employee.id, 'hours', e.target.value)}
+                          onWheel={(e) => e.currentTarget.blur()}
+                        />
+                      </TableCell>
+                      <TableCell>
+                        <Input
+                          type="number"
+                          step="0.25"
+                          min="0"
+                          placeholder="0"
+                          value={bulkPayrollInputs[employee.id]?.overtime || ''}
+                          className="w-20"
+                          id={`overtime-${employee.id}`}
+                          onChange={(e) => handleBulkInputChange(employee.id, 'overtime', e.target.value)}
+                          onWheel={(e) => e.currentTarget.blur()}
+                        />
+                      </TableCell>
+                      <TableCell>
+                        <Input
+                          type="number"
+                          step="0.01"
+                          min="0"
+                          placeholder="0"
+                          value={bulkPayrollInputs[employee.id]?.tips || ''}
+                          className="w-20"
+                          id={`tips-${employee.id}`}
+                          onChange={(e) => handleBulkInputChange(employee.id, 'tips', e.target.value)}
+                          onWheel={(e) => e.currentTarget.blur()}
+                        />
+                      </TableCell>
+                      <TableCell>
+                        <Input
+                          type="number"
+                          step="0.01"
+                          min="0"
+                          placeholder="0"
+                          value={bulkPayrollInputs[employee.id]?.bonus || ''}
+                          className="w-20"
+                          id={`bonus-${employee.id}`}
+                          onChange={(e) => handleBulkInputChange(employee.id, 'bonus', e.target.value)}
+                          onWheel={(e) => e.currentTarget.blur()}
+                        />
+                      </TableCell>
+                      <TableCell>
+                        <Input
+                          type="number"
+                          step="0.01"
+                          min="0"
+                          placeholder="0"
+                          value={bulkPayrollInputs[employee.id]?.deduction || ''}
+                          className="w-20"
+                          id={`deduction-${employee.id}`}
+                          onChange={(e) => handleBulkInputChange(employee.id, 'deduction', e.target.value)}
+                          onWheel={(e) => e.currentTarget.blur()}
+                        />
+                      </TableCell>
+                      <TableCell className="font-medium">
+                        {bulkPayrollInputs[employee.id] ? (
+                          <span className="text-green-600">
+                            ${calculateEmployeeGrossPay(employee, bulkPayrollInputs[employee.id] || {}).toFixed(2)}
+                          </span>
+                        ) : (
+                          <span className="text-muted-foreground">$0.00</span>
+                        )}
+                      </TableCell>
+                      <TableCell>
+                        <Input
+                          placeholder="Optional note..."
+                          value={bulkPayrollInputs[employee.id]?.notes || ''}
+                          className="w-32"
+                          id={`notes-${employee.id}`}
+                          onChange={(e) => handleBulkInputChange(employee.id, 'notes', e.target.value)}
+                        />
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
             </div>
           </div>
 
@@ -1317,84 +1322,99 @@ export default function HRPayroll() {
         setShowAddHoursDialog(open);
         if (!open) setHourAdjustments({});
       }}>
-        <DialogContent className="max-w-5xl max-h-[90vh] overflow-auto">
+        <DialogContent className="max-w-6xl max-h-[90vh] overflow-auto">
           <DialogHeader>
             <DialogTitle>Add/Edit Hours</DialogTitle>
             <DialogDescription>
-              Add manual time entries for employees. Existing hours from POS systems and previous entries are shown. After adding hours, click "Recalculate" to update paychecks.
+              Add manual time entries for employees. Existing hours from POS systems are shown. After adding hours, click "Recalculate" to update paychecks.
             </DialogDescription>
           </DialogHeader>
           
           <div className="py-4">
-            <div className="space-y-3">
-              {employees.filter((emp: any) => emp.status === 'active').map((employee: any) => {
-                const existingHours = calculatedHours.find((h: any) => h.employeeId === employee.id);
-                const totalExisting = existingHours ? (parseFloat(existingHours.regularHours || '0') + parseFloat(existingHours.overtimeHours || '0')) : 0;
-                
-                return (
-                  <div key={employee.id} className="flex items-center gap-4 p-3 border border-gray-700 bg-gray-900 rounded-lg">
-                    {/* Employee Info */}
-                    <div className="w-52">
-                      <div className="font-medium text-white">{employee.firstName} {employee.lastName}</div>
-                      <div className="text-sm text-gray-400">${employee.hourlyRate || 'N/A'}/hr</div>
-                      {totalExisting > 0 && (
-                        <div className="text-xs text-green-400 mt-1">
-                          ✓ {totalExisting.toFixed(2)}h in system
-                        </div>
-                      )}
-                      {totalExisting === 0 && (
-                        <div className="text-xs text-yellow-400 mt-1">
-                          ⚠ No hours yet
-                        </div>
-                      )}
-                    </div>
+            <div className="rounded-md border">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead className="w-[200px]">Employee</TableHead>
+                    <TableHead className="w-[120px]">Hourly Rate</TableHead>
+                    <TableHead className="w-[120px]">Existing Hours</TableHead>
+                    <TableHead className="w-[120px]">Hours to Add</TableHead>
+                    <TableHead className="w-[150px]">Date</TableHead>
+                    <TableHead className="w-[100px]">Status</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {employees.filter((emp: any) => emp.status === 'active').map((employee: any) => {
+                    const existingHours = calculatedHours.find((h: any) => h.employeeId === employee.id);
+                    const totalExisting = existingHours ? (parseFloat(existingHours.regularHours || '0') + parseFloat(existingHours.overtimeHours || '0')) : 0;
                     
-                    {/* Hours Input */}
-                    <div className="w-32">
-                      <Label className="text-xs text-gray-300">Hours to Add</Label>
-                      <Input
-                        type="number"
-                        step="0.25"
-                        min="0"
-                        placeholder="0.00"
-                        value={hourAdjustments[employee.id]?.hours || ''}
-                        className="text-sm bg-gray-800 border-gray-700 text-white"
-                        onChange={(e) => setHourAdjustments({
-                          ...hourAdjustments,
-                          [employee.id]: {
-                            ...hourAdjustments[employee.id],
-                            hours: e.target.value,
-                            date: hourAdjustments[employee.id]?.date || selectedPeriod!.startDate
-                          }
-                        })}
-                        onWheel={(e) => e.currentTarget.blur()}
-                        data-testid={`input-hours-${employee.id}`}
-                      />
-                    </div>
-                    
-                    {/* Date Input */}
-                    <div className="flex-1">
-                      <Label className="text-xs text-gray-300">Date</Label>
-                      <Input
-                        type="date"
-                        value={hourAdjustments[employee.id]?.date || selectedPeriod!.startDate}
-                        min={selectedPeriod!.startDate}
-                        max={selectedPeriod!.endDate}
-                        className="text-sm bg-gray-800 border-gray-700 text-white"
-                        onChange={(e) => setHourAdjustments({
-                          ...hourAdjustments,
-                          [employee.id]: {
-                            ...hourAdjustments[employee.id],
-                            hours: hourAdjustments[employee.id]?.hours || '',
-                            date: e.target.value
-                          }
-                        })}
-                        data-testid={`input-date-${employee.id}`}
-                      />
-                    </div>
-                  </div>
-                );
-              })}
+                    return (
+                      <TableRow key={employee.id}>
+                        <TableCell className="font-medium">
+                          {employee.firstName} {employee.lastName}
+                        </TableCell>
+                        <TableCell>${employee.hourlyRate || 'N/A'}/hr</TableCell>
+                        <TableCell>
+                          {totalExisting > 0 ? (
+                            <span className="text-green-600">{totalExisting.toFixed(2)}h</span>
+                          ) : (
+                            <span className="text-muted-foreground">0h</span>
+                          )}
+                        </TableCell>
+                        <TableCell>
+                          <Input
+                            type="number"
+                            step="0.25"
+                            min="0"
+                            placeholder="0.00"
+                            value={hourAdjustments[employee.id]?.hours || ''}
+                            className="w-24"
+                            onChange={(e) => setHourAdjustments({
+                              ...hourAdjustments,
+                              [employee.id]: {
+                                ...hourAdjustments[employee.id],
+                                hours: e.target.value,
+                                date: hourAdjustments[employee.id]?.date || selectedPeriod!.startDate
+                              }
+                            })}
+                            onWheel={(e) => e.currentTarget.blur()}
+                            data-testid={`input-hours-${employee.id}`}
+                          />
+                        </TableCell>
+                        <TableCell>
+                          <Input
+                            type="date"
+                            value={hourAdjustments[employee.id]?.date || selectedPeriod!.startDate}
+                            min={selectedPeriod!.startDate}
+                            max={selectedPeriod!.endDate}
+                            className="w-36"
+                            onChange={(e) => setHourAdjustments({
+                              ...hourAdjustments,
+                              [employee.id]: {
+                                ...hourAdjustments[employee.id],
+                                hours: hourAdjustments[employee.id]?.hours || '',
+                                date: e.target.value
+                              }
+                            })}
+                            data-testid={`input-date-${employee.id}`}
+                          />
+                        </TableCell>
+                        <TableCell>
+                          {totalExisting > 0 ? (
+                            <Badge variant="outline" className="bg-green-950 text-green-400 border-green-800">
+                              Has Hours
+                            </Badge>
+                          ) : (
+                            <Badge variant="outline" className="bg-yellow-950 text-yellow-400 border-yellow-800">
+                              Needs Hours
+                            </Badge>
+                          )}
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })}
+                </TableBody>
+              </Table>
             </div>
           </div>
 
