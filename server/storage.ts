@@ -370,7 +370,7 @@ export interface IStorage {
   deleteDepartment(id: string): Promise<void>;
 
   // HR Position operations  
-  getPositions(): Promise<Position[]>;
+  getPositions(locationId?: string): Promise<Position[]>;
   getPosition(id: string): Promise<Position | undefined>;
   createPosition(position: InsertPosition): Promise<Position>;
   updatePosition(id: string, position: Partial<InsertPosition>): Promise<Position>;
@@ -2555,7 +2555,19 @@ export class DatabaseStorage implements IStorage {
   }
 
   // HR Position operations
-  async getPositions(): Promise<Position[]> {
+  async getPositions(locationId?: string): Promise<Position[]> {
+    if (locationId) {
+      // Filter positions by their department's location
+      const result = await db.select({
+        position: positions
+      })
+      .from(positions)
+      .leftJoin(departments, eq(positions.departmentId, departments.id))
+      .where(eq(departments.locationId, locationId))
+      .orderBy(positions.title);
+      
+      return result.map(r => r.position);
+    }
     return await db.select().from(positions).orderBy(positions.title);
   }
 
