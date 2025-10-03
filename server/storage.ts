@@ -3517,6 +3517,40 @@ export class DatabaseStorage implements IStorage {
     return payPeriod;
   }
 
+  /**
+   * Calculate tax deductions for payroll using configured tax settings
+   * @param payPeriodId - The payroll period ID to get location from
+   * @param grossPay - The gross pay amount
+   * @param customDeductions - Any custom deduction amounts
+   * @returns Object with calculated tax amounts
+   */
+  private async calculateTaxDeductions(payPeriodId: string, grossPay: number, customDeductions: number = 0) {
+    // Get the pay period to find location
+    const period = await this.getPayrollPeriod(payPeriodId);
+    
+    // Get tax settings for this location (use defaults if not found)
+    const taxSettings = period?.locationId ? await this.getTaxSettings(period.locationId) : null;
+    const federalTaxRate = taxSettings ? parseFloat(taxSettings.federalTaxRate) : 0.08;
+    const stateTaxRate = taxSettings ? parseFloat(taxSettings.stateTaxRate) : 0.02;
+    const socialSecurityRate = taxSettings ? parseFloat(taxSettings.socialSecurityRate) : 0.062;
+    const medicareRate = taxSettings ? parseFloat(taxSettings.medicareRate) : 0.0145;
+    
+    // Calculate tax deductions using configured rates
+    const federalTax = grossPay * federalTaxRate;
+    const stateTax = grossPay * stateTaxRate;
+    const socialSecurity = grossPay * socialSecurityRate;
+    const medicare = grossPay * medicareRate;
+    const totalDeductions = federalTax + stateTax + socialSecurity + medicare + customDeductions;
+    
+    return {
+      federalTax,
+      stateTax,
+      socialSecurity,
+      medicare,
+      totalDeductions
+    };
+  }
+
   async recalculatePayroll(payPeriodId: string): Promise<Paystub[]> {
     // Delete existing paystubs for this pay period
     await db.delete(paystubs).where(eq(paystubs.payPeriodId, payPeriodId));
@@ -3641,13 +3675,9 @@ export class DatabaseStorage implements IStorage {
       const overtimePay = overtimeHours * overtimeRate;
       const grossPay = regularPay + overtimePay;
       
-      // Calculate realistic tax deductions
-      const federalTax = grossPay * 0.08; // 8% federal (more realistic for restaurant workers)
-      const stateTax = grossPay * 0.02; // 2% state (varies by state)
-      const socialSecurity = grossPay * 0.062; // 6.2% (mandatory)
-      const medicare = grossPay * 0.0145; // 1.45% (mandatory)
-      
-      const totalDeductions = federalTax + stateTax + socialSecurity + medicare;
+      // Calculate tax deductions using configured tax settings
+      const { federalTax, stateTax, socialSecurity, medicare, totalDeductions } = 
+        await this.calculateTaxDeductions(payPeriodId, grossPay);
       const netPay = grossPay - totalDeductions;
 
       // Generate real check number using settings
@@ -3760,13 +3790,9 @@ export class DatabaseStorage implements IStorage {
     const overtimePay = otHours * rate * 1.5;
     const grossPay = regularPay + overtimePay + bonusAmount + tipAmount;
 
-    // Calculate taxes
-    const federalTax = grossPay * 0.08;
-    const stateTax = grossPay * 0.02;
-    const socialSecurity = grossPay * 0.062;
-    const medicare = grossPay * 0.0145;
-    
-    const totalDeductions = federalTax + stateTax + socialSecurity + medicare + customDeductionAmount;
+    // Calculate tax deductions using configured tax settings
+    const { federalTax, stateTax, socialSecurity, medicare, totalDeductions } = 
+      await this.calculateTaxDeductions(payPeriodId, grossPay, customDeductionAmount);
     const netPay = grossPay - totalDeductions;
 
     // Generate check number
@@ -3820,6 +3846,10 @@ export class DatabaseStorage implements IStorage {
       notes
     } = updateData;
 
+    // Get the existing paystub to find the payPeriodId
+    const [existingPaystub] = await db.select().from(paystubs).where(eq(paystubs.id, paystubId));
+    if (!existingPaystub) throw new Error('Paystub not found');
+
     // Recalculate pay based on new values
     const regHours = parseFloat(regularHours) || 0;
     const otHours = parseFloat(overtimeHours) || 0;
@@ -3832,13 +3862,9 @@ export class DatabaseStorage implements IStorage {
     const overtimePay = otHours * rate * 1.5;
     const grossPay = regularPay + overtimePay + bonusAmount + tipAmount;
 
-    // Calculate taxes
-    const federalTax = grossPay * 0.08;
-    const stateTax = grossPay * 0.02;
-    const socialSecurity = grossPay * 0.062;
-    const medicare = grossPay * 0.0145;
-    
-    const totalDeductions = federalTax + stateTax + socialSecurity + medicare + customDeductionAmount;
+    // Calculate tax deductions using configured tax settings
+    const { federalTax, stateTax, socialSecurity, medicare, totalDeductions } = 
+      await this.calculateTaxDeductions(existingPaystub.payPeriodId, grossPay, customDeductionAmount);
     const netPay = grossPay - totalDeductions;
 
     const updatedData = {
