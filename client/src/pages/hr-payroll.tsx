@@ -1041,9 +1041,18 @@ export default function HRPayroll() {
               {selectedPaystub && `Paycheck for ${selectedPaystub.employee.firstName} ${selectedPaystub.employee.lastName}`}
             </DialogDescription>
           </DialogHeader>
-          {selectedPaystub && (
+          {selectedPaystub && selectedPeriod && (
             <div className="py-4">
-              <ActualPaycheck paycheck={selectedPaystub} settings={settings} />
+              <ActualPaycheck 
+                paycheck={{
+                  ...selectedPaystub,
+                  payPeriod: {
+                    startDate: selectedPeriod.startDate,
+                    endDate: selectedPeriod.endDate
+                  }
+                }} 
+                settings={settings} 
+              />
             </div>
           )}
           <DialogFooter>
