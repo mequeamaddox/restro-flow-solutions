@@ -138,10 +138,13 @@ export default function HRScheduling() {
 
   const createShiftMutation = useMutation({
     mutationFn: async (data: ShiftFormData) => {
-      return await apiRequest('POST', `/api/hr/shifts?locationId=${currentLocation?.id}`, {
+      const payload: any = {
         ...data,
         locationId: currentLocation?.id,
-      });
+        departmentId: data.departmentId || null,
+        positionId: data.positionId || null,
+      };
+      return await apiRequest('POST', `/api/hr/shifts?locationId=${currentLocation?.id}`, payload);
     },
     onSuccess: () => {
       toast({ title: "Success", description: "Shift created successfully" });
@@ -156,10 +159,13 @@ export default function HRScheduling() {
 
   const updateShiftMutation = useMutation({
     mutationFn: async ({ id, data }: { id: string; data: ShiftFormData }) => {
-      return await apiRequest('PUT', `/api/hr/shifts/${id}?locationId=${currentLocation?.id}`, {
+      const payload: any = {
         ...data,
         locationId: currentLocation?.id,
-      });
+        departmentId: data.departmentId || null,
+        positionId: data.positionId || null,
+      };
+      return await apiRequest('PUT', `/api/hr/shifts/${id}?locationId=${currentLocation?.id}`, payload);
     },
     onSuccess: () => {
       toast({ title: "Success", description: "Shift updated successfully" });
@@ -569,7 +575,7 @@ export default function HRScheduling() {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="grid grid-cols-7 gap-4">
+          <div className="grid grid-cols-7 gap-3">
             {weekDates.map((date, index) => {
               const dayShifts = getShiftsForDate(date);
               const totalHours = dayShifts.reduce((sum, shift) => 
@@ -577,50 +583,71 @@ export default function HRScheduling() {
               );
               const totalCost = dayShifts.reduce((sum, shift) => sum + calculateLaborCost(shift), 0);
               const isToday = date === new Date().toISOString().split('T')[0];
+              const isWeekend = index >= 5;
 
               return (
                 <div 
                   key={date} 
-                  className={`border rounded-lg p-4 min-h-[250px] ${isToday ? 'bg-blue-50 border-blue-300' : ''}`}
+                  className={`relative rounded-xl p-4 min-h-[280px] transition-all backdrop-blur-sm ${
+                    isToday 
+                      ? 'bg-gradient-to-br from-blue-500/20 via-purple-500/20 to-pink-500/20 border-2 border-blue-500 shadow-lg shadow-blue-500/20' 
+                      : isWeekend 
+                      ? 'bg-gray-800/50 border border-gray-700'
+                      : 'bg-gray-800/30 border border-gray-700 hover:bg-gray-800/40 hover:shadow-md'
+                  }`}
                   data-testid={`day-column-${index}`}
                 >
-                  <div className="font-medium text-sm mb-1">
+                  {isToday && (
+                    <div className="absolute top-2 right-2">
+                      <Badge className="bg-gradient-to-r from-blue-500 to-purple-500 text-white text-[10px] px-2 py-0.5 shadow-lg">Today</Badge>
+                    </div>
+                  )}
+                  <div className={`font-bold text-sm mb-1 ${isToday ? 'text-blue-400' : 'text-gray-200'}`}>
                     {dayNames[index]}
                   </div>
-                  <div className="text-xs text-gray-500 mb-3">
+                  <div className="text-xs text-gray-400 mb-4 font-medium">
                     {new Date(date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
                   </div>
                   
                   <div className="space-y-2">
-                    {dayShifts.map((shift) => {
+                    {dayShifts.map((shift, idx) => {
                       const employee = employees.find(emp => emp.id === shift.employeeId);
                       const hours = getShiftHours(shift.startTime, shift.endTime, shift.breakDuration);
                       const cost = calculateLaborCost(shift);
+                      const colors = [
+                        'from-blue-500 to-blue-600',
+                        'from-purple-500 to-purple-600',
+                        'from-pink-500 to-pink-600',
+                        'from-indigo-500 to-indigo-600',
+                        'from-cyan-500 to-cyan-600'
+                      ];
+                      const colorClass = colors[idx % colors.length];
                       
                       return (
                         <div 
                           key={shift.id} 
-                          className="bg-blue-50 dark:bg-blue-900/30 border border-blue-200 dark:border-blue-800 rounded p-2 text-xs"
+                          className={`relative group bg-gradient-to-br ${colorClass} rounded-lg p-3 text-white shadow-md hover:shadow-lg transition-all`}
                           data-testid={`shift-${shift.id}`}
                         >
-                          <div className="font-medium">
+                          <div className="font-semibold text-sm mb-1">
                             {employee?.firstName} {employee?.lastName}
                           </div>
-                          <div className="text-gray-600 dark:text-gray-400">
+                          <div className="text-xs opacity-90 flex items-center gap-1 mb-1">
+                            <Clock className="h-3 w-3" />
                             {shift.startTime} - {shift.endTime}
                           </div>
-                          <div className="text-gray-500 dark:text-gray-500 flex items-center justify-between">
-                            <span>{hours.toFixed(1)}h</span>
-                            {cost > 0 && <span className="text-green-600 dark:text-green-400">${cost.toFixed(2)}</span>}
+                          <div className="flex items-center justify-between text-xs opacity-90">
+                            <span className="font-medium">{hours.toFixed(1)} hrs</span>
+                            {cost > 0 && <span className="font-semibold">${cost.toFixed(0)}</span>}
                           </div>
                           {shift.notes && (
-                            <div className="text-gray-500 text-xs italic mt-1">{shift.notes}</div>
+                            <div className="text-xs opacity-80 mt-2 italic border-t border-white/20 pt-2">{shift.notes}</div>
                           )}
-                          <div className="flex gap-1 mt-1">
+                          <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity flex gap-1">
                             <Button
                               size="sm"
                               variant="ghost"
-                              className="h-6 w-6 p-0"
+                              className="h-6 w-6 p-0 bg-white/20 hover:bg-white/30 rounded"
                               onClick={() => {
                                 setEditingShift(shift);
                                 form.reset({
@@ -637,16 +664,16 @@ export default function HRScheduling() {
                               }}
                               data-testid={`button-edit-shift-${shift.id}`}
                             >
-                              <Edit className="h-3 w-3" />
+                              <Edit className="h-3 w-3 text-white" />
                             </Button>
                             <Button
                               size="sm"
                               variant="ghost"
-                              className="h-6 w-6 p-0 text-red-600 hover:text-red-700"
+                              className="h-6 w-6 p-0 bg-red-500/80 hover:bg-red-500 rounded"
                               onClick={() => deleteShiftMutation.mutate(shift.id)}
                               data-testid={`button-delete-shift-${shift.id}`}
                             >
-                              <Trash2 className="h-3 w-3" />
+                              <Trash2 className="h-3 w-3 text-white" />
                             </Button>
                           </div>
                         </div>
@@ -655,21 +682,28 @@ export default function HRScheduling() {
                   </div>
 
                   {dayShifts.length > 0 && (
-                    <div className="mt-3 pt-2 border-t text-xs space-y-1">
-                      <div className="flex items-center gap-1 text-gray-600">
-                        <Users className="h-3 w-3" />
-                        {dayShifts.length} shifts
-                      </div>
-                      <div className="flex items-center gap-1 text-gray-600">
-                        <Clock className="h-3 w-3" />
-                        {totalHours.toFixed(1)} hours
+                    <div className="mt-auto pt-3 border-t border-gray-700 space-y-1.5">
+                      <div className="flex items-center justify-between text-xs">
+                        <span className="text-gray-400 flex items-center gap-1">
+                          <Users className="h-3 w-3" />
+                          {dayShifts.length} shifts
+                        </span>
+                        <span className="font-semibold text-gray-200">{totalHours.toFixed(1)}h</span>
                       </div>
                       {totalCost > 0 && (
-                        <div className="flex items-center gap-1 text-green-600">
-                          <DollarSign className="h-3 w-3" />
-                          ${totalCost.toFixed(2)}
+                        <div className="flex items-center justify-between text-xs">
+                          <span className="text-gray-400 flex items-center gap-1">
+                            <DollarSign className="h-3 w-3" />
+                            Labor
+                          </span>
+                          <span className="font-bold text-green-400">${totalCost.toFixed(2)}</span>
                         </div>
                       )}
+                    </div>
+                  )}
+                  {dayShifts.length === 0 && (
+                    <div className="absolute inset-0 flex items-center justify-center opacity-10">
+                      <Calendar className="h-16 w-16 text-gray-500" />
                     </div>
                   )}
                 </div>

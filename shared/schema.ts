@@ -616,6 +616,8 @@ export const timeOffStatusEnum = pgEnum("time_off_status", ["pending", "approved
 export const taskStatusEnum = pgEnum("task_status", ["pending", "in-progress", "completed", "cancelled", "overdue"]);
 export const taskPriorityEnum = pgEnum("task_priority", ["low", "medium", "high", "urgent"]);
 export const taskCategoryEnum = pgEnum("task_category", ["cleaning", "inventory", "maintenance", "training", "admin", "other"]);
+export const budgetCategoryEnum = pgEnum("budget_category", ["food", "beverage", "labor", "utilities", "marketing", "maintenance", "supplies", "other"]);
+export const budgetPeriodEnum = pgEnum("budget_period", ["weekly", "monthly", "quarterly", "yearly"]);
 export const messageTypeEnum = pgEnum("message_type", ["message", "announcement", "alert", "reminder"]);
 export const messagePriorityEnum = pgEnum("message_priority", ["normal", "high", "urgent"]);
 export const reviewStatusEnum = pgEnum("review_status", ["draft", "pending-employee", "completed", "archived"]);
@@ -1405,10 +1407,10 @@ export const userPermissions = pgTable("user_permissions", {
 });
 
 export const budgets = pgTable("budgets", {
-  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  locationId: varchar("location_id").references(() => locations.id),
-  category: varchar("category", { enum: ["food", "beverage", "labor", "utilities", "marketing", "maintenance"] }).notNull(),
-  period: varchar("period", { enum: ["daily", "weekly", "monthly", "quarterly", "yearly"] }).notNull(),
+  id: uuid("id").primaryKey().default(sql`gen_random_uuid()`),
+  locationId: uuid("location_id").references(() => locations.id).notNull(),
+  category: budgetCategoryEnum("category").notNull(),
+  period: budgetPeriodEnum("period").notNull(),
   budgetAmount: decimal("budget_amount", { precision: 12, scale: 2 }).notNull(),
   actualAmount: decimal("actual_amount", { precision: 12, scale: 2 }).default("0"),
   variance: decimal("variance", { precision: 12, scale: 2 }).default("0"),
@@ -1611,6 +1613,8 @@ export type InsertInvoiceProcessing = typeof invoiceProcessing.$inferInsert;
 export type InsertPriceMonitoring = typeof priceMonitoring.$inferInsert;
 export type InsertUserPermission = typeof userPermissions.$inferInsert;
 export type InsertBudget = typeof budgets.$inferInsert;
+
+export const insertBudgetSchema = createInsertSchema(budgets).omit({ id: true, createdAt: true, updatedAt: true });
 export type Location = typeof locations.$inferSelect;
 export type InsertLocation = z.infer<typeof insertLocationSchema>;
 export type Category = typeof categories.$inferSelect;
