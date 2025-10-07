@@ -217,7 +217,7 @@ export default function BeverageCostingPage() {
         name: cocktailName,
         description: `Cost: $${cocktailCost.toFixed(2)} | Suggested: $${cocktailSuggested.toFixed(2)}`,
         category: 'cocktail',
-        price: cocktailSuggested,
+        price: cocktailSuggested.toFixed(2),
         locationId: currentLocation?.id,
         ingredients
       });

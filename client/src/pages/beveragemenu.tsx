@@ -363,22 +363,56 @@ export default function BeverageMenu() {
                 <FormField
                   control={form.control}
                   name="price"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Selling Price</FormLabel>
-                      <FormControl>
-                        <Input
-                          type="number"
-                          step="0.01"
-                          {...field}
-                          onChange={(e) => field.onChange(parseFloat(e.target.value) || 0)}
-                          className="bg-slate-800 border-slate-600"
-                          data-testid="input-price"
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
+                  render={({ field }) => {
+                    const sellingPrice = parseFloat(field.value?.toString() || '0');
+                    const actualCostPct = sellingPrice > 0 ? (drinkCost / sellingPrice) * 100 : 0;
+                    const profitMargin = sellingPrice - drinkCost;
+                    
+                    // Determine feedback color and message
+                    let feedbackColor = 'text-slate-400';
+                    let feedbackMessage = '';
+                    
+                    if (sellingPrice > 0) {
+                      if (actualCostPct <= 20) {
+                        feedbackColor = 'text-green-400';
+                        feedbackMessage = 'Excellent margin!';
+                      } else if (actualCostPct <= 25) {
+                        feedbackColor = 'text-blue-400';
+                        feedbackMessage = 'Good margin';
+                      } else if (actualCostPct <= 30) {
+                        feedbackColor = 'text-yellow-400';
+                        feedbackMessage = 'Acceptable margin';
+                      } else {
+                        feedbackColor = 'text-red-400';
+                        feedbackMessage = 'Low margin - consider increasing price';
+                      }
+                    }
+                    
+                    return (
+                      <FormItem>
+                        <FormLabel>Selling Price</FormLabel>
+                        <FormControl>
+                          <Input
+                            type="number"
+                            step="0.01"
+                            {...field}
+                            onChange={(e) => field.onChange(parseFloat(e.target.value) || 0)}
+                            className="bg-slate-800 border-slate-600"
+                            data-testid="input-price"
+                          />
+                        </FormControl>
+                        {sellingPrice > 0 && (
+                          <div className={`text-sm mt-2 ${feedbackColor}`}>
+                            <div className="flex items-center justify-between">
+                              <span>Cost: {actualCostPct.toFixed(1)}% | Profit: ${profitMargin.toFixed(2)}</span>
+                              <span className="font-semibold">{feedbackMessage}</span>
+                            </div>
+                          </div>
+                        )}
+                        <FormMessage />
+                      </FormItem>
+                    );
+                  }}
                 />
 
                 <div className="flex justify-end gap-2 pt-4">
