@@ -8,8 +8,8 @@ import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { useLocation } from "@/contexts/LocationContext";
 import { apiRequest } from "@/lib/queryClient";
-import { DollarSign, Beer, Martini, FlaskConical, Package, Percent, ArrowRight } from "lucide-react";
-import { Link } from "wouter";
+import { DollarSign, Beer, Martini, FlaskConical, Package, Percent, ArrowRight, Save } from "lucide-react";
+import { Link, useLocation as useRoute } from "wouter";
 
 /**
  * BeverageCostingPage
@@ -73,6 +73,7 @@ function toMoney(n: number) {
 export default function BeverageCostingPage() {
   const { currentLocation } = useLocation();
   const { toast } = useToast();
+  const [, navigate] = useRoute();
 
   // Inventory fetch (single query, we filter client-side by family hints)
   const { data: inventoryItems = [], isLoading: invLoading } = useQuery<any[]>({
@@ -178,6 +179,63 @@ export default function BeverageCostingPage() {
   }
   function removeCtLine(id: string) {
     setCtLines(prev => prev.filter(l => l.id !== id));
+  }
+
+  async function saveToMenu() {
+    // Build cocktail name from ingredients
+    const cocktailName = cocktailLines[0]?.name || 'Cocktail';
+    
+    // Convert calculator lines to menu item ingredients
+    const ingredients = cocktailLines
+      .filter(line => line.name && line.qtyOz > 0)
+      .map(line => {
+        // Try to find matching inventory item by name
+        const inventoryItem = (inventoryItems as any[]).find(
+          item => item.name?.toLowerCase().includes(line.name.toLowerCase()) || 
+                  item.displayName?.toLowerCase().includes(line.name.toLowerCase())
+        );
+        
+        return {
+          inventoryItemId: inventoryItem?.id || '',
+          quantity: line.qtyOz,
+          unit: 'oz'
+        };
+      })
+      .filter(ing => ing.inventoryItemId); // Only include items we found in inventory
+    
+    if (ingredients.length === 0) {
+      toast({
+        title: "Cannot save",
+        description: "Add ingredients from your inventory to save to menu",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    try {
+      await apiRequest('POST', '/api/menu-items', {
+        name: cocktailName,
+        description: `Cost: $${cocktailCost.toFixed(2)} | Suggested: $${cocktailSuggested.toFixed(2)}`,
+        category: 'cocktail',
+        price: cocktailSuggested,
+        locationId: currentLocation?.id,
+        ingredients
+      });
+
+      toast({
+        title: "Success!",
+        description: `${cocktailName} saved to menu`,
+      });
+
+      // Navigate to menu page
+      navigate('/beverage-menu');
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to save to menu",
+        variant: "destructive"
+      });
+    }
   }
 
   // Autofill selection handlers
@@ -445,11 +503,20 @@ export default function BeverageCostingPage() {
             </div>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-3 text-sm">
-            <div className="p-3 bg-slate-800 rounded flex items-center justify-between"><span>Total cost</span><span className="font-semibold">{toMoney(cocktailCost)}</span></div>
-            <div className="p-3 bg-slate-800 rounded flex items-center justify-between"><span>Suggested price</span><span className="font-semibold">{toMoney(cocktailSuggested)}</span></div>
-            <div className="p-3 bg-slate-800 rounded flex items-center justify-between"><span>At 20% pour</span><span className="font-semibold">{toMoney(priceFromTarget(cocktailCost, 20))}</span></div>
-            <div className="p-3 bg-slate-800 rounded flex items-center justify-between"><span>At 25% pour</span><span className="font-semibold">{toMoney(priceFromTarget(cocktailCost, 25))}</span></div>
+          <div className="space-y-3">
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-3 text-sm">
+              <div className="p-3 bg-slate-800 rounded flex items-center justify-between"><span>Total cost</span><span className="font-semibold">{toMoney(cocktailCost)}</span></div>
+              <div className="p-3 bg-slate-800 rounded flex items-center justify-between"><span>Suggested price</span><span className="font-semibold">{toMoney(cocktailSuggested)}</span></div>
+              <div className="p-3 bg-slate-800 rounded flex items-center justify-between"><span>At 20% pour</span><span className="font-semibold">{toMoney(priceFromTarget(cocktailCost, 20))}</span></div>
+              <div className="p-3 bg-slate-800 rounded flex items-center justify-between"><span>At 25% pour</span><span className="font-semibold">{toMoney(priceFromTarget(cocktailCost, 25))}</span></div>
+            </div>
+            <Button 
+              onClick={saveToMenu}
+              className="w-full bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700"
+            >
+              <Save className="h-4 w-4 mr-2" />
+              Save Cocktail to Menu
+            </Button>
           </div>
         </CardContent>
       </Card>
