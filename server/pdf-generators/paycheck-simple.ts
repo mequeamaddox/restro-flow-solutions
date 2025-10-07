@@ -250,12 +250,12 @@ async function generateCheckOnTopPDF(data: PaycheckData): Promise<Buffer> {
   let y = 36;
   
   // Top row: Business name (left), Bank name (center), Check number (right)
-  doc.fontSize(10).font('Helvetica-Bold').text(data.companyName, 50, y, { width: 200 });
-  doc.fontSize(10).font('Helvetica-Bold').text(data.bankName || '', 250, y, { width: 150, align: 'center' });
+  doc.fontSize(10).font('Helvetica-Bold').text(data.companyName || 'Business Name', 50, y, { width: 200 });
+  doc.fontSize(10).font('Helvetica-Bold').text(data.bankName || 'Bank Name', 250, y, { width: 150, align: 'center' });
   doc.fontSize(14).font('Helvetica-Bold').text(data.checkNumber, 450, y, { align: 'right' });
   
   y += 12;
-  doc.fontSize(9).font('Helvetica').text(data.companyAddress, 50, y, { width: 200 });
+  doc.fontSize(9).font('Helvetica').text(data.companyAddress || 'Business Address', 50, y, { width: 200 });
   
   y += 24;
   doc.fontSize(9).text(new Date(data.payDate).toLocaleDateString('en-US'), 500, y, { align: 'right' });
@@ -457,12 +457,12 @@ async function generateCheckOnBottomPDF(data: PaycheckData): Promise<Buffer> {
   y += 30;
   
   // Top row: Business name (left), Bank name (center), Check number (right)
-  doc.fontSize(10).font('Helvetica-Bold').text(data.companyName, 50, y, { width: 200 });
-  doc.fontSize(10).font('Helvetica-Bold').text(data.bankName || '', 250, y, { width: 150, align: 'center' });
+  doc.fontSize(10).font('Helvetica-Bold').text(data.companyName || 'Business Name', 50, y, { width: 200 });
+  doc.fontSize(10).font('Helvetica-Bold').text(data.bankName || 'Bank Name', 250, y, { width: 150, align: 'center' });
   doc.fontSize(14).font('Helvetica-Bold').text(data.checkNumber, 450, y, { align: 'right' });
   
   y += 12;
-  doc.fontSize(9).font('Helvetica').text(data.companyAddress, 50, y, { width: 200 });
+  doc.fontSize(9).font('Helvetica').text(data.companyAddress || 'Business Address', 50, y, { width: 200 });
   
   y += 24;
   doc.fontSize(9).text(new Date(data.payDate).toLocaleDateString('en-US'), 500, y, { align: 'right' });

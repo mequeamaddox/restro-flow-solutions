@@ -120,11 +120,11 @@ export function ActualPaycheck({ paycheck, settings }: ActualPaycheckProps) {
     <div className="border-b-2 border-dashed border-gray-400 pb-4 mb-4" style={{ minHeight: '3.5in', padding: '0.5in' }}>
       <div className="flex justify-between items-start mb-4">
         <div className="text-sm font-bold leading-tight">
-          {settings?.companyName}<br/>
-          {settings?.companyAddress}<br/>
+          {settings?.companyName || 'Business Name'}<br/>
+          {settings?.companyAddress || 'Business Address'}<br/>
         </div>
         <div className="text-center">
-          <div className="text-sm font-bold">{settings?.bankName}</div>
+          <div className="text-sm font-bold">{settings?.bankName || 'Bank Name'}</div>
         </div>
         <div className="text-right">
           <div className="text-xl font-bold">{paycheck.checkNumber}</div>

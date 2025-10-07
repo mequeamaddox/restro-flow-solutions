@@ -55,6 +55,7 @@ import Onboarding from "@/pages/onboarding";
 import InvitationAccept from "@/pages/invitation-accept";
 import MultiUnitDashboard from "@/pages/multi-unit-dashboard";
 import BluetoothScalePrototype from "@/pages/bluetooth-scale-prototype";
+import BeverageCost from "@/pages/beveragecost";
 import Sidebar from "@/components/layout/sidebar";
 import Header from "@/components/layout/header";
 import MobileBottomNav from "@/components/layout/mobile-bottom-nav";
@@ -134,6 +135,7 @@ function Router() {
                 <Route path="/pricing" component={Pricing} />
                 {/* Hidden owner-only prototype routes */}
                 <Route path="/bluetooth-scale-prototype" component={BluetoothScalePrototype} />
+                <Route path="/beveragecost" component={BeverageCost} />
                 <Route path="/settings" component={Settings} />
                 {/* HR Employee Management Add-on Routes */}
                 <Route path="/hr/dashboard" component={HRDashboard} />
