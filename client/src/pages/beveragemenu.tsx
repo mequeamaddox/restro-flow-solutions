@@ -17,6 +17,7 @@ import { apiRequest } from "@/lib/queryClient";
 import { useLocation } from "@/contexts/LocationContext";
 import { computeLineCost } from "@/lib/unitCost";
 import { z } from "zod";
+import { Link } from "wouter";
 
 const menuItemFormSchema = z.object({
   name: z.string().min(1, "Drink name is required"),
@@ -201,8 +202,15 @@ export default function BeverageMenu() {
             Manage cocktails, mixed drinks, and bar menu items
           </p>
         </div>
-        <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
-          <DialogTrigger asChild>
+        <div className="flex items-center gap-2">
+          <Link href="/beveragecost">
+            <Button variant="outline" className="bg-slate-800 border-slate-600 text-white hover:bg-slate-700">
+              <Calculator className="h-4 w-4 mr-2" />
+              Pricing Calculator
+            </Button>
+          </Link>
+          <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
+            <DialogTrigger asChild>
             <Button 
               className="bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700"
               onClick={() => {
@@ -214,8 +222,8 @@ export default function BeverageMenu() {
             >
               <Plus className="mr-2 h-4 w-4" /> Add Drink
             </Button>
-          </DialogTrigger>
-          <DialogContent className="bg-slate-900 border-slate-700 text-white max-w-3xl max-h-[90vh] overflow-y-auto">
+            </DialogTrigger>
+            <DialogContent className="bg-slate-900 border-slate-700 text-white max-w-3xl max-h-[90vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle>{editingMenuItemId ? 'Edit Drink' : 'Create New Drink'}</DialogTitle>
             </DialogHeader>
@@ -388,8 +396,9 @@ export default function BeverageMenu() {
                 </div>
               </form>
             </Form>
-          </DialogContent>
-        </Dialog>
+            </DialogContent>
+          </Dialog>
+        </div>
       </div>
 
       <Card className="bg-slate-900/50 border-slate-700">

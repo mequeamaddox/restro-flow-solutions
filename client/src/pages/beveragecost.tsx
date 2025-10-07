@@ -8,7 +8,8 @@ import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { useLocation } from "@/contexts/LocationContext";
 import { apiRequest } from "@/lib/queryClient";
-import { DollarSign, Beer, Martini, FlaskConical, Package, Percent } from "lucide-react";
+import { DollarSign, Beer, Martini, FlaskConical, Package, Percent, ArrowRight } from "lucide-react";
+import { Link } from "wouter";
 
 /**
  * BeverageCostingPage
@@ -219,9 +220,18 @@ export default function BeverageCostingPage() {
           <h1 className="text-xl lg:text-3xl font-bold text-white">Beer & Liquor Costing</h1>
           <p className="text-xs lg:text-sm text-slate-400 mt-1">Use inventory presets or type ad‑hoc values. All prices are suggestions based on your target %.</p>
         </div>
-        {currentLocation && (
-          <Badge variant="secondary" className="bg-slate-800 text-slate-300">{currentLocation.name}</Badge>
-        )}
+        <div className="flex items-center gap-3">
+          <Link href="/beverage-menu">
+            <Button variant="outline" className="bg-slate-800 border-slate-600 text-white hover:bg-slate-700">
+              <Martini className="h-4 w-4 mr-2" />
+              Go to Menu
+              <ArrowRight className="h-4 w-4 ml-2" />
+            </Button>
+          </Link>
+          {currentLocation && (
+            <Badge variant="secondary" className="bg-slate-800 text-slate-300">{currentLocation.name}</Badge>
+          )}
+        </div>
       </div>
 
       {/* Spirits (Bottle) */}
