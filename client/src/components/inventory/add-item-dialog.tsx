@@ -34,6 +34,36 @@ export default function AddItemDialog({ isOpen, onClose, onSuccess, categories, 
   const [isScannerOpen, setIsScannerOpen] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
+  // Determine item type based on selected category
+  const getItemType = (categoryId: string | undefined): 'bar' | 'food' | 'supplies' | null => {
+    if (!categoryId) return null;
+    
+    const category = categories.find(c => c.id === categoryId);
+    if (!category) return null;
+    
+    const categoryName = category.name.toLowerCase();
+    
+    // Bar/Beverage categories
+    if (['beer', 'spirits', 'wine', 'mixers', 'garnishes', 'bar tools'].some(term => categoryName.includes(term))) {
+      return 'bar';
+    }
+    
+    // Food categories
+    if (['protein', 'vegetable', 'dairy', 'grain', 'starch', 'condiment', 'sauce'].some(term => categoryName.includes(term))) {
+      return 'food';
+    }
+    
+    // Supplies categories
+    if (['cleaning', 'office', 'supplies'].some(term => categoryName.includes(term))) {
+      return 'supplies';
+    }
+    
+    return null;
+  };
+
+  const selectedCategoryId = form.watch('categoryId');
+  const itemType = getItemType(selectedCategoryId);
+
   const form = useForm<InsertInventoryItem>({
     resolver: zodResolver(insertInventoryItemSchema),
     defaultValues: {
