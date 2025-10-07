@@ -41,7 +41,8 @@ import {
   Calculator,
   Crown,
   Star,
-  Shield
+  Shield,
+  Martini
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import logoImg from "@assets/IMG_20250812_004328_1754973838131.png";
@@ -49,7 +50,8 @@ import logoImg from "@assets/IMG_20250812_004328_1754973838131.png";
 const navigation = [
   { name: 'Dashboard', href: '/', icon: LayoutDashboard },
   { name: 'Inventory', href: '/inventory', icon: Package },
-  { name: 'Recipes', href: '/recipes', icon: ChefHat },
+  { name: 'Food Recipes', href: '/recipes', icon: ChefHat },
+  { name: 'Beverage Menu', href: '/beverage-menu', icon: Martini },
   { name: 'Purchase Orders', href: '/purchase-orders', icon: ShoppingCart },
   { name: 'Vendors', href: '/vendors', icon: Building2 },
   { name: 'Invoice Processing', href: '/invoice-processing', icon: FileText, badge: 'OCR' },

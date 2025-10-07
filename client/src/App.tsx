@@ -56,6 +56,7 @@ import InvitationAccept from "@/pages/invitation-accept";
 import MultiUnitDashboard from "@/pages/multi-unit-dashboard";
 import BluetoothScalePrototype from "@/pages/bluetooth-scale-prototype";
 import BeverageCost from "@/pages/beveragecost";
+import BeverageMenu from "@/pages/beveragemenu";
 import Sidebar from "@/components/layout/sidebar";
 import Header from "@/components/layout/header";
 import MobileBottomNav from "@/components/layout/mobile-bottom-nav";
@@ -124,6 +125,7 @@ function Router() {
                 }} />
                 <Route path="/inventory" component={Inventory} />
                 <Route path="/recipes" component={Recipes} />
+                <Route path="/beverage-menu" component={BeverageMenu} />
                 <Route path="/vendors" component={Vendors} />
                 <Route path="/purchase-orders" component={PurchaseOrders} />
                 <Route path="/waste-tracking" component={WasteTracking} />
