@@ -836,8 +836,8 @@ export default function Recipes() {
       {/* Page Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-xl lg:text-3xl font-bold text-white">Recipes & Menu Costing</h1>
-          <p className="text-xs lg:text-sm text-slate-400 mt-1">Manage recipes and calculate food costs</p>
+          <h1 className="text-xl lg:text-3xl font-bold text-white">Food Recipes</h1>
+          <p className="text-xs lg:text-sm text-slate-400 mt-1">Manage food recipes and calculate food costs</p>
         </div>
         <Dialog open={isCreateDialogOpen} onOpenChange={(open) => {
           setIsCreateDialogOpen(open);
