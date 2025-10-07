@@ -34,36 +34,6 @@ export default function AddItemDialog({ isOpen, onClose, onSuccess, categories, 
   const [isScannerOpen, setIsScannerOpen] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
-  // Determine item type based on selected category
-  const getItemType = (categoryId: string | undefined): 'bar' | 'food' | 'supplies' | null => {
-    if (!categoryId) return null;
-    
-    const category = categories.find(c => c.id === categoryId);
-    if (!category) return null;
-    
-    const categoryName = category.name.toLowerCase();
-    
-    // Bar/Beverage categories
-    if (['beer', 'spirits', 'wine', 'mixers', 'garnishes', 'bar tools'].some(term => categoryName.includes(term))) {
-      return 'bar';
-    }
-    
-    // Food categories
-    if (['protein', 'vegetable', 'dairy', 'grain', 'starch', 'condiment', 'sauce'].some(term => categoryName.includes(term))) {
-      return 'food';
-    }
-    
-    // Supplies categories
-    if (['cleaning', 'office', 'supplies'].some(term => categoryName.includes(term))) {
-      return 'supplies';
-    }
-    
-    return null;
-  };
-
-  const selectedCategoryId = form.watch('categoryId');
-  const itemType = getItemType(selectedCategoryId);
-
   const form = useForm<InsertInventoryItem>({
     resolver: zodResolver(insertInventoryItemSchema),
     defaultValues: {
@@ -145,6 +115,36 @@ export default function AddItemDialog({ isOpen, onClose, onSuccess, categories, 
       });
     }
   }, [editingItem, currentLocation?.id, form]);
+
+  // Determine item type based on selected category
+  const getItemType = (categoryId: string | undefined | null): 'bar' | 'food' | 'supplies' | null => {
+    if (!categoryId) return null;
+    
+    const category = categories.find(c => c.id === categoryId);
+    if (!category) return null;
+    
+    const categoryName = category.name.toLowerCase();
+    
+    // Bar/Beverage categories
+    if (['beer', 'spirits', 'wine', 'mixers', 'garnishes', 'bar tools'].some(term => categoryName.includes(term))) {
+      return 'bar';
+    }
+    
+    // Food categories
+    if (['protein', 'vegetable', 'dairy', 'grain', 'starch', 'condiment', 'sauce'].some(term => categoryName.includes(term))) {
+      return 'food';
+    }
+    
+    // Supplies categories
+    if (['cleaning', 'office', 'supplies'].some(term => categoryName.includes(term))) {
+      return 'supplies';
+    }
+    
+    return null;
+  };
+
+  const selectedCategoryId = form.watch('categoryId');
+  const itemType = getItemType(selectedCategoryId);
 
   const createItemMutation = useMutation({
     mutationFn: async (data: InsertInventoryItem) => {
@@ -327,7 +327,69 @@ export default function AddItemDialog({ isOpen, onClose, onSuccess, categories, 
               />
             </div>
 
-            {/* Multi-Unit Inventory Tracking Section */}
+            {/* Bar/Beverage Specific Fields */}
+            {itemType === 'bar' && (
+              <div className="space-y-4">
+                <div className="flex items-center gap-2 pt-4 border-t border-slate-700">
+                  <Calculator className="h-4 w-4 text-slate-400" />
+                  <h3 className="text-sm font-semibold text-slate-300">Beverage Details</h3>
+                  <span className="text-xs text-slate-500">(Bar & beverage items)</span>
+                </div>
+                
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <FormField
+                    control={form.control}
+                    name="isAlcoholic"
+                    render={({ field }) => (
+                      <FormItem className="flex flex-row items-start space-x-3 space-y-0 rounded-md border border-slate-700 p-4">
+                        <FormControl>
+                          <Checkbox
+                            checked={field.value || false}
+                            onCheckedChange={field.onChange}
+                          />
+                        </FormControl>
+                        <div className="space-y-1 leading-none">
+                          <FormLabel>
+                            Contains Alcohol
+                          </FormLabel>
+                        </div>
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={form.control}
+                    name="alcoholContent"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>ABV % (Alcohol by Volume)</FormLabel>
+                        <FormControl>
+                          <Input type="number" step="0.1" placeholder="5.0" {...field} value={field.value ?? ''} />
+                        </FormControl>
+                        <p className="text-xs text-slate-500">e.g., Beer: 5%, Wine: 12%, Vodka: 40%</p>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={form.control}
+                    name="bottleSize"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Bottle/Container Size</FormLabel>
+                        <FormControl>
+                          <Input placeholder="750ml, 12oz, 1L" {...field} value={field.value ?? ''} />
+                        </FormControl>
+                        <p className="text-xs text-slate-500">Standard serving size</p>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
+              </div>
+            )}
+
+            {/* Multi-Unit Inventory Tracking Section - Food Items Only */}
+            {itemType === 'food' && (
             <div className="space-y-4">
               <div className="flex items-center gap-2 pt-4 border-t border-slate-700">
                 <Calculator className="h-4 w-4 text-slate-400" />
@@ -436,8 +498,10 @@ export default function AddItemDialog({ isOpen, onClose, onSuccess, categories, 
                 />
               </div>
             </div>
+            )}
 
-            {/* Recipe Costing Conversions Section */}
+            {/* Recipe Costing Conversions Section - Food Items Only */}
+            {itemType === 'food' && (
             <div className="space-y-4">
               <div className="flex items-center gap-2 pt-4 border-t border-slate-700">
                 <Calculator className="h-4 w-4 text-slate-400" />
@@ -555,6 +619,7 @@ export default function AddItemDialog({ isOpen, onClose, onSuccess, categories, 
                 />
               </div>
             </div>
+            )}
             
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <FormField
