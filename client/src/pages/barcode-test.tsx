@@ -18,7 +18,9 @@ export default function BarcodeTest() {
   return (
     <div className="p-4 lg:p-6 space-y-6">
       <div>
-        <h1 className="text-2xl font-semibold text-gray-900">Barcode Scanner Test</h1>
+        <h1 className="text-2xl font-semibold text-gray-900">
+          Barcode Scanner Test
+        </h1>
         <p className="text-gray-600">Test the barcode scanning functionality</p>
       </div>
 
@@ -29,21 +31,22 @@ export default function BarcodeTest() {
             <CardTitle>Direct Scanner Test</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
-            <Button 
-              onClick={() => setIsScannerOpen(true)}
-              className="w-full"
-            >
+            <Button onClick={() => setIsScannerOpen(true)} className="w-full">
               <Camera className="h-4 w-4 mr-2" />
               Open Camera Scanner
             </Button>
-            
+
             {scannedBarcode && (
               <div className="p-4 bg-green-50 border border-green-200 rounded-lg">
                 <div className="flex items-center">
                   <CheckCircle className="h-5 w-5 text-green-600 mr-2" />
                   <div>
-                    <p className="text-sm font-medium text-green-800">Scanned Successfully!</p>
-                    <p className="text-sm text-green-600 font-mono">{scannedBarcode}</p>
+                    <p className="text-sm font-medium text-green-800">
+                      Scanned Successfully!
+                    </p>
+                    <p className="text-sm text-green-600 font-mono">
+                      {scannedBarcode}
+                    </p>
                   </div>
                 </div>
               </div>
@@ -67,11 +70,15 @@ export default function BarcodeTest() {
                 placeholder="Enter or scan product barcode"
               />
             </div>
-            
+
             {inputBarcode && (
               <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
-                <p className="text-sm font-medium text-blue-800">Current Value:</p>
-                <p className="text-sm text-blue-600 font-mono">{inputBarcode}</p>
+                <p className="text-sm font-medium text-blue-800">
+                  Current Value:
+                </p>
+                <p className="text-sm text-blue-600 font-mono">
+                  {inputBarcode}
+                </p>
               </div>
             )}
           </CardContent>
@@ -92,12 +99,16 @@ export default function BarcodeTest() {
                 <li>Allow camera permissions when prompted</li>
                 <li>Point your camera at a barcode</li>
                 <li>Keep the barcode within the scanning frame</li>
-                <li>The scanner will automatically detect and read the barcode</li>
+                <li>
+                  The scanner will automatically detect and read the barcode
+                </li>
               </ul>
             </div>
-            
+
             <div>
-              <h4 className="font-medium text-gray-900">Supported Barcode Types:</h4>
+              <h4 className="font-medium text-gray-900">
+                Supported Barcode Types:
+              </h4>
               <ul className="text-sm text-gray-600 list-disc list-inside mt-2 space-y-1">
                 <li>UPC-A and UPC-E (most common grocery items)</li>
                 <li>EAN-8 and EAN-13 (international products)</li>
