@@ -7,6 +7,8 @@ import { useLocation } from "@/contexts/LocationContext";
 import { usePermissions } from "@/contexts/PermissionContext";
 import { Permission } from "@/contexts/PermissionContext";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { signOut } from "firebase/auth";
+import { auth } from "@/lib/firebase";
 import { 
   LayoutDashboard, 
   Package, 
@@ -448,7 +450,25 @@ export default function Sidebar({ isMobileMenuOpen = false, setIsMobileMenuOpen 
             <Button
               variant="ghost"
               size="sm"
-              onClick={() => window.location.href = '/api/logout'}
+              onClick={async () => {
+                try {
+                  // Sign out from Firebase
+                  await signOut(auth);
+                  
+                  // Clear backend session cookie
+                  await fetch('/api/auth/logout', {
+                    method: 'POST',
+                    credentials: 'include'
+                  });
+                  
+                  // Redirect to auth page
+                  window.location.href = '/auth';
+                } catch (error) {
+                  console.error('Logout error:', error);
+                  // Even if there's an error, redirect to auth
+                  window.location.href = '/auth';
+                }
+              }}
               className="w-full justify-start text-red-400 hover:text-red-300 hover:bg-red-900/20"
             >
               Logout
