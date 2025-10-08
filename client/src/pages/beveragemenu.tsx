@@ -72,12 +72,14 @@ export default function BeverageMenu() {
       if (editingMenuItemId) {
         await apiRequest('PUT', `/api/menu-items/${editingMenuItemId}`, {
           ...data,
+          price: data.price.toString(),
           locationId: currentLocation?.id,
           ingredients: validIngredients
         });
       } else {
         await apiRequest('POST', '/api/menu-items', {
           ...data,
+          price: data.price.toString(),
           locationId: currentLocation?.id,
           ingredients: validIngredients
         });
